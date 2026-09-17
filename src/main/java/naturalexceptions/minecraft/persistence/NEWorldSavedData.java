@@ -8,12 +8,14 @@ import net.minecraft.world.WorldSavedData;
 
 import naturalexceptions.content.BuiltinContent;
 import naturalexceptions.core.persistence.WorldMetadata;
+import naturalexceptions.core.scheduler.DueTimeScheduler;
 
 public final class NEWorldSavedData extends WorldSavedData {
 
     public static final String DATA_IDENTIFIER = "naturalexceptions_world_data";
 
     private WorldMetadata metadata;
+    private final DueTimeScheduler scheduler = new DueTimeScheduler();
 
     public NEWorldSavedData(String name) {
         super(name);
@@ -56,9 +58,14 @@ public final class NEWorldSavedData extends WorldSavedData {
         this.markDirty();
     }
 
+    public DueTimeScheduler scheduler() {
+        return scheduler;
+    }
+
     @Override
     public void readFromNBT(NBTTagCompound nbt) {
         this.metadata = NEWorldMetadataCodec.readFromNbt(nbt);
+        this.scheduler.restore(NEWorldMetadataCodec.readScheduledEventsFromNbt(nbt));
     }
 
     @Override
@@ -66,5 +73,6 @@ public final class NEWorldSavedData extends WorldSavedData {
         if (metadata != null) {
             NEWorldMetadataCodec.writeToNbt(metadata, nbt);
         }
+        NEWorldMetadataCodec.writeScheduledEventsToNbt(scheduler.snapshot(), nbt);
     }
 }
