@@ -4,6 +4,7 @@ import net.minecraft.block.Block;
 import net.minecraft.creativetab.CreativeTabs;
 
 import cpw.mods.fml.common.registry.GameRegistry;
+import naturalexceptions.content.material.BuiltinMaterials;
 import naturalexceptions.minecraft.block.BlockCopperBlock;
 import naturalexceptions.minecraft.block.BlockCopperOre;
 
@@ -22,5 +23,10 @@ public final class NEBlocks {
 
         GameRegistry.registerBlock(copperOre, "copper_ore");
         GameRegistry.registerBlock(copperBlock, "copper_block");
+
+        MaterialBindingRegistry.global()
+            .bind(copperOre, BuiltinMaterials.COPPER.id());
+        MaterialBindingRegistry.global()
+            .bind(copperBlock, BuiltinMaterials.COPPER.id());
     }
 }

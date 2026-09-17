@@ -4,6 +4,7 @@ import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
 
 import cpw.mods.fml.common.registry.GameRegistry;
+import naturalexceptions.content.material.BuiltinMaterials;
 
 public final class NEItems {
 
@@ -25,5 +26,10 @@ public final class NEItems {
 
         GameRegistry.registerItem(copperOreChunk, "copper_ore_chunk");
         GameRegistry.registerItem(copperIngot, "copper_ingot");
+
+        MaterialBindingRegistry.global()
+            .bind(copperOreChunk, BuiltinMaterials.COPPER.id());
+        MaterialBindingRegistry.global()
+            .bind(copperIngot, BuiltinMaterials.COPPER.id());
     }
 }
