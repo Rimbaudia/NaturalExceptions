@@ -3,7 +3,7 @@ package naturalexceptions.core.id;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-public final class ResourceId {
+public final class ResourceId implements Comparable<ResourceId> {
 
     private static final Pattern PART = Pattern.compile("[a-z0-9_.-]+");
 
@@ -22,6 +22,9 @@ public final class ResourceId {
     }
 
     public static ResourceId parse(String value) {
+        if (value == null) {
+            throw new IllegalArgumentException("ResourceId string cannot be null");
+        }
         int separator = value.indexOf(':');
         if (separator <= 0 || separator == value.length() - 1 || value.indexOf(':', separator + 1) >= 0) {
             throw new IllegalArgumentException("Expected namespaced id namespace:path: " + value);
@@ -42,6 +45,18 @@ public final class ResourceId {
 
     public String path() {
         return path;
+    }
+
+    @Override
+    public int compareTo(ResourceId other) {
+        if (other == null) {
+            throw new NullPointerException("Cannot compare ResourceId to null");
+        }
+        int cmp = this.namespace.compareTo(other.namespace);
+        if (cmp != 0) {
+            return cmp;
+        }
+        return this.path.compareTo(other.path);
     }
 
     @Override
