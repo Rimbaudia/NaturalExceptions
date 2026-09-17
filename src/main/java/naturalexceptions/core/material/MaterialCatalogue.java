@@ -41,6 +41,10 @@ public final class MaterialCatalogue {
         return authoredByRef.get(ref);
     }
 
+    public synchronized MaterialDefinition getByRef(MaterialRef ref) {
+        return getAuthored(ref);
+    }
+
     public synchronized GeneratedMaterial getOrRegisterGenerated(CanonicalComposition composition) {
         Objects.requireNonNull(composition, "composition");
         GeneratedMaterial existing = generatedByComp.get(composition);

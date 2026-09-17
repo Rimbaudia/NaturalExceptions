@@ -7,6 +7,8 @@ import java.util.Map;
 
 import naturalexceptions.core.composition.CanonicalComposition;
 import naturalexceptions.core.id.ResourceId;
+import naturalexceptions.core.material.GeneratedMaterial;
+import naturalexceptions.core.material.MaterialDefinition;
 import naturalexceptions.core.material.MaterialRef;
 
 /**
@@ -33,6 +35,29 @@ public final class MaterialPropertyResolver {
     private static final ResourceId ID_STELLAR = ResourceId.of("naturalexceptions", "stellar_matter");
 
     private final Map<MaterialRef, ResolvedProperties> cache = new HashMap<>();
+
+    public synchronized ResolvedProperties resolve(GeneratedMaterial generated) {
+        if (generated == null) {
+            throw new IllegalArgumentException("GeneratedMaterial cannot be null");
+        }
+        return resolve(generated.ref(), generated.composition());
+    }
+
+    public synchronized ResolvedProperties resolve(MaterialDefinition definition) {
+        if (definition == null) {
+            throw new IllegalArgumentException("MaterialDefinition cannot be null");
+        }
+        MaterialRef ref = MaterialRef.authored(
+            definition.id()
+                .resourceId());
+        CanonicalComposition comp = CanonicalComposition.builder()
+            .add(
+                definition.id()
+                    .resourceId(),
+                100)
+            .build();
+        return resolve(ref, comp);
+    }
 
     public synchronized ResolvedProperties resolve(MaterialRef ref, CanonicalComposition composition) {
         if (ref == null) {

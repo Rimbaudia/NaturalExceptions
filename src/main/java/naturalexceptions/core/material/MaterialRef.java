@@ -49,6 +49,13 @@ public final class MaterialRef implements Comparable<MaterialRef> {
         return new MaterialRef(MaterialRefKind.AUTHORED, id, null);
     }
 
+    public static MaterialRef authored(MaterialId id) {
+        if (id == null) {
+            throw new IllegalArgumentException("Authored MaterialId cannot be null");
+        }
+        return authored(id.resourceId());
+    }
+
     public static MaterialRef authored(String namespace, String path) {
         return authored(ResourceId.of(namespace, path));
     }

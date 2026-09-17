@@ -1,0 +1,199 @@
+package naturalexceptions.minecraft.persistence;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+
+import org.junit.jupiter.api.Test;
+
+import naturalexceptions.content.material.BuiltinMaterials;
+import naturalexceptions.core.composition.CanonicalComposition;
+import naturalexceptions.core.id.ResourceId;
+import naturalexceptions.core.material.GeneratedMaterial;
+import naturalexceptions.core.material.MaterialCatalogue;
+import naturalexceptions.core.material.MaterialDefinition;
+import naturalexceptions.core.material.MaterialRef;
+import naturalexceptions.core.property.MaterialPropertyResolver;
+import naturalexceptions.core.property.ResolvedProperties;
+import naturalexceptions.minecraft.item.ItemMaterialSample;
+
+final class GeneratedMaterialPersistenceTest {
+
+    private static final ResourceId CU = ResourceId.of("naturalexceptions", "copper");
+    private static final ResourceId SN = ResourceId.of("naturalexceptions", "tin");
+    private static final ResourceId ZN = ResourceId.of("naturalexceptions", "zinc");
+
+    @Test
+    void generatedMaterialPersistsThroughItemStackNbtAndReconstructsIdentically() {
+        // Step 1: Define ternary alloy (Cu 70%, Sn 20%, Zn 10%)
+        CanonicalComposition composition = CanonicalComposition.builder()
+            .add(CU, 70)
+            .add(SN, 20)
+            .add(ZN, 10)
+            .build();
+        MaterialRef originalRef = MaterialRef.generatedFrom(composition);
+
+        // Step 2: Register in catalogue 1 and resolve properties
+        MaterialCatalogue catalogue1 = new MaterialCatalogue();
+        catalogue1.register(BuiltinMaterials.COPPER);
+        GeneratedMaterial genMat1 = catalogue1.getOrRegisterGenerated(composition);
+        assertEquals(originalRef, genMat1.ref());
+
+        MaterialPropertyResolver resolver1 = new MaterialPropertyResolver();
+        ResolvedProperties resolvedProps1 = resolver1.resolve(genMat1);
+        assertNotNull(resolvedProps1);
+
+        // Step 3: Package into Minecraft ItemStack carrier
+        ItemStack stack = ItemMaterialSample.createStack(originalRef, composition);
+        assertNotNull(stack.getTagCompound());
+
+        // Step 4: Simulate world save/reload by deep-copying the NBT compound
+        NBTTagCompound serializedNbt = (NBTTagCompound) stack.getTagCompound()
+            .copy();
+        ItemStack reloadedStack = new ItemStack(new ItemMaterialSample());
+        reloadedStack.setTagCompound(serializedNbt);
+
+        // Discard catalogue1 and resolver1 (clear in-memory state)
+        catalogue1 = null;
+        resolver1 = null;
+
+        // Step 5: Read from reloaded stack
+        MaterialRef reloadedRef = ItemMaterialSample.getMaterialRef(reloadedStack);
+        CanonicalComposition reloadedComp = ItemMaterialSample.getComposition(reloadedStack);
+
+        assertNotNull(reloadedRef);
+        assertNotNull(reloadedComp);
+        assertEquals(originalRef, reloadedRef);
+        assertEquals(composition, reloadedComp);
+
+        // Step 6: Reconstruct in a fresh catalogue instance
+        MaterialCatalogue catalogue2 = new MaterialCatalogue();
+        catalogue2.register(BuiltinMaterials.COPPER);
+        GeneratedMaterial genMat2 = catalogue2.getOrRegisterGenerated(reloadedComp);
+
+        assertEquals(originalRef, genMat2.ref());
+        assertEquals(genMat1.id(), genMat2.id());
+        assertEquals(composition, genMat2.composition());
+
+        // Step 7: Resolve in a fresh resolver instance and verify identical properties
+        MaterialPropertyResolver resolver2 = new MaterialPropertyResolver();
+        ResolvedProperties resolvedProps2 = resolver2.resolve(genMat2);
+
+        assertEquals(resolvedProps1.properties(), resolvedProps2.properties());
+        assertEquals(
+            resolvedProps1.trace()
+                .appliedLayers(),
+            resolvedProps2.trace()
+                .appliedLayers());
+        assertEquals(
+            resolvedProps1.properties()
+                .density(),
+            resolvedProps2.properties()
+                .density(),
+            1e-9);
+        assertEquals(
+            resolvedProps1.properties()
+                .hardness(),
+            resolvedProps2.properties()
+                .hardness(),
+            1e-9);
+        assertEquals(
+            resolvedProps1.properties()
+                .conductivity(),
+            resolvedProps2.properties()
+                .conductivity(),
+            1e-9);
+    }
+
+    @Test
+    void authoredMaterialPersistsThroughItemStackNbt() {
+        MaterialRef authoredRef = MaterialRef.authored(BuiltinMaterials.COPPER.id());
+
+        ItemStack stack = ItemMaterialSample.createStack(authoredRef);
+        NBTTagCompound savedNbt = (NBTTagCompound) stack.getTagCompound()
+            .copy();
+
+        ItemStack reloadedStack = new ItemStack(new ItemMaterialSample());
+        reloadedStack.setTagCompound(savedNbt);
+
+        MaterialRef reloadedRef = ItemMaterialSample.getMaterialRef(reloadedStack);
+        assertEquals(authoredRef, reloadedRef);
+        assertNull(ItemMaterialSample.getComposition(reloadedStack));
+
+        MaterialCatalogue catalogue = new MaterialCatalogue();
+        catalogue.register(BuiltinMaterials.COPPER);
+        MaterialDefinition def = catalogue.getByRef(reloadedRef);
+        assertNotNull(def);
+        assertEquals(BuiltinMaterials.COPPER.id(), def.id());
+
+        MaterialPropertyResolver resolver = new MaterialPropertyResolver();
+        ResolvedProperties resolved = resolver.resolve(def);
+        assertEquals(
+            8.96,
+            resolved.properties()
+                .density(),
+            1e-3);
+        assertEquals(
+            3.0,
+            resolved.properties()
+                .hardness(),
+            1e-3);
+        assertEquals(
+            100.0,
+            resolved.properties()
+                .conductivity(),
+            1e-3);
+    }
+
+    @Test
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    void presentationAndTooltipsReflectCarrierState() {
+        ItemMaterialSample item = new ItemMaterialSample();
+
+        // 1. Authored carrier
+        MaterialRef authoredRef = MaterialRef.authored(CU);
+        ItemStack authoredStack = ItemMaterialSample.createStack(authoredRef);
+        assertEquals("Material Sample (Copper)", item.getItemStackDisplayName(authoredStack));
+        List<String> tooltip = new ArrayList<>();
+        item.addInformation(authoredStack, null, (List) tooltip, false);
+        assertTrue(tooltip.contains("\u00a78mat:authored:naturalexceptions:copper"));
+
+        // 2. Generated carrier with composition
+        CanonicalComposition comp = CanonicalComposition.builder()
+            .add(CU, 80)
+            .add(SN, 20)
+            .build();
+        MaterialRef genRef = MaterialRef.generatedFrom(comp);
+        ItemStack genStack = ItemMaterialSample.createStack(genRef, comp);
+        assertTrue(
+            item.getItemStackDisplayName(genStack)
+                .startsWith("Material Sample (Generated "));
+        List<String> genTooltip = new ArrayList<>();
+        item.addInformation(genStack, null, (List) genTooltip, false);
+        assertTrue(genTooltip.contains("\u00a78" + genRef.asString()));
+        assertTrue(genTooltip.contains("\u00a77Composition:"));
+
+        // 3. Empty carrier
+        ItemStack emptyStack = new ItemStack(item);
+        assertEquals("Material Sample (Empty)", item.getItemStackDisplayName(emptyStack));
+        List<String> emptyTooltip = new ArrayList<>();
+        item.addInformation(emptyStack, null, (List) emptyTooltip, false);
+        assertTrue(emptyTooltip.contains("\u00a77Empty carrier"));
+
+        // 4. Corrupted carrier
+        ItemStack corruptStack = new ItemStack(item);
+        NBTTagCompound corruptNbt = new NBTTagCompound();
+        corruptNbt.setInteger(MaterialCarrierNbtCodec.KEY_FORMAT, 1);
+        corruptNbt.setString(MaterialCarrierNbtCodec.KEY_MATERIAL_REF, "bad:ref");
+        corruptStack.setTagCompound(corruptNbt);
+        assertEquals("\u00a7cMaterial Sample (Corrupted)", item.getItemStackDisplayName(corruptStack));
+        assertNull(ItemMaterialSample.getMaterialRef(corruptStack));
+    }
+}

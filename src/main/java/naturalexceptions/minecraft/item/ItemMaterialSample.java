@@ -27,7 +27,8 @@ public final class ItemMaterialSample extends Item {
     }
 
     public static ItemStack createStack(MaterialRef ref, CanonicalComposition comp) {
-        ItemStack stack = new ItemStack(NEItems.materialSample);
+        Item item = NEItems.materialSample != null ? NEItems.materialSample : new ItemMaterialSample();
+        ItemStack stack = new ItemStack(item);
         NBTTagCompound nbt = new NBTTagCompound();
         MaterialCarrierNbtCodec.writeToNbt(ref, comp, nbt);
         stack.setTagCompound(nbt);
