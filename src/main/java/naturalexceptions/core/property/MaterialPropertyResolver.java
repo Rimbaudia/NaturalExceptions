@@ -14,6 +14,15 @@ import naturalexceptions.core.material.MaterialRef;
 /**
  * Layered material property resolver architecture spike.
  *
+ * <p><b>PROVISIONAL ARCHITECTURE SPIKE NOTICE (P2.1E):</b>
+ * This resolver exists strictly as an architectural feasibility spike for P2 to demonstrate
+ * that a 4-layer resolution pipeline (baseline, interaction, phase window, anomaly override)
+ * can deterministically evaluate properties without gaps or crashes.
+ *
+ * <p>This is <b>NOT</b> a frozen P3 API, is <b>NOT</b> proof that P3 is complete, and will be
+ * revised or replaced during the actual P3 thermal and metallurgy implementation.
+ * No Minecraft gameplay, tile entity, or content mechanics depend on its internal constants.
+ *
  * <p>
  * Pipeline order:
  * <ol>
