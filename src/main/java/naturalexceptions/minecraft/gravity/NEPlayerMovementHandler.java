@@ -7,6 +7,7 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.util.AxisAlignedBB;
 
 import naturalexceptions.core.gravity.GravitySample;
+import naturalexceptions.core.gravity.LocalBodyStance;
 import naturalexceptions.core.gravity.LocalEntityFrame;
 import naturalexceptions.core.gravity.Vector3d;
 import naturalexceptions.minecraft.mixin.EntityLivingBaseAccessor;
@@ -232,10 +233,16 @@ public final class NEPlayerMovementHandler {
         if (entity == null || entity.boundingBox == null || collisionProvider == null) {
             return false;
         }
-        AxisAlignedBB probe = entity.boundingBox.getOffsetBoundingBox(
-            localDown.x * probeDistance,
-            localDown.y * probeDistance,
-            localDown.z * probeDistance);
+        AxisAlignedBB bb = entity.boundingBox;
+        double cx = (bb.minX + bb.maxX) * 0.5;
+        double cy = (bb.minY + bb.maxY) * 0.5;
+        double cz = (bb.minZ + bb.maxZ) * 0.5;
+        double hw = (bb.maxX - bb.minX) * 0.5;
+        double hh = (bb.maxY - bb.minY) * 0.5;
+
+        LocalBodyStance stance = new LocalBodyStance(new Vector3d(cx, cy, cz), localDown, hw, hh);
+        double[] b = stance.feetProbeBounds(probeDistance, 0.1);
+        AxisAlignedBB probe = AxisAlignedBB.getBoundingBox(b[0], b[1], b[2], b[3], b[4], b[5]);
         List<?> collisions = collisionProvider.getCollidingBoundingBoxes(entity, probe);
         return collisions != null && !collisions.isEmpty();
     }

@@ -10,7 +10,8 @@
     "EntityLivingBaseAccessor"
   ],
   "client": [
-    "MixinEntityRenderer"
+    "MixinEntityRenderer",
+    "MixinRendererLivingEntity"
   ],
   "server": [
   ]

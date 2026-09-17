@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 
 import naturalexceptions.core.gravity.GravityCameraFrame;
 import naturalexceptions.core.gravity.GravitySample;
+import naturalexceptions.core.gravity.LocalBodyStance;
 import naturalexceptions.core.gravity.LocalEntityFrame;
 import naturalexceptions.core.gravity.RadialGravitySource;
 import naturalexceptions.core.gravity.UniformGravityField;
@@ -1027,5 +1028,213 @@ final class RuntimeGravityLocomotionTest {
             groundedTicks >= 28,
             "Player must remain grounded without thrash across transition (grounded " + groundedTicks
                 + " of 30 ticks)");
+    }
+
+    @Test
+    void bodyUpMatchesLocalUp() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(10.0, 64.0, 0.0);
+
+        GravitySample sample = service.sampleFor(entity);
+        Vector3d expectedUp = sample.localUp();
+
+        LocalBodyStance stance = new LocalBodyStance(
+            new Vector3d(entity.posX, entity.posY + 0.9, entity.posZ),
+            sample.localDown(),
+            0.3,
+            0.9);
+
+        assertEquals(expectedUp.x, stance.localUp().x, EPSILON);
+        assertEquals(expectedUp.y, stance.localUp().y, EPSILON);
+        assertEquals(expectedUp.z, stance.localUp().z, EPSILON);
+    }
+
+    @Test
+    void bodySupportPointLiesAlongLocalDown() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(10.0, 64.0, 0.0);
+
+        GravitySample sample = service.sampleFor(entity);
+        Vector3d center = new Vector3d(entity.posX, entity.posY + 0.9, entity.posZ);
+        LocalBodyStance stance = new LocalBodyStance(center, sample.localDown(), 0.3, 0.9);
+
+        Vector3d supDir = stance.supportPoint()
+            .subtract(center)
+            .normalize();
+        assertEquals(sample.localDown().x, supDir.x, EPSILON);
+        assertEquals(sample.localDown().y, supDir.y, EPSILON);
+        assertEquals(sample.localDown().z, supDir.z, EPSILON);
+    }
+
+    @Test
+    void bodyForwardMatchesMovementForward() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(10.0, 64.0, 0.0);
+        entity.rotationYaw = 0.0F;
+
+        GravitySample sample = service.sampleFor(entity);
+        LocalEntityFrame frame = LocalEntityFrame.deriveFrom(sample, entity.rotationYaw);
+        Vector3d moveFwd = frame.mapInput(1.0, 0.0);
+
+        // Movement forward on wall (+X gravity) must be along tangent plane orthogonal to localUp
+        assertEquals(0.0, moveFwd.dot(sample.localUp()), EPSILON);
+        assertEquals(0.0, moveFwd.dot(sample.localDown()), EPSILON);
+        assertTrue(moveFwd.length() > 0.99, "Movement forward must be unit magnitude");
+    }
+
+    @Test
+    void cameraAndBodyShareTargetUp() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(10.0, 64.0, 0.0);
+
+        GravitySample sample = service.sampleFor(entity);
+        LocalBodyStance stance = new LocalBodyStance(
+            new Vector3d(entity.posX, entity.posY + 0.9, entity.posZ),
+            sample.localDown(),
+            0.3,
+            0.9);
+
+        GravityCameraFrame cameraFrame = new GravityCameraFrame(Vector3d.UP, 0.15);
+        cameraFrame.update(sample.localUp());
+
+        // Stepping camera frame toward targetUp converges smoothly to stance.localUp()
+        for (int i = 0; i < 50; i++) {
+            cameraFrame.update(sample.localUp());
+        }
+        assertEquals(stance.localUp().x, cameraFrame.currentUp().x, 2e-3);
+        assertEquals(stance.localUp().y, cameraFrame.currentUp().y, 2e-3);
+        assertEquals(stance.localUp().z, cameraFrame.currentUp().z, 2e-3);
+        assertTrue(
+            cameraFrame.currentUp()
+                .dot(stance.localUp()) > 0.99999,
+            "Camera up must align with stance localUp within 0.99999");
+    }
+
+    @Test
+    void sideWallStanceRotatesBodyNinetyDegreesFromWorldUp() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(10.0, 64.0, 0.0);
+
+        GravitySample sample = service.sampleFor(entity);
+        LocalBodyStance stance = new LocalBodyStance(
+            new Vector3d(entity.posX, entity.posY + 0.9, entity.posZ),
+            sample.localDown(),
+            0.3,
+            0.9);
+
+        assertEquals(90.0, stance.rotationFromWorldUpDegrees(), EPSILON);
+    }
+
+    @Test
+    void undersideStanceRotatesBodyOneHundredEightyDegreesFromWorldUp() {
+        service.setActiveField(UniformGravityField.of(0.0, 0.08, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(0.0, 98.2, 0.0);
+
+        GravitySample sample = service.sampleFor(entity);
+        LocalBodyStance stance = new LocalBodyStance(
+            new Vector3d(entity.posX, entity.posY + 0.9, entity.posZ),
+            sample.localDown(),
+            0.3,
+            0.9);
+
+        assertEquals(180.0, stance.rotationFromWorldUpDegrees(), EPSILON);
+    }
+
+    @Test
+    void orientationBasisHasPositiveDeterminant() {
+        Vector3d[] testDowns = { new Vector3d(0, -1, 0), new Vector3d(1, 0, 0), new Vector3d(-1, 0, 0),
+            new Vector3d(0, 0, 1), new Vector3d(0, 0, -1), new Vector3d(0, 1, 0), new Vector3d(1, -1, 0).normalize(),
+            new Vector3d(0, 1, 1).normalize() };
+
+        for (Vector3d down : testDowns) {
+            LocalBodyStance stance = new LocalBodyStance(Vector3d.ZERO, down, 0.3, 0.9);
+            LocalEntityFrame frame = stance.toEntityFrame(45.0, null);
+            assertEquals(1.0, frame.basisDeterminant(), EPSILON, "Frame basis determinant must be +1 for down=" + down);
+        }
+    }
+
+    @Test
+    void orientationRemainsContinuousAcrossFullCircumnavigation() {
+        int steps = 120;
+        double maxDeltaDeg = 0.0;
+        double prevAngle = 0.0;
+
+        for (int i = 0; i <= steps; i++) {
+            double theta = 2.0 * Math.PI * i / steps;
+            Vector3d down = new Vector3d(Math.sin(theta), -Math.cos(theta), 0.0).normalize();
+            LocalBodyStance stance = new LocalBodyStance(Vector3d.ZERO, down, 0.3, 0.9);
+            double angleDeg = stance.rotationFromWorldUpDegrees();
+
+            if (i > 0) {
+                double delta = Math.abs(angleDeg - prevAngle);
+                if (delta > maxDeltaDeg) {
+                    maxDeltaDeg = delta;
+                }
+            }
+            prevAngle = angleDeg;
+        }
+
+        assertTrue(
+            maxDeltaDeg < 5.0,
+            "Stance orientation must evolve continuously (max delta was " + maxDeltaDeg + " deg)");
+    }
+
+    @Test
+    void wallJumpImpulsePointsAwayFromSupport() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestPlayer player = LocomotionTestPlayer.create();
+        player.setPosition(9.7, 64.0, 0.0);
+        player.motionX = 0.0;
+        player.motionY = 0.0;
+        player.motionZ = 0.0;
+
+        AxisAlignedBB wallBox = AxisAlignedBB.getBoundingBox(10.0, 60.0, -10.0, 11.0, 70.0, 10.0);
+        NEPlayerMovementHandler.CollisionProvider provider = (e, bb) -> {
+            if (bb.intersectsWith(wallBox)) {
+                return Collections.singletonList(wallBox);
+            }
+            return Collections.emptyList();
+        };
+        player.setCollisionProvider(provider);
+
+        player.setJumping(true);
+        NEPlayerMovementHandler.applyJump(player);
+
+        assertTrue(
+            player.motionX < -0.4,
+            "Jump motion must point away from support wall along localUp (motionX was " + player.motionX + ")");
+        assertEquals(0.0, player.motionY, EPSILON, "Wall jump should have zero Y impulse in pure X gravity");
+        assertEquals(0.0, player.motionZ, EPSILON, "Wall jump should have zero Z impulse in pure X gravity");
+        assertTrue(player.isAirBorne, "Player must become airborne after jump");
+    }
+
+    @Test
+    void shouldApplyCustomOrientationOnlyWhenNonstandard() {
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(0.0, 64.0, 0.0);
+
+        // Under standard downward gravity
+        service.setActiveField(UniformGravityField.of(0.0, -0.08, 0.0));
+        assertFalse(
+            NEEntityRenderHandler.shouldApplyCustomOrientation(entity),
+            "Custom orientation must NOT apply under standard downward gravity");
+
+        // Under side-wall gravity
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        assertTrue(
+            NEEntityRenderHandler.shouldApplyCustomOrientation(entity),
+            "Custom orientation must apply under side-wall gravity");
+
+        // Under ceiling gravity
+        service.setActiveField(UniformGravityField.of(0.0, 0.08, 0.0));
+        assertTrue(
+            NEEntityRenderHandler.shouldApplyCustomOrientation(entity),
+            "Custom orientation must apply under ceiling gravity");
     }
 }
