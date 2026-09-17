@@ -5,11 +5,13 @@ import net.minecraft.item.Item;
 
 import cpw.mods.fml.common.registry.GameRegistry;
 import naturalexceptions.content.material.BuiltinMaterials;
+import naturalexceptions.minecraft.item.ItemMaterialSample;
 
 public final class NEItems {
 
     public static Item copperOreChunk;
     public static Item copperIngot;
+    public static ItemMaterialSample materialSample;
 
     private NEItems() {}
 
@@ -24,8 +26,12 @@ public final class NEItems {
             .setTextureName("naturalexceptions:copper_ingot")
             .setCreativeTab(CreativeTabs.tabMaterials);
 
+        materialSample = new ItemMaterialSample();
+        materialSample.setCreativeTab(CreativeTabs.tabMaterials);
+
         GameRegistry.registerItem(copperOreChunk, "copper_ore_chunk");
         GameRegistry.registerItem(copperIngot, "copper_ingot");
+        GameRegistry.registerItem(materialSample, "material_sample");
 
         MaterialBindingRegistry.global()
             .bind(copperOreChunk, BuiltinMaterials.COPPER.id());

@@ -2,4 +2,6 @@ tile.copperOre.name=Copper Ore
 tile.copperBlock.name=Block of Copper
 item.copperOreChunk.name=Copper Ore Chunk
 item.copperIngot.name=Copper Ingot
+item.materialSample.name=Material Sample
 material.naturalexceptions.copper=Copper
+
