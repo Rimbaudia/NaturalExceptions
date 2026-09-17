@@ -10,16 +10,23 @@ import java.util.List;
 
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import naturalexceptions.content.BuiltinContent;
 import naturalexceptions.content.material.BuiltinMaterials;
 import naturalexceptions.core.composition.CanonicalComposition;
 import naturalexceptions.core.id.ResourceId;
+import naturalexceptions.core.material.CanonicalMaterialKey;
+import naturalexceptions.core.material.ConditioningHistory;
 import naturalexceptions.core.material.GeneratedMaterial;
 import naturalexceptions.core.material.MaterialCatalogue;
 import naturalexceptions.core.material.MaterialDefinition;
+import naturalexceptions.core.material.MaterialPhase;
 import naturalexceptions.core.material.MaterialRef;
+import naturalexceptions.core.material.Microstructure;
 import naturalexceptions.core.property.MaterialPropertyResolver;
 import naturalexceptions.core.property.ResolvedProperties;
 import naturalexceptions.minecraft.item.ItemMaterialSample;
@@ -30,20 +37,27 @@ final class GeneratedMaterialPersistenceTest {
     private static final ResourceId SN = ResourceId.of("naturalexceptions", "tin");
     private static final ResourceId ZN = ResourceId.of("naturalexceptions", "zinc");
 
+    @BeforeAll
+    static void initBuiltin() {
+        BuiltinContent.register();
+    }
+
     @Test
     void generatedMaterialPersistsThroughItemStackNbtAndReconstructsIdentically() {
-        // Step 1: Define ternary alloy (Cu 70%, Sn 20%, Zn 10%)
+        // Step 1: Define ternary alloy (Cu 70%, Sn 20%, Zn 10%) with phase and microstructure
         CanonicalComposition composition = CanonicalComposition.builder()
             .add(CU, 70)
             .add(SN, 20)
             .add(ZN, 10)
             .build();
-        MaterialRef originalRef = MaterialRef.generatedFrom(composition);
+        CanonicalMaterialKey stateKey = CanonicalMaterialKey
+            .of(composition, MaterialPhase.SOLID, Microstructure.ANNEALED, ConditioningHistory.COLD_WORKED);
+        MaterialRef originalRef = MaterialRef.generatedFrom(stateKey);
 
         // Step 2: Register in catalogue 1 and resolve properties
         MaterialCatalogue catalogue1 = new MaterialCatalogue();
         catalogue1.register(BuiltinMaterials.COPPER);
-        GeneratedMaterial genMat1 = catalogue1.getOrRegisterGenerated(composition);
+        GeneratedMaterial genMat1 = catalogue1.getOrRegisterGenerated(stateKey);
         assertEquals(originalRef, genMat1.ref());
 
         MaterialPropertyResolver resolver1 = new MaterialPropertyResolver();
@@ -51,7 +65,7 @@ final class GeneratedMaterialPersistenceTest {
         assertNotNull(resolvedProps1);
 
         // Step 3: Package into Minecraft ItemStack carrier
-        ItemStack stack = ItemMaterialSample.createStack(originalRef, composition);
+        ItemStack stack = ItemMaterialSample.createStack(originalRef, stateKey);
         assertNotNull(stack.getTagCompound());
 
         // Step 4: Simulate world save/reload by deep-copying the NBT compound
@@ -66,17 +80,23 @@ final class GeneratedMaterialPersistenceTest {
 
         // Step 5: Read from reloaded stack
         MaterialRef reloadedRef = ItemMaterialSample.getMaterialRef(reloadedStack);
+        CanonicalMaterialKey reloadedKey = ItemMaterialSample.getStateKey(reloadedStack);
         CanonicalComposition reloadedComp = ItemMaterialSample.getComposition(reloadedStack);
 
         assertNotNull(reloadedRef);
+        assertNotNull(reloadedKey);
         assertNotNull(reloadedComp);
         assertEquals(originalRef, reloadedRef);
+        assertEquals(stateKey, reloadedKey);
         assertEquals(composition, reloadedComp);
+        assertEquals(MaterialPhase.SOLID, reloadedKey.phase());
+        assertEquals(Microstructure.ANNEALED, reloadedKey.microstructure());
+        assertEquals(ConditioningHistory.COLD_WORKED, reloadedKey.conditioning());
 
         // Step 6: Reconstruct in a fresh catalogue instance
         MaterialCatalogue catalogue2 = new MaterialCatalogue();
         catalogue2.register(BuiltinMaterials.COPPER);
-        GeneratedMaterial genMat2 = catalogue2.getOrRegisterGenerated(reloadedComp);
+        GeneratedMaterial genMat2 = catalogue2.getOrRegisterGenerated(reloadedKey);
 
         assertEquals(originalRef, genMat2.ref());
         assertEquals(genMat1.id(), genMat2.id());
@@ -153,6 +173,68 @@ final class GeneratedMaterialPersistenceTest {
     }
 
     @Test
+    void carrierSurvivesMinecraftContainerInventorySaveAndLoad() {
+        // Build sample
+        CanonicalComposition comp = CanonicalComposition.builder()
+            .add(CU, 85)
+            .add(SN, 15)
+            .build();
+        CanonicalMaterialKey key = CanonicalMaterialKey
+            .of(comp, MaterialPhase.SOLID, Microstructure.AS_CAST, ConditioningHistory.NONE);
+        MaterialRef ref = MaterialRef.generatedFrom(key);
+        ItemStack stack = ItemMaterialSample.createStack(ref, key);
+
+        // Simulate Minecraft container / chest inventory save:
+        // Container serializes to NBTTagList of slot compounds
+        NBTTagCompound containerNbt = new NBTTagCompound();
+        NBTTagList itemsList = new NBTTagList();
+
+        NBTTagCompound slot0Tag = new NBTTagCompound();
+        slot0Tag.setByte("Slot", (byte) 0);
+        // stack writes its state (id, Count, Damage, tag)
+        slot0Tag.setShort("id", (short) 1000); // simulated host numeric id
+        slot0Tag.setByte("Count", (byte) 1);
+        slot0Tag.setShort("Damage", (short) 0);
+        if (stack.getTagCompound() != null) {
+            slot0Tag.setTag(
+                "tag",
+                stack.getTagCompound()
+                    .copy());
+        }
+        itemsList.appendTag(slot0Tag);
+        containerNbt.setTag("Items", itemsList);
+
+        // Deep copy simulating disk write / read
+        NBTTagCompound diskNbt = (NBTTagCompound) containerNbt.copy();
+
+        // Simulate container restore
+        NBTTagList reloadedItems = diskNbt.getTagList("Items", 10);
+        assertEquals(1, reloadedItems.tagCount());
+        NBTTagCompound restoredSlot0 = reloadedItems.getCompoundTagAt(0);
+
+        ItemStack restoredStack = new ItemStack(new ItemMaterialSample());
+        if (restoredSlot0.hasKey("tag", 10)) {
+            restoredStack.setTagCompound(restoredSlot0.getCompoundTag("tag"));
+        }
+
+        MaterialRef restoredRef = ItemMaterialSample.getMaterialRef(restoredStack);
+        CanonicalMaterialKey restoredKey = ItemMaterialSample.getStateKey(restoredStack);
+
+        assertNotNull(restoredRef);
+        assertNotNull(restoredKey);
+        assertEquals(ref, restoredRef);
+        assertEquals(key, restoredKey);
+        assertEquals(
+            8_500,
+            restoredKey.composition()
+                .parts(CU));
+        assertEquals(
+            1_500,
+            restoredKey.composition()
+                .parts(SN));
+    }
+
+    @Test
     @SuppressWarnings({ "rawtypes", "unchecked" })
     void presentationAndTooltipsReflectCarrierState() {
         ItemMaterialSample item = new ItemMaterialSample();
@@ -165,19 +247,24 @@ final class GeneratedMaterialPersistenceTest {
         item.addInformation(authoredStack, null, (List) tooltip, false);
         assertTrue(tooltip.contains("\u00a78mat:authored:naturalexceptions:copper"));
 
-        // 2. Generated carrier with composition
+        // 2. Generated carrier with state key
         CanonicalComposition comp = CanonicalComposition.builder()
             .add(CU, 80)
             .add(SN, 20)
             .build();
-        MaterialRef genRef = MaterialRef.generatedFrom(comp);
-        ItemStack genStack = ItemMaterialSample.createStack(genRef, comp);
+        CanonicalMaterialKey stateKey = CanonicalMaterialKey
+            .of(comp, MaterialPhase.SOLID, Microstructure.ANNEALED, ConditioningHistory.COLD_WORKED);
+        MaterialRef genRef = MaterialRef.generatedFrom(stateKey);
+        ItemStack genStack = ItemMaterialSample.createStack(genRef, stateKey);
         assertTrue(
             item.getItemStackDisplayName(genStack)
                 .startsWith("Material Sample (Generated "));
         List<String> genTooltip = new ArrayList<>();
         item.addInformation(genStack, null, (List) genTooltip, false);
         assertTrue(genTooltip.contains("\u00a78" + genRef.asString()));
+        assertTrue(genTooltip.contains("\u00a77Phase: solid"));
+        assertTrue(genTooltip.contains("\u00a77Microstructure: annealed"));
+        assertTrue(genTooltip.contains("\u00a77Conditioning: cold_worked"));
         assertTrue(genTooltip.contains("\u00a77Composition:"));
 
         // 3. Empty carrier
@@ -190,10 +277,21 @@ final class GeneratedMaterialPersistenceTest {
         // 4. Corrupted carrier
         ItemStack corruptStack = new ItemStack(item);
         NBTTagCompound corruptNbt = new NBTTagCompound();
-        corruptNbt.setInteger(MaterialCarrierNbtCodec.KEY_FORMAT, 1);
+        corruptNbt.setInteger(MaterialCarrierNbtCodec.KEY_FORMAT, 2);
         corruptNbt.setString(MaterialCarrierNbtCodec.KEY_MATERIAL_REF, "bad:ref");
         corruptStack.setTagCompound(corruptNbt);
         assertEquals("\u00a7cMaterial Sample (Corrupted)", item.getItemStackDisplayName(corruptStack));
         assertNull(ItemMaterialSample.getMaterialRef(corruptStack));
+
+        // 5. Unresolved authored carrier fails safely and visibly
+        MaterialRef unresolvedRef = MaterialRef.authored(ResourceId.of("naturalexceptions", "mythic_alloy_999"));
+        ItemStack unresolvedStack = ItemMaterialSample.createStack(unresolvedRef);
+        assertEquals(
+            "\u00a7cMaterial Sample (Unresolved Authored: mythic_alloy_999)",
+            item.getItemStackDisplayName(unresolvedStack));
+        List<String> unresolvedTooltip = new ArrayList<>();
+        item.addInformation(unresolvedStack, null, (List) unresolvedTooltip, false);
+        assertTrue(
+            unresolvedTooltip.contains("\u00a7cUnresolved authored material: naturalexceptions:mythic_alloy_999"));
     }
 }
