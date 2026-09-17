@@ -17,7 +17,7 @@ import naturalexceptions.minecraft.mixin.EntityLivingBaseAccessor;
  */
 public final class NEPlayerMovementHandler {
 
-    public static final double PROBE_DISTANCE = 0.15;
+    public static final double PROBE_DISTANCE = 0.25;
     public static final double STEP_HEIGHT = 0.6;
     public static final double JUMP_IMPULSE = 0.42;
     public static final double ADHESION_ACCELERATION = 0.04;
@@ -30,6 +30,57 @@ public final class NEPlayerMovementHandler {
     }
 
     private NEPlayerMovementHandler() {}
+
+    /**
+     * Applies a single gravity-relative jump impulse along localUp.
+     * Sets jump cooldown ticks and airborne state to guarantee exactly one impulse per jump.
+     */
+    public static void applyJump(EntityLivingBase entity) {
+        if (entity == null) {
+            return;
+        }
+
+        NEGravityService service = NEGravityService.global();
+        if (!service.isNonstandardGravityActive()) {
+            return;
+        }
+
+        GravitySample sample = service.sampleFor(entity);
+        Vector3d localUp = sample.localUp();
+
+        Vector3d jumpVec = localUp.multiply(JUMP_IMPULSE);
+        entity.motionX += jumpVec.x;
+        entity.motionY += jumpVec.y;
+        entity.motionZ += jumpVec.z;
+
+        boolean isSprinting = false;
+        try {
+            isSprinting = entity.isSprinting();
+        } catch (Throwable ignored) {
+            // Uninitialized test entity or mock
+        }
+
+        if (isSprinting) {
+            LocalEntityFrame frame = LocalEntityFrame.deriveFrom(sample, entity.rotationYaw);
+            Vector3d sprintBoost = frame.tangentForward()
+                .multiply(0.2);
+            entity.motionX += sprintBoost.x;
+            entity.motionY += sprintBoost.y;
+            entity.motionZ += sprintBoost.z;
+        }
+
+        if (entity instanceof EntityLivingBaseAccessor) {
+            ((EntityLivingBaseAccessor) entity).setJumpTicks(10);
+        }
+
+        entity.isAirBorne = true;
+        entity.onGround = false;
+        try {
+            net.minecraftforge.common.ForgeHooks.onLivingJump(entity);
+        } catch (Throwable ignored) {
+            // Forge event bus is not initialized during unit tests
+        }
+    }
 
     public static void handleMovement(EntityLivingBase entity, float strafe, float forward) {
         handleMovement(entity, strafe, forward, defaultCollisionProvider(entity));
@@ -66,21 +117,7 @@ public final class NEPlayerMovementHandler {
             jumpTicks = accessor.getJumpTicks();
         }
         if (isJumping && isGrounded && jumpTicks == 0) {
-            Vector3d jumpVec = localUp.multiply(JUMP_IMPULSE);
-            entity.motionX += jumpVec.x;
-            entity.motionY += jumpVec.y;
-            entity.motionZ += jumpVec.z;
-            if (entity.isSprinting()) {
-                Vector3d sprintBoost = frame.tangentForward()
-                    .multiply(0.2);
-                entity.motionX += sprintBoost.x;
-                entity.motionY += sprintBoost.y;
-                entity.motionZ += sprintBoost.z;
-            }
-            if (accessor != null) {
-                accessor.setJumpTicks(10);
-            }
-            entity.isAirBorne = true;
+            applyJump(entity);
             isGrounded = false;
         }
 
@@ -144,6 +181,16 @@ public final class NEPlayerMovementHandler {
                 entity.motionX -= cancel.x;
                 entity.motionY -= cancel.y;
                 entity.motionZ -= cancel.z;
+            }
+
+            // Cancel any outward radial motion while grounded unless jumping/airborne
+            // to permanently prevent launch-to-space escape velocity
+            double outwardVel = postVel.dot(localUp);
+            if (outwardVel > 0.0 && !entity.isAirBorne) {
+                Vector3d cancelOutward = localUp.multiply(outwardVel);
+                entity.motionX -= cancelOutward.x;
+                entity.motionY -= cancelOutward.y;
+                entity.motionZ -= cancelOutward.z;
             }
 
             // Apply ground friction to tangential velocity

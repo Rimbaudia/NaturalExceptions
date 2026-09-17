@@ -1,8 +1,10 @@
 package naturalexceptions.minecraft.gravity;
 
-import net.minecraft.client.Minecraft;
+import java.nio.FloatBuffer;
+
 import net.minecraft.entity.EntityLivingBase;
 
+import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 
 import cpw.mods.fml.relauncher.Side;
@@ -15,15 +17,15 @@ import naturalexceptions.core.gravity.Vector3d;
  * Client-side camera orientation handler for arbitrary local gravity.
  *
  * <p>
- * Decouples visual orientation from global world Y. Applies a smooth modelview
- * rotation aligning world UP with the player's smoothed {@code localUp}, eliminating
- * vanilla global-Y pitch gimbal lock and enabling smooth first-person viewing on
- * walls and ceilings.
+ * Decouples visual orientation from global world Y. Applies an exact orthonormal
+ * camera orientation matrix derived from the smoothed {@code GravityCameraFrame},
+ * completely eliminating gimbal lock, 180-degree upside-down flips, and visual snaps.
  */
 @SideOnly(Side.CLIENT)
 public final class NECameraHandler {
 
     private static final GravityCameraFrame CAMERA_FRAME = new GravityCameraFrame(Vector3d.UP, 0.15);
+    private static final FloatBuffer MATRIX_BUFFER = BufferUtils.createFloatBuffer(16);
 
     private NECameraHandler() {}
 
@@ -32,18 +34,16 @@ public final class NECameraHandler {
     }
 
     /**
-     * Applies the coordinate frame alignment rotation to the current OpenGL MODELVIEW matrix.
-     * Invoked at the end of {@code EntityRenderer.orientCamera()}.
+     * Applies the complete 3D orthonormal camera orientation to the OpenGL MODELVIEW matrix.
+     * Invoked from {@code MixinEntityRenderer.orientCamera()}.
      */
-    public static void applyAlignment(float partialTicks) {
+    public static void applyOrientation(EntityLivingBase viewEntity, float partialTicks) {
         NEGravityService service = NEGravityService.global();
         if (!service.isNonstandardGravityActive()) {
             CAMERA_FRAME.update(Vector3d.UP);
             return;
         }
 
-        Minecraft mc = Minecraft.getMinecraft();
-        EntityLivingBase viewEntity = mc.renderViewEntity;
         if (viewEntity == null) {
             return;
         }
@@ -52,26 +52,45 @@ public final class NECameraHandler {
         Vector3d targetUp = sample.localUp();
         CAMERA_FRAME.update(targetUp);
 
-        Vector3d currentUp = CAMERA_FRAME.currentUp();
-        Vector3d worldUp = Vector3d.UP;
+        float yaw = viewEntity.prevRotationYaw + (viewEntity.rotationYaw - viewEntity.prevRotationYaw) * partialTicks;
+        float mcPitch = viewEntity.prevRotationPitch
+            + (viewEntity.rotationPitch - viewEntity.prevRotationPitch) * partialTicks;
+        float mathPitch = -mcPitch;
 
-        double dot = currentUp.dot(worldUp);
-        if (dot > 0.9999) {
-            return; // Standard downward gravity, no extra rotation needed
-        }
+        GravityCameraFrame.CameraBasis basis = CAMERA_FRAME.computeCameraBasis(yaw, mathPitch);
 
-        if (dot < -0.9999) {
-            // Exactly inverted (ceiling): rotate 180 degrees around Z
-            GL11.glRotatef(180.0F, 0.0F, 0.0F, 1.0F);
-            return;
-        }
+        // Column-major FloatBuffer for OpenGL Modelview matrix:
+        // View matrix transforms world vectors to eye vectors via M * v:
+        // Row 0 = basis.right -> eye X
+        // Row 1 = basis.up -> eye Y
+        // Row 2 = -basis.look -> eye Z (into screen is -Z)
+        // Row 3 = (0, 0, 0, 1)
+        MATRIX_BUFFER.clear();
+        // Column 0
+        MATRIX_BUFFER.put((float) basis.right.x);
+        MATRIX_BUFFER.put((float) basis.up.x);
+        MATRIX_BUFFER.put((float) -basis.look.x);
+        MATRIX_BUFFER.put(0.0F);
 
-        // Axis-angle rotation from currentUp to worldUp
-        Vector3d rotAxis = currentUp.cross(worldUp)
-            .normalize();
-        double angleRad = Math.acos(Math.max(-1.0, Math.min(1.0, dot)));
-        float angleDeg = (float) Math.toDegrees(angleRad);
+        // Column 1
+        MATRIX_BUFFER.put((float) basis.right.y);
+        MATRIX_BUFFER.put((float) basis.up.y);
+        MATRIX_BUFFER.put((float) -basis.look.y);
+        MATRIX_BUFFER.put(0.0F);
 
-        GL11.glRotatef(angleDeg, (float) rotAxis.x, (float) rotAxis.y, (float) rotAxis.z);
+        // Column 2
+        MATRIX_BUFFER.put((float) basis.right.z);
+        MATRIX_BUFFER.put((float) basis.up.z);
+        MATRIX_BUFFER.put((float) -basis.look.z);
+        MATRIX_BUFFER.put(0.0F);
+
+        // Column 3
+        MATRIX_BUFFER.put(0.0F);
+        MATRIX_BUFFER.put(0.0F);
+        MATRIX_BUFFER.put(0.0F);
+        MATRIX_BUFFER.put(1.0F);
+        MATRIX_BUFFER.flip();
+
+        GL11.glMultMatrix(MATRIX_BUFFER);
     }
 }

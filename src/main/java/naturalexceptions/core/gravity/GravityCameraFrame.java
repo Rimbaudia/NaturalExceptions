@@ -19,6 +19,8 @@ public final class GravityCameraFrame {
     public static final double DEFAULT_SMOOTHING_FACTOR = 0.15;
 
     private Vector3d currentUp;
+    private Vector3d currentForward;
+    private Vector3d currentRight;
     private final double smoothingFactor;
 
     public GravityCameraFrame(Vector3d initialUp, double smoothingFactor) {
@@ -26,6 +28,27 @@ public final class GravityCameraFrame {
         Vector3d norm = initialUp.normalize();
         this.currentUp = norm.lengthSquared() > 1e-6 ? norm : Vector3d.UP;
         this.smoothingFactor = Math.max(0.01, Math.min(1.0, smoothingFactor));
+
+        // Initialize basis: align standard (0, 0, 1) and (1, 0, 0) with currentUp
+        Vector3d worldUp = Vector3d.UP;
+        double dot = worldUp.dot(this.currentUp);
+        if (dot > 0.99999) {
+            this.currentForward = new Vector3d(0.0, 0.0, 1.0);
+            this.currentRight = new Vector3d(1.0, 0.0, 0.0);
+        } else if (dot < -0.99999) {
+            this.currentForward = new Vector3d(0.0, 0.0, 1.0);
+            this.currentRight = new Vector3d(-1.0, 0.0, 0.0);
+        } else {
+            Vector3d axis = worldUp.cross(this.currentUp)
+                .normalize();
+            double angle = Math.acos(Math.max(-1.0, Math.min(1.0, dot)));
+            this.currentForward = LocalEntityFrame.rotateVector(new Vector3d(0.0, 0.0, 1.0), axis, angle)
+                .normalize();
+            this.currentRight = this.currentUp.cross(this.currentForward)
+                .normalize();
+            this.currentForward = this.currentRight.cross(this.currentUp)
+                .normalize();
+        }
     }
 
     public GravityCameraFrame(Vector3d initialUp) {
@@ -40,50 +63,118 @@ public final class GravityCameraFrame {
         return currentUp;
     }
 
+    public Vector3d currentForward() {
+        return currentForward;
+    }
+
+    public Vector3d currentRight() {
+        return currentRight;
+    }
+
     public double smoothingFactor() {
         return smoothingFactor;
     }
 
     /**
      * Steps the camera frame toward the target local-up direction.
-     * Uses spherical linear interpolation (SLERP) so that camera roll and orientation
-     * change smoothly without snapping.
+     * Uses parallel transport along the geodesic rotation so that orientation and roll
+     * evolve smoothly without accumulating twist or snapping 180 degrees.
      */
     public void update(Vector3d targetUp) {
         if (targetUp == null || targetUp.lengthSquared() < 1e-6) {
             return;
         }
         Vector3d target = targetUp.normalize();
-        this.currentUp = slerp(this.currentUp, target, smoothingFactor);
+        double dot = currentUp.dot(target);
+        if (dot > 0.999999) {
+            return;
+        }
+
+        Vector3d rotAxis;
+        double angle;
+        if (dot < -0.999999) {
+            rotAxis = currentRight;
+            angle = Math.PI * smoothingFactor;
+        } else {
+            rotAxis = currentUp.cross(target)
+                .normalize();
+            angle = Math.acos(Math.max(-1.0, Math.min(1.0, dot))) * smoothingFactor;
+        }
+
+        this.currentUp = LocalEntityFrame.rotateVector(this.currentUp, rotAxis, angle)
+            .normalize();
+        this.currentForward = LocalEntityFrame.rotateVector(this.currentForward, rotAxis, angle)
+            .normalize();
+        this.currentRight = this.currentUp.cross(this.currentForward)
+            .normalize();
+        this.currentForward = this.currentRight.cross(this.currentUp)
+            .normalize();
     }
 
     /**
      * Calculates the 3D camera look direction given local yaw and pitch (in degrees).
-     * Local yaw rotates around currentUp.
-     * Local pitch rotates up/down relative to the local horizon plane.
-     * Pitch can safely approach or pass +/- 90 degrees without global gimbal lock
-     * because the reference frame is aligned with currentUp.
+     * Local yaw rotates around currentUp (yaw 0 = forward, 90 = right).
+     * Local pitch tilts up/down relative to the local horizon plane (-90 = up, +90 = down).
      */
     public Vector3d computeLookDirection(double localYawDegrees, double localPitchDegrees) {
         double yawRad = Math.toRadians(localYawDegrees);
         double pitchRad = Math.toRadians(localPitchDegrees);
 
-        // Find an arbitrary reference vector orthogonal to currentUp
-        Vector3d refAxis = Math.abs(currentUp.y) < 0.9 ? Vector3d.UP : new Vector3d(1, 0, 0);
-        Vector3d localRight = currentUp.cross(refAxis)
-            .normalize();
-        Vector3d localForward = localRight.cross(currentUp)
+        // Vanilla Minecraft heading: yaw 0 = forward, yaw 90 = -X (right/west in vanilla)
+        Vector3d fwdYaw = currentForward.multiply(Math.cos(yawRad))
+            .subtract(currentRight.multiply(Math.sin(yawRad)))
             .normalize();
 
-        // Rotate localForward around currentUp by yaw
-        Vector3d horizontalLook = localForward.multiply(Math.cos(yawRad))
-            .add(localRight.multiply(Math.sin(yawRad)))
-            .normalize();
-
-        // Elevate by pitch relative to horizon (cos(pitch)*horiz + sin(pitch)*currentUp)
-        return horizontalLook.multiply(Math.cos(pitchRad))
+        // Elevate by pitch: positive pitch looks up toward zenith, negative looks down toward nadir
+        return fwdYaw.multiply(Math.cos(pitchRad))
             .add(currentUp.multiply(Math.sin(pitchRad)))
             .normalize();
+    }
+
+    /**
+     * Computes the complete 3D camera orthonormal basis (right, up, look) from yaw and pitch.
+     * Guaranteed right-handed with determinant +1.
+     */
+    public CameraBasis computeCameraBasis(double localYawDegrees, double localPitchDegrees) {
+        double yawRad = Math.toRadians(localYawDegrees);
+        double pitchRad = Math.toRadians(localPitchDegrees);
+
+        Vector3d fwdYaw = currentForward.multiply(Math.cos(yawRad))
+            .subtract(currentRight.multiply(Math.sin(yawRad)))
+            .normalize();
+
+        Vector3d look = fwdYaw.multiply(Math.cos(pitchRad))
+            .add(currentUp.multiply(Math.sin(pitchRad)))
+            .normalize();
+
+        // Screen right is the viewer's right ear on the local tangent plane:
+        // fwdYaw x currentUp is always strictly orthogonal to both and non-zero for any pitch
+        Vector3d right = fwdYaw.cross(currentUp)
+            .normalize();
+
+        // Screen up: right x look
+        Vector3d screenUp = right.cross(look)
+            .normalize();
+
+        return new CameraBasis(right, screenUp, look);
+    }
+
+    public static final class CameraBasis {
+
+        public final Vector3d right;
+        public final Vector3d up;
+        public final Vector3d look;
+
+        public CameraBasis(Vector3d right, Vector3d up, Vector3d look) {
+            this.right = right;
+            this.up = up;
+            this.look = look;
+        }
+
+        public double determinant() {
+            Vector3d back = look.negate();
+            return right.dot(up.cross(back));
+        }
     }
 
     /**
@@ -93,14 +184,12 @@ public final class GravityCameraFrame {
         double dot = start.dot(end);
         dot = Math.max(-1.0, Math.min(1.0, dot));
 
-        // If almost identical, direct linear interpolation to avoid numerical instability
         if (dot > 0.9995) {
             return start.multiply(1.0 - t)
                 .add(end.multiply(t))
                 .normalize();
         }
 
-        // If opposing vectors, pick an arbitrary perpendicular axis
         if (dot < -0.9995) {
             Vector3d ortho = Math.abs(start.y) < 0.9 ? start.cross(Vector3d.UP) : start.cross(new Vector3d(1, 0, 0));
             ortho = ortho.normalize();

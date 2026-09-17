@@ -34,6 +34,7 @@ public abstract class MixinEntityPlayer {
         }
         if (NEGravityService.global()
             .isNonstandardGravityActive()) {
+            NEPlayerMovementHandler.applyJump(player);
             ci.cancel();
         }
     }

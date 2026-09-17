@@ -745,4 +745,287 @@ final class RuntimeGravityLocomotionTest {
             assertTrue(r < 10.8, "Radial distance must not escape into space, r was: " + r + " at tick " + tick);
         }
     }
+
+    @Test
+    void standardGravityUsesVanillaMovementPath() {
+        standardGravityPreservesVanillaMovementPath();
+    }
+
+    @Test
+    void forwardInputMovesAlongProjectedViewForward() {
+        // Floor (-Y gravity, local up is +Y)
+        GravitySample floorSample = GravitySample.of(new Vector3d(0, -0.08, 0));
+        Vector3d viewLookFloor = new Vector3d(0.5, -0.2, 0.8).normalize();
+        LocalEntityFrame floorFrame = LocalEntityFrame.deriveFromView(floorSample, viewLookFloor, null);
+
+        Vector3d fwdInputFloor = floorFrame.mapInput(1.0, 0.0);
+        Vector3d projLookFloor = viewLookFloor.subtract(
+            floorSample.localUp()
+                .multiply(viewLookFloor.dot(floorSample.localUp())))
+            .normalize();
+        assertTrue(
+            fwdInputFloor.dot(projLookFloor) > 0.99,
+            "Forward input must move strictly along projected view forward on floor");
+
+        Vector3d backInputFloor = floorFrame.mapInput(-1.0, 0.0);
+        assertTrue(
+            backInputFloor.dot(projLookFloor) < -0.99,
+            "Backward input must move opposite to projected view forward on floor");
+
+        // Wall (+X gravity, local up is -X)
+        GravitySample wallSample = GravitySample.of(new Vector3d(0.08, 0, 0));
+        Vector3d viewLookWall = new Vector3d(0.2, 0.7, 0.4).normalize();
+        LocalEntityFrame wallFrame = LocalEntityFrame.deriveFromView(wallSample, viewLookWall, null);
+
+        Vector3d fwdInputWall = wallFrame.mapInput(1.0, 0.0);
+        Vector3d projLookWall = viewLookWall.subtract(
+            wallSample.localUp()
+                .multiply(viewLookWall.dot(wallSample.localUp())))
+            .normalize();
+        assertTrue(
+            fwdInputWall.dot(projLookWall) > 0.99,
+            "Forward input must move strictly along projected view forward on wall");
+
+        // Ceiling (+Y gravity, local up is -Y)
+        GravitySample ceilingSample = GravitySample.of(new Vector3d(0, 0.08, 0));
+        Vector3d viewLookCeiling = new Vector3d(-0.3, 0.5, -0.6).normalize();
+        LocalEntityFrame ceilingFrame = LocalEntityFrame.deriveFromView(ceilingSample, viewLookCeiling, null);
+
+        Vector3d fwdInputCeiling = ceilingFrame.mapInput(1.0, 0.0);
+        Vector3d projLookCeiling = viewLookCeiling.subtract(
+            ceilingSample.localUp()
+                .multiply(viewLookCeiling.dot(ceilingSample.localUp())))
+            .normalize();
+        assertTrue(
+            fwdInputCeiling.dot(projLookCeiling) > 0.99,
+            "Forward input must move strictly along projected view forward on ceiling");
+    }
+
+    @Test
+    void localFrameMaintainsConsistentHandedness() {
+        Vector3d[] testUps = { Vector3d.UP, Vector3d.DOWN, new Vector3d(1, 0, 0), new Vector3d(-1, 0, 0),
+            new Vector3d(0, 0, 1), new Vector3d(0, 0, -1), new Vector3d(1, 1, 0).normalize(),
+            new Vector3d(0, 1, 1).normalize(), new Vector3d(1, 1, 1).normalize() };
+
+        for (Vector3d up : testUps) {
+            GravitySample sample = GravitySample.of(
+                up.negate()
+                    .multiply(0.08));
+            for (double yaw = 0; yaw < 360; yaw += 45) {
+                LocalEntityFrame frame = LocalEntityFrame.deriveFrom(sample, yaw);
+                assertEquals(
+                    1.0,
+                    frame.basisDeterminant(),
+                    1e-5,
+                    "Basis determinant must be +1.0 for up=" + up + " yaw=" + yaw);
+            }
+        }
+    }
+
+    @Test
+    void localFrameDoesNotFlipForwardAcrossWallTransition() {
+        // Continuous walk from top pole (0, 1, 0) to side wall (0, 0, 1)
+        int steps = 50;
+        Vector3d prevFwd = null;
+
+        for (int i = 0; i <= steps; i++) {
+            double angle = (Math.PI * 0.5 * i) / steps;
+            Vector3d up = new Vector3d(0, Math.cos(angle), Math.sin(angle)).normalize();
+            GravitySample sample = GravitySample.of(
+                up.negate()
+                    .multiply(0.08));
+            LocalEntityFrame frame = LocalEntityFrame.deriveFrom(sample, 0.0);
+
+            if (prevFwd != null) {
+                double dot = frame.tangentForward()
+                    .dot(prevFwd);
+                assertTrue(
+                    dot > 0.95,
+                    "Tangent forward must change smoothly without 180-degree flip: step " + i + " dot=" + dot);
+            }
+            prevFwd = frame.tangentForward();
+        }
+    }
+
+    @Test
+    void cameraPreservesStableRollAcrossTopSideBottom() {
+        GravityCameraFrame camera = new GravityCameraFrame(Vector3d.UP, 0.1);
+
+        // Circumnavigate from top (+Y) through side (+X) to bottom (-Y)
+        int steps = 72;
+        for (int i = 0; i <= steps; i++) {
+            double angle = (Math.PI * i) / steps;
+            Vector3d targetUp = new Vector3d(Math.sin(angle), Math.cos(angle), 0.0).normalize();
+            camera.update(targetUp);
+
+            assertFalse(Double.isNaN(camera.currentUp().x));
+            assertFalse(Double.isNaN(camera.currentUp().y));
+            assertFalse(Double.isNaN(camera.currentUp().z));
+            assertEquals(
+                1.0,
+                camera.currentUp()
+                    .length(),
+                EPSILON);
+
+            GravityCameraFrame.CameraBasis basis = camera.computeCameraBasis(0.0, 0.0);
+            assertEquals(1.0, basis.determinant(), 1e-5, "Camera basis determinant must remain strictly +1.0");
+        }
+    }
+
+    @Test
+    void cameraDoesNotChooseOpposite180DegreeRollSolution() {
+        Vector3d[] surfaceUps = { Vector3d.UP, new Vector3d(1, 0, 0), new Vector3d(-1, 0, 0), new Vector3d(0, 0, 1),
+            new Vector3d(0, 0, -1), Vector3d.DOWN };
+
+        for (Vector3d up : surfaceUps) {
+            GravityCameraFrame camera = new GravityCameraFrame(up, 1.0);
+            camera.update(up);
+
+            for (double yaw = 0; yaw < 360; yaw += 90) {
+                GravityCameraFrame.CameraBasis basis = camera.computeCameraBasis(yaw, 0.0);
+
+                // At pitch 0, screen up must strictly align with currentUp (dot == 1.0, never -1.0)
+                double upAlignment = basis.up.dot(camera.currentUp());
+                assertEquals(
+                    1.0,
+                    upAlignment,
+                    1e-4,
+                    "Screen up must point along localUp (not upside down) for up=" + up + " yaw=" + yaw);
+
+                // Determinant must be +1.0 (strictly right-handed, no mirror inversion)
+                assertEquals(
+                    1.0,
+                    basis.determinant(),
+                    1e-5,
+                    "Basis must have determinant +1.0 for up=" + up + " yaw=" + yaw);
+            }
+        }
+    }
+
+    @Test
+    void jumpInputProducesSingleLocalUpImpulse() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0)); // local up is -X
+
+        LocomotionTestPlayer player = LocomotionTestPlayer.create();
+        player.setPosition(9.7, 64.0, 0.0);
+        player.motionX = 0.0;
+        player.motionY = 0.0;
+        player.motionZ = 0.0;
+
+        NEPlayerMovementHandler.applyJump(player);
+
+        assertEquals(
+            -NEPlayerMovementHandler.JUMP_IMPULSE,
+            player.motionX,
+            EPSILON,
+            "Jump impulse must be along localUp (-X)");
+        assertEquals(0.0, player.motionY, EPSILON);
+        assertEquals(0.0, player.motionZ, EPSILON);
+        assertTrue(player.isAirBorne, "Player must be set to airborne");
+        assertFalse(player.onGround, "Player must not be on ground immediately after jump");
+        assertEquals(10, player.getJumpTicks(), "Jump ticks cooldown must be set to 10");
+    }
+
+    @Test
+    void airbornePlayerDoesNotReceiveRepeatedJumpImpulse() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0)); // local up is -X
+
+        LocomotionTestPlayer player = LocomotionTestPlayer.create();
+        player.setPosition(9.7, 64.0, 0.0);
+        player.setJumping(true);
+
+        AxisAlignedBB wallBox = AxisAlignedBB.getBoundingBox(10.0, 50.0, -10.0, 11.0, 80.0, 10.0);
+        NEPlayerMovementHandler.CollisionProvider provider = (e, bb) -> {
+            if (bb.intersectsWith(wallBox)) {
+                return Collections.singletonList(wallBox);
+            }
+            return Collections.emptyList();
+        };
+        player.setCollisionProvider(provider);
+
+        // Tick 1: Grounded, jumps
+        NEPlayerMovementHandler.handleMovement(player, 0.0F, 0.0F, provider);
+        double velAfterJump = player.motionX;
+        assertTrue(velAfterJump < -0.3, "First tick must jump along -X");
+
+        // Tick 2: Airborne (jumpTicks > 0 or not grounded). Next handleMovement call must NOT add another impulse
+        NEPlayerMovementHandler.handleMovement(player, 0.0F, 0.0F, provider);
+        assertTrue(player.motionX >= velAfterJump - 0.05, "Airborne player must not receive repeated jump impulse");
+    }
+
+    @Test
+    void localStepCannotAccumulateRadialOutwardVelocity() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0)); // local up is -X
+
+        LocomotionTestPlayer player = LocomotionTestPlayer.create();
+        player.setPosition(9.7, 64.0, 0.0);
+        Vector3d localUp = new Vector3d(-1, 0, 0);
+
+        AxisAlignedBB wallBox = AxisAlignedBB.getBoundingBox(10.0, 50.0, -10.0, 11.0, 80.0, 20.0);
+        AxisAlignedBB obstacle = AxisAlignedBB.getBoundingBox(9.6, 50.0, 0.5, 10.0, 80.0, 20.0);
+        NEPlayerMovementHandler.CollisionProvider provider = (e, bb) -> {
+            List<AxisAlignedBB> boxes = new java.util.ArrayList<>();
+            if (bb.intersectsWith(wallBox)) boxes.add(wallBox);
+            if (bb.intersectsWith(obstacle)) boxes.add(obstacle);
+            return boxes;
+        };
+        player.setCollisionProvider(provider);
+
+        // Perform step over obstacle
+        boolean stepped = NEPlayerMovementHandler.attemptLocalStep(player, 0.0, 0.0, 0.3, localUp, 0.6, provider);
+        assertTrue(stepped, "Obstacle must be stepped over");
+        assertEquals(0.0, player.motionX, EPSILON, "Step must zero out motion along localUp");
+        assertEquals(0.0, player.motionY, EPSILON);
+        assertEquals(0.0, player.motionZ, EPSILON);
+    }
+
+    @Test
+    void supportTransitionsWithoutGroundingThrash() {
+        // Radial body with center at (0, 100, 0), radius 10
+        Vector3d center = new Vector3d(0, 100, 0);
+        RadialGravitySource body = new RadialGravitySource(center, 0.08, 10.0, 40.0);
+        service.setActiveField(body);
+
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+
+        // Curved spherical shell at R=10
+        NEPlayerMovementHandler.CollisionProvider provider = (e, bb) -> {
+            List<AxisAlignedBB> boxes = new java.util.ArrayList<>();
+            int minX = (int) Math.floor(bb.minX);
+            int maxX = (int) Math.ceil(bb.maxX);
+            int minY = (int) Math.floor(bb.minY);
+            int maxY = (int) Math.ceil(bb.maxY);
+            int minZ = (int) Math.floor(bb.minZ);
+            int maxZ = (int) Math.ceil(bb.maxZ);
+            for (int x = minX; x <= maxX; x++) {
+                for (int y = minY; y <= maxY; y++) {
+                    for (int z = minZ; z <= maxZ; z++) {
+                        double cx = x + 0.5 - center.x;
+                        double cy = y + 0.5 - center.y;
+                        double cz = z + 0.5 - center.z;
+                        if (cx * cx + cy * cy + cz * cz <= 10.0 * 10.0) {
+                            boxes.add(AxisAlignedBB.getBoundingBox(x, y, z, x + 1, y + 1, z + 1));
+                        }
+                    }
+                }
+            }
+            return boxes;
+        };
+        LocomotionTestPlayer player = LocomotionTestPlayer.create();
+        player.setPosition(0.0, 110.0, 0.0);
+        player.setCollisionProvider(provider);
+
+        // Walk across the curvature transition over 30 consecutive ticks
+        int groundedTicks = 0;
+        for (int tick = 0; tick < 30; tick++) {
+            NEPlayerMovementHandler.handleMovement(player, 0.0F, 1.0F, provider);
+            if (player.onGround) {
+                groundedTicks++;
+            }
+        }
+        assertTrue(
+            groundedTicks >= 28,
+            "Player must remain grounded without thrash across transition (grounded " + groundedTicks
+                + " of 30 ticks)");
+    }
 }

@@ -37,30 +37,85 @@ public final class LocalEntityFrame {
     }
 
     public static LocalEntityFrame deriveFrom(GravitySample sample, double headingYawDegrees) {
-        Vector3d down = sample.localDown();
         Vector3d up = sample.localUp();
+        Vector3d down = sample.localDown();
 
-        double yawRad = Math.toRadians(-headingYawDegrees);
+        double yawRad = Math.toRadians(headingYawDegrees);
+        // Vanilla Minecraft standard ground heading (yaw 0 = +Z, yaw 90 = -X)
+        Vector3d standardForward = new Vector3d(-Math.sin(yawRad), 0.0, Math.cos(yawRad));
 
-        // Find reference axis orthogonal to up
-        Vector3d refAxis = Math.abs(up.y) < 0.9 ? Vector3d.UP : new Vector3d(0, 0, 1);
-        Vector3d rightRef = refAxis.cross(up)
-            .normalize();
-        if (rightRef.lengthSquared() < 1e-6) {
-            rightRef = new Vector3d(1, 0, 0).cross(up)
+        // Rotate standard forward vector from UP (0, 1, 0) to localUp using minimal geodesic rotation
+        Vector3d worldUp = Vector3d.UP;
+        Vector3d fwd;
+        double dot = worldUp.dot(up);
+        if (dot > 0.99999) {
+            fwd = standardForward;
+        } else if (dot < -0.99999) {
+            // Inverted ceiling: 180-degree geodesic continuation around X
+            fwd = new Vector3d(standardForward.x, 0.0, -standardForward.z);
+        } else {
+            Vector3d rotAxis = worldUp.cross(up)
                 .normalize();
+            double angle = Math.acos(Math.max(-1.0, Math.min(1.0, dot)));
+            fwd = rotateVector(standardForward, rotAxis, angle);
         }
-        Vector3d forwardRef = up.cross(rightRef)
+
+        // Project onto tangent plane and normalize
+        Vector3d tangentProj = fwd.subtract(up.multiply(fwd.dot(up)));
+        if (tangentProj.lengthSquared() > 1e-4) {
+            fwd = tangentProj.normalize();
+        } else {
+            fwd = arbitraryTangent(up);
+        }
+
+        // Canonical right-handed convention:
+        // right = up x forward
+        // check: right x up = forward, forward x right = up, det = +1
+        Vector3d right = up.cross(fwd)
             .normalize();
 
-        // Rotate by yaw around up
-        Vector3d forward = forwardRef.multiply(Math.cos(yawRad))
-            .add(rightRef.multiply(Math.sin(yawRad)))
-            .normalize();
-        Vector3d right = forward.cross(up)
-            .normalize();
+        return new LocalEntityFrame(down, up, fwd, right, sample.sourceId());
+    }
 
-        return new LocalEntityFrame(down, up, forward, right, sample.sourceId());
+    public static LocalEntityFrame deriveFromView(GravitySample sample, Vector3d viewForward,
+        Vector3d fallbackForward) {
+        Vector3d up = sample.localUp();
+        Vector3d down = sample.localDown();
+
+        Vector3d proj = viewForward != null ? viewForward.subtract(up.multiply(viewForward.dot(up))) : null;
+        Vector3d fwd;
+        if (proj != null && proj.lengthSquared() > 1e-4) {
+            fwd = proj.normalize();
+        } else if (fallbackForward != null) {
+            Vector3d fbProj = fallbackForward.subtract(up.multiply(fallbackForward.dot(up)));
+            fwd = fbProj.lengthSquared() > 1e-4 ? fbProj.normalize() : arbitraryTangent(up);
+        } else {
+            fwd = arbitraryTangent(up);
+        }
+
+        Vector3d right = up.cross(fwd)
+            .normalize();
+        return new LocalEntityFrame(down, up, fwd, right, sample.sourceId());
+    }
+
+    private static Vector3d arbitraryTangent(Vector3d up) {
+        Vector3d ref = Math.abs(up.y) < 0.9 ? Vector3d.UP : new Vector3d(1.0, 0.0, 0.0);
+        return ref.cross(up)
+            .normalize();
+    }
+
+    public static Vector3d rotateVector(Vector3d v, Vector3d unitAxis, double angleRad) {
+        double cos = Math.cos(angleRad);
+        double sin = Math.sin(angleRad);
+        Vector3d cross = unitAxis.cross(v);
+        double dot = unitAxis.dot(v);
+        return v.multiply(cos)
+            .add(cross.multiply(sin))
+            .add(unitAxis.multiply(dot * (1.0 - cos)));
+    }
+
+    public double basisDeterminant() {
+        return tangentRight.dot(localUp.cross(tangentForward));
     }
 
     public Vector3d localDown() {
