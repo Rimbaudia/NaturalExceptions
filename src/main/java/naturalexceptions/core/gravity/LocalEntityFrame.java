@@ -40,18 +40,23 @@ public final class LocalEntityFrame {
         Vector3d down = sample.localDown();
         Vector3d up = sample.localUp();
 
-        // Convert yaw to reference direction vector in horizontal XZ plane
         double yawRad = Math.toRadians(-headingYawDegrees);
-        Vector3d headingRef = new Vector3d(Math.sin(yawRad), 0.0, Math.cos(yawRad));
 
-        // Project heading onto plane orthogonal to up
-        Vector3d projected = headingRef.subtract(up.multiply(headingRef.dot(up)));
-        if (projected.lengthSquared() < 1e-6) {
-            // Degenerate case: heading is nearly collinear with up; choose fallback reference
-            Vector3d altRef = Math.abs(up.y) < 0.9 ? Vector3d.UP : new Vector3d(1, 0, 0);
-            projected = altRef.subtract(up.multiply(altRef.dot(up)));
+        // Find reference axis orthogonal to up
+        Vector3d refAxis = Math.abs(up.y) < 0.9 ? Vector3d.UP : new Vector3d(0, 0, 1);
+        Vector3d rightRef = refAxis.cross(up)
+            .normalize();
+        if (rightRef.lengthSquared() < 1e-6) {
+            rightRef = new Vector3d(1, 0, 0).cross(up)
+                .normalize();
         }
-        Vector3d forward = projected.normalize();
+        Vector3d forwardRef = up.cross(rightRef)
+            .normalize();
+
+        // Rotate by yaw around up
+        Vector3d forward = forwardRef.multiply(Math.cos(yawRad))
+            .add(rightRef.multiply(Math.sin(yawRad)))
+            .normalize();
         Vector3d right = forward.cross(up)
             .normalize();
 
