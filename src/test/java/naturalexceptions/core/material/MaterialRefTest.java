@@ -105,7 +105,9 @@ final class MaterialRefTest {
     @Test
     void rejectsNullConstruction() {
         assertThrows(IllegalArgumentException.class, () -> MaterialRef.authored((ResourceId) null));
+        assertThrows(IllegalArgumentException.class, () -> MaterialRef.authored((MaterialId) null));
         assertThrows(IllegalArgumentException.class, () -> MaterialRef.generated((DeterministicId) null));
-        assertThrows(IllegalArgumentException.class, () -> MaterialRef.generatedFrom(null));
+        assertThrows(IllegalArgumentException.class, () -> MaterialRef.generatedFrom((CanonicalComposition) null));
+        assertThrows(IllegalArgumentException.class, () -> MaterialRef.generatedFrom((CanonicalMaterialKey) null));
     }
 }

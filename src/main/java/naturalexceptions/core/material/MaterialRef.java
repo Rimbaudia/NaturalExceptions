@@ -67,12 +67,28 @@ public final class MaterialRef implements Comparable<MaterialRef> {
         return new MaterialRef(MaterialRefKind.GENERATED, null, id);
     }
 
+    public static MaterialRef generatedFrom(CanonicalMaterialKey key) {
+        if (key == null) {
+            throw new IllegalArgumentException("CanonicalMaterialKey cannot be null");
+        }
+        DeterministicId detId = DeterministicId.derive(
+            "material",
+            key.composition()
+                .canonicalString(),
+            key.phase()
+                .id(),
+            key.microstructure()
+                .id(),
+            key.conditioning()
+                .id());
+        return generated(detId);
+    }
+
     public static MaterialRef generatedFrom(CanonicalComposition composition) {
         if (composition == null) {
             throw new IllegalArgumentException("CanonicalComposition cannot be null");
         }
-        DeterministicId detId = DeterministicId.derive("material", composition.canonicalString());
-        return generated(detId);
+        return generatedFrom(CanonicalMaterialKey.of(composition));
     }
 
     public static MaterialRef parse(String str) {

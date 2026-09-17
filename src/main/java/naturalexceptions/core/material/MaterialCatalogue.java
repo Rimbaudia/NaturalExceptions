@@ -13,7 +13,7 @@ public final class MaterialCatalogue {
     private final Map<MaterialId, MaterialDefinition> definitions = new LinkedHashMap<>();
     private final Map<MaterialRef, MaterialDefinition> authoredByRef = new HashMap<>();
     private final Map<MaterialRef, GeneratedMaterial> generatedByRef = new HashMap<>();
-    private final Map<CanonicalComposition, GeneratedMaterial> generatedByComp = new HashMap<>();
+    private final Map<CanonicalMaterialKey, GeneratedMaterial> generatedByKey = new HashMap<>();
 
     public synchronized void register(MaterialDefinition definition) {
         Objects.requireNonNull(definition, "definition");
@@ -45,17 +45,22 @@ public final class MaterialCatalogue {
         return getAuthored(ref);
     }
 
-    public synchronized GeneratedMaterial getOrRegisterGenerated(CanonicalComposition composition) {
-        Objects.requireNonNull(composition, "composition");
-        GeneratedMaterial existing = generatedByComp.get(composition);
+    public synchronized GeneratedMaterial getOrRegisterGenerated(CanonicalMaterialKey key) {
+        Objects.requireNonNull(key, "key");
+        GeneratedMaterial existing = generatedByKey.get(key);
         if (existing != null) {
             return existing;
         }
-        MaterialRef ref = MaterialRef.generatedFrom(composition);
-        GeneratedMaterial created = new GeneratedMaterial(ref, composition);
+        MaterialRef ref = MaterialRef.generatedFrom(key);
+        GeneratedMaterial created = new GeneratedMaterial(ref, key);
         generatedByRef.put(ref, created);
-        generatedByComp.put(composition, created);
+        generatedByKey.put(key, created);
         return created;
+    }
+
+    public synchronized GeneratedMaterial getOrRegisterGenerated(CanonicalComposition composition) {
+        Objects.requireNonNull(composition, "composition");
+        return getOrRegisterGenerated(CanonicalMaterialKey.of(composition));
     }
 
     public synchronized GeneratedMaterial getGenerated(MaterialRef ref) {
@@ -80,7 +85,7 @@ public final class MaterialCatalogue {
 
     public synchronized void clearGenerated() {
         generatedByRef.clear();
-        generatedByComp.clear();
+        generatedByKey.clear();
     }
 
     public synchronized Map<MaterialId, MaterialDefinition> snapshot() {
