@@ -3,6 +3,9 @@ package naturalexceptions;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
+import naturalexceptions.content.BuiltinContent;
+import naturalexceptions.minecraft.registry.NEBlocks;
+import naturalexceptions.minecraft.registry.NEItems;
 
 @Mod(
     modid = NaturalExceptions.MOD_ID,
@@ -15,7 +18,11 @@ public final class NaturalExceptions {
     public static final String MOD_NAME = "Natural Exceptions";
 
     @Mod.EventHandler
-    public void preInit(FMLPreInitializationEvent event) {}
+    public void preInit(FMLPreInitializationEvent event) {
+        BuiltinContent.register();
+        NEItems.register();
+        NEBlocks.register();
+    }
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {}
