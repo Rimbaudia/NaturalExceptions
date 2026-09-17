@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Objects;
 
 import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.projectile.EntityArrow;
 import net.minecraftforge.event.entity.living.LivingEvent;
 
@@ -30,6 +31,13 @@ public final class NEGravityTickHandler {
     @SubscribeEvent
     public void onLivingUpdate(LivingEvent.LivingUpdateEvent event) {
         if (event == null || event.entityLiving == null) {
+            return;
+        }
+        // Players have their gravity, locomotion, grounding, and contact handled
+        // exclusively by NEPlayerMovementHandler under nonstandard gravity.
+        // NEGravityTickHandler must never touch players to avoid duplicate gravity
+        // and un-cancelled vanilla-compensation velocity injection.
+        if (event.entityLiving instanceof EntityPlayer) {
             return;
         }
         service.applyGravity(event.entityLiving);

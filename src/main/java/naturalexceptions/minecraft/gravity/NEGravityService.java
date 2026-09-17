@@ -73,6 +73,16 @@ public final class NEGravityService {
         this.enabled = enabled;
     }
 
+    private boolean debugLogging = false;
+
+    public synchronized boolean isDebugLogging() {
+        return debugLogging;
+    }
+
+    public synchronized void setDebugLogging(boolean debugLogging) {
+        this.debugLogging = debugLogging;
+    }
+
     public synchronized boolean isNonstandardGravityActive() {
         if (!enabled) {
             return false;

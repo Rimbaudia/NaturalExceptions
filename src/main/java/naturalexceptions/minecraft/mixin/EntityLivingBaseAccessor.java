@@ -10,4 +10,10 @@ public interface EntityLivingBaseAccessor {
 
     @Accessor("isJumping")
     boolean isJumping();
+
+    @Accessor("jumpTicks")
+    int getJumpTicks();
+
+    @Accessor("jumpTicks")
+    void setJumpTicks(int ticks);
 }

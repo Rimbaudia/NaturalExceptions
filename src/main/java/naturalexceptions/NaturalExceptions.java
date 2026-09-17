@@ -8,6 +8,7 @@ import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 import naturalexceptions.content.BuiltinContent;
+import naturalexceptions.minecraft.gravity.CommandDebugGravity;
 import naturalexceptions.minecraft.gravity.CommandDebugGravityBody;
 import naturalexceptions.minecraft.gravity.NEGravityService;
 import naturalexceptions.minecraft.gravity.NEGravityTickHandler;
@@ -55,6 +56,7 @@ public final class NaturalExceptions {
     public void serverStarting(FMLServerStartingEvent event) {
         if (event != null) {
             event.registerServerCommand(new CommandDebugGravityBody());
+            event.registerServerCommand(new CommandDebugGravity());
         }
     }
 

@@ -15,10 +15,25 @@ public abstract class MixinEntityPlayer {
 
     @Inject(method = "moveEntityWithHeading", at = @At("HEAD"), cancellable = true)
     private void naturalexceptions$moveEntityWithHeading(float strafe, float forward, CallbackInfo ci) {
+        EntityPlayer player = (EntityPlayer) (Object) this;
+        if (player.capabilities.isFlying) {
+            return;
+        }
         if (NEGravityService.global()
             .isNonstandardGravityActive()) {
-            EntityPlayer player = (EntityPlayer) (Object) this;
             NEPlayerMovementHandler.handleMovement(player, strafe, forward);
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "jump", at = @At("HEAD"), cancellable = true)
+    private void naturalexceptions$jump(CallbackInfo ci) {
+        EntityPlayer player = (EntityPlayer) (Object) this;
+        if (player.capabilities.isFlying) {
+            return;
+        }
+        if (NEGravityService.global()
+            .isNonstandardGravityActive()) {
             ci.cancel();
         }
     }

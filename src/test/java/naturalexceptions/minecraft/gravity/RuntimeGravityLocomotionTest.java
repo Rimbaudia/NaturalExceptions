@@ -30,6 +30,7 @@ final class RuntimeGravityLocomotionTest {
     private static class LocomotionTestEntity extends EntityLivingBase implements EntityLivingBaseAccessor {
 
         private boolean jumping;
+        private int jumpTicks;
         private NEPlayerMovementHandler.CollisionProvider collisionProvider;
 
         public LocomotionTestEntity() {
@@ -58,6 +59,16 @@ final class RuntimeGravityLocomotionTest {
         @Override
         public boolean isJumping() {
             return this.jumping;
+        }
+
+        @Override
+        public int getJumpTicks() {
+            return this.jumpTicks;
+        }
+
+        @Override
+        public void setJumpTicks(int ticks) {
+            this.jumpTicks = ticks;
         }
 
         @Override
@@ -119,6 +130,128 @@ final class RuntimeGravityLocomotionTest {
         @Override
         public ItemStack[] getLastActiveItems() {
             return new ItemStack[0];
+        }
+    }
+
+    private static class LocomotionTestPlayer extends net.minecraft.entity.player.EntityPlayer
+        implements EntityLivingBaseAccessor {
+
+        private boolean jumping;
+        private int jumpTicks;
+        private NEPlayerMovementHandler.CollisionProvider collisionProvider;
+
+        public LocomotionTestPlayer() {
+            super(null, new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "TestPlayer"));
+            this.boundingBox.setBounds(-0.3, 0.0, -0.3, 0.3, 1.8, 0.3);
+            this.posX = 0.0;
+            this.posY = 0.0;
+            this.posZ = 0.0;
+        }
+
+        public static LocomotionTestPlayer create() {
+            try {
+                java.lang.reflect.Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+                unsafeField.setAccessible(true);
+                sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
+                LocomotionTestPlayer player = (LocomotionTestPlayer) unsafe
+                    .allocateInstance(LocomotionTestPlayer.class);
+                java.lang.reflect.Field bbField = net.minecraft.entity.Entity.class.getDeclaredField("boundingBox");
+                bbField.setAccessible(true);
+                bbField.set(player, AxisAlignedBB.getBoundingBox(-0.3, 0.0, -0.3, 0.3, 1.8, 0.3));
+                player.capabilities = new net.minecraft.entity.player.PlayerCapabilities();
+                player.jumpMovementFactor = 0.02F;
+                player.stepHeight = 0.6F;
+                player.setPosition(0.0, 0.0, 0.0);
+                return player;
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to allocate LocomotionTestPlayer", e);
+            }
+        }
+
+        public void setCollisionProvider(NEPlayerMovementHandler.CollisionProvider collisionProvider) {
+            this.collisionProvider = collisionProvider;
+        }
+
+        public void setPosition(double x, double y, double z) {
+            this.posX = x;
+            this.posY = y;
+            this.posZ = z;
+            this.boundingBox.setBounds(x - 0.3, y, z - 0.3, x + 0.3, y + 1.8, z + 0.3);
+        }
+
+        public void setJumping(boolean jumping) {
+            this.jumping = jumping;
+        }
+
+        @Override
+        public boolean isJumping() {
+            return this.jumping;
+        }
+
+        @Override
+        public int getJumpTicks() {
+            return this.jumpTicks;
+        }
+
+        @Override
+        public void setJumpTicks(int ticks) {
+            this.jumpTicks = ticks;
+        }
+
+        @Override
+        public float getAIMoveSpeed() {
+            return 0.1F;
+        }
+
+        @Override
+        public void moveEntity(double x, double y, double z) {
+            if (collisionProvider != null) {
+                double origX = x;
+                double origY = y;
+                double origZ = z;
+                AxisAlignedBB expanded = this.boundingBox.addCoord(x, y, z);
+                @SuppressWarnings("unchecked")
+                List<AxisAlignedBB> boxes = collisionProvider.getCollidingBoundingBoxes(this, expanded);
+                if (boxes != null) {
+                    for (AxisAlignedBB box : boxes) {
+                        y = box.calculateYOffset(this.boundingBox, y);
+                    }
+                    this.boundingBox.offset(0.0D, y, 0.0D);
+                    for (AxisAlignedBB box : boxes) {
+                        x = box.calculateXOffset(this.boundingBox, x);
+                    }
+                    this.boundingBox.offset(x, 0.0D, 0.0D);
+                    for (AxisAlignedBB box : boxes) {
+                        z = box.calculateZOffset(this.boundingBox, z);
+                    }
+                    this.boundingBox.offset(0.0D, 0.0D, z);
+                    this.posX = (this.boundingBox.minX + this.boundingBox.maxX) / 2.0;
+                    this.posY = this.boundingBox.minY;
+                    this.posZ = (this.boundingBox.minZ + this.boundingBox.maxZ) / 2.0;
+
+                    if (origX != x) this.motionX = 0.0;
+                    if (origY != y) this.motionY = 0.0;
+                    if (origZ != z) this.motionZ = 0.0;
+                    return;
+                }
+            }
+            this.posX += x;
+            this.posY += y;
+            this.posZ += z;
+            this.boundingBox.offset(x, y, z);
+        }
+
+        @Override
+        public void addChatMessage(net.minecraft.util.IChatComponent p_145747_1_) {}
+
+        @Override
+        public boolean canCommandSenderUseCommand(int p_70003_1_, String p_70003_2_) {
+            return false;
+        }
+
+        @Override
+        public net.minecraft.util.ChunkCoordinates getPlayerCoordinates() {
+            return new net.minecraft.util.ChunkCoordinates((int) posX, (int) posY, (int) posZ);
         }
     }
 
@@ -247,6 +380,7 @@ final class RuntimeGravityLocomotionTest {
         // 2. Wall (+X gravity, local down is +X, local up is -X)
         service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
         entity.setPosition(9.7, 64.0, 0.0);
+        entity.setJumpTicks(0);
         entity.motionX = 0;
         entity.motionY = 0;
         entity.motionZ = 0;
@@ -265,6 +399,7 @@ final class RuntimeGravityLocomotionTest {
         // 3. Ceiling (+Y gravity, local down is +Y, local up is -Y)
         service.setActiveField(UniformGravityField.of(0.0, 0.08, 0.0));
         entity.setPosition(0.0, 98.2, 0.0);
+        entity.setJumpTicks(0);
         entity.motionX = 0;
         entity.motionY = 0;
         entity.motionZ = 0;
@@ -440,5 +575,174 @@ final class RuntimeGravityLocomotionTest {
         // Entity successfully completed continuous 360 degree loop without any teleport or discontinuity
         assertEquals(0.0, entity.posX, EPSILON);
         assertEquals(110.2, entity.posY, EPSILON);
+    }
+
+    @Test
+    void playerGravityIsAppliedExactlyOncePerTick() {
+        // Sideways gravity along +X. Local down is +X, local up is -X.
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+
+        LocomotionTestPlayer player = LocomotionTestPlayer.create();
+        player.setPosition(9.7, 64.0, 0.0);
+        player.rotationYaw = 0.0F;
+        player.motionX = 0.0;
+        player.motionY = 0.0;
+        player.motionZ = 0.0;
+
+        AxisAlignedBB wallBox = AxisAlignedBB.getBoundingBox(10.0, 50.0, -10.0, 11.0, 80.0, 10.0);
+        NEPlayerMovementHandler.CollisionProvider provider = (e, bb) -> {
+            if (bb.intersectsWith(wallBox)) {
+                return Collections.singletonList(wallBox);
+            }
+            return Collections.emptyList();
+        };
+        player.setCollisionProvider(provider);
+
+        NEGravityTickHandler tickHandler = new NEGravityTickHandler(service);
+
+        // Simulate 20 ticks: both NEGravityTickHandler.onLivingUpdate AND
+        // NEPlayerMovementHandler.handleMovement run in the tick sequence.
+        // NEGravityTickHandler must skip EntityPlayer completely, ensuring
+        // player gravity is applied exactly once per tick exclusively by NEPlayerMovementHandler.
+        // There must be no phantom +0.08 upward velocity injection into motionY.
+        for (int tick = 0; tick < 20; tick++) {
+            tickHandler
+                .onLivingUpdate(new net.minecraftforge.event.entity.living.LivingEvent.LivingUpdateEvent(player));
+            NEPlayerMovementHandler.handleMovement(player, 0.0F, 0.0F, provider);
+
+            assertEquals(
+                0.0,
+                player.motionY,
+                EPSILON,
+                "Player motionY must remain 0.0 (no upward launch injection at tick " + tick + ")");
+            assertEquals(
+                64.0,
+                player.posY,
+                EPSILON,
+                "Player posY must remain 64.0 (no upward drift at tick " + tick + ")");
+        }
+    }
+
+    @Test
+    void localStepCannotAccumulateUpwardImpulseAcrossTicks() {
+        // Wall walking (+X gravity, local down is +X, local up is -X)
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+
+        LocomotionTestPlayer player = LocomotionTestPlayer.create();
+        player.setPosition(9.7, 64.0, 0.0);
+        player.rotationYaw = 0.0F; // facing along Z
+        player.motionX = 0.0;
+        player.motionY = 0.0;
+        player.motionZ = 0.0;
+
+        // Base wall at X=10.0 to 11.0
+        AxisAlignedBB wallBox = AxisAlignedBB.getBoundingBox(10.0, 50.0, -10.0, 11.0, 80.0, 20.0);
+        // Step obstacle sticking out 0.5 along localUp (-X) from X=9.5 to 10.0, starting at Z=0.5
+        AxisAlignedBB stepObstacle = AxisAlignedBB.getBoundingBox(9.5, 50.0, 0.5, 10.0, 80.0, 20.0);
+
+        NEPlayerMovementHandler.CollisionProvider provider = (e, bb) -> {
+            List<AxisAlignedBB> boxes = new java.util.ArrayList<>();
+            if (bb.intersectsWith(wallBox)) {
+                boxes.add(wallBox);
+            }
+            if (bb.intersectsWith(stepObstacle)) {
+                boxes.add(stepObstacle);
+            }
+            return boxes;
+        };
+        player.setCollisionProvider(provider);
+
+        // Run 20 ticks of forward movement against and over the obstacle
+        double initialX = player.posX; // 9.7
+        for (int tick = 0; tick < 20; tick++) {
+            NEPlayerMovementHandler.handleMovement(player, 0.0F, 1.0F, provider);
+
+            // Elevation along localUp (-X) relative to initial position
+            double elevationAlongLocalUp = initialX - player.posX;
+            assertTrue(
+                elevationAlongLocalUp <= NEPlayerMovementHandler.STEP_HEIGHT + EPSILON,
+                "Elevation along localUp must never exceed STEP_HEIGHT (0.6), was: " + elevationAlongLocalUp
+                    + " at tick "
+                    + tick);
+
+            // Velocity along localUp (-X) must not accumulate upward impulse (should be <= 0.05)
+            double velocityAlongLocalUp = -player.motionX;
+            assertTrue(
+                velocityAlongLocalUp <= 0.05,
+                "Velocity along localUp must remain bounded to 0 (no upward launch), was: " + velocityAlongLocalUp
+                    + " at tick "
+                    + tick);
+
+            // Distance from active surface: either base wall (X=10.0) or step surface (X=9.5)
+            double distFromWall = Math.abs(player.boundingBox.maxX - 10.0);
+            double distFromStep = Math.abs(player.boundingBox.maxX - 9.5);
+            double distFromActiveSurface = Math.min(distFromWall, distFromStep);
+            assertTrue(
+                distFromActiveSurface < 0.35,
+                "Distance from surface must remain stable, was: " + distFromActiveSurface + " at tick " + tick);
+        }
+    }
+
+    @Test
+    void walkingAcrossRadialSurfaceDoesNotInjectEscapeVelocity() {
+        Vector3d center = new Vector3d(0, 100, 0);
+        RadialGravitySource body = new RadialGravitySource(center, 0.08, 10.0, 40.0);
+        service.setActiveField(body);
+
+        LocomotionTestPlayer player = LocomotionTestPlayer.create();
+        player.setPosition(0.0, 110.0, 0.0);
+        player.rotationYaw = 0.0F;
+
+        NEPlayerMovementHandler.CollisionProvider provider = (e, bb) -> {
+            List<AxisAlignedBB> boxes = new java.util.ArrayList<>();
+            int minX = (int) Math.floor(bb.minX);
+            int maxX = (int) Math.ceil(bb.maxX);
+            int minY = (int) Math.floor(bb.minY);
+            int maxY = (int) Math.ceil(bb.maxY);
+            int minZ = (int) Math.floor(bb.minZ);
+            int maxZ = (int) Math.ceil(bb.maxZ);
+
+            for (int x = minX; x <= maxX; x++) {
+                for (int y = minY; y <= maxY; y++) {
+                    for (int z = minZ; z <= maxZ; z++) {
+                        double cx = x + 0.5 - center.x;
+                        double cy = y + 0.5 - center.y;
+                        double cz = z + 0.5 - center.z;
+                        if (cx * cx + cy * cy + cz * cz <= 10.0 * 10.0) {
+                            boxes.add(AxisAlignedBB.getBoundingBox(x, y, z, x + 1, y + 1, z + 1));
+                        }
+                    }
+                }
+            }
+            return boxes;
+        };
+        player.setCollisionProvider(provider);
+
+        // Walk across top-to-side curvature over 40 ticks without jumping
+        for (int tick = 0; tick < 40; tick++) {
+            NEPlayerMovementHandler.handleMovement(player, 0.0F, 1.0F, provider);
+
+            Vector3d rVec = new Vector3d(player.posX - center.x, player.posY - center.y, player.posZ - center.z);
+            double r = rVec.length();
+            Vector3d rHat = rVec.normalize();
+
+            // Outward radial velocity
+            double outwardRadialVelocity = player.motionX * rHat.x + player.motionY * rHat.y + player.motionZ * rHat.z;
+            assertTrue(
+                outwardRadialVelocity < 0.2,
+                "Outward radial velocity must remain bounded (< 0.2), was: " + outwardRadialVelocity
+                    + " at tick "
+                    + tick);
+
+            // Distance from surface: voxel shell surface is at nominal R=10.0
+            assertTrue(
+                Math.abs(r - 10.0) < 0.8,
+                "Distance from surface must remain within contact tolerance, was: " + Math.abs(r - 10.0)
+                    + " at tick "
+                    + tick);
+
+            // Radial distance must never continuously gain altitude into space
+            assertTrue(r < 10.8, "Radial distance must not escape into space, r was: " + r + " at tick " + tick);
+        }
     }
 }

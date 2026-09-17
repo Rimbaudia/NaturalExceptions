@@ -58,10 +58,14 @@ public final class NEPlayerMovementHandler {
 
         // 3. Handle jump if requested
         boolean isJumping = false;
+        int jumpTicks = 0;
+        EntityLivingBaseAccessor accessor = null;
         if (entity instanceof EntityLivingBaseAccessor) {
-            isJumping = ((EntityLivingBaseAccessor) entity).isJumping();
+            accessor = (EntityLivingBaseAccessor) entity;
+            isJumping = accessor.isJumping();
+            jumpTicks = accessor.getJumpTicks();
         }
-        if (isJumping && isGrounded) {
+        if (isJumping && isGrounded && jumpTicks == 0) {
             Vector3d jumpVec = localUp.multiply(JUMP_IMPULSE);
             entity.motionX += jumpVec.x;
             entity.motionY += jumpVec.y;
@@ -72,6 +76,9 @@ public final class NEPlayerMovementHandler {
                 entity.motionX += sprintBoost.x;
                 entity.motionY += sprintBoost.y;
                 entity.motionZ += sprintBoost.z;
+            }
+            if (accessor != null) {
+                accessor.setJumpTicks(10);
             }
             entity.isAirBorne = true;
             isGrounded = false;
@@ -107,12 +114,15 @@ public final class NEPlayerMovementHandler {
         double plannedY = entity.motionY;
         double plannedZ = entity.motionZ;
 
+        boolean stepped = false;
         if (isGrounded && inputDir.lengthSquared() > 1e-4) {
-            attemptLocalStep(entity, plannedX, plannedY, plannedZ, localUp, STEP_HEIGHT, collisionProvider);
+            stepped = attemptLocalStep(entity, plannedX, plannedY, plannedZ, localUp, STEP_HEIGHT, collisionProvider);
         }
 
-        // 7. Perform movement
-        entity.moveEntity(entity.motionX, entity.motionY, entity.motionZ);
+        // 7. Perform movement if not already positioned by successful discrete step
+        if (!stepped) {
+            entity.moveEntity(entity.motionX, entity.motionY, entity.motionZ);
+        }
 
         // 8. Post-move grounding re-evaluation and surface contact resolution
         Vector3d postVel = new Vector3d(entity.motionX, entity.motionY, entity.motionZ);
@@ -147,6 +157,27 @@ public final class NEPlayerMovementHandler {
             entity.motionY *= 0.91;
             entity.motionZ *= 0.91;
         }
+
+        if (service.isDebugLogging()) {
+            System.out.printf(
+                "[NE-GRAV-DEBUG] entity=%s pos=(%.2f, %.2f, %.2f) vel=(%.4f, %.4f, %.4f) g=(%.3f, %.3f, %.3f) down=%s up=%s grounded=%b onGround=%b jump=%b step=%b%n",
+                entity.getCommandSenderName(),
+                entity.posX,
+                entity.posY,
+                entity.posZ,
+                entity.motionX,
+                entity.motionY,
+                entity.motionZ,
+                sample.acceleration().x,
+                sample.acceleration().y,
+                sample.acceleration().z,
+                localDown,
+                localUp,
+                isGrounded,
+                entity.onGround,
+                isJumping,
+                stepped);
+        }
     }
 
     public static boolean isGrounded(EntityLivingBase entity, Vector3d localDown, double probeDistance,
@@ -176,14 +207,14 @@ public final class NEPlayerMovementHandler {
             return false;
         }
 
-        // Test if direct planned movement along tangent plane collides
+        // 1. Test if direct planned movement along tangent plane collides
         AxisAlignedBB directMove = entity.boundingBox.getOffsetBoundingBox(tangentVel.x, tangentVel.y, tangentVel.z);
         List<?> directCollisions = collisionProvider.getCollidingBoundingBoxes(entity, directMove);
         if (directCollisions == null || directCollisions.isEmpty()) {
             return false; // Path is clear, no step needed
         }
 
-        // Test elevating along localUp
+        // 2. Test elevating along localUp
         AxisAlignedBB elevated = entity.boundingBox
             .getOffsetBoundingBox(localUp.x * stepHeight, localUp.y * stepHeight, localUp.z * stepHeight);
         List<?> elevCollisions = collisionProvider.getCollidingBoundingBoxes(entity, elevated);
@@ -191,18 +222,45 @@ public final class NEPlayerMovementHandler {
             return false; // Cannot step up, obstacle overhead
         }
 
-        // Test moving forward while elevated
+        // 3. Test moving forward while elevated
         AxisAlignedBB elevatedMove = elevated.getOffsetBoundingBox(tangentVel.x, tangentVel.y, tangentVel.z);
         List<?> moveCollisions = collisionProvider.getCollidingBoundingBoxes(entity, elevatedMove);
         if (moveCollisions != null && !moveCollisions.isEmpty()) {
             return false; // Obstacle too tall
         }
 
-        // Apply elevation to bounding box and coordinates
-        entity.boundingBox.offset(localUp.x * stepHeight, localUp.y * stepHeight, localUp.z * stepHeight);
-        entity.posX += localUp.x * stepHeight;
-        entity.posY += localUp.y * stepHeight;
-        entity.posZ += localUp.z * stepHeight;
+        // 4. Step back DOWN along localDown until feet contact the step surface
+        Vector3d localDown = localUp.negate();
+        double low = 0.0;
+        double high = stepHeight;
+        for (int i = 0; i < 8; i++) {
+            double mid = (low + high) * 0.5;
+            AxisAlignedBB testBox = elevatedMove
+                .getOffsetBoundingBox(localDown.x * mid, localDown.y * mid, localDown.z * mid);
+            List<?> testCollisions = collisionProvider.getCollidingBoundingBoxes(entity, testBox);
+            if (testCollisions == null || testCollisions.isEmpty()) {
+                low = mid; // Still clear, can step further down toward surface
+            } else {
+                high = mid; // Hit obstacle surface, back off
+            }
+        }
+        AxisAlignedBB landed = elevatedMove
+            .getOffsetBoundingBox(localDown.x * low, localDown.y * low, localDown.z * low);
+
+        // 5. Apply stepped position to bounding box and coordinates
+        double origMinX = entity.boundingBox.minX;
+        double origMinY = entity.boundingBox.minY;
+        double origMinZ = entity.boundingBox.minZ;
+
+        entity.boundingBox.setBB(landed);
+        entity.posX += landed.minX - origMinX;
+        entity.posY += landed.minY - origMinY;
+        entity.posZ += landed.minZ - origMinZ;
+
+        // Zero out velocity into the step obstacle; no upward kinetic energy injected
+        entity.motionX = 0.0;
+        entity.motionY = 0.0;
+        entity.motionZ = 0.0;
         return true;
     }
 
