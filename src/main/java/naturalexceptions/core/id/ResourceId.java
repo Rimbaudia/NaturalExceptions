@@ -5,7 +5,8 @@ import java.util.regex.Pattern;
 
 public final class ResourceId implements Comparable<ResourceId> {
 
-    private static final Pattern PART = Pattern.compile("[a-z0-9_.-]+");
+    private static final Pattern NAMESPACE_PATTERN = Pattern.compile("[a-z0-9_.-]+");
+    private static final Pattern PATH_PATTERN = Pattern.compile("[a-z0-9/_.-]+");
 
     private final String namespace;
     private final String path;
@@ -16,8 +17,8 @@ public final class ResourceId implements Comparable<ResourceId> {
     }
 
     public static ResourceId of(String namespace, String path) {
-        requirePart("namespace", namespace);
-        requirePart("path", path);
+        requireNamespace(namespace);
+        requirePath(path);
         return new ResourceId(namespace, path);
     }
 
@@ -32,10 +33,17 @@ public final class ResourceId implements Comparable<ResourceId> {
         return of(value.substring(0, separator), value.substring(separator + 1));
     }
 
-    private static void requirePart(String name, String value) {
-        if (value == null || !PART.matcher(value)
+    private static void requireNamespace(String value) {
+        if (value == null || !NAMESPACE_PATTERN.matcher(value)
             .matches()) {
-            throw new IllegalArgumentException("Invalid " + name + ": " + value);
+            throw new IllegalArgumentException("Invalid namespace: " + value);
+        }
+    }
+
+    private static void requirePath(String value) {
+        if (value == null || !PATH_PATTERN.matcher(value)
+            .matches()) {
+            throw new IllegalArgumentException("Invalid path: " + value);
         }
     }
 

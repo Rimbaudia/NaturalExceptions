@@ -26,6 +26,14 @@ final class ResourceIdTest {
     }
 
     @Test
+    void supportsHierarchicalPathWithSlashes() {
+        ResourceId id = ResourceId.parse("naturalexceptions:test/delayed_event");
+        assertEquals("naturalexceptions", id.namespace());
+        assertEquals("test/delayed_event", id.path());
+        assertEquals("naturalexceptions:test/delayed_event", id.toString());
+    }
+
+    @Test
     void roundTripParsingPreservesIdentity() {
         ResourceId id = ResourceId.of("naturalexceptions", "deep_copper.ore-1");
         ResourceId parsed = ResourceId.parse(id.toString());
@@ -46,6 +54,11 @@ final class ResourceIdTest {
     @Test
     void rejectsMultipleColons() {
         assertThrows(IllegalArgumentException.class, () -> ResourceId.parse("a:b:c"));
+    }
+
+    @Test
+    void rejectsSlashInNamespace() {
+        assertThrows(IllegalArgumentException.class, () -> ResourceId.parse("natural/exceptions:copper"));
     }
 
     @Test
