@@ -1,11 +1,13 @@
 package naturalexceptions;
 
+import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import naturalexceptions.content.BuiltinContent;
 import naturalexceptions.minecraft.registry.NEBlocks;
 import naturalexceptions.minecraft.registry.NEItems;
+import naturalexceptions.minecraft.tick.NEWorldTickHandler;
 import naturalexceptions.minecraft.worldgen.BootstrapCopperGenerator;
 
 @Mod(
@@ -18,6 +20,8 @@ public final class NaturalExceptions {
     public static final String MOD_ID = "naturalexceptions";
     public static final String MOD_NAME = "Natural Exceptions";
 
+    private static NEWorldTickHandler tickHandler;
+
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
         BuiltinContent.register();
@@ -28,5 +32,13 @@ public final class NaturalExceptions {
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
         BootstrapCopperGenerator.register();
+        tickHandler = new NEWorldTickHandler();
+        FMLCommonHandler.instance()
+            .bus()
+            .register(tickHandler);
+    }
+
+    public static NEWorldTickHandler tickHandler() {
+        return tickHandler;
     }
 }
