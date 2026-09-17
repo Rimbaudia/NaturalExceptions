@@ -6,6 +6,7 @@ import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import naturalexceptions.content.BuiltinContent;
 import naturalexceptions.minecraft.registry.NEBlocks;
 import naturalexceptions.minecraft.registry.NEItems;
+import naturalexceptions.minecraft.worldgen.BootstrapCopperGenerator;
 
 @Mod(
     modid = NaturalExceptions.MOD_ID,
@@ -25,5 +26,7 @@ public final class NaturalExceptions {
     }
 
     @Mod.EventHandler
-    public void init(FMLInitializationEvent event) {}
+    public void init(FMLInitializationEvent event) {
+        BootstrapCopperGenerator.register();
+    }
 }
