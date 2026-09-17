@@ -8,12 +8,16 @@ import java.util.Objects;
  */
 public final class RadialGravitySource implements GravityField {
 
+    public static final GravitySourceId DEFAULT_RADIAL_ID = GravitySourceId.of("naturalexceptions", "radial_source");
+
     private final Vector3d center;
     private final double surfaceGravity;
     private final double innerRadius;
     private final double maxRadius;
+    private final GravitySourceId sourceId;
 
-    public RadialGravitySource(Vector3d center, double surfaceGravity, double innerRadius, double maxRadius) {
+    public RadialGravitySource(Vector3d center, double surfaceGravity, double innerRadius, double maxRadius,
+        GravitySourceId sourceId) {
         this.center = Objects.requireNonNull(center, "center");
         if (surfaceGravity < 0.0) {
             throw new IllegalArgumentException("surfaceGravity cannot be negative: " + surfaceGravity);
@@ -28,6 +32,11 @@ public final class RadialGravitySource implements GravityField {
         this.surfaceGravity = surfaceGravity;
         this.innerRadius = innerRadius;
         this.maxRadius = maxRadius;
+        this.sourceId = sourceId != null ? sourceId : DEFAULT_RADIAL_ID;
+    }
+
+    public RadialGravitySource(Vector3d center, double surfaceGravity, double innerRadius, double maxRadius) {
+        this(center, surfaceGravity, innerRadius, maxRadius, DEFAULT_RADIAL_ID);
     }
 
     public Vector3d center() {
@@ -46,8 +55,12 @@ public final class RadialGravitySource implements GravityField {
         return maxRadius;
     }
 
+    public GravitySourceId sourceId() {
+        return sourceId;
+    }
+
     @Override
-    public GravitySample sampleAt(double x, double y, double z) {
+    public GravitySample sampleAt(double x, double y, double z, GravityQueryContext context) {
         Vector3d toCenter = center.subtract(x, y, z);
         double distSq = toCenter.lengthSquared();
 
@@ -75,16 +88,17 @@ public final class RadialGravitySource implements GravityField {
             magnitude = surfaceGravity * (ratio * ratio);
         }
 
-        return new GravitySample(direction.multiply(magnitude));
+        return new GravitySample(direction.multiply(magnitude), sourceId);
     }
 
     @Override
     public String toString() {
         return String.format(
-            "RadialGravitySource{center=%s, g=%.3f, r0=%.1f, rMax=%.1f}",
+            "RadialGravitySource{center=%s, g=%.3f, r0=%.1f, rMax=%.1f, sourceId=%s}",
             center,
             surfaceGravity,
             innerRadius,
-            maxRadius);
+            maxRadius,
+            sourceId);
     }
 }

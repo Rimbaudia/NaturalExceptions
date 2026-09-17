@@ -6,7 +6,9 @@ import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
+import cpw.mods.fml.common.event.FMLServerStartingEvent;
 import naturalexceptions.content.BuiltinContent;
+import naturalexceptions.minecraft.gravity.CommandDebugGravityBody;
 import naturalexceptions.minecraft.gravity.NEGravityService;
 import naturalexceptions.minecraft.gravity.NEGravityTickHandler;
 import naturalexceptions.minecraft.registry.NEBlocks;
@@ -44,6 +46,16 @@ public final class NaturalExceptions {
 
         gravityTickHandler = new NEGravityTickHandler(NEGravityService.global());
         MinecraftForge.EVENT_BUS.register(gravityTickHandler);
+        FMLCommonHandler.instance()
+            .bus()
+            .register(gravityTickHandler);
+    }
+
+    @Mod.EventHandler
+    public void serverStarting(FMLServerStartingEvent event) {
+        if (event != null) {
+            event.registerServerCommand(new CommandDebugGravityBody());
+        }
     }
 
     public static NEWorldTickHandler tickHandler() {

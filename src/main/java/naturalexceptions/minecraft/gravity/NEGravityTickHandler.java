@@ -1,14 +1,19 @@
 package naturalexceptions.minecraft.gravity;
 
+import java.util.List;
 import java.util.Objects;
 
+import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.projectile.EntityArrow;
 import net.minecraftforge.event.entity.living.LivingEvent;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import cpw.mods.fml.common.gameevent.TickEvent;
 
 /**
- * Event subscriber that listens for entity living update ticks and applies
- * nonstandard local gravity physics via {@link NEGravityService}.
+ * Event subscriber that listens for entity living update ticks and world ticks,
+ * applying nonstandard local gravity physics to living entities, items, and projectiles
+ * via {@link NEGravityService}.
  */
 public final class NEGravityTickHandler {
 
@@ -28,5 +33,24 @@ public final class NEGravityTickHandler {
             return;
         }
         service.applyGravity(event.entityLiving);
+    }
+
+    @SubscribeEvent
+    public void onWorldTick(TickEvent.WorldTickEvent event) {
+        if (event == null || event.phase != TickEvent.Phase.START || event.world == null) {
+            return;
+        }
+        if (!service.isNonstandardGravityActive()) {
+            return;
+        }
+        List<?> loaded = event.world.loadedEntityList;
+        for (int i = 0; i < loaded.size(); i++) {
+            Object obj = loaded.get(i);
+            if (obj instanceof EntityItem) {
+                service.applyGravity((EntityItem) obj);
+            } else if (obj instanceof EntityArrow) {
+                service.applyGravity((EntityArrow) obj);
+            }
+        }
     }
 }

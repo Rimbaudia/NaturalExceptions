@@ -4,9 +4,12 @@ import java.util.Objects;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.projectile.EntityArrow;
 
 import naturalexceptions.core.gravity.GravityField;
 import naturalexceptions.core.gravity.GravitySample;
+import naturalexceptions.core.gravity.LocalEntityFrame;
 import naturalexceptions.core.gravity.UniformGravityField;
 import naturalexceptions.core.gravity.Vector3d;
 
@@ -15,12 +18,15 @@ import naturalexceptions.core.gravity.Vector3d;
  *
  * <p>
  * Decouples gravity evaluation from hardcoded Y-axis physics. Computes the necessary
- * velocity delta required to counteract vanilla's hardcoded (0, -0.08, 0) downward
- * acceleration and apply arbitrary 3D local gravity vectors.
+ * velocity delta required to counteract vanilla's hardcoded downward acceleration
+ * and applies arbitrary 3D local gravity vectors to living entities, items, and projectiles.
  */
 public final class NEGravityService {
 
     public static final double DEFAULT_VANILLA_GRAVITY = 0.08;
+    public static final double DEFAULT_ITEM_GRAVITY = 0.04;
+    public static final double DEFAULT_ARROW_GRAVITY = 0.05;
+
     private static final NEGravityService GLOBAL = new NEGravityService();
 
     private GravityField activeField;
@@ -67,6 +73,13 @@ public final class NEGravityService {
         this.enabled = enabled;
     }
 
+    public synchronized boolean isNonstandardGravityActive() {
+        if (!enabled) {
+            return false;
+        }
+        return activeField != UniformGravityField.STANDARD_MINECRAFT;
+    }
+
     public GravitySample sampleAt(double x, double y, double z) {
         GravityField field;
         synchronized (this) {
@@ -81,11 +94,19 @@ public final class NEGravityService {
     }
 
     /**
-     * Applies gravitational acceleration delta to the given living entity.
-     * Computes the difference between the local gravity field sample and vanilla's
-     * hardcoded downward acceleration (0, -vanillaDownwardAcceleration, 0).
+     * Derives the local entity reference frame based on current position and heading.
      */
-    public void applyGravity(EntityLivingBase entity) {
+    public LocalEntityFrame getLocalFrame(Entity entity) {
+        Objects.requireNonNull(entity, "entity");
+        GravitySample sample = sampleFor(entity);
+        return LocalEntityFrame.deriveFrom(sample, entity.rotationYaw);
+    }
+
+    /**
+     * Generic acceleration delta application to any entity, counteracting its
+     * specific vanilla downward acceleration constant.
+     */
+    public void applyGravity(Entity entity, double vanillaDownwardG) {
         if (!enabled || entity == null) {
             return;
         }
@@ -93,17 +114,36 @@ public final class NEGravityService {
         GravitySample sample = sampleFor(entity);
         Vector3d localAcc = sample.acceleration();
 
-        // Vanilla hardcodes (0, -vanillaDownwardAcceleration, 0)
-        // Delta needed: localAcc - (0, -vanillaDownwardAcceleration, 0)
+        // Delta needed: localAcc - (0, -vanillaDownwardG, 0)
         double deltaX = localAcc.x;
-        double deltaY = localAcc.y + vanillaDownwardAcceleration;
+        double deltaY = localAcc.y + vanillaDownwardG;
         double deltaZ = localAcc.z;
 
-        // Only modify motion if there is an active divergence from standard vanilla gravity
         if (Math.abs(deltaX) > 1e-6 || Math.abs(deltaY) > 1e-6 || Math.abs(deltaZ) > 1e-6) {
             entity.motionX += deltaX;
             entity.motionY += deltaY;
             entity.motionZ += deltaZ;
         }
+    }
+
+    /**
+     * Applies gravitational acceleration delta to the given living entity.
+     */
+    public void applyGravity(EntityLivingBase entity) {
+        applyGravity(entity, vanillaDownwardAcceleration);
+    }
+
+    /**
+     * Applies gravitational acceleration delta to a dropped item entity.
+     */
+    public void applyGravity(EntityItem item) {
+        applyGravity(item, DEFAULT_ITEM_GRAVITY);
+    }
+
+    /**
+     * Applies gravitational acceleration delta to an arrow / projectile.
+     */
+    public void applyGravity(EntityArrow arrow) {
+        applyGravity(arrow, DEFAULT_ARROW_GRAVITY);
     }
 }
