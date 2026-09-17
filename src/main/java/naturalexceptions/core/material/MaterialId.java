@@ -2,7 +2,7 @@ package naturalexceptions.core.material;
 
 import naturalexceptions.core.id.ResourceId;
 
-public final class MaterialId {
+public final class MaterialId implements Comparable<MaterialId> {
 
     private final ResourceId value;
 
@@ -16,6 +16,15 @@ public final class MaterialId {
 
     public static MaterialId parse(String value) {
         return new MaterialId(ResourceId.parse(value));
+    }
+
+    public ResourceId resourceId() {
+        return value;
+    }
+
+    @Override
+    public int compareTo(MaterialId other) {
+        return value.compareTo(other.value);
     }
 
     @Override
