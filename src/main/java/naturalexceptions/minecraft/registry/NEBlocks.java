@@ -12,6 +12,7 @@ public final class NEBlocks {
 
     public static Block copperOre;
     public static Block copperBlock;
+    public static Block starterSmelter;
 
     private NEBlocks() {}
 
@@ -20,9 +21,16 @@ public final class NEBlocks {
 
         copperOre = new BlockCopperOre().setCreativeTab(CreativeTabs.tabBlock);
         copperBlock = new BlockCopperBlock().setCreativeTab(CreativeTabs.tabBlock);
+        starterSmelter = new naturalexceptions.minecraft.metallurgy.BlockStarterSmelter()
+            .setCreativeTab(CreativeTabs.tabDecorations);
 
         GameRegistry.registerBlock(copperOre, "copper_ore");
         GameRegistry.registerBlock(copperBlock, "copper_block");
+        GameRegistry.registerBlock(starterSmelter, "starter_smelter");
+
+        GameRegistry.registerTileEntity(
+            naturalexceptions.minecraft.metallurgy.TileEntityStarterSmelter.class,
+            "starter_smelter");
 
         MaterialBindingRegistry.global()
             .bind(copperOre, BuiltinMaterials.COPPER.id());
