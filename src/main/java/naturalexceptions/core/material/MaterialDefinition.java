@@ -28,6 +28,10 @@ public final class MaterialDefinition {
         return id;
     }
 
+    public MaterialRef ref() {
+        return MaterialRef.authored(id.resourceId());
+    }
+
     public String translationKey() {
         return translationKey;
     }

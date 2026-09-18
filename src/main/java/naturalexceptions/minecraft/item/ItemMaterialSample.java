@@ -99,24 +99,47 @@ public final class ItemMaterialSample extends Item {
         }
         try {
             MaterialRef ref = MaterialCarrierNbtCodec.readRefFromNbt(stack.getTagCompound());
+            if (ref == null) {
+                return "Material Sample (Empty)";
+            }
+            boolean isLiquid = false;
+            if (MaterialCarrierNbtCodec.hasActiveThermalState(stack.getTagCompound())) {
+                naturalexceptions.core.thermal.ActiveThermalState thermal = MaterialCarrierNbtCodec
+                    .readThermalStateFromNbt(
+                        stack.getTagCompound(),
+                        naturalexceptions.core.property.MaterialProperties.of(8.96, 3.0, 100.0));
+                if (thermal != null && thermal.phase() == naturalexceptions.core.material.MaterialPhase.LIQUID) {
+                    isLiquid = true;
+                }
+            }
+
             if (ref.isAuthored()) {
                 if (BuiltinContent.materials()
                     .getAuthored(ref) == null) {
                     return "\u00a7cMaterial Sample (Unresolved Authored: " + ref.authoredId()
                         .path() + ")";
                 }
-                return "Material Sample (" + capitalize(
-                    ref.authoredId()
-                        .path())
-                    + ")";
+                String path = ref.authoredId()
+                    .path();
+                String matName = capitalize(path);
+                return isLiquid ? "Material Sample (Molten " + matName + ")" : "Material Sample (" + matName + ")";
             } else {
-                return "Material Sample (Generated " + ref.generatedId()
-                    .hex()
-                    .substring(0, 8) + ")";
+                return isLiquid ? "Material Sample (Generated Molten Alloy)" : "Material Sample (Generated Alloy)";
             }
         } catch (PersistenceValidationException e) {
             return "\u00a7cMaterial Sample (Corrupted)";
         }
+    }
+
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public void getSubItems(Item item, net.minecraft.creativetab.CreativeTabs tab, List list) {
+        list.add(new ItemStack(item));
+        list.add(createStack(naturalexceptions.content.material.BuiltinMaterials.COPPER.ref()));
+        naturalexceptions.core.thermal.ActiveThermalState hotCu = naturalexceptions.core.thermal.ActiveThermalState
+            .atTemperature(1400.0, 1.0, 0.1, naturalexceptions.content.material.BuiltinMaterials.COPPER_PROPERTIES);
+        list.add(createStack(naturalexceptions.content.material.BuiltinMaterials.COPPER.ref(), null, hotCu));
     }
 
     @Override

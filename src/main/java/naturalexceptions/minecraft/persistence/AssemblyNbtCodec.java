@@ -92,30 +92,47 @@ public final class AssemblyNbtCodec {
             return null;
         }
 
-        ComponentInstance head = readComponentFromNbt(nbt.getCompoundTag(KEY_HEAD));
-        ComponentInstance handle = readComponentFromNbt(nbt.getCompoundTag(KEY_HANDLE));
-        AttachmentInterface attachment = AttachmentInterface
-            .valueOf(nbt.hasKey(KEY_ATTACHMENT, 8) ? nbt.getString(KEY_ATTACHMENT) : AttachmentInterface.SOCKET.name());
+        try {
+            ComponentInstance head = readComponentFromNbt(nbt.getCompoundTag(KEY_HEAD));
+            ComponentInstance handle = readComponentFromNbt(nbt.getCompoundTag(KEY_HANDLE));
+            if (head == null || handle == null) {
+                return null;
+            }
+            AttachmentInterface attachment = AttachmentInterface.valueOf(
+                nbt.hasKey(KEY_ATTACHMENT, 8) ? nbt.getString(KEY_ATTACHMENT) : AttachmentInterface.SOCKET.name());
 
-        return new AssemblyGraph(head, handle, attachment);
+            return new AssemblyGraph(head, handle, attachment);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public static ComponentInstance readComponentFromNbt(NBTTagCompound nbt) {
         if (nbt == null) return null;
+        if (!nbt.hasKey(KEY_INSTANCE_ID, 8) || !nbt.hasKey(KEY_GEOMETRY, 8)
+            || !nbt.hasKey(KEY_MATERIAL_REF, 8)
+            || !nbt.hasKey(KEY_STATE_KEY, 8)
+            || !nbt.hasKey(KEY_MANUFACTURING, 8)) {
+            return null;
+        }
 
-        DeterministicId id = DeterministicId.parse(nbt.getString(KEY_INSTANCE_ID));
-        GeometryId geometry = GeometryId.parse(nbt.getString(KEY_GEOMETRY));
-        MaterialRef ref = MaterialRef.parse(nbt.getString(KEY_MATERIAL_REF));
-        CanonicalMaterialKey key = CanonicalMaterialKey.parse(nbt.getString(KEY_STATE_KEY));
-        MaterialQuantity mass = MaterialQuantity.ofMilligrams(nbt.getLong(KEY_MASS_MG));
-        ManufacturingState state = ManufacturingState.parse(nbt.getString(KEY_MANUFACTURING));
+        try {
+            DeterministicId id = DeterministicId.parse(nbt.getString(KEY_INSTANCE_ID));
+            GeometryId geometry = GeometryId.parse(nbt.getString(KEY_GEOMETRY));
+            MaterialRef ref = MaterialRef.parse(nbt.getString(KEY_MATERIAL_REF));
+            CanonicalMaterialKey key = CanonicalMaterialKey.parse(nbt.getString(KEY_STATE_KEY));
+            MaterialQuantity mass = MaterialQuantity.ofMilligrams(nbt.getLong(KEY_MASS_MG));
+            ManufacturingState state = ManufacturingState.parse(nbt.getString(KEY_MANUFACTURING));
 
-        double wear = nbt.getDouble(KEY_WEAR);
-        double deformation = nbt.getDouble(KEY_DEFORMATION);
-        double cracking = nbt.getDouble(KEY_CRACKING);
-        boolean fractured = nbt.getBoolean(KEY_FRACTURED);
-        ComponentDamage damage = new ComponentDamage(wear, deformation, cracking, fractured);
+            double wear = nbt.getDouble(KEY_WEAR);
+            double deformation = nbt.getDouble(KEY_DEFORMATION);
+            double cracking = nbt.getDouble(KEY_CRACKING);
+            boolean fractured = nbt.getBoolean(KEY_FRACTURED);
+            ComponentDamage damage = new ComponentDamage(wear, deformation, cracking, fractured);
 
-        return new ComponentInstance(id, geometry, ref, key, mass, state, damage);
+            return new ComponentInstance(id, geometry, ref, key, mass, state, damage);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

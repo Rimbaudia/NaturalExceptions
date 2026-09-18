@@ -14,6 +14,9 @@ import naturalexceptions.content.material.BuiltinMaterials;
 import naturalexceptions.core.assembly.AssemblyGraph;
 import naturalexceptions.core.assembly.DerivedCapability;
 import naturalexceptions.core.assembly.TargetMaterialProfile;
+import naturalexceptions.core.composition.CanonicalComposition;
+import naturalexceptions.core.material.CanonicalMaterialKey;
+import naturalexceptions.core.material.MaterialRef;
 import naturalexceptions.core.property.MaterialProperties;
 import naturalexceptions.core.property.MaterialPropertyResolver;
 import naturalexceptions.minecraft.persistence.AssemblyNbtCodec;
@@ -44,7 +47,11 @@ public final class ItemGenericAssembly extends Item {
         if (stack == null || !stack.hasTagCompound()) {
             return null;
         }
-        return AssemblyNbtCodec.readFromNbt(stack.getTagCompound());
+        try {
+            return AssemblyNbtCodec.readFromNbt(stack.getTagCompound());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public static void saveAssembly(ItemStack stack, AssemblyGraph assembly) {
@@ -160,6 +167,84 @@ public final class ItemGenericAssembly extends Item {
                 .cracking() * 100.0;
             list.add(
                 String.format("  \u00a7eDamage: Wear %.1f%% | Deform %.1f%% | Cracks %.1f%%", wear, deform, cracks));
+        }
+    }
+
+    @Override
+    public String getItemStackDisplayName(ItemStack stack) {
+        AssemblyGraph assembly = getAssembly(stack);
+        if (assembly == null) {
+            return "Tool Assembly";
+        }
+        try {
+            String headMatName = formatMaterialName(
+                assembly.head()
+                    .materialRef());
+            String handleMatName = formatMaterialName(
+                assembly.handle()
+                    .materialRef());
+            String geomName = formatGeometryName(
+                assembly.head()
+                    .geometryId());
+
+            if (assembly.isBroken()) {
+                return "Broken " + headMatName + " " + geomName;
+            }
+            return headMatName + " + " + handleMatName + " " + geomName;
+        } catch (Exception e) {
+            return "Tool Assembly";
+        }
+    }
+
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public void getSubItems(Item item, net.minecraft.creativetab.CreativeTabs tab, List list) {
+        list.add(new ItemStack(item));
+
+        // Create sample Copper Pick
+        naturalexceptions.core.fabrication.ComponentInstance cuHead = new naturalexceptions.core.fabrication.ComponentInstance(
+            naturalexceptions.core.fabrication.GeometryId.PICK_HEAD,
+            BuiltinMaterials.COPPER.ref(),
+            CanonicalMaterialKey
+                .of(CanonicalComposition.of(naturalexceptions.core.id.ResourceId.of("naturalexceptions", "copper"))),
+            naturalexceptions.core.fabrication.ComponentGeometry.pickHead()
+                .requiredMass(BuiltinMaterials.COPPER_PROPERTIES),
+            naturalexceptions.core.fabrication.ManufacturingState.FINISHED);
+
+        naturalexceptions.core.fabrication.ComponentInstance woodHandle = new naturalexceptions.core.fabrication.ComponentInstance(
+            naturalexceptions.core.fabrication.GeometryId.HANDLE,
+            BuiltinMaterials.WOOD.ref(),
+            CanonicalMaterialKey
+                .of(CanonicalComposition.of(naturalexceptions.core.id.ResourceId.of("naturalexceptions", "wood"))),
+            naturalexceptions.core.metallurgy.MaterialQuantity.ofGrams(100.0),
+            naturalexceptions.core.fabrication.ManufacturingState.FINISHED);
+
+        AssemblyGraph cuPick = AssemblyGraph.ofTool(cuHead, woodHandle);
+        list.add(createStack(cuPick));
+    }
+
+    private static String formatMaterialName(MaterialRef ref) {
+        if (ref == null) return "Unknown";
+        if (ref.isAuthored()) {
+            String path = ref.authoredId()
+                .path();
+            return Character.toUpperCase(path.charAt(0)) + path.substring(1);
+        }
+        return "Generated Alloy";
+    }
+
+    private static String formatGeometryName(naturalexceptions.core.fabrication.GeometryId id) {
+        if (id == null) return "Tool";
+        switch (id) {
+            case PICK_HEAD:
+                return "Pick";
+            case BLADE:
+                return "Blade";
+            case PLATE:
+                return "Shield";
+            default:
+                return "Tool";
         }
     }
 }
