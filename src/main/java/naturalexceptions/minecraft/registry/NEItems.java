@@ -12,6 +12,7 @@ public final class NEItems {
     public static Item copperOreChunk;
     public static Item copperIngot;
     public static ItemMaterialSample materialSample;
+    public static naturalexceptions.minecraft.item.ItemGenericAssembly genericAssembly;
 
     private NEItems() {}
 
@@ -29,9 +30,13 @@ public final class NEItems {
         materialSample = new ItemMaterialSample();
         materialSample.setCreativeTab(CreativeTabs.tabMaterials);
 
+        genericAssembly = new naturalexceptions.minecraft.item.ItemGenericAssembly();
+        genericAssembly.setCreativeTab(CreativeTabs.tabTools);
+
         GameRegistry.registerItem(copperOreChunk, "copper_ore_chunk");
         GameRegistry.registerItem(copperIngot, "copper_ingot");
         GameRegistry.registerItem(materialSample, "material_sample");
+        GameRegistry.registerItem(genericAssembly, "generic_assembly");
 
         MaterialBindingRegistry.global()
             .bind(copperOreChunk, BuiltinMaterials.COPPER.id());
