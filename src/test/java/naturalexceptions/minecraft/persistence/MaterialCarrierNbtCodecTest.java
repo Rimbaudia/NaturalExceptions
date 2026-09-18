@@ -1,6 +1,7 @@
 package naturalexceptions.minecraft.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -139,5 +140,65 @@ final class MaterialCarrierNbtCodecTest {
         badState.setString(MaterialCarrierNbtCodec.KEY_STATE_KEY, "corrupt@not@valid");
 
         assertThrows(PersistenceValidationException.class, () -> MaterialCarrierNbtCodec.readStateKeyFromNbt(badState));
+    }
+
+    @Test
+    void activeThermalStateRoundTripsThroughNbt() {
+        MaterialRef ref = MaterialRef.authored(CU);
+        NBTTagCompound nbt = new NBTTagCompound();
+        MaterialCarrierNbtCodec.writeToNbt(ref, (CanonicalMaterialKey) null, nbt);
+
+        naturalexceptions.core.property.MaterialProperties props = naturalexceptions.content.material.BuiltinMaterials.COPPER_PROPERTIES;
+        naturalexceptions.core.thermal.ActiveThermalState hotState = naturalexceptions.core.thermal.ActiveThermalState
+            .atTemperature(800.0, 0.0, 2.5, props);
+
+        MaterialCarrierNbtCodec.writeThermalStateToNbt(hotState, nbt);
+        assertTrue(MaterialCarrierNbtCodec.hasActiveThermalState(nbt));
+
+        naturalexceptions.core.thermal.ActiveThermalState restored = MaterialCarrierNbtCodec
+            .readThermalStateFromNbt(nbt, props);
+        assertNotNull(restored);
+        assertEquals(hotState.energyJoules(), restored.energyJoules(), 0.001);
+        assertEquals(hotState.massKg(), restored.massKg(), 0.001);
+        assertEquals(hotState.temperatureKelvin(), restored.temperatureKelvin(), 0.01);
+    }
+
+    @Test
+    void ambientSampleOmitsThermalTagForSparsePersistence() {
+        MaterialRef ref = MaterialRef.authored(CU);
+        NBTTagCompound nbt = new NBTTagCompound();
+        MaterialCarrierNbtCodec.writeToNbt(ref, (CanonicalMaterialKey) null, nbt);
+
+        naturalexceptions.core.property.MaterialProperties props = naturalexceptions.content.material.BuiltinMaterials.COPPER_PROPERTIES;
+        naturalexceptions.core.thermal.ActiveThermalState ambientState = naturalexceptions.core.thermal.ActiveThermalState
+            .ambient(1.0, props);
+
+        MaterialCarrierNbtCodec.writeThermalStateToNbt(ambientState, nbt);
+        assertFalse(MaterialCarrierNbtCodec.hasActiveThermalState(nbt));
+        assertNull(MaterialCarrierNbtCodec.readThermalStateFromNbt(nbt, props));
+    }
+
+    @Test
+    void rejectsCorruptedThermalEnergyOrMass() {
+        NBTTagCompound badEnergy = new NBTTagCompound();
+        NBTTagCompound thermal = new NBTTagCompound();
+        thermal.setDouble(MaterialCarrierNbtCodec.KEY_THERMAL_ENERGY, -500.0);
+        thermal.setDouble(MaterialCarrierNbtCodec.KEY_THERMAL_MASS, 1.0);
+        badEnergy.setTag(MaterialCarrierNbtCodec.KEY_THERMAL, thermal);
+
+        naturalexceptions.core.property.MaterialProperties props = naturalexceptions.content.material.BuiltinMaterials.COPPER_PROPERTIES;
+        assertThrows(
+            PersistenceValidationException.class,
+            () -> MaterialCarrierNbtCodec.readThermalStateFromNbt(badEnergy, props));
+
+        NBTTagCompound badMass = new NBTTagCompound();
+        NBTTagCompound thermalZeroMass = new NBTTagCompound();
+        thermalZeroMass.setDouble(MaterialCarrierNbtCodec.KEY_THERMAL_ENERGY, 1000.0);
+        thermalZeroMass.setDouble(MaterialCarrierNbtCodec.KEY_THERMAL_MASS, 0.0);
+        badMass.setTag(MaterialCarrierNbtCodec.KEY_THERMAL, thermalZeroMass);
+
+        assertThrows(
+            PersistenceValidationException.class,
+            () -> MaterialCarrierNbtCodec.readThermalStateFromNbt(badMass, props));
     }
 }

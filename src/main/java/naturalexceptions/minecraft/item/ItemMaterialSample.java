@@ -34,12 +34,32 @@ public final class ItemMaterialSample extends Item {
     }
 
     public static ItemStack createStack(MaterialRef ref, CanonicalMaterialKey stateKey) {
+        return createStack(ref, stateKey, null);
+    }
+
+    public static ItemStack createStack(MaterialRef ref, CanonicalMaterialKey stateKey,
+        naturalexceptions.core.thermal.ActiveThermalState thermalState) {
         Item item = NEItems.materialSample != null ? NEItems.materialSample : new ItemMaterialSample();
         ItemStack stack = new ItemStack(item);
         NBTTagCompound nbt = new NBTTagCompound();
         MaterialCarrierNbtCodec.writeToNbt(ref, stateKey, nbt);
+        if (thermalState != null) {
+            MaterialCarrierNbtCodec.writeThermalStateToNbt(thermalState, nbt);
+        }
         stack.setTagCompound(nbt);
         return stack;
+    }
+
+    public static naturalexceptions.core.thermal.ActiveThermalState getThermalState(ItemStack stack,
+        naturalexceptions.core.property.MaterialProperties props) {
+        if (stack == null || !stack.hasTagCompound()) {
+            return null;
+        }
+        try {
+            return MaterialCarrierNbtCodec.readThermalStateFromNbt(stack.getTagCompound(), props);
+        } catch (PersistenceValidationException e) {
+            return null;
+        }
     }
 
     public static MaterialRef getMaterialRef(ItemStack stack) {
@@ -112,6 +132,23 @@ public final class ItemMaterialSample extends Item {
         try {
             MaterialRef ref = MaterialCarrierNbtCodec.readRefFromNbt(stack.getTagCompound());
             list.add("\u00a78" + ref.asString());
+
+            if (MaterialCarrierNbtCodec.hasActiveThermalState(stack.getTagCompound())) {
+                naturalexceptions.core.thermal.ActiveThermalState thermal = MaterialCarrierNbtCodec
+                    .readThermalStateFromNbt(
+                        stack.getTagCompound(),
+                        naturalexceptions.core.property.MaterialProperties.of(8.96, 3.0, 100.0));
+                if (thermal != null) {
+                    list.add(String.format("\u00a7eTemperature: %.1f K", thermal.temperatureKelvin()));
+                    if (thermal.meltFraction() > 0.0 && thermal.meltFraction() < 1.0) {
+                        list.add(String.format("\u00a7ePhase: Mushy (%.0f%% melted)", thermal.meltFraction() * 100.0));
+                    } else {
+                        list.add(
+                            "\u00a7ePhase: " + thermal.phase()
+                                .id());
+                    }
+                }
+            }
 
             if (ref.isAuthored()) {
                 if (BuiltinContent.materials()

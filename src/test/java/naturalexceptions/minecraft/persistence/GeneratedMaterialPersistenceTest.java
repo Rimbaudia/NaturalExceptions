@@ -294,4 +294,54 @@ final class GeneratedMaterialPersistenceTest {
         assertTrue(
             unresolvedTooltip.contains("\u00a7cUnresolved authored material: naturalexceptions:mythic_alloy_999"));
     }
+
+    @Test
+    void carrierWithActiveThermalStateSurvivesContainerSaveAndLoad() {
+        MaterialRef ref = MaterialRef.authored(CU);
+        naturalexceptions.core.property.MaterialProperties props = BuiltinMaterials.COPPER_PROPERTIES;
+        naturalexceptions.core.thermal.ActiveThermalState thermal = naturalexceptions.core.thermal.ActiveThermalState
+            .atTemperature(850.0, 0.0, 1.5, props);
+
+        ItemStack hotStack = ItemMaterialSample.createStack(ref, (CanonicalMaterialKey) null, thermal);
+        assertTrue(MaterialCarrierNbtCodec.hasActiveThermalState(hotStack.getTagCompound()));
+
+        // Simulate chest slot NBT save
+        NBTTagList chestSlots = new NBTTagList();
+        NBTTagCompound slotTag = new NBTTagCompound();
+        slotTag.setByte("Slot", (byte) 0);
+        slotTag.setShort("id", (short) 1000);
+        slotTag.setByte("Count", (byte) 1);
+        slotTag.setShort("Damage", (short) 0);
+        if (hotStack.getTagCompound() != null) {
+            slotTag.setTag(
+                "tag",
+                hotStack.getTagCompound()
+                    .copy());
+        }
+        chestSlots.appendTag(slotTag);
+
+        NBTTagCompound chestCompound = new NBTTagCompound();
+        chestCompound.setTag("Items", chestSlots);
+
+        // Simulate reload into fresh context
+        NBTTagList loadedSlots = chestCompound.getTagList("Items", 10);
+        assertEquals(1, loadedSlots.tagCount());
+        NBTTagCompound loadedSlot0 = loadedSlots.getCompoundTagAt(0);
+
+        ItemStack restoredStack = new ItemStack(new ItemMaterialSample());
+        if (loadedSlot0.hasKey("tag", 10)) {
+            restoredStack.setTagCompound(loadedSlot0.getCompoundTag("tag"));
+        }
+
+        assertNotNull(restoredStack);
+        assertEquals(ref, ItemMaterialSample.getMaterialRef(restoredStack));
+        assertTrue(MaterialCarrierNbtCodec.hasActiveThermalState(restoredStack.getTagCompound()));
+
+        naturalexceptions.core.thermal.ActiveThermalState restoredThermal = ItemMaterialSample
+            .getThermalState(restoredStack, props);
+        assertNotNull(restoredThermal);
+        assertEquals(thermal.energyJoules(), restoredThermal.energyJoules(), 0.001);
+        assertEquals(thermal.massKg(), restoredThermal.massKg(), 0.001);
+        assertEquals(850.0, restoredThermal.temperatureKelvin(), 0.01);
+    }
 }

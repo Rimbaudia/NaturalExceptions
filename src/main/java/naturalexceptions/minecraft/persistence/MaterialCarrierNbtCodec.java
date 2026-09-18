@@ -5,9 +5,13 @@ import net.minecraft.nbt.NBTTagCompound;
 import naturalexceptions.core.composition.CanonicalComposition;
 import naturalexceptions.core.material.CanonicalMaterialKey;
 import naturalexceptions.core.material.MaterialRef;
+import naturalexceptions.core.property.MaterialProperties;
+import naturalexceptions.core.thermal.ActiveThermalState;
+import naturalexceptions.core.thermal.ThermodynamicModel;
 
 /**
- * Codec for translating MaterialRef, CanonicalMaterialKey, and CanonicalComposition to/from ItemStack NBT.
+ * Codec for translating MaterialRef, CanonicalMaterialKey, CanonicalComposition, and active thermal state to/from
+ * ItemStack NBT.
  *
  * <p>
  * Implements strict format versioning and consistency validation:
@@ -15,6 +19,7 @@ import naturalexceptions.core.material.MaterialRef;
  * <li>Format version must be positive and not exceed CURRENT_FORMAT.</li>
  * <li>Generated materials must include reconstruction information (StateKey or Composition).</li>
  * <li>Reconstruction payload is checked against the declared MaterialRef; mismatched hashes are rejected.</li>
+ * <li>Thermal state is sparse: samples at ambient equilibrium omit the "Thermal" tag to sleep implicitly.</li>
  * <li>Corrupt records throw {@link PersistenceValidationException} to fail safely and visibly.</li>
  * </ul>
  */
@@ -24,6 +29,10 @@ public final class MaterialCarrierNbtCodec {
     public static final String KEY_MATERIAL_REF = "MaterialRef";
     public static final String KEY_STATE_KEY = "StateKey";
     public static final String KEY_COMPOSITION = "Composition";
+
+    public static final String KEY_THERMAL = "Thermal";
+    public static final String KEY_THERMAL_ENERGY = "Energy";
+    public static final String KEY_THERMAL_MASS = "Mass";
 
     public static final int FORMAT_V1 = 1;
     public static final int CURRENT_FORMAT = 2;
@@ -50,6 +59,44 @@ public final class MaterialCarrierNbtCodec {
 
     public static void writeToNbt(MaterialRef ref, CanonicalComposition composition, NBTTagCompound nbt) {
         writeToNbt(ref, composition != null ? CanonicalMaterialKey.of(composition) : null, nbt);
+    }
+
+    public static void writeThermalStateToNbt(ActiveThermalState thermalState, NBTTagCompound nbt) {
+        if (nbt == null) {
+            throw new IllegalArgumentException("NBTTagCompound cannot be null");
+        }
+        if (thermalState == null
+            || thermalState.isEquilibratedWith(ThermodynamicModel.DEFAULT_AMBIENT_TEMPERATURE_K, 0.5)) {
+            nbt.removeTag(KEY_THERMAL);
+            return;
+        }
+        NBTTagCompound thermal = new NBTTagCompound();
+        thermal.setDouble(KEY_THERMAL_ENERGY, thermalState.energyJoules());
+        thermal.setDouble(KEY_THERMAL_MASS, thermalState.massKg());
+        nbt.setTag(KEY_THERMAL, thermal);
+    }
+
+    public static boolean hasActiveThermalState(NBTTagCompound nbt) {
+        return nbt != null && nbt.hasKey(KEY_THERMAL, 10);
+    }
+
+    public static ActiveThermalState readThermalStateFromNbt(NBTTagCompound nbt, MaterialProperties props) {
+        if (nbt == null || !nbt.hasKey(KEY_THERMAL, 10)) {
+            return null;
+        }
+        NBTTagCompound thermal = nbt.getCompoundTag(KEY_THERMAL);
+        if (!thermal.hasKey(KEY_THERMAL_ENERGY, 99)) {
+            throw new PersistenceValidationException("Missing thermal energy in carrier NBT");
+        }
+        double energy = thermal.getDouble(KEY_THERMAL_ENERGY);
+        if (Double.isNaN(energy) || Double.isInfinite(energy) || energy < 0.0) {
+            throw new PersistenceValidationException("Corrupted thermal energy in carrier NBT: " + energy);
+        }
+        double mass = thermal.hasKey(KEY_THERMAL_MASS, 99) ? thermal.getDouble(KEY_THERMAL_MASS) : 1.0;
+        if (Double.isNaN(mass) || Double.isInfinite(mass) || mass <= 0.0) {
+            throw new PersistenceValidationException("Corrupted thermal mass in carrier NBT: " + mass);
+        }
+        return new ActiveThermalState(energy, mass, props);
     }
 
     public static MaterialRef readRefFromNbt(NBTTagCompound nbt) {
