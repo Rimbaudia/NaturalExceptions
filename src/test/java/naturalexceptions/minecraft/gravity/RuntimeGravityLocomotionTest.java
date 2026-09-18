@@ -1504,4 +1504,331 @@ final class RuntimeGravityLocomotionTest {
         assertEquals(initial.tangentForward().y, frame.tangentForward().y, 1e-4);
         assertEquals(initial.tangentForward().z, frame.tangentForward().z, 1e-4);
     }
+
+    @Test
+    void cameraBasisMatchesCanonicalRenderedFrame() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(9.7, 64.0, 0.0);
+        entity.rotationYaw = 0.0F;
+
+        NEPlayerPresentationService.instance()
+            .reset();
+        NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 0.0F);
+
+        Vector3d up = frame.renderedUp();
+        Vector3d fwd = frame.renderedForward();
+        Vector3d right = frame.renderedRight();
+
+        // Must match physical frame target when settled
+        assertEquals(
+            frame.physicalFrame()
+                .localUp().x,
+            up.x,
+            EPSILON);
+        assertEquals(
+            frame.physicalFrame()
+                .localUp().y,
+            up.y,
+            EPSILON);
+        assertEquals(
+            frame.physicalFrame()
+                .localUp().z,
+            up.z,
+            EPSILON);
+
+        // Orthonormal basis checks
+        assertEquals(0.0, up.dot(fwd), EPSILON);
+        assertEquals(0.0, up.dot(right), EPSILON);
+        assertEquals(0.0, fwd.dot(right), EPSILON);
+        assertEquals(1.0, up.length(), EPSILON);
+        assertEquals(1.0, fwd.length(), EPSILON);
+        assertEquals(1.0, right.length(), EPSILON);
+
+        // Determinant must be +1.0
+        double det = right.dot(up.cross(fwd));
+        assertEquals(1.0, det, EPSILON);
+    }
+
+    @Test
+    void cameraWorldToViewMatrixHasPositiveOrientation() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(9.7, 64.0, 0.0);
+        entity.rotationPitch = -15.0F; // tilted upward 15 degrees
+
+        NEPlayerPresentationService.instance()
+            .reset();
+        NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 0.0F);
+
+        float[] m = frame.cameraMatrix();
+        // Column-major: column 0 = (m[0], m[1], m[2]), column 1 = (m[4], m[5], m[6]), column 2 = (m[8], m[9], m[10])
+        double det = m[0] * (m[5] * m[10] - m[6] * m[9]) - m[4] * (m[1] * m[10] - m[2] * m[9])
+            + m[8] * (m[1] * m[6] - m[2] * m[5]);
+        assertEquals(1.0, det, 1e-4, "Camera view matrix rotation submatrix must have determinant +1.0");
+    }
+
+    @Test
+    void cameraMatrixDoesNotDoubleApplyVanillaYawPitch() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(9.7, 64.0, 0.0);
+        entity.rotationPitch = 0.0F;
+
+        NEPlayerPresentationService.instance()
+            .reset();
+        NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 0.0F);
+
+        float[] m = frame.cameraMatrix();
+        Vector3d look = frame.computeLookVector();
+
+        // M * look must transform directly to (0, 0, -1) in eye space
+        double eyeX = m[0] * look.x + m[4] * look.y + m[8] * look.z;
+        double eyeY = m[1] * look.x + m[5] * look.y + m[9] * look.z;
+        double eyeZ = m[2] * look.x + m[6] * look.y + m[10] * look.z;
+
+        assertEquals(0.0, eyeX, 1e-4);
+        assertEquals(0.0, eyeY, 1e-4);
+        assertEquals(-1.0, eyeZ, 1e-4);
+    }
+
+    @Test
+    void cameraOriginAndOrientationAreIndependent() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(9.7, 64.0, 0.0);
+        entity.prevPosX = 9.7;
+        entity.prevPosY = 64.0;
+        entity.prevPosZ = 0.0;
+
+        NEPlayerPresentationService.instance()
+            .reset();
+        NEPlayerPresentationFrame frame1 = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 1.0F);
+
+        // Move entity
+        entity.setPosition(9.7, 80.0, 15.0);
+        entity.prevPosX = 9.7;
+        entity.prevPosY = 80.0;
+        entity.prevPosZ = 15.0;
+        NEPlayerPresentationFrame frame2 = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 1.0F);
+
+        // Orientation matrices must be identical
+        float[] m1 = frame1.cameraMatrix();
+        float[] m2 = frame2.cameraMatrix();
+        for (int i = 0; i < 16; i++) {
+            assertEquals(m1[i], m2[i], 1e-4F);
+        }
+
+        // But eyePoint positions must reflect the position change
+        assertEquals(frame1.eyePoint().x, frame2.eyePoint().x, 1e-4);
+        assertEquals(frame1.eyePoint().y + 16.0, frame2.eyePoint().y, 1e-4);
+        assertEquals(frame1.eyePoint().z + 15.0, frame2.eyePoint().z, 1e-4);
+    }
+
+    @Test
+    void firstPersonHandUsesLocalCameraFrame() {
+        // Under nonstandard gravity, presentation frame guarantees camera view matrix
+        // aligns screen with local gravity rather than world Y
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(9.7, 64.0, 0.0);
+
+        NEPlayerPresentationService.instance()
+            .reset();
+        NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 0.0F);
+
+        assertTrue(service.isNonstandardGravityActive());
+        // Screen up matches renderedUp when pitch is 0
+        Vector3d look = frame.computeLookVector();
+        Vector3d camRight = frame.renderedForward()
+            .cross(frame.renderedUp())
+            .normalize();
+        Vector3d screenUp = camRight.cross(look)
+            .normalize();
+        assertEquals(frame.renderedUp().x, screenUp.x, 1e-4);
+        assertEquals(frame.renderedUp().y, screenUp.y, 1e-4);
+        assertEquals(frame.renderedUp().z, screenUp.z, 1e-4);
+    }
+
+    @Test
+    void thirdPersonBodyUpMatchesLocalUp() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(9.7, 64.0, 0.0);
+
+        NEPlayerPresentationService.instance()
+            .reset();
+        NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 0.0F);
+
+        float[] modelM = frame.modelMatrix();
+        // Column 1 is model UP
+        Vector3d modelUp = new Vector3d(modelM[4], modelM[5], modelM[6]);
+        assertEquals(frame.renderedUp().x, modelUp.x, 1e-4);
+        assertEquals(frame.renderedUp().y, modelUp.y, 1e-4);
+        assertEquals(frame.renderedUp().z, modelUp.z, 1e-4);
+
+        // Model matrix determinant is +1.0
+        double det = modelM[0] * (modelM[5] * modelM[10] - modelM[6] * modelM[9])
+            - modelM[4] * (modelM[1] * modelM[10] - modelM[2] * modelM[9])
+            + modelM[8] * (modelM[1] * modelM[6] - modelM[2] * modelM[5]);
+        assertEquals(1.0, det, 1e-4);
+    }
+
+    @Test
+    void bodyForwardMatchesTransportedForward() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(9.7, 64.0, 0.0);
+
+        NEPlayerPresentationService.instance()
+            .reset();
+        NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 0.0F);
+
+        float[] modelM = frame.modelMatrix();
+        // Model forward in model space is -Z, which transforms to -Column 2
+        Vector3d bodyForward = new Vector3d(-modelM[8], -modelM[9], -modelM[10]);
+        assertEquals(frame.renderedForward().x, bodyForward.x, 1e-4);
+        assertEquals(frame.renderedForward().y, bodyForward.y, 1e-4);
+        assertEquals(frame.renderedForward().z, bodyForward.z, 1e-4);
+    }
+
+    @Test
+    void locomotionDistanceUsesLocalTangentDisplacement() {
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(10.0, 64.0, 0.0);
+        Vector3d localUp = new Vector3d(1.0, 0.0, 0.0); // side wall
+
+        // Pure vertical world-Y movement along the wall
+        entity.prevPosX = 10.0;
+        entity.posX = 10.0;
+        entity.prevPosY = 64.0;
+        entity.posY = 64.25;
+        entity.prevPosZ = 0.0;
+        entity.posZ = 0.0;
+
+        NEPlayerMovementHandler.updateLocomotionAnimation(entity, localUp, true);
+
+        assertTrue(entity.limbSwingAmount > 0.0, "Vertical movement along wall must advance limbSwingAmount");
+        assertEquals(
+            0.25 * 0.6,
+            entity.distanceWalkedModified,
+            1e-4,
+            "distanceWalkedModified must accumulate tangential distance");
+    }
+
+    @Test
+    void verticalWorldMovementStillAdvancesWalkCycle() {
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        Vector3d localUp = new Vector3d(1.0, 0.0, 0.0); // side wall
+
+        float initialSwing = entity.limbSwing;
+        for (int tick = 0; tick < 10; tick++) {
+            entity.prevPosY = 64.0 + tick * 0.1;
+            entity.posY = 64.0 + (tick + 1) * 0.1;
+            entity.prevPosX = 10.0;
+            entity.posX = 10.0;
+            entity.prevPosZ = 0.0;
+            entity.posZ = 0.0;
+
+            NEPlayerMovementHandler.updateLocomotionAnimation(entity, localUp, true);
+        }
+
+        assertTrue(
+            entity.limbSwing > initialSwing + 1.0F,
+            "Walk cycle must advance continuously across vertical movement ticks");
+        assertTrue(entity.distanceWalkedModified > 0.5F, "distanceWalkedModified must accumulate across ticks");
+    }
+
+    @Test
+    void standingStillDoesNotAdvanceWalkCycle() {
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        Vector3d localUp = new Vector3d(1.0, 0.0, 0.0);
+        entity.limbSwingAmount = 0.5F;
+        entity.limbSwing = 10.0F;
+        entity.prevPosX = 10.0;
+        entity.posX = 10.0;
+        entity.prevPosY = 64.0;
+        entity.posY = 64.0;
+        entity.prevPosZ = 0.0;
+        entity.posZ = 0.0;
+
+        for (int tick = 0; tick < 15; tick++) {
+            NEPlayerMovementHandler.updateLocomotionAnimation(entity, localUp, true);
+        }
+
+        assertTrue(entity.limbSwingAmount < 0.01F, "limbSwingAmount must decay to zero when standing still");
+        float settledSwing = entity.limbSwing;
+        NEPlayerMovementHandler.updateLocomotionAnimation(entity, localUp, true);
+        assertEquals(settledSwing, entity.limbSwing, 0.005F, "Limb swing must stop advancing when standing still");
+    }
+
+    @Test
+    void fullCircumnavigationKeepsAnimationContinuous() {
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.limbSwing = 0.0F;
+        int steps = 120;
+        for (int i = 0; i < steps; i++) {
+            double angle = 2.0 * Math.PI * (i / (double) steps);
+            Vector3d localUp = new Vector3d(Math.sin(angle), Math.cos(angle), 0.0).normalize();
+            Vector3d tangent = new Vector3d(Math.cos(angle), -Math.sin(angle), 0.0).normalize();
+
+            entity.prevPosX = Math.sin(angle) * 10.0;
+            entity.prevPosY = Math.cos(angle) * 10.0;
+            entity.prevPosZ = 0.0;
+
+            entity.posX = entity.prevPosX + tangent.x * 0.15;
+            entity.posY = entity.prevPosY + tangent.y * 0.15;
+            entity.posZ = 0.0;
+
+            NEPlayerMovementHandler.updateLocomotionAnimation(entity, localUp, true);
+            assertFalse(Float.isNaN(entity.limbSwing), "Limb swing must remain a valid number");
+            assertTrue(entity.limbSwingAmount > 0.0F, "Limb swing amount must remain active while walking around body");
+        }
+        assertTrue(entity.limbSwing > 10.0F, "Full circumnavigation must advance limb swing continuously");
+    }
+
+    @Test
+    void renderFrameDoesNotFlipAtBottomPole() {
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        NEPlayerPresentationService.instance()
+            .reset();
+
+        // Transition through bottom pole: localUp passes from (-0.1, -0.99, 0) through (0, -1, 0) to (0.1, -0.99, 0)
+        Vector3d prevFwd = null;
+        for (int i = -5; i <= 5; i++) {
+            double x = i * 0.05;
+            double y = -Math.sqrt(1.0 - x * x);
+            service.setActiveField(UniformGravityField.of(-x * 0.08, -y * 0.08, 0.0));
+            entity.setPosition(x * 10.0, y * 10.0, 0.0);
+
+            NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+                .getPresentationFrame(entity, 0.0F);
+
+            if (prevFwd != null) {
+                double dot = prevFwd.dot(frame.renderedForward());
+                assertTrue(dot > 0.9, "Forward vector must not flip 180 degrees at bottom pole");
+            }
+            prevFwd = frame.renderedForward();
+        }
+    }
+
+    @Test
+    void standardGravityUsesVanillaPresentationPath() {
+        service.resetToDefault();
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(0.0, 64.0, 0.0);
+
+        assertFalse(service.isNonstandardGravityActive(), "Standard gravity must not report nonstandard active");
+        assertFalse(
+            NEEntityRenderHandler.shouldApplyCustomOrientation(entity),
+            "Custom orientation must not apply under standard gravity");
+    }
 }

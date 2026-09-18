@@ -194,6 +194,9 @@ public final class NEPlayerMovementHandler {
             entity.motionZ *= 0.91;
         }
 
+        // 9. Update locomotion animation state using gravity-relative tangential displacement
+        updateLocomotionAnimation(entity, localUp, isGrounded);
+
         if (service.isDebugLogging()) {
             System.out.printf(
                 "[NE-GRAV-DEBUG] entity=%s pos=(%.2f, %.2f, %.2f) vel=(%.4f, %.4f, %.4f) g=(%.3f, %.3f, %.3f) down=%s up=%s grounded=%b onGround=%b jump=%b step=%b%n",
@@ -304,6 +307,38 @@ public final class NEPlayerMovementHandler {
         entity.motionY = 0.0;
         entity.motionZ = 0.0;
         return true;
+    }
+
+    /**
+     * Updates walking animation, limb swing, and distance walked using gravity-relative
+     * tangential displacement along the local support surface.
+     */
+    public static void updateLocomotionAnimation(EntityLivingBase entity, Vector3d localUp, boolean isGrounded) {
+        if (entity == null || localUp == null) {
+            return;
+        }
+
+        Vector3d deltaPos = new Vector3d(
+            entity.posX - entity.prevPosX,
+            entity.posY - entity.prevPosY,
+            entity.posZ - entity.prevPosZ);
+
+        double normalDisp = deltaPos.dot(localUp);
+        Vector3d tangentDelta = deltaPos.subtract(localUp.multiply(normalDisp));
+        double tangentDistance = tangentDelta.length();
+
+        entity.prevLimbSwingAmount = entity.limbSwingAmount;
+        float f6 = (float) (tangentDistance * 4.0);
+        if (f6 > 1.0F) {
+            f6 = 1.0F;
+        }
+
+        entity.limbSwingAmount += (f6 - entity.limbSwingAmount) * 0.4F;
+        entity.limbSwing += entity.limbSwingAmount;
+
+        if (isGrounded) {
+            entity.distanceWalkedModified += (float) (tangentDistance * 0.6);
+        }
     }
 
     private static CollisionProvider defaultCollisionProvider(EntityLivingBase entity) {

@@ -31,8 +31,8 @@ public final class NEGravityService {
 
     private static final NEGravityService GLOBAL = new NEGravityService();
 
-    private final Map<Integer, LocalEntityFrame> entityFrames = new ConcurrentHashMap<>();
-    private final Map<Integer, Float> entityLastYaw = new ConcurrentHashMap<>();
+    private final Map<Long, LocalEntityFrame> entityFrames = new ConcurrentHashMap<>();
+    private final Map<Long, Float> entityLastYaw = new ConcurrentHashMap<>();
 
     private GravityField activeField;
     private double vanillaDownwardAcceleration;
@@ -62,6 +62,8 @@ public final class NEGravityService {
         this.enabled = true;
         this.entityFrames.clear();
         this.entityLastYaw.clear();
+        NEPlayerPresentationService.instance()
+            .reset();
     }
 
     public synchronized double vanillaDownwardAcceleration() {
@@ -110,13 +112,25 @@ public final class NEGravityService {
         return sampleAt(entity.posX, entity.posY, entity.posZ);
     }
 
+    public static long entityKey(Entity entity) {
+        if (entity == null) {
+            return 0L;
+        }
+        long id = entity.getEntityId();
+        if (entity.worldObj != null && entity.worldObj.isRemote) {
+            return id | (1L << 32);
+        }
+        return id;
+    }
+
     /**
      * Clears cached frame and yaw state for the given entity.
      */
     public void clearEntityFrame(Entity entity) {
         if (entity != null) {
-            entityFrames.remove(entity.getEntityId());
-            entityLastYaw.remove(entity.getEntityId());
+            long key = entityKey(entity);
+            entityFrames.remove(key);
+            entityLastYaw.remove(key);
         }
     }
 
@@ -131,25 +145,25 @@ public final class NEGravityService {
     public LocalEntityFrame getOrUpdateLocalFrame(EntityLivingBase entity) {
         Objects.requireNonNull(entity, "entity");
         GravitySample sample = sampleFor(entity);
-        int id = entity.getEntityId();
+        long key = entityKey(entity);
 
         float currentYaw = entity.rotationYaw;
-        Float lastYaw = entityLastYaw.get(id);
+        Float lastYaw = entityLastYaw.get(key);
         float yawDelta = 0.0F;
         if (lastYaw != null) {
             yawDelta = currentYaw - lastYaw;
             while (yawDelta < -180.0F) yawDelta += 360.0F;
             while (yawDelta >= 180.0F) yawDelta -= 360.0F;
         }
-        entityLastYaw.put(id, currentYaw);
+        entityLastYaw.put(key, currentYaw);
 
-        LocalEntityFrame frame = entityFrames.get(id);
+        LocalEntityFrame frame = entityFrames.get(key);
         if (frame == null) {
             frame = LocalEntityFrame.deriveFrom(sample, currentYaw);
         } else {
             frame = frame.transportTo(sample.localUp(), yawDelta, sample.sourceId());
         }
-        entityFrames.put(id, frame);
+        entityFrames.put(key, frame);
         return frame;
     }
 

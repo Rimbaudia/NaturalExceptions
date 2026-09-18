@@ -1,5 +1,9 @@
 package naturalexceptions.minecraft.gravity;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
+
 import net.minecraft.entity.EntityLivingBase;
 
 import org.lwjgl.opengl.GL11;
@@ -16,10 +20,15 @@ import naturalexceptions.core.gravity.Vector3d;
  * <p>
  * Positions and orients living entity 3D models relative to local gravity, ensuring
  * that the entity's feet are planted on the support surface (floor, wall, ceiling)
- * and the body extends outward along {@code localUp}.
+ * and the body extends outward along {@code renderedUp}, consuming the exact same
+ * canonical presentation frame as the camera.
  */
 @SideOnly(Side.CLIENT)
 public final class NEEntityRenderHandler {
+
+    private static final FloatBuffer MODEL_BUFFER = ByteBuffer.allocateDirect(64)
+        .order(ByteOrder.nativeOrder())
+        .asFloatBuffer();
 
     private NEEntityRenderHandler() {}
 
@@ -54,8 +63,9 @@ public final class NEEntityRenderHandler {
             return;
         }
 
-        GravitySample sample = service.sampleFor(entity);
-        Vector3d localUp = sample.localUp();
+        NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, partialTicks);
+        Vector3d localUp = frame.renderedUp();
         Vector3d worldUp = Vector3d.UP;
         double dot = worldUp.dot(localUp);
 
@@ -68,25 +78,21 @@ public final class NEEntityRenderHandler {
         double hw = entity.width * 0.5;
         double hh = entity.height * 0.5;
         Vector3d center = new Vector3d(entity.posX, entity.posY + hh, entity.posZ);
-        LocalBodyStance stance = new LocalBodyStance(center, sample.localDown(), hw, hh);
+        LocalBodyStance stance = new LocalBodyStance(
+            center,
+            frame.renderedUp()
+                .negate(),
+            hw,
+            hh);
         Vector3d offset = stance.supportSurfaceOffset();
 
         GL11.glTranslatef((float) offset.x, (float) offset.y, (float) offset.z);
 
-        // 2. Rotate from world UP (0, 1, 0) to localUp
-        if (dot < -0.99999) {
-            // Upside down ceiling: 180 degrees around X axis
-            GL11.glRotatef(180.0F, 1.0F, 0.0F, 0.0F);
-        } else {
-            Vector3d axis = stance.rotationAxis();
-            float angleDeg = (float) stance.rotationFromWorldUpDegrees();
-            GL11.glRotatef(angleDeg, (float) axis.x, (float) axis.y, (float) axis.z);
-        }
+        // 2. Apply canonical model orientation matrix derived from rendered presentation frame
+        frame.uploadModelMatrix(MODEL_BUFFER);
+        GL11.glMultMatrix(MODEL_BUFFER);
 
-        // 3. Rotate body yaw around local Up (the local Y axis in the rotated frame)
-        GL11.glRotatef(180.0F - bodyYaw, 0.0F, 1.0F, 0.0F);
-
-        // 4. Handle death animation if dying
+        // 3. Handle death animation if dying
         applyDeathRotation(entity, partialTicks);
     }
 
