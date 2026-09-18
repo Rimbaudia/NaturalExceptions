@@ -1,23 +1,32 @@
 package naturalexceptions.minecraft.gravity;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.util.AxisAlignedBB;
 
-import naturalexceptions.core.gravity.GravitySample;
 import naturalexceptions.core.gravity.LocalBodyStance;
 import naturalexceptions.core.gravity.LocalEntityFrame;
 import naturalexceptions.core.gravity.Vector3d;
 
 /**
- * Service providing the canonical smoothed rendered presentation frame for player rendering.
+ * Service providing the canonical presentation frame for player rendering and camera positioning.
  *
  * <p>
- * Ensures physicalLocalFrame (authoritative for movement/contact/jump) and renderedLocalFrame
- * (smoothed for camera/model presentation) are cleanly separated, while maintaining determinism,
- * positive determinant (+1.0), and continuous heading transport.
+ * Architectural invariants:
+ * <ul>
+ * <li><b>Camera orientation may be smoothed:</b> {@code renderedUp} and {@code renderedForward}
+ * are geodesically interpolated across render frames to eliminate visual disorientation on ledge transitions.</li>
+ * <li><b>Camera position may not interpolate through solid geometry:</b> {@code eyePoint} is anchored
+ * strictly to the physically valid local body stance, derived from authoritative {@code physicalLocalUp}
+ * and collision-checked against nearby block geometry.</li>
+ * <li>Zero entity physics interference: adjustments apply solely to presentation viewpoints.</li>
+ * </ul>
  */
 public final class NEPlayerPresentationService {
 
@@ -25,6 +34,7 @@ public final class NEPlayerPresentationService {
 
     private final Map<Long, Vector3d> smoothedUps = new ConcurrentHashMap<>();
     private final Map<Long, Vector3d> smoothedForwards = new ConcurrentHashMap<>();
+    private final Map<Long, Vector3d> prevSafeEyePoints = new ConcurrentHashMap<>();
     private double smoothingFactor = 0.25;
 
     private NEPlayerPresentationService() {}
@@ -36,6 +46,7 @@ public final class NEPlayerPresentationService {
     public synchronized void reset() {
         smoothedUps.clear();
         smoothedForwards.clear();
+        prevSafeEyePoints.clear();
     }
 
     public synchronized double smoothingFactor() {
@@ -47,10 +58,24 @@ public final class NEPlayerPresentationService {
     }
 
     /**
-     * Gets or updates the canonical rendered presentation frame for an entity.
-     * Consumed by camera, entity 3D model, and viewpoint anchoring.
+     * Gets or updates the canonical rendered presentation frame for an entity using the live World.
      */
     public NEPlayerPresentationFrame getPresentationFrame(EntityLivingBase entity, float partialTicks) {
+        if (entity == null || entity.worldObj == null) {
+            return getPresentationFrame(entity, partialTicks, null, null);
+        }
+        return getPresentationFrame(entity, partialTicks, entity.worldObj::rayTraceBlocks, (e, bb) -> {
+            @SuppressWarnings("unchecked")
+            List<AxisAlignedBB> list = (List<AxisAlignedBB>) entity.worldObj.getCollidingBoundingBoxes(e, bb);
+            return list != null ? list : Collections.emptyList();
+        });
+    }
+
+    /**
+     * Core presentation frame derivation, accepting raytrace and collision providers for deterministic unit testing.
+     */
+    public NEPlayerPresentationFrame getPresentationFrame(EntityLivingBase entity, float partialTicks,
+        NECameraCollisionHelper.RayTraceProvider rayTracer, NECameraCollisionHelper.CollisionBoxProvider boxProvider) {
         Objects.requireNonNull(entity, "entity");
         NEGravityService service = NEGravityService.global();
         LocalEntityFrame physFrame = service.getOrUpdateLocalFrame(entity);
@@ -113,24 +138,56 @@ public final class NEPlayerPresentationService {
         smoothedUps.put(key, currUp);
         smoothedForwards.put(key, currFwd);
 
-        // Interpolated entity position
+        // 1. Interpolated entity coordinates
         double interpX = entity.prevPosX + (entity.posX - entity.prevPosX) * (double) partialTicks;
         double interpY = entity.prevPosY + (entity.posY - entity.prevPosY) * (double) partialTicks;
         double interpZ = entity.prevPosZ + (entity.posZ - entity.prevPosZ) * (double) partialTicks;
 
         double hw = entity.width * 0.5;
         double hh = entity.height * 0.5;
-        Vector3d aabbCenter = new Vector3d(interpX, interpY + hh, interpZ);
-        GravitySample sample = service.sampleFor(entity);
-        LocalBodyStance stance = LocalBodyStance.fromAabb(aabbCenter, currUp.negate(), hw, hh, entity.getEyeHeight());
 
-        Vector3d eyePoint = stance.eyePoint();
-        Vector3d supportPoint = stance.supportPoint();
+        // 2. Physical eye height in Minecraft 1.7.10:
+        // In 1.7.10, EntityPlayer.yOffset is 1.62F (or 1.54F sneaking) and entity.posY is eye-level.
+        // EntityPlayer.getEyeHeight() returns 0.12F (sneak offset), NOT 1.62F.
+        double physicalEyeHeight;
+        double yOffset;
+        if (entity instanceof EntityPlayer || entity.yOffset > 0.0F) {
+            yOffset = entity.yOffset > 0.0F ? (double) entity.yOffset : 1.62;
+            physicalEyeHeight = yOffset;
+        } else {
+            float eh = entity.getEyeHeight();
+            physicalEyeHeight = eh > 0.0F ? (double) eh : entity.height * 0.85;
+            yOffset = 0.0;
+        }
+
+        // True physical AABB center: entity.posY in 1.7.10 is feet + yOffset
+        double bottomY = interpY - yOffset;
+        Vector3d physicalBodyCenter = new Vector3d(interpX, bottomY + hh, interpZ);
+
+        // 3. PHYSICAL stance: authoritative physical local frame dictates eye position
+        Vector3d physUp = physFrame.localUp();
+        Vector3d physDown = physUp.negate();
+        LocalBodyStance physicalStance = LocalBodyStance
+            .fromAabb(physicalBodyCenter, physDown, hw, hh, physicalEyeHeight);
+
+        Vector3d rawEyePoint = physicalStance.eyePoint();
+        Vector3d supportPoint = physicalStance.supportPoint();
+
+        // 4. Collision-aware first-person camera placement and depenetration
+        Vector3d prevSafeEye = prevSafeEyePoints.get(key);
+        Vector3d safeEyePoint;
+        if (service.isNonstandardGravityActive() && (rayTracer != null || boxProvider != null)) {
+            safeEyePoint = NECameraCollisionHelper
+                .resolveCameraPosition(rayTracer, boxProvider, entity, physicalBodyCenter, rawEyePoint, prevSafeEye);
+        } else {
+            safeEyePoint = rawEyePoint;
+        }
+        prevSafeEyePoints.put(key, safeEyePoint);
 
         float mcPitch = entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch) * partialTicks;
         double mathPitch = -mcPitch;
 
-        return new NEPlayerPresentationFrame(physFrame, currUp, currFwd, eyePoint, supportPoint, mathPitch);
+        return new NEPlayerPresentationFrame(physFrame, currUp, currFwd, safeEyePoint, supportPoint, mathPitch);
     }
 
     private static long entityKey(EntityLivingBase entity) {

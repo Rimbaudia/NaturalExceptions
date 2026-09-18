@@ -77,7 +77,10 @@ public final class NEEntityRenderHandler {
         // 1. Calculate stance geometry and translate origin to support surface (feet)
         double hw = entity.width * 0.5;
         double hh = entity.height * 0.5;
-        Vector3d center = new Vector3d(entity.posX, entity.posY + hh, entity.posZ);
+        double yOffset = entity instanceof net.minecraft.entity.player.EntityPlayer ? (double) entity.yOffset
+            : (entity.yOffset > 0.0F ? (double) entity.yOffset : 0.0);
+        double bottomY = entity.posY - yOffset;
+        Vector3d center = new Vector3d(entity.posX, bottomY + hh, entity.posZ);
         LocalBodyStance stance = new LocalBodyStance(
             center,
             frame.renderedUp()

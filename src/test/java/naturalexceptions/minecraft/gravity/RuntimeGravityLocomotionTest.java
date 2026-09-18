@@ -4,12 +4,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.AxisAlignedBB;
+import net.minecraft.util.MovingObjectPosition;
+import net.minecraft.util.Vec3;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +53,9 @@ final class RuntimeGravityLocomotionTest {
             this.posX = x;
             this.posY = y;
             this.posZ = z;
+            this.prevPosX = x;
+            this.prevPosY = y;
+            this.prevPosZ = z;
             this.boundingBox.setBounds(x - 0.3, y, z - 0.3, x + 0.3, y + 1.8, z + 0.3);
         }
 
@@ -1830,5 +1836,307 @@ final class RuntimeGravityLocomotionTest {
         assertFalse(
             NEEntityRenderHandler.shouldApplyCustomOrientation(entity),
             "Custom orientation must not apply under standard gravity");
+    }
+
+    @Test
+    void firstPersonEyeUsesPhysicallyValidLocalStance() {
+        // Wall at X = 5.0, localDown = (+1, 0, 0), localUp = (-1, 0, 0)
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.yOffset = 1.62F;
+        // Player standing on the wall: feet at X = 5.0, bounding box [4.4, 5.0] along X, posY at 65.62
+        entity.setPosition(4.7, 64.0, 0.0);
+        entity.boundingBox.setBounds(4.4, 64.0, -0.3, 5.0, 65.8, 0.3);
+
+        NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 0.0F);
+
+        // Support point must touch the wall surface at X = 5.0
+        assertEquals(5.0, frame.supportPoint().x, 1e-3, "Support point must lie on wall surface at X=5.0");
+
+        // Eye point must extend outward along localUp (-1, 0, 0) by physicalEyeHeight (1.62)
+        // 5.0 - 1.62 = 3.38
+        assertEquals(3.38, frame.eyePoint().x, 1e-3, "Eye point must extend outward from wall along localUp by 1.62");
+        assertFalse(
+            Math.abs(frame.eyePoint().x - 4.88) < 0.1,
+            "Eye point must not be placed at 0.12 from wall (ankles)");
+    }
+
+    @Test
+    void renderedOrientationSmoothingDoesNotMoveEyeThroughSolid() {
+        NEPlayerPresentationService.instance()
+            .reset();
+        // Frame 1: on top surface under downward gravity (localUp = (0, 1, 0))
+        service.setActiveField(UniformGravityField.of(0.0, -0.08, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.yOffset = 1.62F;
+        entity.setPosition(5.3, 64.0, 0.0);
+        entity.boundingBox.setBounds(5.0, 64.0, -0.3, 5.6, 65.8, 0.3);
+
+        // Render frame 1: currUp starts at (0, 1, 0)
+        NEPlayerPresentationFrame frame1 = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 0.0F);
+        assertEquals(1.0, frame1.renderedUp().y, 1e-3, "Initial rendered up must be (0, 1, 0)");
+
+        // Step onto side wall: gravity pulls along -X, physical localUp switches to (+1, 0, 0)
+        service.setActiveField(UniformGravityField.of(-0.08, 0.0, 0.0));
+
+        // Render frame 2: currUp is slerping toward (1, 0, 0), so renderedUp has x > 0 and y > 0
+        NEPlayerPresentationFrame frame2 = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 0.0F);
+
+        // Visual orientation is smoothed
+        assertTrue(frame2.renderedUp().x > 0.1 && frame2.renderedUp().y > 0.1, "Rendered up must be smoothed");
+
+        // BUT eyePoint must remain strictly anchored to the physical stance (along physical localUp +X),
+        // NOT diagonally rotated along renderedUp which would penetrate the corner block
+        assertEquals(5.0 + 1.62, frame2.eyePoint().x, 1e-3, "Eye point X must remain on physical stance");
+        assertTrue(frame2.eyePoint().x > 6.0, "Eye point must remain extended outward from wall");
+    }
+
+    @Test
+    void desiredCameraOriginInsideSolidIsDepenetrated() {
+        // Block obstacle at [0, 0, 0] to [1, 1, 1]
+        AxisAlignedBB blockBox = AxisAlignedBB.getBoundingBox(0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+        List<AxisAlignedBB> blockList = Collections.singletonList(blockBox);
+        NECameraCollisionHelper.CollisionBoxProvider boxProvider = (e, bb) -> blockList;
+        NECameraCollisionHelper.RayTraceProvider rayTracer = (start, end) -> {
+            // Ray from start (outside, y=1.5) to end (inside, y=0.5) hits top face at y=1.0
+            if (start.yCoord >= 1.0 && end.yCoord < 1.0) {
+                return new MovingObjectPosition(0, 0, 0, 1, Vec3.createVectorHelper(end.xCoord, 1.0, end.zCoord));
+            }
+            return null;
+        };
+
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        Vector3d bodyCenter = new Vector3d(0.5, 1.5, 0.5);
+        Vector3d desiredEye = new Vector3d(0.5, 0.5, 0.5); // inside the block!
+
+        Vector3d resolved = NECameraCollisionHelper
+            .resolveCameraPosition(rayTracer, boxProvider, entity, bodyCenter, desiredEye, null);
+
+        // Resolved eye must not be inside the block
+        assertFalse(
+            NECameraCollisionHelper.isPointInsideSolid(boxProvider, entity, resolved),
+            "Resolved camera position must not be inside solid block");
+        assertTrue(
+            resolved.y >= 1.0 + NECameraCollisionHelper.SURFACE_BACKOFF_MARGIN - 1e-3,
+            "Resolved camera position must be pushed outside top face of block");
+    }
+
+    @Test
+    void cameraDepenetrationDoesNotMovePlayer() {
+        AxisAlignedBB blockBox = AxisAlignedBB.getBoundingBox(0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+        NECameraCollisionHelper.CollisionBoxProvider boxProvider = (e, bb) -> Collections.singletonList(blockBox);
+
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(0.5, 1.5, 0.5);
+
+        double origX = entity.posX;
+        double origY = entity.posY;
+        double origZ = entity.posZ;
+        AxisAlignedBB origBb = entity.boundingBox.copy();
+
+        Vector3d bodyCenter = new Vector3d(origX, origY, origZ);
+        Vector3d desiredEye = new Vector3d(0.5, 0.5, 0.5);
+
+        NECameraCollisionHelper.resolveCameraPosition(null, boxProvider, entity, bodyCenter, desiredEye, null);
+
+        assertEquals(origX, entity.posX, 1e-9, "Entity posX must not be modified by camera depenetration");
+        assertEquals(origY, entity.posY, 1e-9, "Entity posY must not be modified by camera depenetration");
+        assertEquals(origZ, entity.posZ, 1e-9, "Entity posZ must not be modified by camera depenetration");
+        assertEquals(origBb.minX, entity.boundingBox.minX, 1e-9, "Entity bounding box must not change");
+        assertEquals(origBb.minY, entity.boundingBox.minY, 1e-9, "Entity bounding box must not change");
+    }
+
+    @Test
+    void cameraDepenetrationDoesNotModifyVelocity() {
+        AxisAlignedBB blockBox = AxisAlignedBB.getBoundingBox(0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+        NECameraCollisionHelper.CollisionBoxProvider boxProvider = (e, bb) -> Collections.singletonList(blockBox);
+
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.motionX = 0.05;
+        entity.motionY = -0.08;
+        entity.motionZ = 0.12;
+
+        Vector3d bodyCenter = new Vector3d(0.5, 1.5, 0.5);
+        Vector3d desiredEye = new Vector3d(0.5, 0.5, 0.5);
+
+        NECameraCollisionHelper.resolveCameraPosition(null, boxProvider, entity, bodyCenter, desiredEye, null);
+
+        assertEquals(0.05, entity.motionX, 1e-9, "MotionX must remain untouched");
+        assertEquals(-0.08, entity.motionY, 1e-9, "MotionY must remain untouched");
+        assertEquals(0.12, entity.motionZ, 1e-9, "MotionZ must remain untouched");
+    }
+
+    @Test
+    void cameraSweepStopsBeforeVoxelCollision() {
+        // Corner block at [1.0, 0.0, 0.0] to [2.0, 1.0, 1.0]
+        AxisAlignedBB blockBox = AxisAlignedBB.getBoundingBox(1.0, 0.0, 0.0, 2.0, 1.0, 1.0);
+        NECameraCollisionHelper.CollisionBoxProvider boxProvider = (e, bb) -> Collections.singletonList(blockBox);
+        NECameraCollisionHelper.RayTraceProvider rayTracer = (start, end) -> {
+            if (start.xCoord < 1.0 && end.xCoord >= 1.0) {
+                return new MovingObjectPosition(0, 0, 0, 4, Vec3.createVectorHelper(1.0, end.yCoord, end.zCoord));
+            }
+            return null;
+        };
+
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        Vector3d bodyCenter = new Vector3d(0.5, 1.5, 0.5);
+        Vector3d prevSafeEye = new Vector3d(0.5, 0.5, 0.5);
+        Vector3d desiredEye = new Vector3d(1.5, 0.5, 0.5); // attempting to sweep across x = 1.0 into block
+
+        Vector3d resolved = NECameraCollisionHelper
+            .resolveCameraPosition(rayTracer, boxProvider, entity, bodyCenter, desiredEye, prevSafeEye);
+
+        assertTrue(resolved.x < 1.0, "Sweep must stop before entering the voxel surface at X=1.0");
+        assertFalse(
+            NECameraCollisionHelper.isPointInsideSolid(boxProvider, entity, resolved),
+            "Camera sweep destination must not be inside solid");
+    }
+
+    @Test
+    void cameraPositionRemainsValidAcrossNinetyDegreeTransition() {
+        // L-shaped step: ground at Y <= 0, and wall at X >= 5 for Y in [0, 5]
+        AxisAlignedBB ground = AxisAlignedBB.getBoundingBox(-10.0, -10.0, -10.0, 10.0, 0.0, 10.0);
+        AxisAlignedBB wall = AxisAlignedBB.getBoundingBox(5.0, 0.0, -10.0, 10.0, 10.0, 10.0);
+        List<AxisAlignedBB> terrain = Arrays.asList(ground, wall);
+        NECameraCollisionHelper.CollisionBoxProvider boxProvider = (e, bb) -> {
+            List<AxisAlignedBB> list = new java.util.ArrayList<>();
+            for (AxisAlignedBB b : terrain) {
+                if (bb.intersectsWith(b)) {
+                    list.add(b);
+                }
+            }
+            return list;
+        };
+
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.yOffset = 1.62F;
+
+        // Step through 10 points traversing from floor approaching wall to climbing wall
+        for (int i = 0; i <= 10; i++) {
+            double frac = i / 10.0;
+            double posX = 4.0 + frac * 0.7; // 4.0 to 4.7
+            double posY = frac * 1.5;
+
+            // When approaching wall, localUp transitions toward (-1, 0, 0)
+            double ux = -frac;
+            double uy = 1.0 - frac;
+            Vector3d up = new Vector3d(ux, uy, 0.0).normalize();
+            service.setActiveField(UniformGravityField.of(-up.x * 0.08, -up.y * 0.08, 0.0));
+
+            entity.setPosition(posX, posY + 1.62, 0.0);
+            NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+                .getPresentationFrame(entity, 0.0F, null, boxProvider);
+
+            Vector3d eye = frame.eyePoint();
+            assertFalse(
+                NECameraCollisionHelper.isPointInsideSolid(boxProvider, entity, eye),
+                "Camera eye point must never enter solid geometry across transition at step " + i);
+        }
+    }
+
+    @Test
+    void cameraPositionRemainsValidAtBottomPole() {
+        // Underside of a block platform at Y = 10.0 (blocks exist at Y >= 10.0)
+        AxisAlignedBB ceiling = AxisAlignedBB.getBoundingBox(-10.0, 10.0, -10.0, 10.0, 20.0, 10.0);
+        NECameraCollisionHelper.CollisionBoxProvider boxProvider = (e, bb) -> Collections.singletonList(ceiling);
+
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.yOffset = 1.62F;
+        // Gravity pulls UP into the ceiling (+Y), localUp points DOWN (-Y)
+        service.setActiveField(UniformGravityField.of(0.0, 0.08, 0.0));
+        // Feet touching ceiling at Y = 10.0; bounding box [8.2, 10.0], entity.posY = 8.2 + 1.62 = 9.82
+        entity.setPosition(0.0, 9.82, 0.0);
+        entity.boundingBox.setBounds(-0.3, 8.2, -0.3, 0.3, 10.0, 0.3);
+
+        NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 0.0F, null, boxProvider);
+
+        Vector3d eye = frame.eyePoint();
+        assertEquals(10.0 - 1.62, eye.y, 1e-3, "Eye point must hang 1.62 blocks below ceiling");
+        assertFalse(
+            NECameraCollisionHelper.isPointInsideSolid(boxProvider, entity, eye),
+            "Camera eye must not penetrate ceiling blocks");
+    }
+
+    @Test
+    void cameraCollisionCorrectionDoesNotAccumulate() {
+        AxisAlignedBB blockBox = AxisAlignedBB.getBoundingBox(0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+        NECameraCollisionHelper.CollisionBoxProvider boxProvider = (e, bb) -> Collections.singletonList(blockBox);
+
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        Vector3d bodyCenter = new Vector3d(0.5, 1.5, 0.5);
+        Vector3d desiredEye = new Vector3d(0.5, 0.95, 0.5); // near top face
+
+        Vector3d firstResolved = NECameraCollisionHelper
+            .resolveCameraPosition(null, boxProvider, entity, bodyCenter, desiredEye, null);
+
+        Vector3d current = firstResolved;
+        for (int frame = 0; frame < 100; frame++) {
+            current = NECameraCollisionHelper
+                .resolveCameraPosition(null, boxProvider, entity, bodyCenter, desiredEye, current);
+        }
+
+        assertEquals(firstResolved.x, current.x, 1e-9, "X position must not accumulate or drift over 100 frames");
+        assertEquals(firstResolved.y, current.y, 1e-9, "Y position must not accumulate or drift over 100 frames");
+        assertEquals(firstResolved.z, current.z, 1e-9, "Z position must not accumulate or drift over 100 frames");
+    }
+
+    @Test
+    void standardGravityUsesVanillaEyePath() {
+        service.resetToDefault();
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.yOffset = 1.62F;
+        entity.setPosition(10.0, 65.62, -20.0);
+
+        NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 0.0F);
+
+        Vector3d entityPos = new Vector3d(10.0, 65.62, -20.0);
+        Vector3d eyeDelta = entityPos.subtract(frame.eyePoint());
+
+        assertEquals(0.0, eyeDelta.x, 1e-6, "Eye delta X must be 0 in standard gravity");
+        assertEquals(0.0, eyeDelta.y, 1e-6, "Eye delta Y must be 0 in standard gravity");
+        assertEquals(0.0, eyeDelta.z, 1e-6, "Eye delta Z must be 0 in standard gravity");
+    }
+
+    @Test
+    void runtimeInvariantCameraNeverInsideSolidOnCircumnavigation() {
+        // Spherical shell test body represented by 6 bounding boxes enclosing radius 10
+        AxisAlignedBB topBlock = AxisAlignedBB.getBoundingBox(-2.0, 9.0, -2.0, 2.0, 10.0, 2.0);
+        AxisAlignedBB sideBlock = AxisAlignedBB.getBoundingBox(9.0, -2.0, -2.0, 10.0, 2.0, 2.0);
+        AxisAlignedBB bottomBlock = AxisAlignedBB.getBoundingBox(-2.0, -10.0, -2.0, 2.0, -9.0, 2.0);
+        AxisAlignedBB oppBlock = AxisAlignedBB.getBoundingBox(-10.0, -2.0, -2.0, -9.0, 2.0, 2.0);
+        List<AxisAlignedBB> blocks = Arrays.asList(topBlock, sideBlock, bottomBlock, oppBlock);
+        NECameraCollisionHelper.CollisionBoxProvider boxProvider = (e, bb) -> blocks;
+
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.yOffset = 1.62F;
+
+        // Loop 72 steps (5 degrees each) around the body
+        for (int step = 0; step < 72; step++) {
+            double angle = step * (2.0 * Math.PI / 72.0);
+            double rx = Math.sin(angle);
+            double ry = Math.cos(angle);
+            Vector3d localUp = new Vector3d(rx, ry, 0.0);
+            service.setActiveField(UniformGravityField.of(-rx * 0.08, -ry * 0.08, 0.0));
+
+            // Place entity on the surface of the radius-10 body with feet touching radius 10
+            double offsetDist = 10.0 + 0.3 * Math.abs(rx) + 0.9 * Math.abs(ry);
+            double posX = rx * offsetDist;
+            double posY = ry * offsetDist + 0.72;
+            entity.setPosition(posX, posY, 0.0);
+
+            NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+                .getPresentationFrame(entity, 0.0F, null, boxProvider);
+
+            Vector3d eye = frame.eyePoint();
+            assertFalse(
+                NECameraCollisionHelper.isPointInsideSolid(boxProvider, entity, eye),
+                "Runtime invariant violated: camera must never be inside solid geometry at angle "
+                    + Math.toDegrees(angle));
+        }
     }
 }
