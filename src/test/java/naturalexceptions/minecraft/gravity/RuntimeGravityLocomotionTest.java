@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.List;
 
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.projectile.EntityArrow;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.MovingObjectPosition;
@@ -2138,5 +2139,329 @@ final class RuntimeGravityLocomotionTest {
                 "Runtime invariant violated: camera must never be inside solid geometry at angle "
                     + Math.toDegrees(angle));
         }
+    }
+
+    @Test
+    void localHeadForwardMatchesCanonicalLook() {
+        // On a vertical wall (e.g. East wall, localUp = (-1, 0, 0))
+        Vector3d localUp = new Vector3d(-1.0, 0.0, 0.0);
+        Vector3d tangentForward = new Vector3d(0.0, 1.0, 0.0); // Walking up the wall
+        Vector3d tangentRight = localUp.cross(tangentForward)
+            .normalize(); // (0, 0, -1) South
+
+        // Looking straight ahead along tangentForward
+        Vector3d lookVector = tangentForward;
+
+        float[] angles = NEEntityRenderHandler
+            .computeLocalHeadAngles(lookVector, localUp, tangentForward, tangentRight);
+        assertEquals(
+            0.0F,
+            angles[0],
+            1e-4,
+            "Head yaw must be 0 when looking straight forward along local body heading");
+        assertEquals(
+            0.0F,
+            angles[1],
+            1e-4,
+            "Head pitch must be 0 when looking straight forward along local body heading");
+    }
+
+    @Test
+    void wallHeadYawIsRelativeToLocalBodyFrame() {
+        Vector3d localUp = new Vector3d(-1.0, 0.0, 0.0);
+        Vector3d tangentForward = new Vector3d(0.0, 1.0, 0.0);
+        Vector3d tangentRight = localUp.cross(tangentForward)
+            .normalize(); // (0, 0, -1)
+
+        // Look 30 degrees right: cos(30)*fwd + sin(30)*right
+        double rad30 = Math.toRadians(30.0);
+        Vector3d lookRight = tangentForward.multiply(Math.cos(rad30))
+            .add(tangentRight.multiply(Math.sin(rad30)))
+            .normalize();
+        float[] anglesRight = NEEntityRenderHandler
+            .computeLocalHeadAngles(lookRight, localUp, tangentForward, tangentRight);
+        assertEquals(
+            30.0F,
+            anglesRight[0],
+            1e-3,
+            "Head yaw must turn +30 degrees when looking 30 deg right relative to body");
+        assertEquals(0.0F, anglesRight[1], 1e-3, "Head pitch must remain 0 when looking horizontally");
+
+        // Look 30 degrees left: cos(30)*fwd - sin(30)*right
+        Vector3d lookLeft = tangentForward.multiply(Math.cos(rad30))
+            .subtract(tangentRight.multiply(Math.sin(rad30)))
+            .normalize();
+        float[] anglesLeft = NEEntityRenderHandler
+            .computeLocalHeadAngles(lookLeft, localUp, tangentForward, tangentRight);
+        assertEquals(
+            -30.0F,
+            anglesLeft[0],
+            1e-3,
+            "Head yaw must turn -30 degrees when looking 30 deg left relative to body");
+        assertEquals(0.0F, anglesLeft[1], 1e-3, "Head pitch must remain 0 when looking horizontally");
+
+        // Look 45 degrees up (toward localUp)
+        double rad45 = Math.toRadians(45.0);
+        Vector3d lookUp = tangentForward.multiply(Math.cos(rad45))
+            .add(localUp.multiply(Math.sin(rad45)))
+            .normalize();
+        float[] anglesUp = NEEntityRenderHandler.computeLocalHeadAngles(lookUp, localUp, tangentForward, tangentRight);
+        assertEquals(0.0F, anglesUp[0], 1e-3, "Head yaw must be 0 when looking up");
+        assertEquals(-45.0F, anglesUp[1], 1e-3, "Head pitch must be -45 degrees when looking up along localUp");
+
+        // Look 45 degrees down (toward localDown / support surface)
+        Vector3d lookDown = tangentForward.multiply(Math.cos(rad45))
+            .subtract(localUp.multiply(Math.sin(rad45)))
+            .normalize();
+        float[] anglesDown = NEEntityRenderHandler
+            .computeLocalHeadAngles(lookDown, localUp, tangentForward, tangentRight);
+        assertEquals(0.0F, anglesDown[0], 1e-3, "Head yaw must be 0 when looking down");
+        assertEquals(
+            45.0F,
+            anglesDown[1],
+            1e-3,
+            "Head pitch must be +45 degrees when looking down toward support surface");
+    }
+
+    @Test
+    void wallHeadDoesNotLockNinetyDegreesRight() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0)); // Gravity towards +X (East wall, localUp is -X)
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.yOffset = 1.62F;
+        entity.setPosition(10.0, 64.0, 0.0);
+        entity.rotationYaw = 0.0F; // Global yaw facing South
+        entity.rotationPitch = 0.0F;
+
+        NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 0.0F);
+        float[] angles = NEEntityRenderHandler.computeLocalHeadAngles(
+            frame.computeLookVector(),
+            frame.renderedUp(),
+            frame.renderedForward(),
+            frame.renderedRight());
+
+        // Head yaw must be 0 when looking straight forward along local body
+        assertTrue(
+            Math.abs(angles[0]) < 1e-4,
+            "Head yaw must NOT be locked 90 or 75 degrees right on a side wall; got: " + angles[0]);
+        assertTrue(Math.abs(angles[1]) < 1e-4, "Head pitch must be 0 when looking forward; got: " + angles[1]);
+    }
+
+    @Test
+    void bottomHeadOrientationRemainsContinuous() {
+        // Traversal across the bottom pole (ceiling, localUp = (0, -1, 0))
+        service.resetToDefault();
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.yOffset = 1.62F;
+
+        double[] angles = { -15.0, -10.0, -5.0, -1.0, 0.0, 1.0, 5.0, 10.0, 15.0 };
+        float prevYaw = 0.0F;
+        for (int i = 0; i < angles.length; i++) {
+            double rad = Math.toRadians(angles[i]);
+            double rx = Math.sin(rad);
+            double ry = -Math.cos(rad);
+            service.setActiveField(UniformGravityField.of(-rx * 0.08, -ry * 0.08, 0.0));
+            entity.setPosition(rx * 10.0, ry * 10.0, 0.0);
+
+            NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+                .getPresentationFrame(entity, 0.0F);
+            float[] headAngles = NEEntityRenderHandler.computeLocalHeadAngles(
+                frame.computeLookVector(),
+                frame.renderedUp(),
+                frame.renderedForward(),
+                frame.renderedRight());
+
+            assertTrue(Math.abs(headAngles[0]) < 75.0F, "Head yaw must remain within natural limits at bottom pole");
+            if (i > 0) {
+                float deltaYaw = Math.abs(headAngles[0] - prevYaw);
+                assertTrue(deltaYaw < 30.0F, "Head yaw must change continuously across bottom pole traversal");
+            }
+            prevYaw = headAngles[0];
+        }
+    }
+
+    @Test
+    void arrowInitialVelocityMatchesCameraLook() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0)); // Side wall (East)
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.yOffset = 1.62F;
+        entity.setPosition(10.0, 64.0, 0.0);
+        entity.rotationPitch = -20.0F; // Aiming 20 degrees up along local frame
+        entity.prevRotationPitch = -20.0F;
+
+        NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 1.0F);
+        Vector3d look = frame.computeLookVector();
+
+        EntityArrow arrow = new EntityArrow(null, 0.0, 0.0, 0.0);
+        NEProjectileHelper.alignArrowLaunch(arrow, entity, 2.0F);
+
+        Vector3d arrowVel = new Vector3d(arrow.motionX, arrow.motionY, arrow.motionZ);
+        assertTrue(arrowVel.length() > 1.0, "Arrow initial speed must be non-zero");
+
+        Vector3d normVel = arrowVel.normalize();
+        double dot = normVel.dot(look);
+        assertEquals(
+            1.0,
+            dot,
+            1e-5,
+            "Initial arrow velocity must be directly aligned with canonical 3D look vector (dot product = 1.0)");
+    }
+
+    @Test
+    void arrowLaunchDirectionWorksOnTopWallBottomAndOppositeWall() {
+        Vector3d[] ups = { new Vector3d(0.0, 1.0, 0.0), // Top
+            new Vector3d(1.0, 0.0, 0.0), // West wall
+            new Vector3d(0.0, -1.0, 0.0), // Bottom / Ceiling
+            new Vector3d(-1.0, 0.0, 0.0) // East wall
+        };
+
+        for (Vector3d up : ups) {
+            Vector3d g = up.negate()
+                .multiply(0.08);
+            service.setActiveField(UniformGravityField.of(g.x, g.y, g.z));
+
+            LocomotionTestEntity entity = new LocomotionTestEntity();
+            entity.yOffset = 1.62F;
+            Vector3d pos = up.multiply(10.0);
+            entity.setPosition(pos.x, pos.y, pos.z);
+            entity.rotationPitch = -15.0F; // Looking 15 degrees up
+            entity.prevRotationPitch = -15.0F;
+
+            if (up.dot(Vector3d.UP) > 0.99999) {
+                // Standard top surface: shouldApplyCustomLaunch is false (vanilla bypass)
+                assertFalse(NEProjectileHelper.shouldApplyCustomLaunch(entity));
+            } else {
+                assertTrue(NEProjectileHelper.shouldApplyCustomLaunch(entity));
+                NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+                    .getPresentationFrame(entity, 1.0F);
+                Vector3d look = frame.computeLookVector();
+
+                EntityArrow arrow = new EntityArrow(null, 0.0, 0.0, 0.0);
+                NEProjectileHelper.alignArrowLaunch(arrow, entity, 3.0F);
+
+                Vector3d normVel = new Vector3d(arrow.motionX, arrow.motionY, arrow.motionZ).normalize();
+                assertEquals(
+                    1.0,
+                    normVel.dot(look),
+                    1e-5,
+                    "Arrow launch velocity must match canonical 3D look on up " + up);
+            }
+        }
+    }
+
+    @Test
+    void arrowSpawnPointUsesLocalEyeFrame() {
+        // On East wall: localUp is (-1, 0, 0)
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.yOffset = 1.62F;
+        entity.setPosition(10.0, 64.0, 0.0);
+
+        NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 0.0F);
+        Vector3d eye = frame.eyePoint();
+        Vector3d look = frame.computeLookVector();
+
+        Vector3d spawn = NEProjectileHelper.computeLaunchPosition(entity, look);
+
+        assertEquals(eye.x + look.x * NEProjectileHelper.ARROW_FORWARD_OFFSET, spawn.x, 1e-5);
+        assertEquals(eye.y + look.y * NEProjectileHelper.ARROW_FORWARD_OFFSET, spawn.y, 1e-5);
+        assertEquals(eye.z + look.z * NEProjectileHelper.ARROW_FORWARD_OFFSET, spawn.z, 1e-5);
+
+        // On a wall where localUp is (-1, 0, 0), the eye is positioned along X:
+        // entity AABB center is 10.0, support surface at boundary is 10.3, eye is 10.3 - 1.62 = 8.68
+        assertEquals(8.68, eye.x, 1e-4, "Physical eye X on vertical wall must extend outward along localUp");
+    }
+
+    @Test
+    void arrowDoesNotSpawnInsideSupportSurface() {
+        // Standing on East wall (support surface at X = 10.0, standing on X = 10.0 face)
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.yOffset = 1.62F;
+        entity.setPosition(10.0, 64.0, 0.0);
+
+        // Look straight down at the support wall: localPitch = -90 (looking down toward nadir)
+        entity.rotationPitch = 89.0F; // Looking down at feet/wall
+
+        NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 0.0F);
+        Vector3d look = frame.computeLookVector();
+        Vector3d spawn = NEProjectileHelper.computeLaunchPosition(entity, look);
+
+        // Support surface is at X >= 10.0. The arrow must spawn strictly in free space (X < 10.0)
+        assertTrue(spawn.x < 10.0, "Arrow spawn point must NOT penetrate the support surface; spawn.x = " + spawn.x);
+        assertTrue(spawn.x < 9.0, "Arrow must remain well clear of the wall support surface");
+    }
+
+    @Test
+    void projectileLaunchDoesNotUseGlobalYawAsCanonicalTruth() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.yOffset = 1.62F;
+        entity.setPosition(10.0, 64.0, 0.0);
+        entity.rotationYaw = 0.0F;
+        entity.rotationPitch = 0.0F;
+
+        NEPlayerPresentationFrame frame1 = NEPlayerPresentationService.instance()
+            .getPresentationFrame(entity, 0.0F);
+        Vector3d look1 = frame1.computeLookVector();
+
+        EntityArrow arrow1 = new EntityArrow(null, 0.0, 0.0, 0.0);
+        NEProjectileHelper.alignArrowLaunch(arrow1, entity, 2.0F);
+
+        Vector3d v1 = new Vector3d(arrow1.motionX, arrow1.motionY, arrow1.motionZ).normalize();
+        assertEquals(1.0, v1.dot(look1), 1e-5);
+    }
+
+    @Test
+    void projectileReceivesGravityExactlyOnceAfterLaunch() {
+        service.setActiveField(UniformGravityField.of(0.05, 0.0, 0.0));
+
+        EntityArrow arrow = new EntityArrow(null, 0.0, 64.0, 0.0);
+        arrow.motionX = 0.0;
+        arrow.motionY = 0.0;
+        arrow.motionZ = 1.0;
+
+        // 1. NEGravityService applies gravity delta for 1 tick: localAcc - (0, -0.05, 0)
+        service.applyGravity(arrow);
+
+        // 2. Simulated vanilla arrow onUpdate applies hardcoded downward acceleration: motionY -= 0.05
+        arrow.motionY -= 0.05;
+
+        // Net acceleration over 1 tick must be exactly (+0.05, 0.0, 0.0)
+        assertEquals(0.05, arrow.motionX, 1e-6, "Arrow motionX must receive exactly 1 tick of local gravity (+0.05)");
+        assertEquals(
+            0.0,
+            arrow.motionY,
+            1e-6,
+            "Arrow motionY must have vanilla gravity completely cancelled (net 0.0)");
+        assertEquals(1.0, arrow.motionZ, 1e-6, "Arrow motionZ must remain unaffected by perpendicular gravity");
+    }
+
+    @Test
+    void standardGravityUsesVanillaProjectileLaunchPath() {
+        service.resetToDefault();
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.yOffset = 1.62F;
+        entity.setPosition(0.0, 64.0, 0.0);
+        entity.rotationYaw = 45.0F;
+        entity.rotationPitch = -30.0F;
+
+        assertFalse(
+            NEProjectileHelper.shouldApplyCustomLaunch(entity),
+            "shouldApplyCustomLaunch must return false under standard downward gravity");
+
+        EntityArrow arrow = new EntityArrow(null, 0.0, 0.0, 0.0);
+        arrow.motionX = 123.456;
+        arrow.motionY = 78.9;
+        arrow.motionZ = -42.0;
+
+        NEProjectileHelper.alignArrowLaunch(arrow, entity, 2.0F);
+
+        assertEquals(123.456, arrow.motionX, 1e-6, "Arrow motionX must be untouched under standard gravity bypass");
+        assertEquals(78.9, arrow.motionY, 1e-6, "Arrow motionY must be untouched under standard gravity bypass");
+        assertEquals(-42.0, arrow.motionZ, 1e-6, "Arrow motionZ must be untouched under standard gravity bypass");
     }
 }

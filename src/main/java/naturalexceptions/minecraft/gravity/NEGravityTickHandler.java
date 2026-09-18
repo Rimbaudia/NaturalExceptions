@@ -57,7 +57,12 @@ public final class NEGravityTickHandler {
             if (obj instanceof EntityItem) {
                 service.applyGravity((EntityItem) obj);
             } else if (obj instanceof EntityArrow) {
-                service.applyGravity((EntityArrow) obj);
+                EntityArrow arrow = (EntityArrow) obj;
+                if (arrow instanceof naturalexceptions.minecraft.mixin.EntityArrowAccessor
+                    && ((naturalexceptions.minecraft.mixin.EntityArrowAccessor) arrow).isInGround()) {
+                    continue;
+                }
+                service.applyGravity(arrow);
             }
         }
     }

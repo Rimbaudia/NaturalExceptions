@@ -7,11 +7,14 @@
   "compatibilityLevel": "JAVA_8",
   "mixins": [
     "MixinEntityPlayer",
-    "EntityLivingBaseAccessor"
+    "EntityLivingBaseAccessor",
+    "MixinEntityArrow",
+    "EntityArrowAccessor"
   ],
   "client": [
     "MixinEntityRenderer",
-    "MixinRendererLivingEntity"
+    "MixinRendererLivingEntity",
+    "MixinModelBiped"
   ],
   "server": [
   ]
