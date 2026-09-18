@@ -36,5 +36,31 @@ public final class BuiltinMaterials {
         COPPER_COMPOSITION,
         COPPER_PROPERTIES);
 
+    public static final ResourceId WOOD_RESOURCE_ID = ResourceId.of("naturalexceptions", "wood");
+    public static final MaterialId WOOD_MATERIAL_ID = MaterialId.of("naturalexceptions", "wood");
+
+    public static final CanonicalComposition WOOD_COMPOSITION = CanonicalComposition.of(WOOD_RESOURCE_ID);
+
+    public static final MaterialProperties WOOD_PROPERTIES = MaterialProperties.builder()
+        .density(0.65) // g/cm³ (650 kg/m³)
+        .hardness(1.2) // Mohs scale baseline
+        .conductivity(0.1)
+        .thermalConductivity(0.15) // W / (m · K)
+        .specificHeatSolid(1700.0) // J / (kg · K)
+        .specificHeatLiquid(1700.0)
+        .meltingPointKelvin(600.0) // Pyrolysis / combustion threshold proxy
+        .latentHeatOfFusion(0.0)
+        .electricalResistivity(1.0e14) // Insulator
+        .addTrait("organic")
+        .addTrait("fibrous")
+        .addTrait("shock_absorbing")
+        .build();
+
+    public static final MaterialDefinition WOOD = new MaterialDefinition(
+        WOOD_MATERIAL_ID,
+        "material.naturalexceptions.wood",
+        WOOD_COMPOSITION,
+        WOOD_PROPERTIES);
+
     private BuiltinMaterials() {}
 }

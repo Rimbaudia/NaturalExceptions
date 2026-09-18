@@ -16,6 +16,11 @@ public final class BuiltinContent {
                 .resourceId(),
             "material",
             1L)
+        .add(
+            BuiltinMaterials.WOOD.id()
+                .resourceId(),
+            "material",
+            1L)
         .build();
 
     private static boolean registered;
@@ -25,6 +30,7 @@ public final class BuiltinContent {
     public static void register() {
         if (registered) return;
         MATERIALS.register(BuiltinMaterials.COPPER);
+        MATERIALS.register(BuiltinMaterials.WOOD);
         registered = true;
     }
 
