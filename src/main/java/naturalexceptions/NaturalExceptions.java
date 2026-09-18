@@ -57,6 +57,7 @@ public final class NaturalExceptions {
         if (event != null) {
             event.registerServerCommand(new CommandDebugGravityBody());
             event.registerServerCommand(new CommandDebugGravity());
+            event.registerServerCommand(new naturalexceptions.minecraft.metallurgy.CommandSmelter());
         }
     }
 
