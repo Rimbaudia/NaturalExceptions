@@ -7,10 +7,12 @@ import java.util.List;
 import java.util.Objects;
 
 import naturalexceptions.core.composition.CanonicalComposition;
+import naturalexceptions.core.fabrication.ComponentInstance;
 import naturalexceptions.core.id.ResourceId;
 import naturalexceptions.core.material.CanonicalMaterialKey;
 import naturalexceptions.core.material.MaterialPhase;
 import naturalexceptions.core.material.MaterialRef;
+import naturalexceptions.core.property.MaterialProperties;
 import naturalexceptions.core.property.MaterialPropertyResolver;
 import naturalexceptions.core.property.ResolvedProperties;
 import naturalexceptions.core.thermal.ActiveThermalState;
@@ -78,6 +80,16 @@ public final class VesselState {
         return Collections.unmodifiableList(layers);
     }
 
+    public List<AggregateLayer> slagLayers() {
+        List<AggregateLayer> slag = new ArrayList<>();
+        for (AggregateLayer l : layers) {
+            if (l.phaseType() == AggregatePhaseType.SLAG) {
+                slag.add(l);
+            }
+        }
+        return Collections.unmodifiableList(slag);
+    }
+
     public MaterialPropertyResolver propertyResolver() {
         return propertyResolver;
     }
@@ -116,6 +128,27 @@ public final class VesselState {
             key,
             comp,
             mass,
+            ambientThermal,
+            AggregatePhaseType.SOLID_CHARGE);
+        addLayer(solidLayer);
+    }
+
+    public void addComponentCharge(ComponentInstance component, MaterialProperties properties) {
+        Objects.requireNonNull(component, "component");
+        Objects.requireNonNull(properties, "properties");
+        ActiveThermalState ambientThermal = ActiveThermalState.ambient(
+            component.mass()
+                .toKilograms(),
+            properties);
+        CanonicalComposition comp = component.stateKey()
+            .composition();
+        CanonicalMaterialKey key = component.stateKey();
+
+        AggregateLayer solidLayer = new AggregateLayer(
+            component.materialRef(),
+            key,
+            comp,
+            component.mass(),
             ambientThermal,
             AggregatePhaseType.SOLID_CHARGE);
         addLayer(solidLayer);
