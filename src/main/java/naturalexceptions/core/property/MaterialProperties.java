@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import naturalexceptions.core.material.MaterialPhase;
+
 /**
  * Immutable numerical and qualitative properties of a material.
  *
@@ -79,6 +81,13 @@ public final class MaterialProperties {
         return get(KEY_HARDNESS, 2.0);
     }
 
+    public double hardness(MaterialPhase phase) {
+        if (phase == MaterialPhase.LIQUID) {
+            return 0.0;
+        }
+        return hardness();
+    }
+
     public double conductivity() {
         return get(KEY_CONDUCTIVITY, 10.0);
     }
@@ -131,6 +140,28 @@ public final class MaterialProperties {
     @Override
     public String toString() {
         return "MaterialProperties" + values + (biologicalTraits.isEmpty() ? "" : "[traits=" + biologicalTraits + "]");
+    }
+
+    public MaterialProperties forPhase(MaterialPhase phase) {
+        if (phase == MaterialPhase.LIQUID) {
+            if (hardness() == 0.0) {
+                return this;
+            }
+            return toBuilder().hardness(0.0)
+                .build();
+        }
+        return this;
+    }
+
+    public Builder toBuilder() {
+        Builder b = builder();
+        for (Map.Entry<String, Double> entry : values.entrySet()) {
+            b.set(entry.getKey(), entry.getValue());
+        }
+        for (String trait : biologicalTraits) {
+            b.addTrait(trait);
+        }
+        return b;
     }
 
     public static Builder builder() {

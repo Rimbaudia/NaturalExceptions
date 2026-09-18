@@ -42,10 +42,7 @@ public final class ItemMaterialSample extends Item {
         Item item = NEItems.materialSample != null ? NEItems.materialSample : new ItemMaterialSample();
         ItemStack stack = new ItemStack(item);
         NBTTagCompound nbt = new NBTTagCompound();
-        MaterialCarrierNbtCodec.writeToNbt(ref, stateKey, nbt);
-        if (thermalState != null) {
-            MaterialCarrierNbtCodec.writeThermalStateToNbt(thermalState, nbt);
-        }
+        MaterialCarrierNbtCodec.writeToNbt(ref, stateKey, thermalState, nbt);
         stack.setTagCompound(nbt);
         return stack;
     }

@@ -61,6 +61,34 @@ public final class MaterialCarrierNbtCodec {
         writeToNbt(ref, composition != null ? CanonicalMaterialKey.of(composition) : null, nbt);
     }
 
+    public static void writeToNbt(MaterialRef ref, CanonicalMaterialKey stateKey, ActiveThermalState thermalState,
+        NBTTagCompound nbt) {
+        if (ref == null) {
+            throw new IllegalArgumentException("MaterialRef cannot be null");
+        }
+        if (nbt == null) {
+            throw new IllegalArgumentException("NBTTagCompound cannot be null");
+        }
+
+        CanonicalMaterialKey effectiveKey = stateKey;
+        MaterialRef effectiveRef = ref;
+
+        if (thermalState != null && effectiveKey != null) {
+            naturalexceptions.core.material.MaterialPhase activePhase = thermalState.phase();
+            if (effectiveKey.phase() != activePhase) {
+                effectiveKey = effectiveKey.withPhase(activePhase);
+                if (effectiveRef.isGenerated()) {
+                    effectiveRef = MaterialRef.generatedFrom(effectiveKey);
+                }
+            }
+        }
+
+        writeToNbt(effectiveRef, effectiveKey, nbt);
+        if (thermalState != null) {
+            writeThermalStateToNbt(thermalState, nbt);
+        }
+    }
+
     public static void writeThermalStateToNbt(ActiveThermalState thermalState, NBTTagCompound nbt) {
         if (nbt == null) {
             throw new IllegalArgumentException("NBTTagCompound cannot be null");

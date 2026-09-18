@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import naturalexceptions.core.composition.CanonicalComposition;
+import naturalexceptions.core.material.MaterialPhase;
 import naturalexceptions.core.material.MaterialRef;
 
 /**
@@ -19,13 +20,19 @@ public final class ResolutionContext {
 
     private final MaterialRef ref;
     private final CanonicalComposition composition;
+    private final MaterialPhase phase;
     private final Map<String, Double> properties = new HashMap<>();
     private final Set<String> traits = new LinkedHashSet<>();
     private final List<String> trace = new ArrayList<>();
 
     public ResolutionContext(MaterialRef ref, CanonicalComposition composition) {
+        this(ref, composition, MaterialPhase.SOLID);
+    }
+
+    public ResolutionContext(MaterialRef ref, CanonicalComposition composition, MaterialPhase phase) {
         this.ref = Objects.requireNonNull(ref, "ref");
         this.composition = Objects.requireNonNull(composition, "composition");
+        this.phase = phase != null ? phase : MaterialPhase.SOLID;
     }
 
     public MaterialRef ref() {
@@ -34,6 +41,10 @@ public final class ResolutionContext {
 
     public CanonicalComposition composition() {
         return composition;
+    }
+
+    public MaterialPhase phase() {
+        return phase;
     }
 
     public double get(String key, double defaultValue) {

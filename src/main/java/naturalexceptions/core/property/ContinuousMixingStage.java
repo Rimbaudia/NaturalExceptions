@@ -20,7 +20,7 @@ public final class ContinuousMixingStage implements PropertyResolverStage {
     public void apply(ResolutionContext context) {
         CanonicalComposition comp = context.composition();
 
-        double density = 0.0;
+        double invDensitySum = 0.0;
         double hardness = 0.0;
         double conductivity = 0.0;
         double thermalConductivity = 0.0;
@@ -34,7 +34,7 @@ public final class ContinuousMixingStage implements PropertyResolverStage {
             double frac = comp.fraction(constituent);
             ConstituentData data = ConstituentData.lookup(constituent);
 
-            density += frac * data.density();
+            invDensitySum += (frac / data.density());
             hardness += frac * data.hardness();
             conductivity += frac * data.conductivity();
             thermalConductivity += frac * data.thermalConductivity();
@@ -51,8 +51,13 @@ public final class ContinuousMixingStage implements PropertyResolverStage {
             }
         }
 
+        double density = invDensitySum > 0.0 ? (1.0 / invDensitySum) : 5.0;
         context.set(MaterialProperties.KEY_DENSITY, density);
-        context.set(MaterialProperties.KEY_HARDNESS, hardness);
+        if (context.phase() == naturalexceptions.core.material.MaterialPhase.LIQUID) {
+            context.set(MaterialProperties.KEY_HARDNESS, 0.0);
+        } else {
+            context.set(MaterialProperties.KEY_HARDNESS, hardness);
+        }
         context.set(MaterialProperties.KEY_CONDUCTIVITY, conductivity);
         context.set(MaterialProperties.KEY_THERMAL_CONDUCTIVITY, thermalConductivity);
         context.set(MaterialProperties.KEY_SPECIFIC_HEAT_SOLID, specificHeatSolid);

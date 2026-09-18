@@ -1,6 +1,7 @@
 package naturalexceptions.core.property;
 
 import naturalexceptions.core.composition.CanonicalComposition;
+import naturalexceptions.core.material.MaterialPhase;
 
 /**
  * Layer 3: Known phase / alloy rules (metallurgical structure enrichment and intermetallic/solid solution windows).
@@ -14,6 +15,9 @@ public final class PhaseAlloyRuleStage implements PropertyResolverStage {
 
     @Override
     public void apply(ResolutionContext context) {
+        if (context.phase() == MaterialPhase.LIQUID) {
+            return;
+        }
         CanonicalComposition comp = context.composition();
 
         // Alpha-bronze phase window: ~75-92% Cu, 8-25% Sn

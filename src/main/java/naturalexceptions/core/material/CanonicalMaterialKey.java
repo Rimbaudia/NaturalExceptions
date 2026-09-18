@@ -80,6 +80,43 @@ public final class CanonicalMaterialKey implements Comparable<CanonicalMaterialK
         return canonicalString;
     }
 
+    public CanonicalMaterialKey withPhase(MaterialPhase newPhase) {
+        if (this.phase == newPhase) {
+            return this;
+        }
+        return new CanonicalMaterialKey(this.composition, newPhase, this.microstructure, this.conditioning);
+    }
+
+    public CanonicalMaterialKey withMicrostructure(Microstructure newMicrostructure) {
+        if (this.microstructure == newMicrostructure) {
+            return this;
+        }
+        return new CanonicalMaterialKey(this.composition, this.phase, newMicrostructure, this.conditioning);
+    }
+
+    public CanonicalMaterialKey withConditioning(ConditioningHistory newConditioning) {
+        if (this.conditioning == newConditioning) {
+            return this;
+        }
+        return new CanonicalMaterialKey(this.composition, this.phase, this.microstructure, newConditioning);
+    }
+
+    public CanonicalMaterialKey asMolten() {
+        return new CanonicalMaterialKey(
+            this.composition,
+            MaterialPhase.LIQUID,
+            Microstructure.AS_CAST,
+            ConditioningHistory.NONE);
+    }
+
+    public CanonicalMaterialKey asSolidified() {
+        return new CanonicalMaterialKey(
+            this.composition,
+            MaterialPhase.SOLID,
+            Microstructure.AS_CAST,
+            ConditioningHistory.NONE);
+    }
+
     public static CanonicalMaterialKey parse(String str) {
         if (str == null || str.trim()
             .isEmpty()) {

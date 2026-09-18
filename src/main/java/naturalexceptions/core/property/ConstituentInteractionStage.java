@@ -1,6 +1,7 @@
 package naturalexceptions.core.property;
 
 import naturalexceptions.core.composition.CanonicalComposition;
+import naturalexceptions.core.material.MaterialPhase;
 
 /**
  * Layer 2: Constituent interaction layer (pairwise and group solute effects).
@@ -14,6 +15,9 @@ public final class ConstituentInteractionStage implements PropertyResolverStage 
 
     @Override
     public void apply(ResolutionContext context) {
+        if (context.phase() == MaterialPhase.LIQUID) {
+            return;
+        }
         CanonicalComposition comp = context.composition();
 
         // Cu-Sn solid solution interaction
