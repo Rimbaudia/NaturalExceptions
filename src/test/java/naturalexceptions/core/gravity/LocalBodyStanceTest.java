@@ -152,4 +152,50 @@ public class LocalBodyStanceTest {
             assertEquals(1.0, frame.basisDeterminant(), EPSILON, "Basis determinant must be +1 (right-handed)");
         }
     }
+
+    @Test
+    void standardFloorEyePointMatchesVanillaEyeHeight() {
+        Vector3d center = new Vector3d(10.0, 64.9, 5.0);
+        Vector3d localDown = new Vector3d(0, -1, 0);
+        LocalBodyStance stance = new LocalBodyStance(center, localDown, 0.3, 0.9);
+
+        // Support point is feet at Y=64.0
+        Vector3d sup = stance.supportPoint();
+        assertEquals(64.0, sup.y, EPSILON);
+
+        // Eye point is at Y=65.62 (feet Y + 1.62)
+        Vector3d eye = stance.eyePoint();
+        assertEquals(10.0, eye.x, EPSILON);
+        assertEquals(65.62, eye.y, EPSILON);
+        assertEquals(5.0, eye.z, EPSILON);
+
+        // cameraEyeDelta from entityPos (10.0, 64.0, 5.0) is (0.0, -1.62, 0.0)
+        Vector3d delta = stance.cameraEyeDelta(new Vector3d(10.0, 64.0, 5.0));
+        assertEquals(0.0, delta.x, EPSILON);
+        assertEquals(-1.62, delta.y, EPSILON);
+        assertEquals(0.0, delta.z, EPSILON);
+    }
+
+    @Test
+    void sideWallEyePointExtendsOutwardFromWallAlongLocalUp() {
+        // Wall at +X (support point at X=10.3). Gravity pulls +X. localUp points into room (-X).
+        Vector3d center = new Vector3d(10.0, 64.9, 5.0);
+        Vector3d localDown = new Vector3d(1, 0, 0);
+        LocalBodyStance stance = new LocalBodyStance(center, localDown, 0.3, 0.9);
+
+        Vector3d sup = stance.supportPoint();
+        assertEquals(10.3, sup.x, EPSILON);
+
+        // Eye point is 1.62m along localUp (-X) from the support surface (10.3 - 1.62 = 8.68)
+        Vector3d eye = stance.eyePoint();
+        assertEquals(8.68, eye.x, EPSILON);
+        assertEquals(64.9, eye.y, EPSILON);
+        assertEquals(5.0, eye.z, EPSILON);
+
+        // cameraEyeDelta from entityPos (10.0, 64.0, 5.0)
+        Vector3d delta = stance.cameraEyeDelta(new Vector3d(10.0, 64.0, 5.0));
+        assertEquals(1.32, delta.x, EPSILON);
+        assertEquals(-0.9, delta.y, EPSILON);
+        assertEquals(0.0, delta.z, EPSILON);
+    }
 }

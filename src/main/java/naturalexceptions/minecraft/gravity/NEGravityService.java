@@ -1,6 +1,8 @@
 package naturalexceptions.minecraft.gravity;
 
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
@@ -29,6 +31,9 @@ public final class NEGravityService {
 
     private static final NEGravityService GLOBAL = new NEGravityService();
 
+    private final Map<Integer, LocalEntityFrame> entityFrames = new ConcurrentHashMap<>();
+    private final Map<Integer, Float> entityLastYaw = new ConcurrentHashMap<>();
+
     private GravityField activeField;
     private double vanillaDownwardAcceleration;
     private boolean enabled;
@@ -55,6 +60,8 @@ public final class NEGravityService {
         this.activeField = UniformGravityField.STANDARD_MINECRAFT;
         this.vanillaDownwardAcceleration = DEFAULT_VANILLA_GRAVITY;
         this.enabled = true;
+        this.entityFrames.clear();
+        this.entityLastYaw.clear();
     }
 
     public synchronized double vanillaDownwardAcceleration() {
@@ -104,10 +111,56 @@ public final class NEGravityService {
     }
 
     /**
+     * Clears cached frame and yaw state for the given entity.
+     */
+    public void clearEntityFrame(Entity entity) {
+        if (entity != null) {
+            entityFrames.remove(entity.getEntityId());
+            entityLastYaw.remove(entity.getEntityId());
+        }
+    }
+
+    /**
+     * Gets or updates the persistent parallel-transported local frame for an entity.
+     *
+     * <p>
+     * Ensures continuous heading transport across changing localUp surfaces without
+     * coordinate singularities at the poles. The frame is parallel-transported along the geodesic
+     * from the previous localUp to the new localUp, and updated with any mouse yaw change.
+     */
+    public LocalEntityFrame getOrUpdateLocalFrame(EntityLivingBase entity) {
+        Objects.requireNonNull(entity, "entity");
+        GravitySample sample = sampleFor(entity);
+        int id = entity.getEntityId();
+
+        float currentYaw = entity.rotationYaw;
+        Float lastYaw = entityLastYaw.get(id);
+        float yawDelta = 0.0F;
+        if (lastYaw != null) {
+            yawDelta = currentYaw - lastYaw;
+            while (yawDelta < -180.0F) yawDelta += 360.0F;
+            while (yawDelta >= 180.0F) yawDelta -= 360.0F;
+        }
+        entityLastYaw.put(id, currentYaw);
+
+        LocalEntityFrame frame = entityFrames.get(id);
+        if (frame == null) {
+            frame = LocalEntityFrame.deriveFrom(sample, currentYaw);
+        } else {
+            frame = frame.transportTo(sample.localUp(), yawDelta, sample.sourceId());
+        }
+        entityFrames.put(id, frame);
+        return frame;
+    }
+
+    /**
      * Derives the local entity reference frame based on current position and heading.
      */
     public LocalEntityFrame getLocalFrame(Entity entity) {
         Objects.requireNonNull(entity, "entity");
+        if (entity instanceof EntityLivingBase) {
+            return getOrUpdateLocalFrame((EntityLivingBase) entity);
+        }
         GravitySample sample = sampleFor(entity);
         return LocalEntityFrame.deriveFrom(sample, entity.rotationYaw);
     }

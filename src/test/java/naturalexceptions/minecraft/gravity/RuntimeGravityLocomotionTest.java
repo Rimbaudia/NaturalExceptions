@@ -1237,4 +1237,271 @@ final class RuntimeGravityLocomotionTest {
             NEEntityRenderHandler.shouldApplyCustomOrientation(entity),
             "Custom orientation must apply under ceiling gravity");
     }
+
+    @Test
+    void eyePointUsesLocalUpInsteadOfGlobalY() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0)); // +X gravity, wall at +X
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(9.7, 64.0, 0.0);
+
+        GravitySample sample = service.sampleFor(entity);
+        Vector3d localDown = sample.localDown(); // (1, 0, 0)
+
+        LocalBodyStance stance = LocalBodyStance.fromAabb(new Vector3d(9.7, 64.9, 0.0), localDown, 0.3, 0.9, 1.62);
+
+        Vector3d eye = stance.eyePoint();
+        // Eye extends along localUp (-X), so eye.x is displaced into the room, while Y is body center level
+        assertTrue(eye.x < 9.7, "Eye point must extend along localUp (-X) into room");
+        assertEquals(64.9, eye.y, EPSILON, "Eye point along global Y must not be shifted by global Y eye height");
+    }
+
+    @Test
+    void sideWallEyePointLiesTowardLocalHeadNotSupport() {
+        // Wall at X=10.0, player standing on wall with localDown = (+1, 0, 0)
+        Vector3d center = new Vector3d(9.7, 64.9, 0.0);
+        Vector3d localDown = new Vector3d(1.0, 0.0, 0.0);
+        LocalBodyStance stance = new LocalBodyStance(center, localDown, 0.3, 0.9);
+
+        Vector3d sup = stance.supportPoint(); // feet at X = 10.0
+        Vector3d head = stance.headPoint(); // head at X = 9.4
+        Vector3d eye = stance.eyePoint(); // eye at X = 8.38
+
+        // Eye is on the head side of the support surface along localUp (-X)
+        assertTrue(eye.x < sup.x, "Eye point must lie along localUp away from support");
+        assertTrue(Math.abs(eye.x - head.x) < Math.abs(eye.x - sup.x), "Eye point must be closer to head than feet");
+    }
+
+    @Test
+    void bottomEyePointLiesOnLocalHeadSide() {
+        // Bottom pole: localDown = (0, 1, 0), localUp = (0, -1, 0)
+        Vector3d center = new Vector3d(0.0, 10.0, 0.0);
+        Vector3d localDown = new Vector3d(0.0, 1.0, 0.0);
+        LocalBodyStance stance = new LocalBodyStance(center, localDown, 0.3, 0.9);
+
+        Vector3d sup = stance.supportPoint(); // feet at Y = 10.9
+        Vector3d eye = stance.eyePoint(); // eye at Y = 10.9 - 1.62 = 9.28
+
+        assertTrue(eye.y < sup.y, "At bottom pole, eye point must lie below feet along localUp");
+        assertEquals(center.x, eye.x, EPSILON);
+        assertEquals(center.z, eye.z, EPSILON);
+    }
+
+    @Test
+    void groundedStabilizationDoesNotPreventJumpDetachment() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestPlayer player = LocomotionTestPlayer.create();
+        player.setPosition(9.7, 64.0, 0.0);
+        player.motionX = 0.0;
+        player.motionY = 0.0;
+        player.motionZ = 0.0;
+
+        AxisAlignedBB wallBox = AxisAlignedBB.getBoundingBox(10.0, 60.0, -10.0, 11.0, 70.0, 10.0);
+        NEPlayerMovementHandler.CollisionProvider provider = (e, bb) -> {
+            if (bb.intersectsWith(wallBox)) {
+                return Collections.singletonList(wallBox);
+            }
+            return Collections.emptyList();
+        };
+        player.setCollisionProvider(provider);
+
+        // First establish grounding
+        NEPlayerMovementHandler.handleMovement(player, 0.0F, 0.0F, provider);
+        assertTrue(player.onGround, "Player should be grounded initially");
+
+        // Jump!
+        player.setJumping(true);
+        NEPlayerMovementHandler.applyJump(player);
+
+        // Outward velocity along localUp (-X)
+        assertTrue(player.motionX < -0.4, "Jump must give outward velocity along localUp (-X)");
+        assertTrue(player.isAirBorne, "Player must be airborne after jump");
+        assertFalse(player.onGround, "Player must not be onGround immediately after jump");
+    }
+
+    @Test
+    void airbornePlayerReceivesNoSurfaceAdhesion() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        // Position entity in open space far from any collision boxes
+        entity.setPosition(0.0, 64.0, 0.0);
+        entity.motionX = 0.0;
+        entity.motionY = 0.0;
+        entity.motionZ = 0.0;
+        entity.isAirBorne = true;
+
+        NEPlayerMovementHandler.CollisionProvider emptyProvider = (e, bb) -> Collections.emptyList();
+        NEPlayerMovementHandler.handleMovement(entity, 0.0F, 0.0F, emptyProvider);
+
+        // Acceleration should be strictly equal to the gravity field acceleration (0.08, 0, 0)
+        // damped by airborne drag (0.91), without any additional adhesion force
+        assertEquals(0.08 * 0.91, entity.motionX, 1e-4, "Airborne entity must only receive physical gravity with drag");
+        assertFalse(entity.onGround, "Airborne entity far from walls must not be marked onGround");
+    }
+
+    @Test
+    void headingTransportPreservesForwardAcrossChangingUp() {
+        LocalEntityFrame frame = LocalEntityFrame.standardMinecraft(); // up = (0, 1, 0), fwd = (0, 0, 1)
+
+        // Transport along a curved trajectory from up=(0,1,0) toward up=(0,0,1)
+        int steps = 10;
+        for (int i = 1; i <= steps; i++) {
+            double angle = (Math.PI * 0.5) * (i / (double) steps);
+            Vector3d newUp = new Vector3d(0.0, Math.cos(angle), Math.sin(angle)).normalize();
+            frame = frame.transportTo(newUp, 0.0);
+
+            // Forward must remain orthogonal to localUp
+            assertEquals(
+                0.0,
+                frame.tangentForward()
+                    .dot(frame.localUp()),
+                EPSILON);
+            // Right must remain orthogonal to both
+            assertEquals(
+                0.0,
+                frame.tangentRight()
+                    .dot(frame.localUp()),
+                EPSILON);
+            assertEquals(
+                0.0,
+                frame.tangentRight()
+                    .dot(frame.tangentForward()),
+                EPSILON);
+            // Determinant must be +1
+            assertEquals(1.0, frame.basisDeterminant(), EPSILON);
+        }
+    }
+
+    @Test
+    void headingTransportDoesNotSpinAtBottomPole() {
+        // Start near bottom pole at theta = 170 degrees in Y-Z plane
+        double thetaStart = Math.toRadians(170.0);
+        Vector3d upStart = new Vector3d(0.0, Math.cos(thetaStart), Math.sin(thetaStart)).normalize();
+        LocalEntityFrame frame = LocalEntityFrame.standardMinecraft()
+            .transportTo(upStart, 0.0);
+
+        // Step across bottom pole (180 degrees) to 190 degrees
+        Vector3d rightBefore = frame.tangentRight();
+        for (double deg = 171.0; deg <= 190.0; deg += 1.0) {
+            double rad = Math.toRadians(deg);
+            Vector3d newUp = new Vector3d(0.0, Math.cos(rad), Math.sin(rad)).normalize();
+            frame = frame.transportTo(newUp, 0.0);
+        }
+        Vector3d rightAfter = frame.tangentRight();
+
+        // The tangentRight vector should not have flipped or spun around
+        assertEquals(rightBefore.x, rightAfter.x, 1e-3, "tangentRight X must not flip at bottom pole");
+        assertEquals(0.0, rightAfter.y, 1e-3, "tangentRight Y should remain near 0 in Y-Z plane transport");
+        assertEquals(0.0, rightAfter.z, 1e-3, "tangentRight Z should remain near 0 in Y-Z plane transport");
+    }
+
+    @Test
+    void holdingForwardTraversesThroughPoleInsteadOfOrbiting() {
+        // Entity at equator of radial body: up = (0, 0, 1), fwd = (0, -1, 0)
+        Vector3d initUp = new Vector3d(0.0, 0.0, 1.0);
+        LocalEntityFrame frame = LocalEntityFrame.standardMinecraft()
+            .transportTo(initUp, 0.0);
+
+        // Transport towards bottom pole up = (0, -1, 0) through angle theta from 0 to PI
+        int steps = 50;
+        for (int i = 0; i <= steps; i++) {
+            double angle = Math.PI * (i / (double) steps);
+            Vector3d newUp = new Vector3d(0.0, -Math.sin(angle), Math.cos(angle)).normalize();
+            frame = frame.transportTo(newUp, 0.0);
+
+            // Throughout the traversal, motion must stay strictly in the Y-Z plane (X component == 0)
+            // proving it never deflects or orbits azimuthally
+            assertEquals(0.0, frame.tangentForward().x, EPSILON, "tangentForward must not develop an X component");
+            assertEquals(0.0, frame.localUp().x, EPSILON, "localUp must not develop an X component");
+        }
+    }
+
+    @Test
+    void transportedFrameRemainsOrthonormal() {
+        LocalEntityFrame frame = LocalEntityFrame.standardMinecraft();
+        for (int i = 0; i < 100; i++) {
+            double phi = Math.toRadians(i * 3.6);
+            Vector3d newUp = new Vector3d(Math.sin(phi) * Math.cos(phi), Math.cos(phi), Math.sin(phi)).normalize();
+            frame = frame.transportTo(newUp, 5.0);
+
+            assertEquals(
+                1.0,
+                frame.localUp()
+                    .length(),
+                EPSILON);
+            assertEquals(
+                1.0,
+                frame.tangentForward()
+                    .length(),
+                EPSILON);
+            assertEquals(
+                1.0,
+                frame.tangentRight()
+                    .length(),
+                EPSILON);
+
+            assertEquals(
+                0.0,
+                frame.localUp()
+                    .dot(frame.tangentForward()),
+                EPSILON);
+            assertEquals(
+                0.0,
+                frame.localUp()
+                    .dot(frame.tangentRight()),
+                EPSILON);
+            assertEquals(
+                0.0,
+                frame.tangentForward()
+                    .dot(frame.tangentRight()),
+                EPSILON);
+        }
+    }
+
+    @Test
+    void transportedFrameMaintainsPositiveDeterminant() {
+        LocalEntityFrame frame = LocalEntityFrame.standardMinecraft();
+        for (int i = 0; i < 50; i++) {
+            double angle = 2.0 * Math.PI * (i / 50.0);
+            Vector3d newUp = new Vector3d(Math.sin(angle), -Math.cos(angle), 0.0).normalize();
+            frame = frame.transportTo(newUp, 7.5);
+            assertEquals(1.0, frame.basisDeterminant(), EPSILON, "Determinant must remain +1 for step " + i);
+        }
+    }
+
+    @Test
+    void cameraTargetUsesTransportedForward() {
+        service.setActiveField(UniformGravityField.of(0.08, 0.0, 0.0));
+        LocomotionTestEntity entity = new LocomotionTestEntity();
+        entity.setPosition(9.7, 64.0, 0.0);
+        entity.rotationYaw = 0.0F;
+
+        LocalEntityFrame frame = service.getOrUpdateLocalFrame(entity);
+        Vector3d fwd = frame.tangentForward();
+
+        // Forward vector must be orthogonal to localUp
+        assertEquals(0.0, fwd.dot(frame.localUp()), EPSILON);
+        // Canonical frame is shared by service
+        assertEquals(frame, service.getOrUpdateLocalFrame(entity));
+    }
+
+    @Test
+    void fullCircumnavigationReturnsWithContinuousHeading() {
+        LocalEntityFrame initial = LocalEntityFrame.standardMinecraft();
+        LocalEntityFrame frame = initial;
+        int steps = 120;
+        for (int i = 1; i <= steps; i++) {
+            double angle = 2.0 * Math.PI * (i / (double) steps);
+            Vector3d newUp = new Vector3d(Math.sin(angle), Math.cos(angle), 0.0).normalize();
+            frame = frame.transportTo(newUp, 0.0);
+        }
+
+        // Full 360 degree loop with zero yaw delta returns to initial frame
+        assertEquals(initial.localUp().x, frame.localUp().x, 1e-4);
+        assertEquals(initial.localUp().y, frame.localUp().y, 1e-4);
+        assertEquals(initial.localUp().z, frame.localUp().z, 1e-4);
+
+        assertEquals(initial.tangentForward().x, frame.tangentForward().x, 1e-4);
+        assertEquals(initial.tangentForward().y, frame.tangentForward().y, 1e-4);
+        assertEquals(initial.tangentForward().z, frame.tangentForward().z, 1e-4);
+    }
 }

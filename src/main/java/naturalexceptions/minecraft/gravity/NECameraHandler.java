@@ -10,7 +10,7 @@ import org.lwjgl.opengl.GL11;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import naturalexceptions.core.gravity.GravityCameraFrame;
-import naturalexceptions.core.gravity.GravitySample;
+import naturalexceptions.core.gravity.LocalEntityFrame;
 import naturalexceptions.core.gravity.Vector3d;
 
 /**
@@ -48,40 +48,48 @@ public final class NECameraHandler {
             return;
         }
 
-        GravitySample sample = service.sampleFor(viewEntity);
-        Vector3d targetUp = sample.localUp();
+        LocalEntityFrame frame = service.getOrUpdateLocalFrame(viewEntity);
+        Vector3d targetUp = frame.localUp();
         CAMERA_FRAME.update(targetUp);
 
-        float yaw = viewEntity.prevRotationYaw + (viewEntity.rotationYaw - viewEntity.prevRotationYaw) * partialTicks;
         float mcPitch = viewEntity.prevRotationPitch
             + (viewEntity.rotationPitch - viewEntity.prevRotationPitch) * partialTicks;
         float mathPitch = -mcPitch;
+        double pitchRad = Math.toRadians(mathPitch);
 
-        GravityCameraFrame.CameraBasis basis = CAMERA_FRAME.computeCameraBasis(yaw, mathPitch);
+        Vector3d tangentForward = frame.tangentForward();
+        Vector3d look = tangentForward.multiply(Math.cos(pitchRad))
+            .add(targetUp.multiply(Math.sin(pitchRad)))
+            .normalize();
+
+        Vector3d right = tangentForward.cross(targetUp)
+            .normalize();
+        Vector3d screenUp = right.cross(look)
+            .normalize();
 
         // Column-major FloatBuffer for OpenGL Modelview matrix:
         // View matrix transforms world vectors to eye vectors via M * v:
-        // Row 0 = basis.right -> eye X
-        // Row 1 = basis.up -> eye Y
-        // Row 2 = -basis.look -> eye Z (into screen is -Z)
+        // Row 0 = right -> eye X
+        // Row 1 = screenUp -> eye Y
+        // Row 2 = -look -> eye Z (into screen is -Z)
         // Row 3 = (0, 0, 0, 1)
         MATRIX_BUFFER.clear();
         // Column 0
-        MATRIX_BUFFER.put((float) basis.right.x);
-        MATRIX_BUFFER.put((float) basis.up.x);
-        MATRIX_BUFFER.put((float) -basis.look.x);
+        MATRIX_BUFFER.put((float) right.x);
+        MATRIX_BUFFER.put((float) screenUp.x);
+        MATRIX_BUFFER.put((float) -look.x);
         MATRIX_BUFFER.put(0.0F);
 
         // Column 1
-        MATRIX_BUFFER.put((float) basis.right.y);
-        MATRIX_BUFFER.put((float) basis.up.y);
-        MATRIX_BUFFER.put((float) -basis.look.y);
+        MATRIX_BUFFER.put((float) right.y);
+        MATRIX_BUFFER.put((float) screenUp.y);
+        MATRIX_BUFFER.put((float) -look.y);
         MATRIX_BUFFER.put(0.0F);
 
         // Column 2
-        MATRIX_BUFFER.put((float) basis.right.z);
-        MATRIX_BUFFER.put((float) basis.up.z);
-        MATRIX_BUFFER.put((float) -basis.look.z);
+        MATRIX_BUFFER.put((float) right.z);
+        MATRIX_BUFFER.put((float) screenUp.z);
+        MATRIX_BUFFER.put((float) -look.z);
         MATRIX_BUFFER.put(0.0F);
 
         // Column 3

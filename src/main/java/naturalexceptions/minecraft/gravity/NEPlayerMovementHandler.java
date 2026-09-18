@@ -18,10 +18,10 @@ import naturalexceptions.minecraft.mixin.EntityLivingBaseAccessor;
  */
 public final class NEPlayerMovementHandler {
 
-    public static final double PROBE_DISTANCE = 0.25;
+    public static final double PROBE_DISTANCE = 0.10;
     public static final double STEP_HEIGHT = 0.6;
     public static final double JUMP_IMPULSE = 0.42;
-    public static final double ADHESION_ACCELERATION = 0.04;
+    public static final double ADHESION_ACCELERATION = 0.0;
     public static final double GROUND_FRICTION = 0.546; // standard 0.6 slipperiness * 0.91
 
     @FunctionalInterface
@@ -62,7 +62,7 @@ public final class NEPlayerMovementHandler {
         }
 
         if (isSprinting) {
-            LocalEntityFrame frame = LocalEntityFrame.deriveFrom(sample, entity.rotationYaw);
+            LocalEntityFrame frame = service.getOrUpdateLocalFrame(entity);
             Vector3d sprintBoost = frame.tangentForward()
                 .multiply(0.2);
             entity.motionX += sprintBoost.x;
@@ -105,8 +105,8 @@ public final class NEPlayerMovementHandler {
         // 1. Evaluate gravity-relative grounding
         boolean isGrounded = isGrounded(entity, localDown, PROBE_DISTANCE, collisionProvider);
 
-        // 2. Derive local movement frame based on entity heading
-        LocalEntityFrame frame = LocalEntityFrame.deriveFrom(sample, entity.rotationYaw);
+        // 2. Obtain canonical persistent parallel-transported movement frame
+        LocalEntityFrame frame = service.getOrUpdateLocalFrame(entity);
 
         // 3. Handle jump if requested
         boolean isJumping = false;
@@ -133,19 +133,11 @@ public final class NEPlayerMovementHandler {
             entity.motionZ += moveAccel.z;
         }
 
-        // 5. Apply gravity or surface adhesion
-        if (!isGrounded) {
-            Vector3d gravity = sample.acceleration();
-            entity.motionX += gravity.x;
-            entity.motionY += gravity.y;
-            entity.motionZ += gravity.z;
-        } else {
-            // Apply gentle adhesion force towards surface to prevent detachment/drift
-            Vector3d adhesion = localDown.multiply(ADHESION_ACCELERATION);
-            entity.motionX += adhesion.x;
-            entity.motionY += adhesion.y;
-            entity.motionZ += adhesion.z;
-        }
+        // 5. Apply physical gravity acceleration always
+        Vector3d gravity = sample.acceleration();
+        entity.motionX += gravity.x;
+        entity.motionY += gravity.y;
+        entity.motionZ += gravity.z;
 
         // 6. Gravity-relative step handling before movement
         double plannedX = entity.motionX;
@@ -176,7 +168,7 @@ public final class NEPlayerMovementHandler {
             entity.isAirBorne = false;
             entity.fallDistance = 0.0F;
 
-            // Cancel motion into the surface to prevent jitter or penetration
+            // Cancel motion into the surface to provide normal support
             if (normalVel > 0.0) {
                 Vector3d cancel = localDown.multiply(normalVel);
                 entity.motionX -= cancel.x;
@@ -184,20 +176,16 @@ public final class NEPlayerMovementHandler {
                 entity.motionZ -= cancel.z;
             }
 
-            // Cancel any outward radial motion while grounded unless jumping/airborne
-            // to permanently prevent launch-to-space escape velocity
-            double outwardVel = postVel.dot(localUp);
-            if (outwardVel > 0.0 && !entity.isAirBorne) {
-                Vector3d cancelOutward = localUp.multiply(outwardVel);
-                entity.motionX -= cancelOutward.x;
-                entity.motionY -= cancelOutward.y;
-                entity.motionZ -= cancelOutward.z;
-            }
+            // Apply ground friction strictly to tangential velocity
+            Vector3d currentVel = new Vector3d(entity.motionX, entity.motionY, entity.motionZ);
+            double currentNormal = currentVel.dot(localDown);
+            Vector3d normalComponent = localDown.multiply(currentNormal);
+            Vector3d tangentComponent = currentVel.subtract(normalComponent);
+            Vector3d newVel = normalComponent.add(tangentComponent.multiply(GROUND_FRICTION));
 
-            // Apply ground friction to tangential velocity
-            entity.motionX *= GROUND_FRICTION;
-            entity.motionY *= GROUND_FRICTION;
-            entity.motionZ *= GROUND_FRICTION;
+            entity.motionX = newVel.x;
+            entity.motionY = newVel.y;
+            entity.motionZ = newVel.z;
         } else {
             entity.onGround = false;
             // Airborne drag

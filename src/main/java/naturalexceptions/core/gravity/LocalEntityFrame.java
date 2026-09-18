@@ -98,6 +98,78 @@ public final class LocalEntityFrame {
         return new LocalEntityFrame(down, up, fwd, right, sample.sourceId());
     }
 
+    /**
+     * Parallel-transports this frame to a new localUp orientation, and applies any local yaw delta.
+     *
+     * <p>
+     * Uses incremental geodesic rotation between the current localUp and newUp,
+     * ensuring zero singularities at the poles. The tangentForward vector is projected
+     * onto the new tangent plane, normalized, and then rotated by yawDeltaDegrees around newUp.
+     *
+     * @param newUp           the new local up vector
+     * @param yawDeltaDegrees yaw change in degrees (positive = turning right / clockwise)
+     * @param newSourceId     the new gravity source id
+     * @return a new orthonormal, right-handed LocalEntityFrame with determinant +1
+     */
+    public LocalEntityFrame transportTo(Vector3d newUp, double yawDeltaDegrees, GravitySourceId newSourceId) {
+        if (newUp == null || newUp.lengthSquared() < 1e-6) {
+            return this;
+        }
+        Vector3d nUp = newUp.normalize();
+        double dot = this.localUp.dot(nUp);
+        boolean unchangedUp = dot > 0.999999;
+        boolean unchangedYaw = Math.abs(yawDeltaDegrees) <= 1e-6;
+        boolean unchangedSource = newSourceId == null || newSourceId.equals(this.activeSourceId);
+        if (unchangedUp && unchangedYaw && unchangedSource) {
+            return this;
+        }
+
+        Vector3d nDown = nUp.negate();
+
+        // 1. Parallel transport existing tangentForward from this.localUp to nUp
+        Vector3d transportedFwd;
+        if (unchangedUp) {
+            transportedFwd = this.tangentForward.subtract(nUp.multiply(this.tangentForward.dot(nUp)));
+        } else if (dot < -0.999999) {
+            transportedFwd = this.tangentForward.negate();
+        } else {
+            Vector3d rotAxis = this.localUp.cross(nUp)
+                .normalize();
+            double angle = Math.acos(Math.max(-1.0, Math.min(1.0, dot)));
+            transportedFwd = rotateVector(this.tangentForward, rotAxis, angle);
+            transportedFwd = transportedFwd.subtract(nUp.multiply(transportedFwd.dot(nUp)));
+        }
+
+        if (transportedFwd.lengthSquared() > 1e-6) {
+            transportedFwd = transportedFwd.normalize();
+        } else {
+            transportedFwd = arbitraryTangent(nUp);
+        }
+
+        // 2. Apply yaw delta around nUp
+        Vector3d fwd;
+        if (!unchangedYaw) {
+            Vector3d tempRight = nUp.cross(transportedFwd)
+                .normalize();
+            double yawRad = Math.toRadians(yawDeltaDegrees);
+            fwd = transportedFwd.multiply(Math.cos(yawRad))
+                .subtract(tempRight.multiply(Math.sin(yawRad)))
+                .normalize();
+        } else {
+            fwd = transportedFwd;
+        }
+
+        // 3. Construct canonical right vector: right = nUp x fwd
+        Vector3d right = nUp.cross(fwd)
+            .normalize();
+
+        return new LocalEntityFrame(nDown, nUp, fwd, right, newSourceId != null ? newSourceId : this.activeSourceId);
+    }
+
+    public LocalEntityFrame transportTo(Vector3d newUp, double yawDeltaDegrees) {
+        return transportTo(newUp, yawDeltaDegrees, this.activeSourceId);
+    }
+
     private static Vector3d arbitraryTangent(Vector3d up) {
         Vector3d ref = Math.abs(up.y) < 0.9 ? Vector3d.UP : new Vector3d(1.0, 0.0, 0.0);
         return ref.cross(up)
@@ -144,6 +216,22 @@ public final class LocalEntityFrame {
     public Vector3d mapInput(double forwardInput, double strafeInput) {
         return tangentForward.multiply(forwardInput)
             .add(tangentRight.multiply(strafeInput));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        LocalEntityFrame that = (LocalEntityFrame) o;
+        return Objects.equals(localDown, that.localDown) && Objects.equals(localUp, that.localUp)
+            && Objects.equals(tangentForward, that.tangentForward)
+            && Objects.equals(tangentRight, that.tangentRight)
+            && Objects.equals(activeSourceId, that.activeSourceId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(localDown, localUp, tangentForward, tangentRight, activeSourceId);
     }
 
     @Override

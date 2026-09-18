@@ -6,28 +6,79 @@ import java.util.Objects;
  * Geometric model of an entity's local stance in arbitrary gravity.
  *
  * <p>
- * Defines support footprint (feet) and head extent relative to local down/up vectors,
- * calculates the exact translation offset needed to plant feet against support surfaces,
- * and derives the orientation angles from world UP (0, 1, 0) to localUp.
+ * Defines conceptual body geometry for arbitrary stance:
+ * <ul>
+ * <li>{@code bodyCenter}: Geometric center of the standing body in the local frame</li>
+ * <li>{@code localDown} / {@code localUp}: Directional gravity vectors</li>
+ * <li>{@code halfHeight}: Half-height of the body along localUp (0.9 for standard player)</li>
+ * <li>{@code eyeOffsetFromCenter}: Eye offset from bodyCenter along localUp (0.72 for player)</li>
+ * <li>{@code supportPoint}: {@code bodyCenter + localDown * halfHeight} (feet contacting support)</li>
+ * <li>{@code headPoint}: {@code bodyCenter + localUp * halfHeight} (top of head)</li>
+ * <li>{@code eyePoint}: {@code bodyCenter + localUp * eyeOffsetFromCenter} (local eye origin)</li>
+ * </ul>
  *
  * <p>
  * This is a pure core domain model with zero Minecraft imports.
  */
 public final class LocalBodyStance {
 
+    public static final double DEFAULT_PLAYER_HALF_HEIGHT = 0.9;
+    public static final double DEFAULT_PLAYER_HALF_WIDTH = 0.3;
+    public static final double DEFAULT_PLAYER_EYE_OFFSET = 0.72; // eyeHeight (1.62) - halfHeight (0.9)
+
     private final Vector3d center;
     private final Vector3d localDown;
     private final Vector3d localUp;
     private final double halfWidth;
     private final double halfHeight;
+    private final double eyeOffsetFromCenter;
+    private final Vector3d supportPoint;
+    private final Vector3d headPoint;
+    private final Vector3d eyePoint;
 
-    public LocalBodyStance(Vector3d center, Vector3d localDown, double halfWidth, double halfHeight) {
+    public LocalBodyStance(Vector3d center, Vector3d localDown, double halfWidth, double halfHeight,
+        double eyeOffsetFromCenter) {
         this.center = center != null ? center : Vector3d.ZERO;
         Vector3d d = localDown != null && localDown.lengthSquared() > 1e-6 ? localDown.normalize() : Vector3d.DOWN;
         this.localDown = d;
         this.localUp = d.negate();
         this.halfWidth = Math.max(1e-4, halfWidth);
         this.halfHeight = Math.max(1e-4, halfHeight);
+        this.eyeOffsetFromCenter = eyeOffsetFromCenter;
+
+        // Support point on the boundary of the AABB along localDown
+        this.supportPoint = new Vector3d(
+            this.center.x + this.localDown.x * this.halfWidth,
+            this.center.y + this.localDown.y * this.halfHeight,
+            this.center.z + this.localDown.z * this.halfWidth);
+
+        // Head point on the boundary of the AABB along localUp
+        this.headPoint = new Vector3d(
+            this.center.x + this.localUp.x * this.halfWidth,
+            this.center.y + this.localUp.y * this.halfHeight,
+            this.center.z + this.localUp.z * this.halfWidth);
+
+        // Eye point is located eyeHeight (halfHeight + eyeOffsetFromCenter) along localUp from supportPoint
+        double eyeHeight = this.halfHeight + this.eyeOffsetFromCenter;
+        this.eyePoint = this.supportPoint.add(this.localUp.multiply(eyeHeight));
+    }
+
+    public LocalBodyStance(Vector3d center, Vector3d localDown, double halfWidth, double halfHeight) {
+        this(center, localDown, halfWidth, halfHeight, DEFAULT_PLAYER_EYE_OFFSET);
+    }
+
+    /**
+     * Constructs a stance from an existing collision bounding box center, anchoring
+     * the feet on the contact surface along localDown.
+     */
+    public static LocalBodyStance fromAabb(Vector3d aabbCenter, Vector3d localDown, double halfWidth, double halfHeight,
+        double eyeHeight) {
+        double eyeOffset = eyeHeight - halfHeight;
+        return new LocalBodyStance(aabbCenter, localDown, halfWidth, halfHeight, eyeOffset);
+    }
+
+    public Vector3d bodyCenter() {
+        return center;
     }
 
     public Vector3d center() {
@@ -50,36 +101,43 @@ public final class LocalBodyStance {
         return halfHeight;
     }
 
+    public double eyeOffsetFromCenter() {
+        return eyeOffsetFromCenter;
+    }
+
     /**
      * Center of the body's support footprint (feet) contacting the ground/wall.
      */
     public Vector3d supportPoint() {
-        return new Vector3d(
-            center.x + localDown.x * halfWidth,
-            center.y + localDown.y * halfHeight,
-            center.z + localDown.z * halfWidth);
+        return supportPoint;
     }
 
     /**
      * Center of the body's head, farthest from the support surface along localUp.
      */
     public Vector3d headPoint() {
-        return new Vector3d(
-            center.x + localUp.x * halfWidth,
-            center.y + localUp.y * halfHeight,
-            center.z + localUp.z * halfWidth);
+        return headPoint;
+    }
+
+    /**
+     * Gravity-relative eye position: supportPoint + localUp * (halfHeight + eyeOffsetFromCenter).
+     */
+    public Vector3d eyePoint() {
+        return eyePoint;
+    }
+
+    /**
+     * Camera eye translation delta needed to convert from entity render origin (posX, posY, posZ)
+     * to the gravity-relative eyePoint: deltaEye = entityPos - eyePoint.
+     */
+    public Vector3d cameraEyeDelta(Vector3d entityPos) {
+        return entityPos.subtract(eyePoint);
     }
 
     /**
      * Translation offset from entity base position (posX, posY, posZ) to supportPoint.
      * In vanilla coordinates: base = (C.x, C.y - halfHeight, C.z).
      * supportSurfaceOffset = supportPoint - base = (d_x * halfWidth, halfHeight + d_y * halfHeight, d_z * halfWidth).
-     *
-     * <p>
-     * For vanilla floor (d = (0, -1, 0)): offset is (0, 0, 0).
-     * For +X wall (d = (1, 0, 0)): offset is (halfWidth, halfHeight, 0).
-     * For -X wall (d = (-1, 0, 0)): offset is (-halfWidth, halfHeight, 0).
-     * For ceiling (d = (0, 1, 0)): offset is (0, 2 * halfHeight, 0).
      */
     public Vector3d supportSurfaceOffset() {
         return new Vector3d(localDown.x * halfWidth, halfHeight + localDown.y * halfHeight, localDown.z * halfWidth);
@@ -96,8 +154,6 @@ public final class LocalBodyStance {
 
     /**
      * Unit rotation axis from world UP (0, 1, 0) to localUp.
-     * If localUp is aligned with world UP, returns (0, 1, 0).
-     * If localUp is exactly inverted (-world UP), returns (1, 0, 0) as canonical 180-degree flip axis.
      */
     public Vector3d rotationAxis() {
         double dot = Vector3d.UP.dot(localUp);
@@ -113,12 +169,6 @@ public final class LocalBodyStance {
 
     /**
      * Axis-aligned bounds [minX, minY, minZ, maxX, maxY, maxZ] for probing feet-side contact.
-     * The probe box is anchored strictly at the feet side along localDown, extending outward
-     * by probeDistance and inward by inwardMargin, while covering the lateral extent of the body
-     * across orthogonal axes.
-     *
-     * <p>
-     * Blocks contacting the head or upper body are strictly outside these bounds.
      */
     public double[] feetProbeBounds(double probeDistance, double inwardMargin) {
         Vector3d sup = supportPoint();
@@ -156,13 +206,14 @@ public final class LocalBodyStance {
         if (o == null || getClass() != o.getClass()) return false;
         LocalBodyStance that = (LocalBodyStance) o;
         return Double.compare(that.halfWidth, halfWidth) == 0 && Double.compare(that.halfHeight, halfHeight) == 0
+            && Double.compare(that.eyeOffsetFromCenter, eyeOffsetFromCenter) == 0
             && Objects.equals(center, that.center)
             && Objects.equals(localDown, that.localDown);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(center, localDown, halfWidth, halfHeight);
+        return Objects.hash(center, localDown, halfWidth, halfHeight, eyeOffsetFromCenter);
     }
 
     @Override
@@ -175,6 +226,8 @@ public final class LocalBodyStance {
             + localUp
             + ", support="
             + supportPoint()
+            + ", eye="
+            + eyePoint()
             + ", head="
             + headPoint()
             + '}';
