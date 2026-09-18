@@ -1,7 +1,25 @@
+# Creative Tab
+itemGroup.naturalExceptions=Natural Exceptions
+
+# Blocks
 tile.copperOre.name=Copper Ore
 tile.copperBlock.name=Block of Copper
+tile.refractoryBrick.name=Refractory Brick Block
+tile.starterSmelter.name=Starter Smelter
+tile.castingTable.name=Casting Table
+
+# Items
 item.copperOreChunk.name=Copper Ore Chunk
 item.copperIngot.name=Copper Ingot
+item.slagLump.name=Slag Lump
 item.materialSample.name=Material Sample
-material.naturalexceptions.copper=Copper
+item.castingMold.name=Casting Mold
+item.genericComponent.name=Component
+item.genericAssembly.name=Tool Assembly
 
+# Materials
+material.naturalexceptions.copper=Copper
+material.naturalexceptions.tin=Tin
+material.naturalexceptions.lead=Lead
+material.naturalexceptions.wood=Wood
+material.naturalexceptions.slag=Slag
