@@ -27,6 +27,9 @@ public final class NaturalExceptions {
     public static final String MOD_ID = "naturalexceptions";
     public static final String MOD_NAME = "Natural Exceptions";
 
+    @Mod.Instance(NaturalExceptions.MOD_ID)
+    public static NaturalExceptions instance;
+
     private static NEWorldTickHandler tickHandler;
     private static NEGravityTickHandler gravityTickHandler;
 
@@ -40,6 +43,9 @@ public final class NaturalExceptions {
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
         BootstrapCopperGenerator.register();
+        cpw.mods.fml.common.network.NetworkRegistry.INSTANCE
+            .registerGuiHandler(this, new naturalexceptions.minecraft.gui.NEGuiHandler());
+
         tickHandler = new NEWorldTickHandler();
         FMLCommonHandler.instance()
             .bus()

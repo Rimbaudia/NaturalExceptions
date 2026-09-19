@@ -53,6 +53,25 @@ public final class ComponentGeometry {
         return of(GeometryId.BLADE, 25.0); // 25 cm³ blade
     }
 
+    public static ComponentGeometry forId(GeometryId id) {
+        if (id == null) return blank();
+        switch (id) {
+            case PICK_HEAD:
+                return pickHead();
+            case HANDLE:
+                return handle();
+            case PLATE:
+                return plate();
+            case ROD:
+                return rod();
+            case BLADE:
+                return blade();
+            case BLANK:
+            default:
+                return blank();
+        }
+    }
+
     public GeometryId id() {
         return id;
     }

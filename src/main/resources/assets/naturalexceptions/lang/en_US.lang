@@ -23,3 +23,7 @@ material.naturalexceptions.tin=Tin
 material.naturalexceptions.lead=Lead
 material.naturalexceptions.wood=Wood
 material.naturalexceptions.slag=Slag
+
+# Containers / GUI
+container.starterSmelter=Starter Smelter
+

@@ -16,7 +16,6 @@ import net.minecraft.world.World;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import naturalexceptions.core.metallurgy.AggregateLayer;
-import naturalexceptions.core.metallurgy.MaterialQuantity;
 
 /**
  * Block hosting the Starter Smelter vessel.
@@ -113,97 +112,71 @@ public final class BlockStarterSmelter extends BlockContainer {
         TileEntityStarterSmelter smelter = (TileEntityStarterSmelter) te;
         ItemStack held = player.getHeldItem();
 
-        // Sneak interaction: extraction
+        // 1. Direct outlet interaction: pour directly into held empty casting mold
+        if (held != null && held.getItem() instanceof naturalexceptions.minecraft.item.ItemCastingMold) {
+            if (!naturalexceptions.minecraft.item.ItemCastingMold.isFilled(held)) {
+                if (smelter.pourIntoMold(held)) {
+                    player.addChatMessage(
+                        new ChatComponentText("\u00a7aPoured molten metal into " + held.getDisplayName()));
+                    return true;
+                } else {
+                    player
+                        .addChatMessage(new ChatComponentText("\u00a7cNo accessible liquid metal in smelter to pour."));
+                    return true;
+                }
+            }
+        }
+
+        // 2. Developer/debug inspect: sneak right-click outputs coarse status to chat
         if (player.isSneaking()) {
-            // Attempt to pour liquid metal first
-            ItemStack poured = smelter.extractLiquidMetal(MaterialQuantity.ofGrams(100.0));
-            if (poured != null) {
-                if (!player.inventory.addItemStackToInventory(poured)) {
-                    player.dropPlayerItemWithRandomChoice(poured, false);
-                }
-                player.addChatMessage(new ChatComponentText("\u00a7aExtracted 100g liquid metal sample."));
+            smelter.validateStructure();
+            if (!smelter.isStructureValid()) {
+                player.addChatMessage(
+                    new ChatComponentText(
+                        "\u00a7c[Starter Smelter] Structure Incomplete! Requires solid hearth base. (Use /ne_smelter structure)"));
                 return true;
             }
 
-            // Otherwise skim slag
-            ItemStack skimmed = smelter.extractSlag(MaterialQuantity.ofGrams(50.0));
-            if (skimmed != null) {
-                if (!player.inventory.addItemStackToInventory(skimmed)) {
-                    player.dropPlayerItemWithRandomChoice(skimmed, false);
-                }
-                player.addChatMessage(new ChatComponentText("\u00a7eSkimmed 50g slag from surface."));
-                return true;
-            }
-
-            player.addChatMessage(new ChatComponentText("\u00a77No extractable liquid metal or slag present."));
-            return true;
-        }
-
-        // Insert fuel
-        if (held != null && smelter.insertFuel(held)) {
             player.addChatMessage(
                 new ChatComponentText(
                     String.format(
-                        "\u00a76Fuel added. Active burn: %d ticks.",
+                        "\u00a7e[Smelter Status] Structure: \u00a7aValid\u00a7e | Layers: %d | Mass: %s | Fuel: %s",
                         smelter.vesselState()
-                            .fuelState()
-                            .remainingTicks())));
-            return true;
-        }
-
-        // Insert feed / ore
-        if (held != null && smelter.insertFeed(held)) {
-            player.addChatMessage(
-                new ChatComponentText(
-                    String.format(
-                        "\u00a76Feed added. Total mass: %s across %d layer(s).",
+                            .layers()
+                            .size(),
                         smelter.vesselState()
                             .totalMass(),
                         smelter.vesselState()
-                            .layers()
-                            .size())));
-            return true;
-        }
+                            .fuelState()
+                            .isBurning() ? "\u00a7aBurning" : "\u00a77Cold")));
 
-        // Inspect coarse status
-        smelter.validateStructure();
-        if (!smelter.isStructureValid()) {
-            player.addChatMessage(
-                new ChatComponentText(
-                    "\u00a7c[Starter Smelter] Structure Incomplete! Requires solid hearth base. (Use /ne_smelter structure)"));
-            return true;
-        }
-
-        player.addChatMessage(
-            new ChatComponentText(
-                String.format(
-                    "\u00a7e[Smelter Status] Structure: \u00a7aValid\u00a7e | Layers: %d | Mass: %s | Fuel: %s",
-                    smelter.vesselState()
-                        .layers()
-                        .size(),
-                    smelter.vesselState()
-                        .totalMass(),
-                    smelter.vesselState()
-                        .fuelState()
-                        .isBurning() ? "\u00a7aBurning" : "\u00a77Cold")));
-
-        for (int i = 0; i < smelter.vesselState()
-            .layers()
-            .size(); i++) {
-            AggregateLayer l = smelter.vesselState()
+            for (int i = 0; i < smelter.vesselState()
                 .layers()
-                .get(i);
-            player.addChatMessage(
-                new ChatComponentText(
-                    String.format(
-                        "  \u00a77[%d] %s: %s at %.1f K (%s)",
-                        i,
-                        l.phaseType(),
-                        l.mass(),
-                        l.temperatureKelvin(),
-                        l.physicalPhase())));
+                .size(); i++) {
+                AggregateLayer l = smelter.vesselState()
+                    .layers()
+                    .get(i);
+                player.addChatMessage(
+                    new ChatComponentText(
+                        String.format(
+                            "  \u00a77[%d] %s: %s at %.1f K (%s)",
+                            i,
+                            l.phaseType(),
+                            l.mass(),
+                            l.temperatureKelvin(),
+                            l.physicalPhase())));
+            }
+            return true;
         }
 
+        // 3. Normal player activation: Open Starter Smelter GUI
+        player.openGui(
+            naturalexceptions.NaturalExceptions.instance,
+            naturalexceptions.minecraft.gui.NEGuiHandler.GUI_STARTER_SMELTER,
+            world,
+            x,
+            y,
+            z);
         return true;
     }
 }

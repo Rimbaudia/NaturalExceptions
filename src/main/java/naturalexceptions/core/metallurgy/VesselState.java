@@ -35,6 +35,14 @@ public final class VesselState {
 
     public static final MaterialQuantity DEFAULT_CAPACITY = MaterialQuantity.ofKilograms(50.0);
 
+    public static final double FLAME_TEMPERATURE_K = 1750.0;
+    public static final double COMBUSTION_CONDUCTANCE_W_PER_K = 50.0;
+    public static final double STEFAN_BOLTZMANN_SIGMA = 5.670374419e-8;
+    public static final double CRUCIBLE_EXPOSED_AREA_M2 = 0.06;
+    public static final double EMISSIVITY = 0.80;
+    public static final double CONVECTIVE_HEAT_COEFF = 12.0;
+    public static final double INTERLAYER_CONDUCTANCE_W_PER_K = 100.0;
+
     private final MaterialQuantity capacity;
     private final VesselLining lining;
     private final FuelBurnState fuelState;
@@ -162,44 +170,97 @@ public final class VesselState {
 
         double deltaSeconds = (double) deltaTicks / FuelBurnState.TICKS_PER_SECOND;
 
-        // 1. Combustion energy release
+        // 1. Combustion energy release with physical flame temperature boundary
         double combustionJoules = fuelState.step(deltaTicks);
-        if (combustionJoules > 0.0 && !layers.isEmpty()) {
-            // Distribute energy across existing layers proportionally to mass
-            long totalMg = totalMass().milligrams();
-            if (totalMg > 0L) {
-                for (AggregateLayer layer : layers) {
-                    double fraction = (double) layer.mass()
-                        .milligrams() / (double) totalMg;
+        long totalMg = totalMass().milligrams();
+
+        if (combustionJoules > 0.0 && !layers.isEmpty() && totalMg > 0L) {
+            for (AggregateLayer layer : layers) {
+                double fraction = (double) layer.mass()
+                    .milligrams() / (double) totalMg;
+                double currentTemp = layer.temperatureKelvin();
+                double deltaTFlame = Math.max(0.0, FLAME_TEMPERATURE_K - currentTemp);
+                // Heat transfer rate bounded by (T_flame - T_charge) and fuel combustion energy
+                double qTransferCap = (COMBUSTION_CONDUCTANCE_W_PER_K * fraction * deltaTFlame) * deltaSeconds;
+                double qIn = Math.min(combustionJoules * fraction, qTransferCap);
+                if (qIn > 0.0) {
                     layer.thermalState()
-                        .addEnergyJoules(combustionJoules * fraction);
+                        .addEnergyJoules(qIn);
                 }
             }
         }
 
-        // 2. Heat exchange with ambient
-        for (AggregateLayer layer : layers) {
-            ActiveThermalState thermal = layer.thermalState();
-            double temp = thermal.temperatureKelvin();
-            if (temp > ambientTempK) {
-                // Cooling towards ambient
-                double heatTransferCoeff = 15.0; // W / (m² · K) natural convection proxy
-                double surfaceArea = 0.10; // ~0.1 m² crucible surface area
-                double qJoules = heatTransferCoeff * surfaceArea * (temp - ambientTempK) * deltaSeconds;
-                thermal.removeEnergyJoules(qJoules);
+        // 2. Heat exchange with ambient (Stefan-Boltzmann radiation + natural convection)
+        if (!layers.isEmpty() && totalMg > 0L) {
+            for (AggregateLayer layer : layers) {
+                ActiveThermalState thermal = layer.thermalState();
+                double temp = thermal.temperatureKelvin();
+                if (temp > ambientTempK) {
+                    double fraction = (double) layer.mass()
+                        .milligrams() / (double) totalMg;
+                    double layerArea = CRUCIBLE_EXPOSED_AREA_M2 * fraction;
+                    double qRad = EMISSIVITY * STEFAN_BOLTZMANN_SIGMA
+                        * layerArea
+                        * (Math.pow(temp, 4.0) - Math.pow(ambientTempK, 4.0))
+                        * deltaSeconds;
+                    double qConv = CONVECTIVE_HEAT_COEFF * layerArea * (temp - ambientTempK) * deltaSeconds;
+                    double qLoss = Math.max(0.0, qRad + qConv);
+                    thermal.removeEnergyJoules(qLoss);
+                }
             }
         }
 
-        // 3. Metallurgical process rules & reduction
+        // 3. Interlayer heat exchange (Conduction between touching layers)
+        if (layers.size() > 1) {
+            for (int i = 0; i < layers.size() - 1; i++) {
+                AggregateLayer l1 = layers.get(i);
+                AggregateLayer l2 = layers.get(i + 1);
+                double t1 = l1.temperatureKelvin();
+                double t2 = l2.temperatureKelvin();
+                double deltaT = t1 - t2;
+                if (Math.abs(deltaT) > 0.1) {
+                    double qExchange = INTERLAYER_CONDUCTANCE_W_PER_K * deltaT * deltaSeconds;
+                    double c1 = l1.mass()
+                        .toKilograms()
+                        * l1.thermalState()
+                            .properties()
+                            .specificHeatSolid();
+                    double c2 = l2.mass()
+                        .toKilograms()
+                        * l2.thermalState()
+                            .properties()
+                            .specificHeatSolid();
+                    if (c1 > 0.0 && c2 > 0.0) {
+                        double maxExchange = Math.abs(deltaT) * (c1 * c2) / (c1 + c2) * 0.5;
+                        if (Math.abs(qExchange) > maxExchange) {
+                            qExchange = deltaT > 0 ? maxExchange : -maxExchange;
+                        }
+                        if (qExchange > 0.0) {
+                            l1.thermalState()
+                                .removeEnergyJoules(qExchange);
+                            l2.thermalState()
+                                .addEnergyJoules(qExchange);
+                        } else if (qExchange < 0.0) {
+                            l1.thermalState()
+                                .addEnergyJoules(-qExchange);
+                            l2.thermalState()
+                                .removeEnergyJoules(-qExchange);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Metallurgical process rules & reduction
         processSolidCharges();
 
-        // 4. Molten mixing of compatible metallic layers
+        // 5. Molten mixing of compatible metallic layers
         mixMoltenMetalLayers();
 
-        // 5. Layer ordering & sorting
+        // 6. Layer ordering & sorting
         sortLayers();
 
-        // 6. Refractory lining thermal stress
+        // 7. Refractory lining thermal stress
         for (AggregateLayer layer : layers) {
             lining.applyThermalStress(layer.temperatureKelvin(), deltaSeconds);
         }
