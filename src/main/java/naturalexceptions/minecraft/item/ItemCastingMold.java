@@ -254,6 +254,45 @@ public final class ItemCastingMold extends Item {
     }
 
     @Override
+    public boolean onItemUse(ItemStack stack, EntityPlayer player, World world, int x, int y, int z, int side,
+        float hitX, float hitY, float hitZ) {
+        net.minecraft.block.Block block = world.getBlock(x, y, z);
+        if (block instanceof naturalexceptions.minecraft.fabrication.BlockCastingTable
+            || block instanceof naturalexceptions.minecraft.metallurgy.BlockStarterSmelter) {
+            return false;
+        }
+        if (isFilled(stack)) {
+            if (isSolidified(stack)) {
+                if (!world.isRemote) {
+                    ItemStack comp = extractComponent(stack);
+                    if (comp != null) {
+                        if (!player.inventory.addItemStackToInventory(comp)) {
+                            player.dropPlayerItemWithRandomChoice(comp, false);
+                        }
+                        player.inventoryContainer.detectAndSendChanges();
+                        world.playSoundEffect(player.posX, player.posY, player.posZ, "random.pop", 1.0F, 1.2F);
+                        player.addChatMessage(
+                            new ChatComponentText("\u00a7aExtracted " + comp.getDisplayName() + " from mold."));
+                    }
+                }
+                return true;
+            } else {
+                if (!world.isRemote) {
+                    ActiveThermalState thermal = getThermalState(stack);
+                    double temp = thermal != null ? thermal.temperatureKelvin() : 1358.0;
+                    player.addChatMessage(
+                        new ChatComponentText(
+                            String.format(
+                                "\u00a7cThe cast metal is still molten/hot (%.1f K)! Wait for it to solidify.",
+                                temp)));
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
     public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
         if (isFilled(stack)) {
             if (isSolidified(stack)) {
@@ -263,6 +302,8 @@ public final class ItemCastingMold extends Item {
                         if (!player.inventory.addItemStackToInventory(comp)) {
                             player.dropPlayerItemWithRandomChoice(comp, false);
                         }
+                        player.inventoryContainer.detectAndSendChanges();
+                        world.playSoundEffect(player.posX, player.posY, player.posZ, "random.pop", 1.0F, 1.2F);
                         player.addChatMessage(
                             new ChatComponentText("\u00a7aExtracted " + comp.getDisplayName() + " from mold."));
                     }

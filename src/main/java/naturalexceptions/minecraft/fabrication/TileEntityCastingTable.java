@@ -43,11 +43,28 @@ public final class TileEntityCastingTable extends TileEntity implements IInvento
             if (ItemCastingMold.isFilled(moldStack)) {
                 boolean wasSolid = ItemCastingMold.isSolidified(moldStack);
 
-                // Run physical convective and radiative cooling on world tick
+                // Run physical convective and radiative cooling on world tick.
+                // The casting table also acts as a stone heat sink conducting heat
+                // out of the base of the mold at an accelerated rate.
+                ((ItemCastingMold) moldStack.getItem()).onUpdate(moldStack, worldObj, null, 0, false);
                 ((ItemCastingMold) moldStack.getItem()).onUpdate(moldStack, worldObj, null, 0, false);
 
                 boolean nowSolid = ItemCastingMold.isSolidified(moldStack);
-                if (wasSolid != nowSolid || worldObj.getTotalWorldTime() % 20L == 0L) {
+                if (wasSolid != nowSolid) {
+                    worldObj.playSoundEffect(xCoord + 0.5D, yCoord + 1.0D, zCoord + 0.5D, "random.fizz", 0.7F, 1.5F);
+                    for (int i = 0; i < 8; i++) {
+                        worldObj.spawnParticle(
+                            "smoke",
+                            xCoord + 0.3D + worldObj.rand.nextDouble() * 0.4D,
+                            yCoord + 1.05D,
+                            zCoord + 0.3D + worldObj.rand.nextDouble() * 0.4D,
+                            0.0D,
+                            0.04D,
+                            0.0D);
+                    }
+                    markDirty();
+                    worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+                } else if (worldObj.getTotalWorldTime() % 20L == 0L) {
                     markDirty();
                     worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
                 }
@@ -66,12 +83,13 @@ public final class TileEntityCastingTable extends TileEntity implements IInvento
             NBTTagCompound moldTag = tag.getCompoundTag("Mold");
             this.moldStack = ItemStack.loadItemStackFromNBT(moldTag);
             if (this.moldStack == null && moldTag.hasKey("tag")) {
-                net.minecraft.item.Item item =
-                    naturalexceptions.minecraft.registry.NEItems.castingMold != null
-                        ? naturalexceptions.minecraft.registry.NEItems.castingMold
-                        : new ItemCastingMold();
+                net.minecraft.item.Item item = naturalexceptions.minecraft.registry.NEItems.castingMold != null
+                    ? naturalexceptions.minecraft.registry.NEItems.castingMold
+                    : new ItemCastingMold();
                 this.moldStack = new ItemStack(item);
-                this.moldStack.setTagCompound((NBTTagCompound) moldTag.getCompoundTag("tag").copy());
+                this.moldStack.setTagCompound(
+                    (NBTTagCompound) moldTag.getCompoundTag("tag")
+                        .copy());
             }
         } else {
             this.moldStack = null;

@@ -67,7 +67,10 @@ public final class BlockCastingTable extends BlockContainer {
 
         TileEntity te = world.getTileEntity(x, y, z);
         if (!(te instanceof TileEntityCastingTable)) {
-            return false;
+            te = createNewTileEntity(world, world.getBlockMetadata(x, y, z));
+            world.setTileEntity(x, y, z, te);
+            te.markDirty();
+            world.markBlockForUpdate(x, y, z);
         }
         TileEntityCastingTable table = (TileEntityCastingTable) te;
         ItemStack held = player.getHeldItem();
@@ -81,6 +84,7 @@ public final class BlockCastingTable extends BlockContainer {
                     player.setCurrentItemOrArmor(0, null);
                 }
                 table.setMold(placed);
+                player.inventoryContainer.detectAndSendChanges();
                 world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "step.stone", 1.0F, 1.0F);
                 player.addChatMessage(
                     new ChatComponentText(
@@ -100,6 +104,7 @@ public final class BlockCastingTable extends BlockContainer {
                 if (!player.inventory.addItemStackToInventory(component)) {
                     player.dropPlayerItemWithRandomChoice(component, false);
                 }
+                player.inventoryContainer.detectAndSendChanges();
                 world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "random.pop", 1.0F, 1.2F);
                 player.addChatMessage(
                     new ChatComponentText(
@@ -109,6 +114,7 @@ public final class BlockCastingTable extends BlockContainer {
                     if (!player.inventory.addItemStackToInventory(tableMold)) {
                         player.dropPlayerItemWithRandomChoice(tableMold, false);
                     }
+                    player.inventoryContainer.detectAndSendChanges();
                     table.setMold(null);
                 } else {
                     table.markDirty();
@@ -153,6 +159,7 @@ public final class BlockCastingTable extends BlockContainer {
         if (!player.inventory.addItemStackToInventory(tableMold)) {
             player.dropPlayerItemWithRandomChoice(tableMold, false);
         }
+        player.inventoryContainer.detectAndSendChanges();
         world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "step.stone", 1.0F, 0.8F);
         player.addChatMessage(
             new ChatComponentText(
