@@ -5,6 +5,7 @@ import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChatComponentText;
 
 import naturalexceptions.minecraft.item.ItemCastingMold;
@@ -81,8 +82,38 @@ public final class ContainerStarterSmelter extends Container {
                 }
             }
 
+            // Check adjacent casting table for empty mold
+            if (tileEntity.getWorldObj() != null) {
+                int[][] offsets = { { 0, 0, 1 }, { 0, 0, -1 }, { 1, 0, 0 }, { -1, 0, 0 }, { 0, -1, 1 }, { 0, -1, -1 },
+                    { 1, -1, 0 }, { -1, -1, 0 }, { 0, -1, 0 } };
+                for (int[] off : offsets) {
+                    TileEntity te = tileEntity.getWorldObj()
+                        .getTileEntity(
+                            tileEntity.xCoord + off[0],
+                            tileEntity.yCoord + off[1],
+                            tileEntity.zCoord + off[2]);
+                    if (te instanceof naturalexceptions.minecraft.fabrication.TileEntityCastingTable) {
+                        naturalexceptions.minecraft.fabrication.TileEntityCastingTable table = (naturalexceptions.minecraft.fabrication.TileEntityCastingTable) te;
+                        ItemStack tableMold = table.getMold();
+                        if (tableMold != null && !ItemCastingMold.isFilled(tableMold)) {
+                            if (tileEntity.pourIntoMold(tableMold)) {
+                                table.markDirty();
+                                tileEntity.getWorldObj()
+                                    .markBlockForUpdate(table.xCoord, table.yCoord, table.zCoord);
+                                player.addChatMessage(
+                                    new ChatComponentText(
+                                        "\u00a7aPoured molten metal into adjacent Casting Table mold."));
+                                detectAndSendChanges();
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+
             player.addChatMessage(
-                new ChatComponentText("\u00a7eInsert an empty Casting Mold into the mold slot to pour metal."));
+                new ChatComponentText(
+                    "\u00a7eInsert an empty Casting Mold into the mold slot or onto adjacent Casting Table."));
             return false;
         }
 

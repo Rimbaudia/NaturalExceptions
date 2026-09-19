@@ -346,4 +346,65 @@ final class SmelterLiveIntegrationTest {
                 .toGrams(),
             0.1);
     }
+
+    @Test
+    void castingTableAcceptsMoldAndPersistsState() {
+        naturalexceptions.minecraft.fabrication.TileEntityCastingTable table = new naturalexceptions.minecraft.fabrication.TileEntityCastingTable();
+        ItemStack pickMold = ItemCastingMold.createStack(GeometryId.PICK_HEAD);
+
+        // Place mold
+        table.setMold(pickMold);
+        assertNotNull(table.getMold());
+        assertEquals(GeometryId.PICK_HEAD, ItemCastingMold.getGeometry(table.getMold()));
+
+        // NBT round-trip
+        NBTTagCompound tag = new NBTTagCompound();
+        table.writeToNBT(tag);
+
+        naturalexceptions.minecraft.fabrication.TileEntityCastingTable reloadedTable = new naturalexceptions.minecraft.fabrication.TileEntityCastingTable();
+        reloadedTable.readFromNBT(tag);
+
+        assertNotNull(reloadedTable.getMold());
+        assertEquals(GeometryId.PICK_HEAD, ItemCastingMold.getGeometry(reloadedTable.getMold()));
+    }
+
+    @Test
+    void castingTableCoolsHotMoldAndExtractsComponent() {
+        naturalexceptions.minecraft.fabrication.TileEntityCastingTable table = new naturalexceptions.minecraft.fabrication.TileEntityCastingTable();
+        ItemStack pickMold = ItemCastingMold.createStack(GeometryId.PICK_HEAD);
+
+        // Create molten copper layer
+        ActiveThermalState hotThermal = ActiveThermalState
+            .atTemperature(1450.0, 1.0, 0.300, BuiltinMaterials.COPPER_PROPERTIES);
+        AggregateLayer hotCu = new AggregateLayer(
+            BuiltinMaterials.COPPER.ref(),
+            CanonicalMaterialKey.of(CanonicalComposition.of(ResourceId.of("naturalexceptions", "copper"))),
+            CanonicalComposition.of(ResourceId.of("naturalexceptions", "copper")),
+            MaterialQuantity.ofGrams(300.0),
+            hotThermal,
+            AggregatePhaseType.MOLTEN_METAL);
+
+        ItemCastingMold.fillMold(pickMold, hotCu);
+        table.setMold(pickMold);
+
+        assertTrue(ItemCastingMold.isFilled(table.getMold()));
+        assertFalse(ItemCastingMold.isSolidified(table.getMold()), "Mold must initially be molten");
+
+        // Simulate cooling ticks
+        for (int tick = 0; tick < 1000; tick++) {
+            ((ItemCastingMold) table.getMold()
+                .getItem()).onUpdate(table.getMold(), null, null, 0, false);
+            if (ItemCastingMold.isSolidified(table.getMold())) {
+                break;
+            }
+        }
+
+        assertTrue(ItemCastingMold.isSolidified(table.getMold()), "Mold on table must solidify through cooling");
+
+        // Extract component
+        ItemStack component = ItemCastingMold.extractComponent(table.getMold());
+        assertNotNull(component);
+        assertEquals(GeometryId.PICK_HEAD, ItemGenericComponent.getGeometry(component));
+        assertFalse(ItemCastingMold.isFilled(table.getMold()), "Mold on table resets to empty after extraction");
+    }
 }

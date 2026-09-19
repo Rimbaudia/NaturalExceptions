@@ -42,6 +42,9 @@ public final class NEBlocks {
             GameRegistry.registerBlock(castingTable, "casting_table");
 
             GameRegistry.registerTileEntity(TileEntityStarterSmelter.class, "starter_smelter");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.fabrication.TileEntityCastingTable.class,
+                "casting_table");
         } catch (Throwable t) {
             // Allows unit testing without LaunchClassLoader
         }

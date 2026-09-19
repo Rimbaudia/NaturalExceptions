@@ -56,6 +56,18 @@ public final class NaturalExceptions {
         FMLCommonHandler.instance()
             .bus()
             .register(gravityTickHandler);
+
+        if (event.getSide()
+            .isClient()) {
+            registerClientRenderers();
+        }
+    }
+
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    private void registerClientRenderers() {
+        cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
+            naturalexceptions.minecraft.fabrication.TileEntityCastingTable.class,
+            new naturalexceptions.minecraft.fabrication.client.RenderCastingTable());
     }
 
     @Mod.EventHandler

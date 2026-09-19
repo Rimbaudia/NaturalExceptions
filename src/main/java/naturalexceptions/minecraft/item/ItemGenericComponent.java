@@ -71,6 +71,11 @@ public final class ItemGenericComponent extends Item {
         }
     }
 
+    public static GeometryId getGeometry(ItemStack stack) {
+        ComponentInstance comp = getComponent(stack);
+        return comp != null ? comp.geometryId() : null;
+    }
+
     @Override
     public String getItemStackDisplayName(ItemStack stack) {
         ComponentInstance comp = getComponent(stack);
