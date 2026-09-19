@@ -37,11 +37,27 @@ import naturalexceptions.minecraft.registry.NEItems;
 
 final class SmelterLiveIntegrationTest {
 
+    private static net.minecraft.item.Item testFuelItem;
+    private static net.minecraft.item.Item testEmptyCanister;
+    private static net.minecraft.item.Item testFuelCanister;
+
     @BeforeAll
     static void init() {
         BuiltinContent.register();
         NEItems.register();
         NEBlocks.register();
+
+        testFuelItem = new net.minecraft.item.Item().setUnlocalizedName("testFuelItem");
+        testEmptyCanister = new net.minecraft.item.Item().setUnlocalizedName("testEmptyCanister");
+        testFuelCanister = new net.minecraft.item.Item().setUnlocalizedName("testFuelCanister")
+            .setContainerItem(testEmptyCanister);
+
+        cpw.mods.fml.common.registry.GameRegistry.registerFuelHandler(stack -> {
+            if (stack == null || stack.getItem() == null) return 0;
+            if (stack.getItem() == testFuelItem) return 1600;
+            if (stack.getItem() == testFuelCanister) return 20000;
+            return 0;
+        });
     }
 
     @Test
@@ -406,5 +422,69 @@ final class SmelterLiveIntegrationTest {
         assertNotNull(component);
         assertEquals(GeometryId.PICK_HEAD, ItemGenericComponent.getGeometry(component));
         assertFalse(ItemCastingMold.isFilled(table.getMold()), "Mold on table resets to empty after extraction");
+    }
+
+    @Test
+    void testFuelFeedingAndPacketSync() {
+        TileEntityStarterSmelter smelter = new TileEntityStarterSmelter();
+        ItemStack fuel = new ItemStack(testFuelItem, 64);
+        assertTrue(smelter.isItemValidForSlot(TileEntityStarterSmelter.SLOT_FUEL, fuel));
+        smelter.setInventorySlotContents(TileEntityStarterSmelter.SLOT_FUEL, fuel);
+
+        smelter.updateEntity();
+        assertTrue(
+            smelter.vesselState()
+                .fuelState()
+                .isBurning());
+        assertEquals(63, smelter.getStackInSlot(TileEntityStarterSmelter.SLOT_FUEL).stackSize);
+
+        // Verify description packet has action ID 0 (custom mod tile entity, not mob spawner)
+        net.minecraft.network.play.server.S35PacketUpdateTileEntity pkt = (net.minecraft.network.play.server.S35PacketUpdateTileEntity) smelter
+            .getDescriptionPacket();
+        assertNotNull(pkt);
+        assertEquals(
+            0,
+            pkt.func_148853_f(),
+            "Description packet must use action ID 0 so Forge client executes onDataPacket");
+    }
+
+    @Test
+    void testContainerFuelLeavesEmptyContainer() {
+        TileEntityStarterSmelter smelter = new TileEntityStarterSmelter();
+        ItemStack fuelCanister = new ItemStack(testFuelCanister, 1);
+        smelter.setInventorySlotContents(TileEntityStarterSmelter.SLOT_FUEL, fuelCanister);
+
+        smelter.updateEntity();
+        assertTrue(
+            smelter.vesselState()
+                .fuelState()
+                .isBurning());
+        ItemStack remaining = smelter.getStackInSlot(TileEntityStarterSmelter.SLOT_FUEL);
+        assertNotNull(remaining);
+        assertEquals(
+            testEmptyCanister,
+            remaining.getItem(),
+            "Container fuel consumption must leave empty container item");
+    }
+
+    @Test
+    void testFeedSlotAcceptsCopperIngotAndOre() {
+        TileEntityStarterSmelter smelter = new TileEntityStarterSmelter();
+        ItemStack ingot = new ItemStack(NEItems.copperIngot, 1);
+        assertTrue(smelter.isItemValidForSlot(TileEntityStarterSmelter.SLOT_FEED, ingot));
+        smelter.setInventorySlotContents(TileEntityStarterSmelter.SLOT_FEED, ingot);
+
+        smelter.updateEntity();
+        assertEquals(
+            1,
+            smelter.vesselState()
+                .layers()
+                .size());
+        assertEquals(
+            AggregatePhaseType.SOLID_CHARGE,
+            smelter.vesselState()
+                .layers()
+                .get(0)
+                .phaseType());
     }
 }

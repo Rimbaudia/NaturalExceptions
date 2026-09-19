@@ -1,6 +1,7 @@
 package naturalexceptions.minecraft.metallurgy;
 
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Items;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -25,8 +26,10 @@ import naturalexceptions.core.property.MaterialProperties;
 import naturalexceptions.core.property.MaterialPropertyResolver;
 import naturalexceptions.core.thermal.ActiveThermalState;
 import naturalexceptions.minecraft.item.ItemCastingMold;
+import naturalexceptions.minecraft.item.ItemGenericComponent;
 import naturalexceptions.minecraft.item.ItemMaterialSample;
 import naturalexceptions.minecraft.persistence.VesselStateNbtCodec;
+import naturalexceptions.minecraft.registry.NEBlocks;
 import naturalexceptions.minecraft.registry.NEItems;
 
 /**
@@ -77,9 +80,6 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
         }
 
         validateStructure();
-        if (!structureValid) {
-            return;
-        }
 
         // 1. Auto-feed fuel if burning expired and fuel is available in slot 0
         if (!vesselState.fuelState()
@@ -87,8 +87,20 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
             int burnTicks = TileEntityFurnace.getItemBurnTime(inventory[SLOT_FUEL]);
             if (burnTicks > 0) {
                 vesselState.addFuel(burnTicks);
-                decrStackSize(SLOT_FUEL, 1);
+                ItemStack fuelStack = inventory[SLOT_FUEL];
+                if (fuelStack.getItem() != null && fuelStack.getItem()
+                    .hasContainerItem(fuelStack)) {
+                    inventory[SLOT_FUEL] = fuelStack.getItem()
+                        .getContainerItem(fuelStack);
+                } else if (Items.lava_bucket != null && fuelStack.getItem() == Items.lava_bucket) {
+                    inventory[SLOT_FUEL] = Items.bucket != null ? new ItemStack(Items.bucket) : null;
+                } else {
+                    decrStackSize(SLOT_FUEL, 1);
+                }
                 markDirty();
+                if (worldObj != null) {
+                    worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+                }
             }
         }
 
@@ -99,6 +111,9 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
                     inventory[SLOT_FEED] = null;
                 }
                 markDirty();
+                if (worldObj != null) {
+                    worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+                }
             }
         }
 
@@ -132,8 +147,57 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
     public boolean insertFeed(ItemStack stack) {
         if (stack == null || stack.stackSize <= 0) return false;
 
-        if (stack.getItem() == NEItems.copperOreChunk) {
+        if (stack.getItem() == NEItems.copperOreChunk
+            || net.minecraft.block.Block.getBlockFromItem(stack.getItem()) == NEBlocks.copperOre) {
             vesselState.addOreChunk(OreFeedstockDefinition.copperOreChunk());
+            stack.stackSize--;
+            markDirty();
+            if (worldObj != null) {
+                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            }
+            return true;
+        }
+
+        if (stack.getItem() == NEItems.copperIngot) {
+            MaterialQuantity mass = MaterialQuantity.ofKilograms(1.0);
+            ActiveThermalState thermal = ActiveThermalState.ambient(
+                1.0,
+                OreFeedstockDefinition.copperOreChunk()
+                    .metallicProperties());
+            AggregateLayer layer = new AggregateLayer(
+                naturalexceptions.content.material.BuiltinMaterials.COPPER.ref(),
+                CanonicalMaterialKey.of(naturalexceptions.content.material.BuiltinMaterials.COPPER_COMPOSITION),
+                naturalexceptions.content.material.BuiltinMaterials.COPPER_COMPOSITION,
+                mass,
+                thermal,
+                AggregatePhaseType.SOLID_CHARGE);
+            vesselState.remelt(layer);
+            stack.stackSize--;
+            markDirty();
+            if (worldObj != null) {
+                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            }
+            return true;
+        }
+
+        if (stack.getItem() instanceof ItemGenericComponent) {
+            GeometryId geom = ItemGenericComponent.getGeometry(stack);
+            double vol = ComponentGeometry.forId(geom)
+                .volumeCm3();
+            double massKg = (vol * 8.96) / 1000.0;
+            MaterialQuantity mass = MaterialQuantity.ofKilograms(massKg);
+            ActiveThermalState thermal = ActiveThermalState.ambient(
+                massKg,
+                OreFeedstockDefinition.copperOreChunk()
+                    .metallicProperties());
+            AggregateLayer layer = new AggregateLayer(
+                naturalexceptions.content.material.BuiltinMaterials.COPPER.ref(),
+                CanonicalMaterialKey.of(naturalexceptions.content.material.BuiltinMaterials.COPPER_COMPOSITION),
+                naturalexceptions.content.material.BuiltinMaterials.COPPER_COMPOSITION,
+                mass,
+                thermal,
+                AggregatePhaseType.SOLID_CHARGE);
+            vesselState.remelt(layer);
             stack.stackSize--;
             markDirty();
             if (worldObj != null) {
@@ -187,7 +251,12 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
         ComponentGeometry geomDef = ComponentGeometry.forId(geom);
 
         for (AggregateLayer l : vesselState.layers()) {
-            if (l.phaseType() == AggregatePhaseType.MOLTEN_METAL && l.physicalPhase() == MaterialPhase.LIQUID) {
+            if (l.phaseType() == AggregatePhaseType.MOLTEN_METAL && (l.physicalPhase() == MaterialPhase.LIQUID
+                || l.thermalState()
+                    .meltFraction() >= 0.50
+                || l.temperatureKelvin() >= l.thermalState()
+                    .properties()
+                    .meltingPointKelvin())) {
                 MaterialQuantity needed = geomDef.requiredMass(
                     l.thermalState()
                         .properties()
@@ -345,12 +414,23 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
             return TileEntityFurnace.getItemBurnTime(stack) > 0;
         }
         if (slot == SLOT_FEED) {
-            return stack.getItem() == NEItems.copperOreChunk || stack.getItem() instanceof ItemMaterialSample;
+            return isSmeltableFeed(stack);
         }
         if (slot == SLOT_MOLD) {
             return stack.getItem() instanceof ItemCastingMold;
         }
         return true;
+    }
+
+    public static boolean isSmeltableFeed(ItemStack stack) {
+        if (stack == null) return false;
+        if (stack.getItem() == NEItems.copperOreChunk) return true;
+        if (stack.getItem() == NEItems.copperIngot) return true;
+        if (stack.getItem() instanceof ItemGenericComponent) return true;
+        if (stack.getItem() instanceof ItemMaterialSample) return true;
+        if (net.minecraft.block.Block.getBlockFromItem(stack.getItem()) == NEBlocks.copperOre) return true;
+        if (net.minecraft.block.Block.getBlockFromItem(stack.getItem()) == NEBlocks.copperBlock) return true;
+        return false;
     }
 
     // --- Persistence & Networking ---
@@ -398,7 +478,7 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
     public Packet getDescriptionPacket() {
         NBTTagCompound compound = new NBTTagCompound();
         writeToNBT(compound);
-        return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 1, compound);
+        return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 0, compound);
     }
 
     @Override

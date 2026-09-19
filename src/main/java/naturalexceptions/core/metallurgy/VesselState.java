@@ -350,7 +350,9 @@ public final class VesselState {
     private void mixMoltenMetalLayers() {
         List<AggregateLayer> moltenMetals = new ArrayList<>();
         for (AggregateLayer l : layers) {
-            if (l.phaseType() == AggregatePhaseType.MOLTEN_METAL && l.physicalPhase() == MaterialPhase.LIQUID) {
+            if (l.phaseType() == AggregatePhaseType.MOLTEN_METAL
+                && (l.physicalPhase() == MaterialPhase.LIQUID || l.thermalState()
+                    .meltFraction() >= 0.50)) {
                 moltenMetals.add(l);
             }
         }
@@ -449,7 +451,9 @@ public final class VesselState {
 
         for (int i = 0; i < layers.size(); i++) {
             AggregateLayer l = layers.get(i);
-            if (l.phaseType() == AggregatePhaseType.MOLTEN_METAL && l.physicalPhase() == MaterialPhase.LIQUID) {
+            if (l.phaseType() == AggregatePhaseType.MOLTEN_METAL
+                && (l.physicalPhase() == MaterialPhase.LIQUID || l.thermalState()
+                    .meltFraction() >= 0.50)) {
                 MaterialQuantity extractAmount = l.mass()
                     .compareTo(desiredMass) <= 0 ? l.mass() : desiredMass;
                 ActiveThermalState extractedThermal = l.extractMass(extractAmount);

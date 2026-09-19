@@ -140,9 +140,23 @@ public final class BlockCastingTable extends BlockContainer {
         }
 
         // 4. Table has mold: Empty
-        // A: Check if adjacent Starter Smelter can pour liquid metal into it
+        // A: Sneak right-click retrieves the empty mold
+        if (player.isSneaking()) {
+            if (!player.inventory.addItemStackToInventory(tableMold)) {
+                player.dropPlayerItemWithRandomChoice(tableMold, false);
+            }
+            player.inventoryContainer.detectAndSendChanges();
+            world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "step.stone", 1.0F, 0.8F);
+            player.addChatMessage(
+                new ChatComponentText(
+                    "\u00a7eRetrieved \u00a7f" + tableMold.getDisplayName() + " \u00a7efrom Casting Table."));
+            table.setMold(null);
+            return true;
+        }
+
+        // B: Normal right-click attempts pour from adjacent Starter Smelter
         TileEntityStarterSmelter adjacentSmelter = findAdjacentSmelter(world, x, y, z);
-        if (adjacentSmelter != null && !player.isSneaking()) {
+        if (adjacentSmelter != null) {
             if (adjacentSmelter.pourIntoMold(tableMold)) {
                 world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "liquid.lavapop", 1.0F, 1.0F);
                 player.addChatMessage(
@@ -152,25 +166,33 @@ public final class BlockCastingTable extends BlockContainer {
                 table.markDirty();
                 world.markBlockForUpdate(x, y, z);
                 return true;
+            } else {
+                double maxTemp = 293.15;
+                for (naturalexceptions.core.metallurgy.AggregateLayer l : adjacentSmelter.vesselState()
+                    .layers()) {
+                    if (l.temperatureKelvin() > maxTemp) {
+                        maxTemp = l.temperatureKelvin();
+                    }
+                }
+                player.addChatMessage(
+                    new ChatComponentText(
+                        String.format(
+                            "\u00a7e[Casting Table] Smelter has no liquid metal ready to pour (Crucible: %.0f K, need >= 1358 K). Sneak right-click to retrieve mold.",
+                            maxTemp)));
+                return true;
             }
+        } else {
+            player.addChatMessage(
+                new ChatComponentText(
+                    "\u00a7c[Casting Table] No adjacent Starter Smelter found. Place a Smelter next to or above this table, or sneak right-click to retrieve mold."));
+            return true;
         }
-
-        // B: If player is sneaking or no smelter pour occurred, pick the mold up
-        if (!player.inventory.addItemStackToInventory(tableMold)) {
-            player.dropPlayerItemWithRandomChoice(tableMold, false);
-        }
-        player.inventoryContainer.detectAndSendChanges();
-        world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "step.stone", 1.0F, 0.8F);
-        player.addChatMessage(
-            new ChatComponentText(
-                "\u00a7eRetrieved \u00a7f" + tableMold.getDisplayName() + " \u00a7efrom Casting Table."));
-        table.setMold(null);
-        return true;
     }
 
     private TileEntityStarterSmelter findAdjacentSmelter(World world, int x, int y, int z) {
         int[][] offsets = { { 0, 0, 1 }, { 0, 0, -1 }, { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, 1, 1 },
-            { 0, 1, -1 }, { 1, 1, 0 }, { -1, 1, 0 } };
+            { 0, 1, -1 }, { 1, 1, 0 }, { -1, 1, 0 }, { 0, -1, 0 }, { 0, -1, 1 }, { 0, -1, -1 }, { 1, -1, 0 },
+            { -1, -1, 0 } };
         for (int[] off : offsets) {
             TileEntity te = world.getTileEntity(x + off[0], y + off[1], z + off[2]);
             if (te instanceof TileEntityStarterSmelter) {

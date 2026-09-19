@@ -115,13 +115,34 @@ public final class BlockStarterSmelter extends BlockContainer {
         // 1. Direct outlet interaction: pour directly into held empty casting mold
         if (held != null && held.getItem() instanceof naturalexceptions.minecraft.item.ItemCastingMold) {
             if (!naturalexceptions.minecraft.item.ItemCastingMold.isFilled(held)) {
-                if (smelter.pourIntoMold(held)) {
+                ItemStack singleMold = held.stackSize == 1 ? held : held.splitStack(1);
+                if (smelter.pourIntoMold(singleMold)) {
+                    if (singleMold != held) {
+                        if (!player.inventory.addItemStackToInventory(singleMold)) {
+                            player.dropPlayerItemWithRandomChoice(singleMold, false);
+                        }
+                    }
+                    player.inventoryContainer.detectAndSendChanges();
+                    world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "liquid.lavapop", 1.0F, 1.0F);
                     player.addChatMessage(
-                        new ChatComponentText("\u00a7aPoured molten metal into " + held.getDisplayName()));
+                        new ChatComponentText("\u00a7aPoured molten metal into " + singleMold.getDisplayName()));
                     return true;
                 } else {
-                    player
-                        .addChatMessage(new ChatComponentText("\u00a7cNo accessible liquid metal in smelter to pour."));
+                    if (singleMold != held) {
+                        held.stackSize++;
+                    }
+                    double maxTemp = 293.15;
+                    for (naturalexceptions.core.metallurgy.AggregateLayer l : smelter.vesselState()
+                        .layers()) {
+                        if (l.temperatureKelvin() > maxTemp) {
+                            maxTemp = l.temperatureKelvin();
+                        }
+                    }
+                    player.addChatMessage(
+                        new ChatComponentText(
+                            String.format(
+                                "\u00a7cNo accessible liquid metal in smelter to pour (Crucible: %.0f K, need >= 1358 K).",
+                                maxTemp)));
                     return true;
                 }
             }

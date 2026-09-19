@@ -35,6 +35,14 @@ public final class NEBlocks {
         castingTable = new BlockCastingTable().setCreativeTab(NECreativeTab.INSTANCE);
 
         try {
+            net.minecraft.tileentity.TileEntity.addMapping(TileEntityStarterSmelter.class, "starter_smelter");
+        } catch (Throwable ignored) {}
+        try {
+            net.minecraft.tileentity.TileEntity
+                .addMapping(naturalexceptions.minecraft.fabrication.TileEntityCastingTable.class, "casting_table");
+        } catch (Throwable ignored) {}
+
+        try {
             GameRegistry.registerBlock(copperOre, "copper_ore");
             GameRegistry.registerBlock(copperBlock, "copper_block");
             GameRegistry.registerBlock(refractoryBrick, "refractory_brick");
