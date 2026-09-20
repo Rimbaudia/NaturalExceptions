@@ -68,6 +68,9 @@ public final class NaturalExceptions {
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
             naturalexceptions.minecraft.fabrication.TileEntityCastingTable.class,
             new naturalexceptions.minecraft.fabrication.client.RenderCastingTable());
+        cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
+            naturalexceptions.minecraft.metallurgy.TileEntitySmelterOutlet.class,
+            new naturalexceptions.minecraft.metallurgy.client.RenderSmelterOutlet());
     }
 
     @Mod.EventHandler

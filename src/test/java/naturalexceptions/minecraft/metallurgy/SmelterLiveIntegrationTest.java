@@ -487,4 +487,78 @@ final class SmelterLiveIntegrationTest {
                 .get(0)
                 .phaseType());
     }
+
+    @Test
+    void testMultiFuelBufferingAllowsContinuousBurning() {
+        TileEntityStarterSmelter smelter = new TileEntityStarterSmelter();
+        // Give 5 fuel items
+        ItemStack fuelStack = new ItemStack(testFuelItem, 5);
+        smelter.setInventorySlotContents(TileEntityStarterSmelter.SLOT_FUEL, fuelStack);
+
+        // First update consumes 1 fuel (1600 ticks) and steps 1 tick -> 1599 ticks
+        smelter.updateEntity();
+        assertEquals(4, smelter.getStackInSlot(TileEntityStarterSmelter.SLOT_FUEL).stackSize);
+        assertEquals(
+            1599,
+            smelter.vesselState()
+                .fuelState()
+                .remainingTicks());
+
+        // Second update consumes another fuel because remainingTicks (1599) <= 1600 (buffering up to 2 items)
+        smelter.updateEntity();
+        assertEquals(3, smelter.getStackInSlot(TileEntityStarterSmelter.SLOT_FUEL).stackSize);
+        assertEquals(
+            3198,
+            smelter.vesselState()
+                .fuelState()
+                .remainingTicks());
+
+        // Third update does NOT consume because remainingTicks is 3198 > 1600 (buffer full)
+        smelter.updateEntity();
+        assertEquals(3, smelter.getStackInSlot(TileEntityStarterSmelter.SLOT_FUEL).stackSize);
+        assertEquals(
+            3197,
+            smelter.vesselState()
+                .fuelState()
+                .remainingTicks());
+    }
+
+    @Test
+    void testSmelterOutletPhysicalPouringProcess() {
+        TileEntityStarterSmelter smelter = new TileEntityStarterSmelter();
+        // Charge with 300g molten copper at 1450 K
+        MaterialQuantity mass = MaterialQuantity.ofGrams(300.0);
+        ActiveThermalState hotThermal = ActiveThermalState
+            .atTemperature(1450.0, 1.0, 0.300, BuiltinMaterials.COPPER_PROPERTIES);
+        AggregateLayer hotCu = new AggregateLayer(
+            BuiltinMaterials.COPPER.ref(),
+            CanonicalMaterialKey.of(CanonicalComposition.of(ResourceId.of("naturalexceptions", "copper"))),
+            CanonicalComposition.of(ResourceId.of("naturalexceptions", "copper")),
+            mass,
+            hotThermal,
+            AggregatePhaseType.MOLTEN_METAL);
+        smelter.vesselState()
+            .addLayer(hotCu);
+
+        TileEntitySmelterOutlet outlet = new TileEntitySmelterOutlet();
+        outlet.setFacing(2); // North
+        assertEquals(2, outlet.getFacing());
+        assertFalse(outlet.isPouring());
+
+        // Test outlet NBT serialization
+        NBTTagCompound tag = new NBTTagCompound();
+        outlet.writeToNBT(tag);
+        TileEntitySmelterOutlet loadedOutlet = new TileEntitySmelterOutlet();
+        loadedOutlet.readFromNBT(tag);
+        assertEquals(2, loadedOutlet.getFacing());
+        assertFalse(loadedOutlet.isPouring());
+
+        // Pouring directly into empty mold stack
+        ItemStack mold = ItemCastingMold.createStack(GeometryId.PICK_HEAD);
+        assertFalse(ItemCastingMold.isFilled(mold));
+        boolean poured = smelter.pourIntoMold(mold);
+        assertTrue(poured, "Smelter must pour into mold");
+        assertTrue(ItemCastingMold.isFilled(mold), "Mold must be filled after pouring");
+        assertFalse(ItemCastingMold.isSolidified(mold), "Freshly poured mold must be molten");
+    }
 }

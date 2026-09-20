@@ -148,6 +148,67 @@ public final class BlockStarterSmelter extends BlockContainer {
             }
         }
 
+        // 2. Direct fuel feeding from hand (sneak right-click feeds up to 16, normal feeds 1)
+        if (held != null && net.minecraft.tileentity.TileEntityFurnace.getItemBurnTime(held) > 0) {
+            int burnTimePerItem = net.minecraft.tileentity.TileEntityFurnace.getItemBurnTime(held);
+            int countToFeed = player.isSneaking() ? Math.min(held.stackSize, 16) : 1;
+            int totalBurnAdded = burnTimePerItem * countToFeed;
+
+            smelter.vesselState()
+                .addFuel(totalBurnAdded);
+
+            if (held.getItem()
+                .hasContainerItem(held)) {
+                ItemStack container = held.getItem()
+                    .getContainerItem(held);
+                held.stackSize--;
+                if (held.stackSize <= 0) {
+                    player.setCurrentItemOrArmor(0, container);
+                } else if (container != null && !player.inventory.addItemStackToInventory(container)) {
+                    player.dropPlayerItemWithRandomChoice(container, false);
+                }
+            } else {
+                held.stackSize -= countToFeed;
+                if (held.stackSize <= 0) {
+                    player.setCurrentItemOrArmor(0, null);
+                }
+            }
+            player.inventoryContainer.detectAndSendChanges();
+            smelter.markDirty();
+            world.markBlockForUpdate(x, y, z);
+            world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "fire.ignite", 1.0F, 1.0F);
+
+            int remaining = smelter.vesselState()
+                .fuelState()
+                .remainingTicks();
+            player.addChatMessage(
+                new ChatComponentText(
+                    String.format(
+                        "\u00a76[Starter Smelter] Fed %dx fuel to fire. (Fire duration: %d ticks / %.0fs)",
+                        countToFeed,
+                        remaining,
+                        remaining / 20.0)));
+            return true;
+        }
+
+        // 3. Direct feed charge insertion from hand
+        if (held != null && TileEntityStarterSmelter.isSmeltableFeed(held)) {
+            ItemStack singleCharge = held.stackSize == 1 ? held : held.splitStack(1);
+            if (smelter.insertFeed(singleCharge)) {
+                if (singleCharge != held && singleCharge.stackSize > 0) {
+                    held.stackSize += singleCharge.stackSize;
+                }
+                player.inventoryContainer.detectAndSendChanges();
+                smelter.markDirty();
+                world.markBlockForUpdate(x, y, z);
+                world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "step.stone", 1.0F, 1.0F);
+                player.addChatMessage(
+                    new ChatComponentText(
+                        "\u00a7a[Starter Smelter] Added 1x " + held.getDisplayName() + " to crucible charge."));
+                return true;
+            }
+        }
+
         // 2. Developer/debug inspect: sneak right-click outputs coarse status to chat
         if (player.isSneaking()) {
             smelter.validateStructure();

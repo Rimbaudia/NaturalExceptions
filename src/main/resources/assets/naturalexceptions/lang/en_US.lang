@@ -7,6 +7,7 @@ tile.copperBlock.name=Block of Copper
 tile.refractoryBrick.name=Refractory Brick Block
 tile.starterSmelter.name=Starter Smelter
 tile.castingTable.name=Casting Table
+tile.smelterOutlet.name=Smelter Outlet
 
 # Items
 item.copperOreChunk.name=Copper Ore Chunk

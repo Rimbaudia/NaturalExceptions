@@ -69,6 +69,31 @@ public final class ItemCastingMold extends Item {
     @SideOnly(Side.CLIENT)
     private IIcon iconHandle;
 
+    @SideOnly(Side.CLIENT)
+    private IIcon iconIngotFilled;
+    @SideOnly(Side.CLIENT)
+    private IIcon iconIngotSolid;
+    @SideOnly(Side.CLIENT)
+    private IIcon iconPickHeadFilled;
+    @SideOnly(Side.CLIENT)
+    private IIcon iconPickHeadSolid;
+    @SideOnly(Side.CLIENT)
+    private IIcon iconPlateFilled;
+    @SideOnly(Side.CLIENT)
+    private IIcon iconPlateSolid;
+    @SideOnly(Side.CLIENT)
+    private IIcon iconRodFilled;
+    @SideOnly(Side.CLIENT)
+    private IIcon iconRodSolid;
+    @SideOnly(Side.CLIENT)
+    private IIcon iconBladeFilled;
+    @SideOnly(Side.CLIENT)
+    private IIcon iconBladeSolid;
+    @SideOnly(Side.CLIENT)
+    private IIcon iconHandleFilled;
+    @SideOnly(Side.CLIENT)
+    private IIcon iconHandleSolid;
+
     public ItemCastingMold() {
         setUnlocalizedName("castingMold");
         setTextureName("naturalexceptions:ingot_casting_mold");
@@ -379,18 +404,76 @@ public final class ItemCastingMold extends Item {
     @SideOnly(Side.CLIENT)
     public void registerIcons(IIconRegister reg) {
         this.itemIcon = reg.registerIcon("naturalexceptions:ingot_casting_mold");
-        this.iconBlank = this.itemIcon;
+        this.iconBlank = reg.registerIcon("naturalexceptions:casting_mold");
         this.iconPickHead = reg.registerIcon("naturalexceptions:mold_pick_head");
         this.iconPlate = reg.registerIcon("naturalexceptions:mold_plate");
         this.iconRod = reg.registerIcon("naturalexceptions:mold_rod");
         this.iconBlade = reg.registerIcon("naturalexceptions:mold_blade");
         this.iconHandle = reg.registerIcon("naturalexceptions:mold_handle");
+
+        this.iconIngotFilled = reg.registerIcon("naturalexceptions:mold_ingot_filled");
+        this.iconIngotSolid = reg.registerIcon("naturalexceptions:mold_ingot_solid");
+        this.iconPickHeadFilled = reg.registerIcon("naturalexceptions:mold_pick_head_filled");
+        this.iconPickHeadSolid = reg.registerIcon("naturalexceptions:mold_pick_head_solid");
+        this.iconPlateFilled = reg.registerIcon("naturalexceptions:mold_plate_filled");
+        this.iconPlateSolid = reg.registerIcon("naturalexceptions:mold_plate_solid");
+        this.iconRodFilled = reg.registerIcon("naturalexceptions:mold_rod_filled");
+        this.iconRodSolid = reg.registerIcon("naturalexceptions:mold_rod_solid");
+        this.iconBladeFilled = reg.registerIcon("naturalexceptions:mold_blade_filled");
+        this.iconBladeSolid = reg.registerIcon("naturalexceptions:mold_blade_solid");
+        this.iconHandleFilled = reg.registerIcon("naturalexceptions:mold_handle_filled");
+        this.iconHandleSolid = reg.registerIcon("naturalexceptions:mold_handle_solid");
     }
 
     @Override
     @SideOnly(Side.CLIENT)
     public IIcon getIconIndex(ItemStack stack) {
+        boolean filled = isFilled(stack);
+        boolean solid = isSolidified(stack);
         GeometryId geom = getGeometry(stack);
+
+        if (filled) {
+            if (solid) {
+                if (geom != null) {
+                    switch (geom) {
+                        case PICK_HEAD:
+                            return iconPickHeadSolid != null ? iconPickHeadSolid : iconPickHead;
+                        case PLATE:
+                            return iconPlateSolid != null ? iconPlateSolid : iconPlate;
+                        case ROD:
+                            return iconRodSolid != null ? iconRodSolid : iconRod;
+                        case BLADE:
+                            return iconBladeSolid != null ? iconBladeSolid : iconBlade;
+                        case HANDLE:
+                            return iconHandleSolid != null ? iconHandleSolid : iconHandle;
+                        case BLANK:
+                        default:
+                            return iconIngotSolid != null ? iconIngotSolid : itemIcon;
+                    }
+                }
+                return iconIngotSolid != null ? iconIngotSolid : itemIcon;
+            } else {
+                if (geom != null) {
+                    switch (geom) {
+                        case PICK_HEAD:
+                            return iconPickHeadFilled != null ? iconPickHeadFilled : iconPickHead;
+                        case PLATE:
+                            return iconPlateFilled != null ? iconPlateFilled : iconPlate;
+                        case ROD:
+                            return iconRodFilled != null ? iconRodFilled : iconRod;
+                        case BLADE:
+                            return iconBladeFilled != null ? iconBladeFilled : iconBlade;
+                        case HANDLE:
+                            return iconHandleFilled != null ? iconHandleFilled : iconHandle;
+                        case BLANK:
+                        default:
+                            return iconIngotFilled != null ? iconIngotFilled : itemIcon;
+                    }
+                }
+                return iconIngotFilled != null ? iconIngotFilled : itemIcon;
+            }
+        }
+
         if (geom != null) {
             switch (geom) {
                 case PICK_HEAD:

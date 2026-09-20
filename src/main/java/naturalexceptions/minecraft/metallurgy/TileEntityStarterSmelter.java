@@ -81,9 +81,9 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
 
         validateStructure();
 
-        // 1. Auto-feed fuel if burning expired and fuel is available in slot 0
-        if (!vesselState.fuelState()
-            .isBurning() && inventory[SLOT_FUEL] != null) {
+        // 1. Auto-feed fuel from slot 0 if fire is low/empty (buffers up to ~3200 ticks of fire)
+        if (inventory[SLOT_FUEL] != null && vesselState.fuelState()
+            .remainingTicks() <= 1600) {
             int burnTicks = TileEntityFurnace.getItemBurnTime(inventory[SLOT_FUEL]);
             if (burnTicks > 0) {
                 vesselState.addFuel(burnTicks);

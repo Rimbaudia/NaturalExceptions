@@ -18,6 +18,7 @@ public final class NEBlocks {
     public static Block refractoryBrick;
     public static Block starterSmelter;
     public static Block castingTable;
+    public static Block smelterOutlet;
 
     private NEBlocks() {}
 
@@ -34,12 +35,19 @@ public final class NEBlocks {
 
         castingTable = new BlockCastingTable().setCreativeTab(NECreativeTab.INSTANCE);
 
+        smelterOutlet = new naturalexceptions.minecraft.metallurgy.BlockSmelterOutlet()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+
         try {
             net.minecraft.tileentity.TileEntity.addMapping(TileEntityStarterSmelter.class, "starter_smelter");
         } catch (Throwable ignored) {}
         try {
             net.minecraft.tileentity.TileEntity
                 .addMapping(naturalexceptions.minecraft.fabrication.TileEntityCastingTable.class, "casting_table");
+        } catch (Throwable ignored) {}
+        try {
+            net.minecraft.tileentity.TileEntity
+                .addMapping(naturalexceptions.minecraft.metallurgy.TileEntitySmelterOutlet.class, "smelter_outlet");
         } catch (Throwable ignored) {}
 
         try {
@@ -48,11 +56,20 @@ public final class NEBlocks {
             GameRegistry.registerBlock(refractoryBrick, "refractory_brick");
             GameRegistry.registerBlock(starterSmelter, ItemBlockStarterSmelter.class, "starter_smelter");
             GameRegistry.registerBlock(castingTable, "casting_table");
+            GameRegistry.registerBlock(smelterOutlet, "smelter_outlet");
 
             GameRegistry.registerTileEntity(TileEntityStarterSmelter.class, "starter_smelter");
             GameRegistry.registerTileEntity(
                 naturalexceptions.minecraft.fabrication.TileEntityCastingTable.class,
                 "casting_table");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.metallurgy.TileEntitySmelterOutlet.class,
+                "smelter_outlet");
+
+            GameRegistry.addRecipe(new net.minecraft.item.ItemStack(smelterOutlet), "B B", " B ", 'B', refractoryBrick);
+            GameRegistry
+                .addRecipe(new net.minecraft.item.ItemStack(starterSmelter), "BBB", "B B", "BBB", 'B', refractoryBrick);
+            GameRegistry.addRecipe(new net.minecraft.item.ItemStack(castingTable), "BBB", "B B", 'B', refractoryBrick);
         } catch (Throwable t) {
             // Allows unit testing without LaunchClassLoader
         }
