@@ -124,7 +124,7 @@ public final class NaturalExceptions {
             naturalexceptions.minecraft.event.EntityFallingStar.class,
             new naturalexceptions.minecraft.event.client.RenderFallingStar());
         cpw.mods.fml.client.registry.RenderingRegistry
-            .registerBlockHandler(new naturalexceptions.minecraft.metallurgy.client.RenderSmelterOutletBlock());
+            .registerBlockHandler(new naturalexceptions.minecraft.client.model.PartModelRenderer());
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
             naturalexceptions.minecraft.fabrication.TileEntityCastingTable.class,
             new naturalexceptions.minecraft.fabrication.client.RenderCastingTable());

@@ -4,16 +4,17 @@ package naturalexceptions.minecraft.metallurgy;
 public final class SmelterOutletGeometry {
 
     public static final double STREAM_X = 0.5;
-    public static final double STREAM_Y = 0.375;
+    public static final double STREAM_Y = 0.25;
     public static final double STREAM_Z = 0.5;
 
     private SmelterOutletGeometry() {}
 
     public static double[][] parts(int facing) {
-        double[][] boxes = { { 0.3125, 0.3125, 0.9375, 0.6875, 0.6875, 1.0 }, // wall flange
-            { 0.375, 0.375, 0.5, 0.625, 0.4375, 0.9375 }, // channel floor
-            { 0.3125, 0.375, 0.4375, 0.375, 0.5625, 0.9375 }, // left rim
-            { 0.625, 0.375, 0.4375, 0.6875, 0.5625, 0.9375 } // right rim
+        double[][] boxes = { { 0.25, 0.25, 0.875, 0.75, 0.6875, 1.0 }, // wall flange (clay)
+            { 0.3125, 0.3125, 0.4375, 0.6875, 0.375, 0.875 }, // channel floor (sooted)
+            { 0.25, 0.3125, 0.4375, 0.3125, 0.5, 0.875 }, // left rim (clay)
+            { 0.6875, 0.3125, 0.4375, 0.75, 0.5, 0.875 }, // right rim (clay)
+            { 0.375, 0.25, 0.4375, 0.625, 0.3125, 0.5625 } // downturned pouring lip (sooted)
         };
         for (double[] b : boxes) {
             double minX = b[0], minZ = b[2], maxX = b[3], maxZ = b[5];

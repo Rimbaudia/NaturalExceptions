@@ -21,12 +21,9 @@ import cpw.mods.fml.relauncher.SideOnly;
  * Smelter Outlet spout block that physically pours molten metal from an adjacent
  * Smelter vessel down into a Casting Table below.
  */
-public final class BlockSmelterOutlet extends BlockContainer {
+public final class BlockSmelterOutlet extends BlockContainer implements naturalexceptions.minecraft.block.PartModel {
 
-    public static int renderId = -1;
 
-    @SideOnly(Side.CLIENT)
-    private IIcon blockIconRefractory;
 
     public BlockSmelterOutlet() {
         super(Material.rock);
@@ -53,7 +50,7 @@ public final class BlockSmelterOutlet extends BlockContainer {
 
     @Override
     public int getRenderType() {
-        return renderId;
+        return naturalexceptions.minecraft.block.PartModel.RenderType.id;
     }
 
     @Override
@@ -194,19 +191,38 @@ public final class BlockSmelterOutlet extends BlockContainer {
     }
 
     @SideOnly(Side.CLIENT)
-    private IIcon blockIconSpout;
+    private IIcon clayIcon;
+    @SideOnly(Side.CLIENT)
+    private IIcon channelIcon;
 
     @Override
     @SideOnly(Side.CLIENT)
     public void registerBlockIcons(IIconRegister reg) {
-        this.blockIconRefractory = reg.registerIcon("naturalexceptions:refractory_brick_block");
-        this.blockIconSpout = reg.registerIcon("naturalexceptions:smelter_outlet");
-        this.blockIcon = this.blockIconSpout;
+        clayIcon = reg.registerIcon("naturalexceptions:smelter_outlet_clay");
+        channelIcon = reg.registerIcon("naturalexceptions:smelter_outlet_channel");
+        blockIcon = clayIcon;
     }
 
     @Override
     @SideOnly(Side.CLIENT)
     public IIcon getIcon(int side, int meta) {
-        return this.blockIconSpout != null ? this.blockIconSpout : this.blockIconRefractory;
+        return clayIcon;
+    }
+
+    @Override
+    public double[][] parts(int metadata) {
+        return SmelterOutletGeometry.parts(metadata);
+    }
+
+    /** Flange and rims are fired clay; the channel floor and lip are sooted from the metal. */
+    @Override
+    @SideOnly(Side.CLIENT)
+    public IIcon partIcon(int index, int metadata) {
+        return index == 1 || index == 4 ? channelIcon : clayIcon;
+    }
+
+    @Override
+    public int inventoryMetadata() {
+        return 2;
     }
 }
