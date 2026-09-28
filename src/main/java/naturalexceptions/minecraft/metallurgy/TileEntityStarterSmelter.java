@@ -61,6 +61,8 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
     public static final int SLOT_MOLD = 2;
     public static final int SLOT_OUTPUT = SLOT_MOLD;
     public static final int INVENTORY_SIZE = 3;
+    /** One ladle scoop of slag. */
+    public static final MaterialQuantity SLAG_SKIM_AMOUNT = MaterialQuantity.ofGrams(250.0);
     /** Emergency mass-safety ceiling only. Player capacity is geometry-derived in litres. */
     public static final MaterialQuantity CAPACITY = MaterialQuantity.ofKilograms(5000.0);
 
@@ -179,26 +181,22 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
         return overCapacity;
     }
 
-    public String outletStatus() {
+    /** State of the canonical smelter, outlet, casting-table path, for the GUI and for pour feedback. */
+    public SmelterOutletState outletState() {
+        if (!structureValid) return SmelterOutletState.STRUCTURE_INCOMPLETE;
         TileEntitySmelterOutlet outlet = SmelterPortLookup.findOutlet(worldObj, vesselGeometry());
-        if (outlet == null) return "NO OUTLET";
-        boolean accessibleLiquid = false;
+        if (outlet == null) return SmelterOutletState.NO_OUTLET;
+        if (outlet.isPouring()) return SmelterOutletState.POURING;
+        return outlet.stateFor(this);
+    }
+
+    /** True when the lowest reachable metal layer can flow; a deeper layer cannot be tapped past it. */
+    public boolean hasPourableMetal() {
         for (AggregateLayer layer : vesselState.layers()) {
-            if (layer.phaseType() == AggregatePhaseType.MOLTEN_METAL
-                && (layer.physicalPhase() == naturalexceptions.core.material.MaterialPhase.LIQUID
-                    || layer.thermalState()
-                        .meltFraction() >= 0.50)) {
-                accessibleLiquid = true;
-                break;
-            }
-            if (layer.phaseType() == AggregatePhaseType.MOLTEN_METAL) break;
+            if (layer.phaseType() != AggregatePhaseType.MOLTEN_METAL) continue;
+            return layer.isPourable();
         }
-        if (!accessibleLiquid) return "NO ACCESSIBLE LIQUID";
-        if (outlet.isPouring()) return "POURING";
-        naturalexceptions.minecraft.fabrication.TileEntityCastingTable receiver = outlet.findTargetCastingTable();
-        if (receiver == null || receiver.getMold() == null) return "RECEIVER MISSING";
-        if (naturalexceptions.minecraft.item.ItemCastingMold.isFilled(receiver.getMold())) return "RECEIVER FULL";
-        return "OUTLET READY";
+        return false;
     }
 
     private boolean hasGeometricRoom(MaterialQuantity addedMass, MaterialProperties properties) {
@@ -233,6 +231,19 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
     public void updateEntity() {
         if (worldObj != null && worldObj.isRemote) {
             return;
+        }
+
+        // Older saves could hold an item in the retired mold slot; hand it back rather than hide it.
+        if (inventory[SLOT_MOLD] != null && worldObj != null) {
+            worldObj.spawnEntityInWorld(
+                new net.minecraft.entity.item.EntityItem(
+                    worldObj,
+                    xCoord + 0.5D,
+                    yCoord + 1.2D,
+                    zCoord + 0.5D,
+                    inventory[SLOT_MOLD]));
+            inventory[SLOT_MOLD] = null;
+            markDirty();
         }
 
         if (vesselGeometry == null || worldObj == null || worldObj.getTotalWorldTime() % 10L == 0L) validateStructure();
@@ -705,14 +716,7 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
         MaterialRef existingRef = ItemCastingMold.getContainedMaterialRef(moldStack);
 
         for (AggregateLayer l : vesselState.layers()) {
-            if (l.phaseType() == AggregatePhaseType.MOLTEN_METAL && (l.physicalPhase() == MaterialPhase.LIQUID
-                || l.thermalState()
-                    .meltFraction() >= 0.50
-                || (l.thermalState()
-                    .properties() != null && l.temperatureKelvin()
-                        >= l.thermalState()
-                            .properties()
-                            .meltingPointKelvin()))) {
+            if (l.isPourable()) {
                 if (existingRef != null && !existingRef.equals(l.materialRef())) {
                     continue; // Skip incompatible metal for partially filled mold
                 }
@@ -754,14 +758,7 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
         MaterialRef existingRef = ItemFoundryLadle.getContainedMaterialRef(ladleStack);
 
         for (AggregateLayer l : vesselState.layers()) {
-            if (l.phaseType() == AggregatePhaseType.MOLTEN_METAL && (l.physicalPhase() == MaterialPhase.LIQUID
-                || l.thermalState()
-                    .meltFraction() >= 0.50
-                || (l.thermalState()
-                    .properties() != null && l.temperatureKelvin()
-                        >= l.thermalState()
-                            .properties()
-                            .meltingPointKelvin()))) {
+            if (l.isPourable()) {
                 if (existingRef != null && !existingRef.equals(l.materialRef())) {
                     continue; // Skip incompatible metal for partially filled ladle
                 }

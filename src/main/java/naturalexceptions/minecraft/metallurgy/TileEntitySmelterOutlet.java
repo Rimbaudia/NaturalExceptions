@@ -81,6 +81,23 @@ public class TileEntitySmelterOutlet extends TileEntity {
         return null;
     }
 
+    /** Pour readiness of this outlet for a connected smelter, ignoring an in-progress stream. */
+    public SmelterOutletState stateFor(TileEntityStarterSmelter smelter) {
+        if (smelter == null) return SmelterOutletState.NO_OUTLET;
+        if (!smelter.isStructureValid()) return SmelterOutletState.STRUCTURE_INCOMPLETE;
+        if (!smelter.hasPourableMetal()) return SmelterOutletState.NOTHING_MOLTEN;
+        TileEntityCastingTable table = findTargetCastingTable();
+        if (table == null) return SmelterOutletState.NO_TABLE;
+        ItemStack mold = table.getMold();
+        if (mold == null) return SmelterOutletState.NO_MOLD;
+        if (ItemCastingMold.isFilled(mold)) return SmelterOutletState.MOLD_FULL;
+        return SmelterOutletState.READY;
+    }
+
+    private static void tell(EntityPlayer player, String colour, String text) {
+        if (player != null) player.addChatMessage(new ChatComponentText(colour + "[Smelter Outlet] " + text));
+    }
+
     public boolean startPouring(EntityPlayer player) {
         if (worldObj != null && worldObj.isRemote) return true;
         if (isPouring) {
@@ -96,8 +113,13 @@ public class TileEntitySmelterOutlet extends TileEntity {
             if (player != null) {
                 player.addChatMessage(
                     new ChatComponentText(
-                        "\u00a7c[Smelter Outlet] No connected Starter Smelter found behind this outlet."));
+                        "\u00a7c[Smelter Outlet] This outlet is not set into the wall of a Starter Smelter."));
             }
+            return false;
+        }
+
+        if (!smelter.isStructureValid()) {
+            tell(player, "\u00a7c", SmelterOutletState.STRUCTURE_INCOMPLETE.hint());
             return false;
         }
 
@@ -150,9 +172,7 @@ public class TileEntitySmelterOutlet extends TileEntity {
             if (mp > 0 && mp < minMeltPoint) {
                 minMeltPoint = mp;
             }
-            if (l.phaseType() == AggregatePhaseType.MOLTEN_METAL
-                && (l.physicalPhase() == MaterialPhase.LIQUID || l.thermalState()
-                    .meltFraction() >= 0.50 || (mp > 0 && l.temperatureKelvin() >= mp))) {
+            if (l.isPourable()) {
                 hasLiquid = true;
                 liquidToPour = l;
                 break;
@@ -161,14 +181,11 @@ public class TileEntitySmelterOutlet extends TileEntity {
 
         if (!hasLiquid) {
             if (player != null) {
-                String requirement = Double.isInfinite(minMeltPoint) ? "no material melting point is available"
-                    : String.format("need >= %.0f K", minMeltPoint);
-                player.addChatMessage(
-                    new ChatComponentText(
-                        String.format(
-                            "\u00a7c[Smelter Outlet] Crucible charge has no compatible molten metal ready (Current: %.0f K, %s).",
-                            maxTemp,
-                            requirement)));
+                String progress = Double.isInfinite(minMeltPoint) ? "there is no metal in the crucible"
+                    : maxTemp >= minMeltPoint ? "it is melting but still mostly solid"
+                    : maxTemp >= minMeltPoint * 0.75 ? "it is glowing but not yet at its melting heat"
+                        : "it is far too cool to flow";
+                tell(player, "\u00a7c", "Nothing in the crucible can be poured yet: " + progress + ".");
             }
             return false;
         }

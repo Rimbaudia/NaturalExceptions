@@ -132,6 +132,19 @@ public final class BlockStarterSmelter extends BlockContainer {
 
         // 0. Direct ladle interaction: scoop molten metal or return metal to smelter
         if (held != null && held.getItem() instanceof naturalexceptions.minecraft.item.ItemFoundryLadle) {
+            // Sneak with an empty ladle: skim floating slag off the melt.
+            if (player.isSneaking() && !naturalexceptions.minecraft.item.ItemFoundryLadle.hasMetal(held)) {
+                ItemStack slag = smelter.extractSlag(TileEntityStarterSmelter.SLAG_SKIM_AMOUNT);
+                if (slag == null) {
+                    player.addChatMessage(new ChatComponentText("\u00a77There is no slag floating on the melt."));
+                    return true;
+                }
+                if (!player.inventory.addItemStackToInventory(slag)) player.dropPlayerItemWithRandomChoice(slag, false);
+                player.inventoryContainer.detectAndSendChanges();
+                world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "liquid.lavapop", 0.6F, 0.7F);
+                player.addChatMessage(new ChatComponentText("\u00a7eSkimmed a scoop of slag off the melt."));
+                return true;
+            }
             if (player.isSneaking() && naturalexceptions.minecraft.item.ItemFoundryLadle.hasMetal(held)) {
                 // Return molten metal from ladle back to crucible
                 naturalexceptions.core.metallurgy.MaterialQuantity mass = naturalexceptions.minecraft.item.ItemFoundryLadle
@@ -144,8 +157,7 @@ public final class BlockStarterSmelter extends BlockContainer {
                     smelter.markDirty();
                     world.markBlockForUpdate(x, y, z);
                     world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "liquid.lavapop", 1.0F, 1.0F);
-                    player.addChatMessage(
-                        new ChatComponentText("\u00a7aPoured " + mass + " of molten metal back into Starter Smelter."));
+                    player.addChatMessage(new ChatComponentText("\u00a7aPoured the ladle back into the smelter."));
                     return true;
                 }
             } else {
@@ -153,14 +165,11 @@ public final class BlockStarterSmelter extends BlockContainer {
                 if (smelter.pourIntoLadle(held)) {
                     player.inventoryContainer.detectAndSendChanges();
                     world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "liquid.lavapop", 1.0F, 1.0F);
-                    naturalexceptions.core.metallurgy.MaterialQuantity mass = naturalexceptions.minecraft.item.ItemFoundryLadle
-                        .getFilledMass(held);
-                    player.addChatMessage(
-                        new ChatComponentText("\u00a7aScooped molten metal into Foundry Ladle (" + mass + ")."));
+                    player.addChatMessage(new ChatComponentText("\u00a7aScooped molten metal into the ladle."));
                     return true;
                 } else {
                     player.addChatMessage(
-                        new ChatComponentText("\u00a7cNo accessible molten metal in smelter to scoop into ladle."));
+                        new ChatComponentText("\u00a7cThere is no molten metal the ladle can reach yet."));
                     return true;
                 }
             }
@@ -204,11 +213,8 @@ public final class BlockStarterSmelter extends BlockContainer {
             player.addChatMessage(
                 new ChatComponentText(
                     String.format(
-                        "\u00a76[Starter Smelter] Fed %dx fuel to fire (%s). (Fire duration: %d ticks / %.0fs)",
-                        countToFeed,
-                        heatLabel,
-                        remaining,
-                        remaining / 20.0)));
+                        "\u00a76[Starter Smelter] Fed the fire; it will burn for about %d seconds.",
+                        Math.max(1, remaining / 20))));
             return true;
         }
 
@@ -224,10 +230,17 @@ public final class BlockStarterSmelter extends BlockContainer {
                 world.markBlockForUpdate(x, y, z);
                 world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "step.stone", 1.0F, 1.0F);
                 player.addChatMessage(
-                    new ChatComponentText(
-                        "\u00a7a[Starter Smelter] Added 1x " + held.getDisplayName() + " to crucible charge."));
+                    new ChatComponentText("\u00a7a[Starter Smelter] Added " + held.getDisplayName() + " to the charge."));
                 return true;
             }
+            // Refused: the split-off charge goes back to the held stack instead of vanishing.
+            if (singleCharge != held) held.stackSize += singleCharge.stackSize;
+            player.inventoryContainer.detectAndSendChanges();
+            player.addChatMessage(
+                new ChatComponentText(
+                    "\u00a7c[Starter Smelter] " + (smelter.isStructureValid()
+                        ? "There is no room in the crucible for that." : SmelterOutletState.STRUCTURE_INCOMPLETE.hint())));
+            return true;
         } else if (held != null) {
             String rejection = naturalexceptions.core.material.VanillaResourceClassification.getRejectionReason(held);
             if (rejection != null) {
@@ -247,10 +260,7 @@ public final class BlockStarterSmelter extends BlockContainer {
                 world.playSoundEffect(player.posX, player.posY, player.posZ, "random.fizz", 0.7F, 1.2F);
                 player.addChatMessage(
                     new ChatComponentText(
-                        String.format(
-                            "\u00a7c[Starter Smelter] Ouch! The metal in the hearth is scalding hot (%.0f K / %.0f \u00b0C)! Use blacksmith tongs to handle it.",
-                            tempK,
-                            tempK - 273.15)));
+                        "\u00a7c[Starter Smelter] Ouch! The metal in the hearth is scalding. Use blacksmith tongs."));
                 return true;
             } else {
                 smelter.setHearthWorkpiece(null);
@@ -265,64 +275,45 @@ public final class BlockStarterSmelter extends BlockContainer {
             }
         }
 
-        // 2c. Developer/debug inspect: sneak right-click outputs coarse status to chat
+        // 2c. Sneak: a short status line; operators/creative also get the exact layer readout.
         if (player.isSneaking()) {
-            if (smelter.getHearthWorkpiece() != null) {
-                ItemStack hw = smelter.getHearthWorkpiece();
-                naturalexceptions.core.thermal.ActiveThermalState thermal = naturalexceptions.minecraft.item.ItemGenericComponent
-                    .getThermalState(hw);
-                double tempK = thermal != null ? thermal.temperatureKelvin() : 293.15;
-                player.addChatMessage(
-                    new ChatComponentText(
-                        String.format(
-                            "\u00a7e[Hearth Workpiece] \u00a7f%s \u00a77(T: %.0f K / %.0f \u00b0C)",
-                            hw.getDisplayName(),
-                            tempK,
-                            tempK - 273.15)));
-            }
-
             smelter.validateStructure();
             if (!smelter.isStructureValid()) {
                 String failure = smelter.getStructureValidationResult() != null
                     && smelter.getStructureValidationResult()
                         .failureReason() != null ? smelter.getStructureValidationResult()
-                            .failureReason() : "Requires complete 3x3x3 refractory structure";
-                player.addChatMessage(
-                    new ChatComponentText(
-                        "\u00a7c[Starter Smelter] Structure incomplete or outdated — open Knowledge Browser for current layout. ("
-                            + failure
-                            + ")"));
+                            .failureReason() : "The 3x3x3 refractory shell is incomplete.";
+                player.addChatMessage(new ChatComponentText("\u00a7c[Starter Smelter] Structure incomplete: " + failure));
                 return true;
             }
-
+            SmelterOutletState state = smelter.outletState();
             player.addChatMessage(
                 new ChatComponentText(
-                    String.format(
-                        "\u00a7e[Smelter Status] Structure: \u00a7aValid\u00a7e | Layers: %d | Mass: %s | Fuel: %s",
-                        smelter.vesselState()
-                            .layers()
-                            .size(),
-                        smelter.vesselState()
-                            .totalMass(),
-                        smelter.vesselState()
+                    "\u00a7e[Starter Smelter] Formed. Fire "
+                        + (smelter.vesselState()
                             .fuelState()
-                            .isBurning() ? "\u00a7aBurning" : "\u00a77Cold")));
-
-            for (int i = 0; i < smelter.vesselState()
-                .layers()
-                .size(); i++) {
-                AggregateLayer l = smelter.vesselState()
+                            .isBurning() ? "burning" : "out")
+                        + ". Tap: "
+                        + state.shortText()
+                        + "."));
+            if (!state.canPour()) player.addChatMessage(new ChatComponentText("\u00a77" + state.hint()));
+            if (player.capabilities.isCreativeMode || player.canCommandSenderUseCommand(2, "ne_smelter")) {
+                for (int i = 0; i < smelter.vesselState()
                     .layers()
-                    .get(i);
-                player.addChatMessage(
-                    new ChatComponentText(
-                        String.format(
-                            "  \u00a77[%d] %s: %s at %.1f K (%s)",
-                            i,
-                            l.phaseType(),
-                            l.mass(),
-                            l.temperatureKelvin(),
-                            l.physicalPhase())));
+                    .size(); i++) {
+                    AggregateLayer l = smelter.vesselState()
+                        .layers()
+                        .get(i);
+                    player.addChatMessage(
+                        new ChatComponentText(
+                            String.format(
+                                "  \u00a78[debug %d] %s: %s at %.1f K (%s)",
+                                i,
+                                l.phaseType(),
+                                l.mass(),
+                                l.temperatureKelvin(),
+                                l.physicalPhase())));
+                }
             }
             return true;
         }

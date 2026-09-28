@@ -68,14 +68,15 @@ public final class CraftingKnowledgeProvider implements IKnowledgeProvider {
                 .icon(outletStack)
                 .summary("Pouring spout mounted onto the crucible face to channel clean molten metal.")
                 .description(
-                    "The Smelter Outlet attaches directly to the exterior front face of the Starter Smelter "
-                        + "at the crucible hearth level (dy = 0, dz = -1 relative to controller).\n\n"
-                        + "Right-clicking the outlet opens the stopper valve to pour molten metal into a Casting "
-                        + "Table positioned immediately below it. Molten slag sits above the metal layer and is "
-                        + "automatically excluded from pouring.")
-                .addProperty("Mounting Position", "Front exterior face (facing front)")
-                .addProperty("Pour Rate", "Continuous gravity stream")
-                .addProperty("Slag Filtering", "Automatic (taps lower clean metal layer)")
+                    "Molten metal leaves the Starter Smelter only through a Smelter Outlet. Place the outlet against "
+                        + "the outside of any smelter wall at the same height as the controller, with the spout facing "
+                        + "away from the smelter.\n\n"
+                        + "Put a Casting Table directly below the spout and an empty mold on the table. When the smelter "
+                        + "screen shows 'Tap: ready to pour', right-click the outlet to open the tap. Slag floats above "
+                        + "the metal and is never poured.")
+                .addProperty("Mounting Position", "Outside a wall, level with the controller")
+                .addProperty("Receiver", "Casting Table with an empty mold, directly below")
+                .addProperty("Slag Filtering", "Automatic (taps the metal beneath the slag)")
                 .addAcquisition(
                     ProcessStep.builder()
                         .operation("Crafting Table")
@@ -101,8 +102,8 @@ public final class CraftingKnowledgeProvider implements IKnowledgeProvider {
                 .icon(tuyereStack)
                 .summary("Air-blast injection nozzle enabling forced air draft to reach iron-smelting temperatures.")
                 .description(
-                    "The Tuyere is a specialized refractory nozzle lined with copper to direct high-velocity "
-                        + "air into the combustion zone. It mounts onto the exterior chamber walls (dx = \u00b12, dy = 0, dz = 1).\n\n"
+                    "The Tuyere is a refractory nozzle with a metal blast pipe that directs air into the fire. "
+                        + "It mounts against the outside of a smelter wall, level with the controller, nozzle facing in.\n\n"
                         + "The Tuyere is optional. Strong fuel can melt iron under natural draft; pumping a Hand Bellows "
                         + "through a Tuyere increases airflow and speeds heating.")
                 .addProperty("Role", "Optional forced draft; increases heating rate")
@@ -112,9 +113,9 @@ public final class CraftingKnowledgeProvider implements IKnowledgeProvider {
                         .operation("Crafting Table")
                         .machine(new ItemStack(Blocks.crafting_table), "Crafting Grid")
                         .addInput(brickStack, "2x Refractory Brick Blocks")
-                        .addInput(copperIngotStack, "1x Copper Ingot")
+                        .addInput(copperIngotStack, "1x cold cast metal rod")
                         .addOutput(tuyereStack, "Smelter Tuyere")
-                        .addNote("Arranged as 'BCB' horizontally in crafting grid.")
+                        .addNote("Brick block, cast rod, brick block in a row. Cast the rod in a Rod mold.")
                         .build())
                 .addUsage(
                     ProcessStep.builder()
@@ -173,9 +174,12 @@ public final class CraftingKnowledgeProvider implements IKnowledgeProvider {
                     ProcessStep.builder()
                         .operation("Crafting Table")
                         .machine(new ItemStack(Blocks.crafting_table), "Crafting Grid")
-                        .addInput(new ItemStack(brickStack.getItem(), 3), "Refractory Bricks / Clay (Bowl shape)")
+                        .addInput(
+                            new ItemStack(NEItems.refractoryBrick != null ? NEItems.refractoryBrick : Items.brick, 3),
+                            "3x fired Refractory Brick")
                         .addInput(new ItemStack(Items.stick, 1), "Stick Handle")
                         .addOutput(ladleStack, "Foundry Ladle")
+                        .addNote("Bricks as 'B B' over ' BS' (bowl with a stick handle).")
                         .build())
                 .addUsage(
                     ProcessStep.builder()
@@ -189,6 +193,32 @@ public final class CraftingKnowledgeProvider implements IKnowledgeProvider {
                 .addRelated("starter_smelter")
                 .addRelated("slag_lump")
                 .build());
+
+        // 5b. Smithing tools made from the first castings
+        if (NEItems.blacksmithHammer != null) {
+            ItemStack hammerStack = new ItemStack(NEItems.blacksmithHammer);
+            registry.registerEntry(
+                KnowledgeEntry.builder("smithing_tools", "Smithing Tools", KnowledgeCategory.CRAFTING)
+                    .icon(hammerStack)
+                    .summary("Hammer, tongs and forging anvil, made from your first cold castings.")
+                    .description(
+                        "Cast parts are ordinary crafting ingredients once they have cooled; any metal works.\n\n"
+                            + "Blacksmith Hammer: a cast ingot above a stick.\n"
+                            + "Blacksmith Tongs: two cast rods placed diagonally.\n"
+                            + "Forging Anvil: three cast plates above three stone.\n"
+                            + "Smelter Tuyere: brick block, cast rod, brick block.\n\n"
+                            + "The finished tool remembers which castings it was made from.")
+                    .addProperty("Ingredients", "Cold cast ingots, rods and plates")
+                    .addAcquisition(
+                        ProcessStep.builder()
+                            .operation("Crafting Table")
+                            .machine(new ItemStack(Blocks.crafting_table), "Crafting Grid")
+                            .addInput(new ItemStack(Items.stick), "Stick")
+                            .addOutput(hammerStack, "Blacksmith Hammer (with a cast ingot)")
+                            .build())
+                    .addRelated("casting_table")
+                    .build());
+        }
 
         // 6. Casting Table
         registry.registerEntry(

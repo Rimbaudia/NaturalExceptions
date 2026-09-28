@@ -112,4 +112,67 @@ final class SmelterBreakPreservationTest {
         assertNotNull(drop);
         assertTrue(ItemBlockStarterSmelter.carriesContents(drop));
     }
+
+    @Test
+    void metalAtItsMeltOnsetIsNotYetPourable() {
+        TileEntityStarterSmelter smelter = new TileEntityStarterSmelter();
+        CanonicalComposition cu = CanonicalComposition.of(ResourceId.of("naturalexceptions", "copper"));
+        double kg = 0.5;
+        double onset = ThermodynamicModel.energyForTemperature(
+            BuiltinMaterials.COPPER_PROPERTIES.meltingPointKelvin(),
+            0.0,
+            kg,
+            BuiltinMaterials.COPPER_PROPERTIES);
+        smelter.vesselState()
+            .addLayer(
+                new AggregateLayer(
+                    BuiltinMaterials.COPPER.ref(),
+                    CanonicalMaterialKey.of(cu),
+                    cu,
+                    MaterialQuantity.ofKilograms(kg),
+                    new ActiveThermalState(onset + 1.0, kg, BuiltinMaterials.COPPER_PROPERTIES),
+                    AggregatePhaseType.MOLTEN_METAL));
+        assertFalse(smelter.hasPourableMetal());
+        assertNull(
+            smelter.vesselState()
+                .pourLiquidMetal(MaterialQuantity.ofGrams(10.0)));
+
+        smelter.vesselState()
+            .addLayer(hotCopper(0.5, 1500.0));
+        assertTrue(smelter.hasPourableMetal() || smelter.vesselState()
+            .layers()
+            .stream()
+            .anyMatch(AggregateLayer::isPourable));
+        // Without an outlet in the world, the GUI says so rather than offering a dead pour control.
+        assertEquals(SmelterOutletState.NO_OUTLET, smelter.outletState());
+    }
+
+    @Test
+    void slagSkimmingKeepsMassAndHeatInASample() {
+        TileEntityStarterSmelter smelter = new TileEntityStarterSmelter();
+        double kg = 0.4;
+        double energy = ThermodynamicModel.energyForTemperature(
+            1400.0,
+            1.0,
+            kg,
+            naturalexceptions.core.metallurgy.OreFeedstockDefinition.SLAG_PROPERTIES);
+        CanonicalComposition slag = CanonicalComposition
+            .of(naturalexceptions.core.metallurgy.OreFeedstockDefinition.SLAG_RESOURCE_ID);
+        smelter.vesselState()
+            .addLayer(
+                new AggregateLayer(
+                    naturalexceptions.core.metallurgy.OreFeedstockDefinition.SLAG_REF,
+                    CanonicalMaterialKey.of(slag),
+                    slag,
+                    MaterialQuantity.ofKilograms(kg),
+                    new ActiveThermalState(energy, kg, naturalexceptions.core.metallurgy.OreFeedstockDefinition.SLAG_PROPERTIES),
+                    AggregatePhaseType.SLAG));
+        ItemStack skimmed = smelter.extractSlag(TileEntityStarterSmelter.SLAG_SKIM_AMOUNT);
+        assertNotNull(skimmed);
+        MaterialQuantity left = smelter.vesselState()
+            .totalMass();
+        assertEquals(
+            MaterialQuantity.ofKilograms(kg),
+            left.add(naturalexceptions.minecraft.item.ItemMaterialSample.getMass(skimmed)));
+    }
 }

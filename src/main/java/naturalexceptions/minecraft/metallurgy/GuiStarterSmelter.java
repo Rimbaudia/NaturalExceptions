@@ -34,45 +34,37 @@ public final class GuiStarterSmelter extends GuiContainer {
         this.ySize = 166;
     }
 
+    /** Heat gauge spans ambient to a white-hot hearth. */
+    private static final double GAUGE_MIN_K = 293.15;
+    private static final double GAUGE_MAX_K = 2000.0;
+    /** Fire gauge reads full at the auto-feed buffer (about 160 s of burning). */
+    private static final int FIRE_GAUGE_TICKS = 3200;
+
     @Override
     protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
-        // Title
         this.fontRendererObj.drawString("Starter Smelter", 8, 6, 0x404040);
+        String structure = tileEntity.isStructureValid() ? "Formed" : "Incomplete";
+        int structureColour = tileEntity.isStructureValid() ? 0x2E7D32 : 0xAA0000;
+        this.fontRendererObj.drawString(structure, 168 - fontRendererObj.getStringWidth(structure), 6, structureColour);
 
-        // Status
-        if (tileEntity.isStructureValid()) {
-            this.fontRendererObj.drawString("\u00a72Formed", 134, 6, 0x008000);
-        } else {
-            this.fontRendererObj.drawString("\u00a74Broken", 130, 6, 0xAA0000);
-        }
+        this.fontRendererObj.drawString("Feed", 8, 24, 0x404040);
+        this.fontRendererObj.drawString("Fuel", 8, 58, 0x404040);
 
-        double maxTemp = 293.15;
-        for (AggregateLayer layer : tileEntity.vesselState()
-            .layers()) maxTemp = Math.max(maxTemp, layer.temperatureKelvin());
-        String capacity = fillBand(tileEntity.fillFraction());
-        this.fontRendererObj.drawString(trim(String.format("%s  %s", heatBand(maxTemp), capacity), 70), 58, 55,
-            maxTemp > 600 ? 0xAA5500 : 0x404040);
-        this.fontRendererObj.drawString(
-            trim(
-                String.format(
-                    "Fill %s  Fuel %s",
-                    fillBand(tileEntity.fillFraction()),
-                    tileEntity.vesselState()
-                        .fuelState()
-                        .isBurning() ? "burning" : "idle"),
-                70),
-            58,
-            65,
-            0x404040);
-        this.fontRendererObj.drawString(trim("Outlet " + compactOutletStatus(), 70), 58, 75, 0x404040);
+        double hottest = hottestLayerTemperature();
+        this.fontRendererObj.drawString(trim("Heat: " + heatBand(hottest), 110), 58, 54, hottest > 800 ? 0xAA5500 : 0x404040);
+        this.fontRendererObj.drawString(trim("Fire: " + fireText(), 110), 58, 64, 0x404040);
+        SmelterOutletState state = tileEntity.outletState();
+        int stateColour = state == SmelterOutletState.READY || state == SmelterOutletState.POURING ? 0x2E7D32 : 0x404040;
+        this.fontRendererObj.drawString(trim("Tap: " + state.shortText(), 110), 58, 74, stateColour);
     }
 
-    private String compactOutletStatus() {
-        String status = tileEntity.outletStatus();
-        if ("NO ACCESSIBLE LIQUID".equals(status)) return "no liquid";
-        if ("RECEIVER MISSING".equals(status)) return "need receiver";
-        if ("RECEIVER FULL".equals(status)) return "receiver full";
-        return status.toLowerCase(java.util.Locale.ROOT);
+    private String fireText() {
+        int ticks = tileEntity.vesselState()
+            .fuelState()
+            .remainingTicks();
+        if (ticks <= 0) return tileEntity.getStackInSlot(TileEntityStarterSmelter.SLOT_FUEL) != null ? "catching"
+            : "out, add fuel";
+        return "burning, ~" + Math.max(1, ticks / 20) + "s";
     }
 
     private String trim(String text, int width) {
@@ -91,6 +83,29 @@ public final class GuiStarterSmelter extends GuiContainer {
         int l = this.guiTop;
         this.drawTexturedModalRect(k, l, 0, 0, this.xSize, this.ySize);
         drawLayerStack(k + 63, l + 12, 60, 37);
+        drawHeatGauge(k + 134, l + 13, 7, 35);
+        drawFireGauge(k + 151, l + 13, 7, 35);
+    }
+
+    private void drawHeatGauge(int x, int y, int width, int height) {
+        double hottest = hottestLayerTemperature();
+        double fraction = Math.max(0.0, Math.min(1.0, (hottest - GAUGE_MIN_K) / (GAUGE_MAX_K - GAUGE_MIN_K)));
+        int filled = (int) Math.round(fraction * height);
+        if (filled <= 0) return;
+        float[] rgba = MaterialAppearance.getThermalIncandescenceRgba(Math.max(900.0, hottest));
+        int glow = 0xFF000000 | (int) (rgba[0] * 255) << 16 | (int) (rgba[1] * 255) << 8 | (int) (rgba[2] * 255);
+        int colour = hottest < 800 ? 0xFF8A3B24 : glow;
+        drawRect(x, y + height - filled, x + width, y + height, colour);
+    }
+
+    private void drawFireGauge(int x, int y, int width, int height) {
+        int ticks = tileEntity.vesselState()
+            .fuelState()
+            .remainingTicks();
+        int filled = (int) Math.round(Math.min(1.0, ticks / (double) FIRE_GAUGE_TICKS) * height);
+        if (filled <= 0) return;
+        drawRect(x, y + height - filled, x + width, y + height, 0xFFE0701C);
+        drawRect(x, y + height - filled, x + width, Math.min(y + height, y + height - filled + 2), 0xFFFFC23A);
     }
 
     private void drawLayerStack(int x, int y, int width, int height) {
@@ -116,54 +131,73 @@ public final class GuiStarterSmelter extends GuiContainer {
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         super.drawScreen(mouseX, mouseY, partialTicks);
-
-        // Hover over monitor area (x between guiLeft + 61 and guiLeft + 120, y between guiTop + 18 and guiTop + 44)
-        if (mouseX >= this.guiLeft + 61 && mouseX <= this.guiLeft + 125
-            && mouseY >= this.guiTop + 10
-            && mouseY <= this.guiTop + 50) {
-            List<String> tooltip = new ArrayList<>();
-            tooltip.add("\u00a76--- Smelter contents ---");
-            tooltip.add("\u00a77Charge: " + fillBand(tileEntity.fillFraction()));
+        int x = mouseX - guiLeft;
+        int y = mouseY - guiTop;
+        List<String> tooltip = new ArrayList<>();
+        if (x >= 61 && x <= 125 && y >= 10 && y <= 50) {
+            contentsTooltip(tooltip);
+        } else if (x >= 133 && x <= 142 && y >= 12 && y <= 49) {
+            tooltip.add("\u00a76Heat");
+            tooltip.add("\u00a77Hottest contents: " + heatBand(hottestLayerTemperature()));
+            tooltip.add("\u00a78Copper flows once it reaches molten heat.");
+        } else if (x >= 150 && x <= 159 && y >= 12 && y <= 49) {
+            tooltip.add("\u00a76Fire");
+            tooltip.add("\u00a77" + fireText());
             if (tileEntity.vesselState()
                 .fuelState()
                 .isBurning()) {
                 tooltip.add(
-                    "\u00a77Fuel: \u00a7f" + tileEntity.vesselState()
+                    "\u00a77Burning " + tileEntity.vesselState()
                         .fuelState()
                         .fuelLabel());
             }
-            tooltip.add("\u00a77Heat: " + heatBand(hottestLayerTemperature()));
-
-            List<AggregateLayer> layers = tileEntity.vesselState()
-                .layers();
-            if (layers.isEmpty()) {
-                tooltip.add("\u00a78(Crucible is empty)");
-            } else {
-                for (int i = 0; i < layers.size(); i++) {
-                    AggregateLayer l = layers.get(i);
-                    String phase = l.phaseType() == AggregatePhaseType.SLAG ? "dark residue"
-                        : l.physicalPhase() == naturalexceptions.core.material.MaterialPhase.LIQUID ? "liquid metal"
-                            : "solid metal";
-                    String materialName = naturalexceptions.minecraft.knowledge.KnowledgePresentation.materialName(
-                        this.mc.thePlayer, l.materialRef(), l.stateKey());
-                    tooltip.add(String.format("\u00a77Layer %d: %s, %s, %s", i + 1, materialName, phase,
-                        heatBand(l.temperatureKelvin())));
-                }
-            }
-
-            if (tileEntity.vesselState()
-                .lining()
-                .isDamaged()) {
+            tooltip.add("\u00a78Fuel in the slot is added as the fire burns down.");
+        } else if (x >= 56 && x <= 170 && y >= 72 && y <= 83) {
+            SmelterOutletState state = tileEntity.outletState();
+            tooltip.add("\u00a76Pouring");
+            tooltip.add("\u00a77" + state.hint());
+            tooltip.add("\u00a78Molten metal leaves only through the outlet spout.");
+        } else if (x >= 110 && y >= 4 && y <= 15 && !tileEntity.isStructureValid()) {
+            tooltip.add("\u00a7cThe structure is not complete");
+            if (tileEntity.getStructureValidationResult() != null && tileEntity.getStructureValidationResult()
+                .failureReason() != null) {
                 tooltip.add(
-                    String.format(
-                        "\u00a7cLining Wear: %.1f%%",
-                        tileEntity.vesselState()
-                            .lining()
-                            .damage() * 100.0));
+                    "\u00a77" + tileEntity.getStructureValidationResult()
+                        .failureReason());
             }
-
-            this.drawHoveringText(tooltip, mouseX, mouseY, fontRendererObj);
+            tooltip.add("\u00a78See the Knowledge Browser (K) for the layout.");
         }
+        if (!tooltip.isEmpty()) this.drawHoveringText(tooltip, mouseX, mouseY, fontRendererObj);
+    }
+
+    private void contentsTooltip(List<String> tooltip) {
+        tooltip.add("\u00a76Crucible");
+        tooltip.add("\u00a77" + capitalise(fillBand(tileEntity.fillFraction())));
+        List<AggregateLayer> layers = tileEntity.vesselState()
+            .layers();
+        if (layers.isEmpty()) {
+            tooltip.add("\u00a78Empty. Put ore or scrap metal in the feed slot.");
+        } else {
+            for (int i = layers.size() - 1; i >= 0; i--) {
+                AggregateLayer l = layers.get(i);
+                String state = l.phaseType() == AggregatePhaseType.SLAG ? "slag; sneak-use an empty ladle to skim"
+                    : l.phaseType() == AggregatePhaseType.SOLID_CHARGE ? "unmelted charge"
+                        : l.isPourable() ? "molten, can be poured" : "softening, not yet pourable";
+                String materialName = l.phaseType() == AggregatePhaseType.SLAG ? "Slag"
+                    : naturalexceptions.minecraft.knowledge.KnowledgePresentation
+                        .materialName(this.mc.thePlayer, l.materialRef(), l.stateKey());
+                tooltip.add(String.format("\u00a7f%s\u00a77: %s", materialName, state));
+            }
+        }
+        if (tileEntity.vesselState()
+            .lining()
+            .isDamaged()) {
+            tooltip.add("\u00a7cThe refractory lining is showing heat damage.");
+        }
+    }
+
+    private static String capitalise(String text) {
+        return text.isEmpty() ? text : Character.toUpperCase(text.charAt(0)) + text.substring(1);
     }
 
     private double hottestLayerTemperature() {

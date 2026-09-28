@@ -173,12 +173,12 @@ public final class MetallurgyKnowledgeProvider implements IKnowledgeProvider {
                     "Slag consists of fluxed silica and rock matrix separated from raw ores during smelting. "
                         + "Because slag has lower density than liquid metal, it floats as a separate aggregate layer.\n\n"
                         + "If excessive slag accumulates in the crucible, it reduces available capacity for metal. "
-                        + "Hold a Foundry Ladle and Shift-Right-Click the Starter Smelter controller to skim out slag lumps.\n\n"
+                        + "Hold an empty Foundry Ladle and Shift-Right-Click the Starter Smelter controller to skim off a scoop of slag.\n\n"
                         + "The Smelter Outlet automatically taps from the bottom metal layer, ensuring that poured components "
                         + "are pure metal rather than contaminated by slag.")
                 .addProperty("Phase", "Liquid / Glassy Solid")
                 .addProperty("Density", "Lower than metal (floats on top)")
-                .addProperty("Removal Method", "Shift-Right-Click with Foundry Ladle")
+                .addProperty("Removal Method", "Shift-Right-Click with an empty Foundry Ladle")
                 .addAcquisition(
                     ProcessStep.builder()
                         .operation("Slag Skimming")

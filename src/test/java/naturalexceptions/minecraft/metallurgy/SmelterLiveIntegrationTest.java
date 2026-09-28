@@ -681,6 +681,9 @@ final class SmelterLiveIntegrationTest {
         boolean pouredInContainer = container.enchantItem(player, 0);
         assertFalse(pouredInContainer);
         assertEquals(0, player.messages.size());
+        // No dead output slot: only fuel and feed plus the player's inventory.
+        assertEquals(2 + 36, container.inventorySlots.size());
+        assertEquals(SmelterOutletState.STRUCTURE_INCOMPLETE.canPour(), false);
     }
 
     private static class EnvironmentalTestCastingTable extends TileEntityCastingTable {

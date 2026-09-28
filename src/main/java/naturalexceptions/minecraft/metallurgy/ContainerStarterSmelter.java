@@ -15,6 +15,9 @@ import net.minecraft.tileentity.TileEntityFurnace;
  */
 public final class ContainerStarterSmelter extends Container {
 
+    /** Fuel and feed are the only container slots. */
+    static final int MACHINE_SLOTS = 2;
+
     private final TileEntityStarterSmelter tileEntity;
 
     public ContainerStarterSmelter(InventoryPlayer playerInv, TileEntityStarterSmelter tileEntity) {
@@ -26,8 +29,7 @@ public final class ContainerStarterSmelter extends Container {
         // Slot 1: Feed (x=36, y=20)
         addSlotToContainer(new SlotFeed(tileEntity, TileEntityStarterSmelter.SLOT_FEED, 36, 20));
 
-        // Slot 2: Mold / Output (x=134, y=36)
-        addSlotToContainer(new SlotOutput(tileEntity, TileEntityStarterSmelter.SLOT_MOLD, 134, 36));
+        // Molten metal leaves physically through the side-wall outlet; there is no output slot.
 
         // Player Inventory (3 rows of 9)
         for (int row = 0; row < 3; row++) {
@@ -66,14 +68,6 @@ public final class ContainerStarterSmelter extends Container {
     }
 
     @Override
-    public boolean enchantItem(EntityPlayer player, int actionId) {
-        // Liquid transfer is physical: use the side-wall outlet/Casting Table or the Foundry Ladle.
-        if (actionId == 0) return false;
-
-        return false;
-    }
-
-    @Override
     public ItemStack transferStackInSlot(EntityPlayer player, int slotIndex) {
         ItemStack itemstack = null;
         Slot slot = (Slot) this.inventorySlots.get(slotIndex);
@@ -82,11 +76,11 @@ public final class ContainerStarterSmelter extends Container {
             ItemStack itemstack1 = slot.getStack();
             itemstack = itemstack1.copy();
 
-            // Machine slots (0, 1, 2) to player inventory
-            if (slotIndex < TileEntityStarterSmelter.INVENTORY_SIZE) {
+            // Machine slots (fuel, feed) to player inventory
+            if (slotIndex < MACHINE_SLOTS) {
                 if (!this.mergeItemStack(
                     itemstack1,
-                    TileEntityStarterSmelter.INVENTORY_SIZE,
+                    MACHINE_SLOTS,
                     this.inventorySlots.size(),
                     true)) {
                     return null;
@@ -145,23 +139,6 @@ public final class ContainerStarterSmelter extends Container {
         @Override
         public boolean isItemValid(ItemStack stack) {
             return TileEntityStarterSmelter.isSmeltableFeed(stack);
-        }
-    }
-
-    private static final class SlotOutput extends Slot {
-
-        public SlotOutput(IInventory inv, int index, int x, int y) {
-            super(inv, index, x, y);
-        }
-
-        @Override
-        public boolean isItemValid(ItemStack stack) {
-            return false;
-        }
-
-        @Override
-        public int getSlotStackLimit() {
-            return 64;
         }
     }
 }

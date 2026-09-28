@@ -547,15 +547,7 @@ public final class VesselState {
 
         for (int i = 0; i < layers.size(); i++) {
             AggregateLayer l = layers.get(i);
-            if (l.phaseType() == AggregatePhaseType.MOLTEN_METAL
-                && (requestedMaterial == null || requestedMaterial.equals(l.materialRef()))
-                && (l.physicalPhase() == MaterialPhase.LIQUID || l.thermalState()
-                    .meltFraction() >= 0.50
-                    || (l.thermalState()
-                        .properties() != null && l.temperatureKelvin()
-                            >= l.thermalState()
-                                .properties()
-                                .meltingPointKelvin()))) {
+            if (l.isPourable() && (requestedMaterial == null || requestedMaterial.equals(l.materialRef()))) {
                 MaterialQuantity extractAmount = l.mass()
                     .compareTo(desiredMass) <= 0 ? l.mass() : desiredMass;
                 ActiveThermalState extractedThermal = l.extractMass(extractAmount);
