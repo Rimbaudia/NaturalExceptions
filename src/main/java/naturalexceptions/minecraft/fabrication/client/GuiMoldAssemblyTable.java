@@ -22,7 +22,7 @@ public final class GuiMoldAssemblyTable extends GuiContainer {
 
     private static final ResourceLocation GUI = new ResourceLocation(
         "naturalexceptions",
-        "textures/gui/assembly_table.png");
+        "textures/gui/mold_assembly_table.png");
     private final TileEntityMoldAssemblyTable table;
 
     public GuiMoldAssemblyTable(InventoryPlayer player, TileEntityMoldAssemblyTable table) {
@@ -41,7 +41,7 @@ public final class GuiMoldAssemblyTable extends GuiContainer {
             .size(); i++) {
             int col = i % 3, row = i / 3;
             buttonList.add(
-                new GuiButton(
+                new HitArea(
                     i,
                     guiLeft + MoldAssemblyLayout.BUTTON_X + col * MoldAssemblyLayout.BUTTON_COLUMN_SPACING,
                     guiTop + MoldAssemblyLayout.BUTTON_Y + row * MoldAssemblyLayout.BUTTON_ROW_SPACING,
@@ -65,27 +65,43 @@ public final class GuiMoldAssemblyTable extends GuiContainer {
             ? table.getStackInSlot(1) == null ? "Choose shape (1 blank)" : "Take output to change shape"
             : "Insert Blank Mold into input";
         fontRendererObj.drawString(trim(instruction, 160), 8, 51, 0x404040);
+        fontRendererObj.drawString("Inventory", 8, 93, 0x404040);
+        drawShapeLabels();
     }
 
     @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mx, int my) {
         GL11.glColor4f(1, 1, 1, 1);
-        drawRect(guiLeft, guiTop, guiLeft + xSize, guiTop + ySize, 0xFF373737);
-        drawRect(guiLeft + 1, guiTop + 1, guiLeft + xSize - 1, guiTop + ySize - 1, 0xFFC6C6C6);
-        drawRect(guiLeft + 1, guiTop + 1, guiLeft + xSize - 1, guiTop + 2, 0xFFFFFFFF);
-        drawRect(guiLeft + 1, guiTop + 1, guiLeft + 2, guiTop + ySize - 1, 0xFFFFFFFF);
         mc.getTextureManager()
             .bindTexture(GUI);
-        drawTexturedModalRect(guiLeft, guiTop + 103, 0, 83, xSize, 83);
-        drawSlotBackground(guiLeft + MoldAssemblyLayout.INPUT_X - 1, guiTop + MoldAssemblyLayout.MACHINE_Y - 1);
-        drawSlotBackground(guiLeft + MoldAssemblyLayout.OUTPUT_X - 1, guiTop + MoldAssemblyLayout.MACHINE_Y - 1);
-        drawRect(guiLeft + 74, guiTop + 37, guiLeft + 106, guiTop + 41, 0xFF777777);
-        drawRect(guiLeft + 101, guiTop + 33, guiLeft + 107, guiTop + 45, 0xFF777777);
+        drawTexturedModalRect(guiLeft, guiTop, 0, 0, xSize, ySize);
+        // Shape buttons belong to the background so held items and tooltips always draw above them.
+        for (int i = 0; i < TileEntityMoldAssemblyTable.selectableGeometries()
+            .size(); i++) {
+            int buttonX = guiLeft + MoldAssemblyLayout.BUTTON_X + (i % 3) * MoldAssemblyLayout.BUTTON_COLUMN_SPACING;
+            int buttonY = guiTop + MoldAssemblyLayout.BUTTON_Y + (i / 3) * MoldAssemblyLayout.BUTTON_ROW_SPACING;
+            boolean hovered = mx >= buttonX && mx < buttonX + MoldAssemblyLayout.BUTTON_WIDTH
+                && my >= buttonY
+                && my < buttonY + MoldAssemblyLayout.BUTTON_HEIGHT;
+            drawShapeButton(
+                buttonX,
+                buttonY,
+                MoldAssemblyLayout.BUTTON_WIDTH,
+                MoldAssemblyLayout.BUTTON_HEIGHT,
+                table.canShape(i),
+                hovered);
+        }
     }
 
-    private void drawSlotBackground(int x, int y) {
-        drawRect(x, y, x + 18, y + 18, 0xFF373737);
-        drawRect(x + 1, y + 1, x + 17, y + 17, 0xFF8B8B8B);
+    /** A clickable but invisible button; the shape buttons are drawn in the background layer. */
+    private static final class HitArea extends GuiButton {
+
+        HitArea(int id, int x, int y, int width, int height, String label) {
+            super(id, x, y, width, height, label);
+        }
+
+        @Override
+        public void drawButton(net.minecraft.client.Minecraft mc, int mouseX, int mouseY) {}
     }
 
     @Override
@@ -93,25 +109,27 @@ public final class GuiMoldAssemblyTable extends GuiContainer {
         for (int i = 0; i < buttonList.size(); i++) ((GuiButton) buttonList.get(i)).enabled = table.canShape(i);
         super.drawScreen(mouseX, mouseY, partialTicks);
         int index = 0;
-        GeometryId hoveredGeometry = null;
-        boolean hoveredEnabled = false;
         for (GeometryId geometry : TileEntityMoldAssemblyTable.selectableGeometries()) {
-            int col = index % 3, row = index / 3;
-            int buttonX = guiLeft + MoldAssemblyLayout.BUTTON_X + col * MoldAssemblyLayout.BUTTON_COLUMN_SPACING;
-            int buttonY = guiTop + MoldAssemblyLayout.BUTTON_Y + row * MoldAssemblyLayout.BUTTON_ROW_SPACING;
-            int x = buttonX + 2;
-            int y = buttonY + 1;
-            boolean enabled = table.canShape(index);
+            int buttonX = guiLeft + MoldAssemblyLayout.BUTTON_X
+                + (index % 3) * MoldAssemblyLayout.BUTTON_COLUMN_SPACING;
+            int buttonY = guiTop + MoldAssemblyLayout.BUTTON_Y + (index / 3) * MoldAssemblyLayout.BUTTON_ROW_SPACING;
             boolean hovered = mouseX >= buttonX && mouseX < buttonX + MoldAssemblyLayout.BUTTON_WIDTH
                 && mouseY >= buttonY
                 && mouseY < buttonY + MoldAssemblyLayout.BUTTON_HEIGHT;
-            drawShapeButton(
-                buttonX,
-                buttonY,
-                MoldAssemblyLayout.BUTTON_WIDTH,
-                MoldAssemblyLayout.BUTTON_HEIGHT,
-                enabled,
-                hovered);
+            if (hovered && mc.thePlayer.inventory.getItemStack() == null) {
+                drawShapeTooltip(geometry, table.canShape(index), mouseX, mouseY);
+            }
+            index++;
+        }
+    }
+
+    /** Shape icons and labels, drawn under any held item. */
+    private void drawShapeLabels() {
+        int index = 0;
+        for (GeometryId geometry : TileEntityMoldAssemblyTable.selectableGeometries()) {
+            int x = MoldAssemblyLayout.BUTTON_X + (index % 3) * MoldAssemblyLayout.BUTTON_COLUMN_SPACING + 2;
+            int y = MoldAssemblyLayout.BUTTON_Y + (index / 3) * MoldAssemblyLayout.BUTTON_ROW_SPACING + 1;
+            boolean enabled = table.canShape(index);
             ItemStack icon = ItemCastingMold.createStack(geometry);
             GL11.glEnable(GL11.GL_DEPTH_TEST);
             RenderHelper.enableGUIStandardItemLighting();
@@ -120,14 +138,9 @@ public final class GuiMoldAssemblyTable extends GuiContainer {
             RenderHelper.disableStandardItemLighting();
             GL11.glDisable(GL11.GL_DEPTH_TEST);
             String label = geometry == GeometryId.PICK_HEAD ? "Pick" : capitalize(geometry.id());
-            fontRendererObj.drawString(label, x + 19, y + 3, enabled ? 0x404040 : 0x777777);
-            if (hovered) {
-                hoveredGeometry = geometry;
-                hoveredEnabled = enabled;
-            }
+            fontRendererObj.drawString(label, x + 19, y + 5, enabled ? 0x404040 : 0x777777);
             index++;
         }
-        if (hoveredGeometry != null) drawShapeTooltip(hoveredGeometry, hoveredEnabled, mouseX, mouseY);
     }
 
     private void drawShapeTooltip(GeometryId geometry, boolean enabled, int mouseX, int mouseY) {

@@ -20,7 +20,29 @@ public final class BlockMoldAssemblyTable extends BlockContainer {
         setHardness(2.0F);
         setStepSound(soundTypeWood);
         setBlockName("moldAssemblyTable");
-        setBlockTextureName("naturalexceptions:assembly_table_top");
+        setBlockTextureName("naturalexceptions:mold_assembly_table_top");
+    }
+
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    private net.minecraft.util.IIcon iconTop;
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    private net.minecraft.util.IIcon iconSide;
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    private net.minecraft.util.IIcon iconBottom;
+
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public void registerBlockIcons(net.minecraft.client.renderer.texture.IIconRegister reg) {
+        iconTop = reg.registerIcon("naturalexceptions:mold_assembly_table_top");
+        iconSide = reg.registerIcon("naturalexceptions:mold_assembly_table_side");
+        iconBottom = reg.registerIcon("naturalexceptions:assembly_table_bottom");
+        blockIcon = iconTop;
+    }
+
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public net.minecraft.util.IIcon getIcon(int side, int meta) {
+        return side == 1 ? iconTop : side == 0 ? iconBottom : iconSide;
     }
 
     @Override

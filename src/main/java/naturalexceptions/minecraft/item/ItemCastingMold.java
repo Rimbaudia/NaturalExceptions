@@ -89,7 +89,6 @@ public final class ItemCastingMold extends Item {
     @SideOnly(Side.CLIENT)
     private IIcon iconHandleFill;
 
-
     public ItemCastingMold() {
         setUnlocalizedName("castingMold");
         setTextureName("naturalexceptions:ingot_casting_mold");

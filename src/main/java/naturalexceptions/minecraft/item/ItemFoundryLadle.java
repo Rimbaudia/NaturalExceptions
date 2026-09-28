@@ -453,4 +453,35 @@ public final class ItemFoundryLadle extends Item {
         }
         return BuiltinMaterials.COPPER_PROPERTIES;
     }
+
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    private net.minecraft.util.IIcon contentsIcon;
+
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public void registerIcons(net.minecraft.client.renderer.texture.IIconRegister register) {
+        itemIcon = register.registerIcon("naturalexceptions:clay_crucible");
+        contentsIcon = register.registerIcon("naturalexceptions:ladle_contents");
+    }
+
+    /** Pass 0: the clay ladle; pass 1: its contents, tinted by what they are and how hot. */
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public boolean requiresMultipleRenderPasses() {
+        return true;
+    }
+
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public net.minecraft.util.IIcon getIcon(ItemStack stack, int pass) {
+        return pass == 1 && hasMetal(stack) ? contentsIcon : itemIcon;
+    }
+
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public int getColorFromItemStack(ItemStack stack, int pass) {
+        if (pass != 1 || !hasMetal(stack)) return 0xFFFFFF;
+        return HeatWords
+            .seenMetalColour(getContainedMaterialRef(stack), getContainedStateKey(stack), getThermalState(stack));
+    }
 }

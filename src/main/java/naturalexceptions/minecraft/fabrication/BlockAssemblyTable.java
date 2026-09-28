@@ -41,7 +41,7 @@ public final class BlockAssemblyTable extends BlockContainer {
     public void registerBlockIcons(IIconRegister reg) {
         iconTop = reg.registerIcon("naturalexceptions:assembly_table_top");
         iconSide = reg.registerIcon("naturalexceptions:assembly_table_side");
-        iconBottom = reg.registerIcon("naturalexceptions:refractory_brick_block");
+        iconBottom = reg.registerIcon("naturalexceptions:assembly_table_bottom");
         this.blockIcon = iconTop;
     }
 

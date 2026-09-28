@@ -9,12 +9,13 @@ import naturalexceptions.core.metallurgy.MaterialQuantity;
 
 /** Deterministic bounded impacts derived from the already-persisted P8 parent event. */
 public final class StarRainImpactFactory {
+
     public static final int IMPACTS_PER_EVENT = 4;
     private static final String ID_DOMAIN = "naturalexceptions:p11:star_rain_impact:v1";
     /** Stellar core mass: 2, 4 or 8 kg for severity 1, 2, 3; the rest of the ball is fused terrestrial crust. */
     public static final long CORE_MASS_SEVERITY_ONE_MG = 2_000_000L;
 
-    private StarRainImpactFactory() { }
+    private StarRainImpactFactory() {}
 
     public static List<StarRainImpact> create(EventRecord event, int centerX, int centerZ) {
         if (event == null || !EventRecord.PROTECTED_STAR_RAIN.equals(event.type())) {
@@ -23,19 +24,40 @@ public final class StarRainImpactFactory {
         List<StarRainImpact> impacts = new ArrayList<>(IMPACTS_PER_EVENT);
         long duration = event.endsAtTick() - event.scheduledAtTick();
         for (int ordinal = 0; ordinal < IMPACTS_PER_EVENT; ordinal++) {
-            DeterministicId id = DeterministicId.derive(ID_DOMAIN, event.id().hex(), Integer.toString(ordinal));
-            long entropy = Long.parseUnsignedLong(DeterministicId.derive(ID_DOMAIN, event.id().hex(), "parameters",
-                Integer.toString(ordinal)).hex().substring(0, 16), 16);
+            DeterministicId id = DeterministicId.derive(
+                ID_DOMAIN,
+                event.id()
+                    .hex(),
+                Integer.toString(ordinal));
+            long entropy = Long.parseUnsignedLong(
+                DeterministicId.derive(
+                    ID_DOMAIN,
+                    event.id()
+                        .hex(),
+                    "parameters",
+                    Integer.toString(ordinal))
+                    .hex()
+                    .substring(0, 16),
+                16);
             int dx = (int) Long.remainderUnsigned(entropy, 193L) - 96;
             int dz = (int) Long.remainderUnsigned(mix(entropy), 193L) - 96;
             int severity = 1 + (int) Long.remainderUnsigned(mix(entropy ^ 0x535441525241494eL), 3L);
             long parts = IMPACTS_PER_EVENT + 1L;
-            long dueOffset = (duration / parts) * (ordinal + 1L)
-                + (duration % parts) * (ordinal + 1L) / parts;
+            long dueOffset = (duration / parts) * (ordinal + 1L) + (duration % parts) * (ordinal + 1L) / parts;
             dueOffset = Math.max(1L, dueOffset);
             long dueTick = Math.addExact(event.scheduledAtTick(), dueOffset);
-            impacts.add(new StarRainImpact(event.id(), id, ordinal, dueTick, centerX + dx, centerZ + dz,
-                severity, MaterialQuantity.ofMilligrams(coreMassMilligrams(severity)), false, false));
+            impacts.add(
+                new StarRainImpact(
+                    event.id(),
+                    id,
+                    ordinal,
+                    dueTick,
+                    centerX + dx,
+                    centerZ + dz,
+                    severity,
+                    MaterialQuantity.ofMilligrams(coreMassMilligrams(severity)),
+                    false,
+                    false));
         }
         return Collections.unmodifiableList(impacts);
     }

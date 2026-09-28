@@ -12,18 +12,20 @@ import org.lwjgl.opengl.GL11;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
-import naturalexceptions.core.material.MaterialRef;
 import naturalexceptions.core.knowledge.KnowledgeSubjectRef;
-import naturalexceptions.minecraft.knowledge.PlayerKnowledgeProperties;
+import naturalexceptions.core.material.MaterialRef;
 import naturalexceptions.minecraft.gui.ContainerMaterialNaming;
 import naturalexceptions.minecraft.item.MaterialNamingTarget;
+import naturalexceptions.minecraft.knowledge.PlayerKnowledgeProperties;
 import naturalexceptions.minecraft.network.NENetwork;
 import naturalexceptions.minecraft.network.PacketApplyAlloyName;
 
 @SideOnly(Side.CLIENT)
 public class GuiMaterialNaming extends GuiContainer {
 
-    private static final ResourceLocation DEMO_BG = new ResourceLocation("textures/gui/demo_background.png");
+    private static final ResourceLocation DEMO_BG = new ResourceLocation(
+        "naturalexceptions",
+        "textures/gui/material_naming.png");
 
     private final ContainerMaterialNaming container;
     private GuiTextField nameField;
@@ -42,10 +44,13 @@ public class GuiMaterialNaming extends GuiContainer {
         if (sampleStack != null) {
             this.materialRef = MaterialNamingTarget.getMaterialRef(sampleStack);
             if (materialRef != null) {
-                naturalexceptions.core.knowledge.KnowledgeSubjectRef subject = KnowledgeSubjectRef.material(materialRef);
-                existingAlias = PlayerKnowledgeProperties.get(player).knowledge().aliasFor(subject);
-                resolvedName = naturalexceptions.minecraft.knowledge.KnowledgePresentation.materialName(player,
-                    materialRef, MaterialNamingTarget.getStateKey(sampleStack));
+                naturalexceptions.core.knowledge.KnowledgeSubjectRef subject = KnowledgeSubjectRef
+                    .material(materialRef);
+                existingAlias = PlayerKnowledgeProperties.get(player)
+                    .knowledge()
+                    .aliasFor(subject);
+                resolvedName = naturalexceptions.minecraft.knowledge.KnowledgePresentation
+                    .materialName(player, materialRef, MaterialNamingTarget.getStateKey(sampleStack));
                 if (existingAlias != null) resolvedName = existingAlias;
             }
         }

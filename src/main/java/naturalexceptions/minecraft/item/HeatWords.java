@@ -14,4 +14,15 @@ public final class HeatWords {
         if (kelvin >= 318.15) return "warm";
         return "cool";
     }
+
+    /** Colour of hot or cold metal as seen: molten glow, incandescent when very hot, else its own colour. */
+    static int seenMetalColour(naturalexceptions.core.material.MaterialRef ref,
+        naturalexceptions.core.material.CanonicalMaterialKey key,
+        naturalexceptions.core.thermal.ActiveThermalState thermal) {
+        double kelvin = thermal != null ? thermal.temperatureKelvin() : 293.15;
+        if (kelvin >= 900.0) {
+            return naturalexceptions.core.material.MaterialAppearance.getMoltenColor(ref, key, kelvin) & 0xFFFFFF;
+        }
+        return naturalexceptions.core.material.MaterialAppearance.getSolidColor(ref, key) & 0xFFFFFF;
+    }
 }

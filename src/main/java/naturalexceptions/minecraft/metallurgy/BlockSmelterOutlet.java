@@ -23,8 +23,6 @@ import cpw.mods.fml.relauncher.SideOnly;
  */
 public final class BlockSmelterOutlet extends BlockContainer implements naturalexceptions.minecraft.block.PartModel {
 
-
-
     public BlockSmelterOutlet() {
         super(Material.rock);
         setHardness(2.0F);

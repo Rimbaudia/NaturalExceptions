@@ -31,8 +31,9 @@ final class IconNamesResolveTest {
     void everyIconNameInCodeHasATexture() throws Exception {
         List<String> problems = new ArrayList<>();
         try (Stream<Path> files = Files.walk(SOURCES)) {
-            for (Path file : (Iterable<Path>) files.filter(p -> p.toString()
-                .endsWith(".java"))::iterator) {
+            for (Path file : (Iterable<Path>) files.filter(
+                p -> p.toString()
+                    .endsWith(".java"))::iterator) {
                 for (String line : Files.readAllLines(file, StandardCharsets.UTF_8)) {
                     if (!line.contains("registerIcon(") && !line.contains("TextureName(")) continue;
                     Matcher matcher = ICON.matcher(line);
@@ -75,5 +76,29 @@ final class IconNamesResolveTest {
             && !Files.isRegularFile(TEXTURES.resolve("blocks/" + parts[1] + ".png"))) {
                 problems.add(where + ": " + icon);
             }
+    }
+
+    @Test
+    void everyGuiTextureInCodeExists() throws IOException {
+        Pattern gui = Pattern.compile("\"(textures/gui/[a-z0-9_]+\\.png)\"");
+        List<String> problems = new ArrayList<>();
+        try (Stream<Path> files = Files.walk(SOURCES)) {
+            for (Path file : (Iterable<Path>) files.filter(
+                p -> p.toString()
+                    .endsWith(".java"))::iterator) {
+                String text = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+                Matcher matcher = gui.matcher(text);
+                while (matcher.find()) {
+                    // Only this mod's own GUI art; vanilla locations are single-argument ResourceLocations.
+                    int start = Math.max(0, matcher.start() - 40);
+                    if (!text.substring(start, matcher.start())
+                        .contains("naturalexceptions")) continue;
+                    String path = matcher.group(1)
+                        .substring("textures/".length());
+                    if (!Files.isRegularFile(TEXTURES.resolve(path))) problems.add(file.getFileName() + ": " + path);
+                }
+            }
+        }
+        assertTrue(problems.isEmpty(), "Missing GUI textures: " + problems);
     }
 }

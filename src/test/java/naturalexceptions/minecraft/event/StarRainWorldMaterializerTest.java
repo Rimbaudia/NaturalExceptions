@@ -2,7 +2,6 @@ package naturalexceptions.minecraft.event;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Proxy;
@@ -28,7 +27,6 @@ import naturalexceptions.core.event.EventInstanceFactory;
 import naturalexceptions.core.event.EventRecord;
 import naturalexceptions.core.event.StarRainImpact;
 import naturalexceptions.core.event.WorldEventSchedule;
-import naturalexceptions.core.fluid.FluidCellKey;
 import naturalexceptions.core.fluid.FluidParcel;
 import naturalexceptions.core.persistence.WorldMetadata;
 import naturalexceptions.minecraft.persistence.NEWorldSavedData;
@@ -70,9 +68,14 @@ final class StarRainWorldMaterializerTest {
         naturalexceptions.core.event.StarRainCraterPlan plan = naturalexceptions.core.event.StarRainCraterPlan
             .of(impact.severity(), naturalexceptions.core.event.StarRainCraterPlan.seedOf(impact.id()));
         int coreY = 64 + plan.ballCenterDy();
-        assertEquals(NEBlocks.fallenStarCell, world.getBlock(impact.x(), coreY, impact.z()), "molten core at the heart");
-        assertEquals(NEBlocks.impactCrust, world.getBlock(impact.x(), coreY + (impact.severity() >= 3 ? 2 : 1),
-            impact.z()), "fused crust shell above it");
+        assertEquals(
+            NEBlocks.fallenStarCell,
+            world.getBlock(impact.x(), coreY, impact.z()),
+            "molten core at the heart");
+        assertEquals(
+            NEBlocks.impactCrust,
+            world.getBlock(impact.x(), coreY + (impact.severity() >= 3 ? 2 : 1), impact.z()),
+            "fused crust shell above it");
         assertEquals(Blocks.air, world.getBlock(impact.x() + plan.radius() - 1, 64, impact.z()), "crater cleared");
         long stellar = 0L;
         int crust = 0;
@@ -87,13 +90,19 @@ final class StarRainWorldMaterializerTest {
             } else crust++;
         }
         assertEquals(originalMass, stellar, "all stellar matter is in the core, none lost or created");
-        assertEquals(plan.cellsWithRole(naturalexceptions.core.event.StarRainCraterPlan.Role.CRUST).size(), crust);
+        assertEquals(
+            plan.cellsWithRole(naturalexceptions.core.event.StarRainCraterPlan.Role.CRUST)
+                .size(),
+            crust);
         assertEquals(
             0L,
             impact.stellarMass()
                 .milligrams());
         int placements = world.fluidPlacements;
-        assertEquals(plan.cellsWithRole(naturalexceptions.core.event.StarRainCraterPlan.Role.CORE).size(), placements);
+        assertEquals(
+            plan.cellsWithRole(naturalexceptions.core.event.StarRainCraterPlan.Role.CORE)
+                .size(),
+            placements);
         assertFalse(materializer.materialize(world, saved, impact));
         assertEquals(placements, world.fluidPlacements, "materializing twice does nothing");
     }
@@ -102,11 +111,15 @@ final class StarRainWorldMaterializerTest {
     void craterNeverDestroysTileEntitiesBedrockOrParcelHosts() {
         NEBlocks.register();
         assertTrue(StarRainWorldMaterializer.carvable(Blocks.stone, false, 1.5F));
-        assertTrue(StarRainWorldMaterializer.carvable(Blocks.planks, false, 2.0F), "builds in the blast zone are damaged");
+        assertTrue(
+            StarRainWorldMaterializer.carvable(Blocks.planks, false, 2.0F),
+            "builds in the blast zone are damaged");
         assertFalse(StarRainWorldMaterializer.carvable(Blocks.chest, true, 2.5F), "tile entities are spared");
         assertFalse(StarRainWorldMaterializer.carvable(Blocks.bedrock, false, -1.0F));
         assertFalse(StarRainWorldMaterializer.carvable(Blocks.obsidian, false, -1.0F), "unbreakable stays");
-        assertFalse(StarRainWorldMaterializer.carvable(NEBlocks.fluidCell, false, 0.1F), "other parcels are never erased");
+        assertFalse(
+            StarRainWorldMaterializer.carvable(NEBlocks.fluidCell, false, 0.1F),
+            "other parcels are never erased");
     }
 
     private static final class FakeWorld extends World {

@@ -73,6 +73,7 @@ public final class ItemBlacksmithHammer extends Item {
         setMaxDamage(250);
         setUnlocalizedName("blacksmithHammer");
         setTextureName("naturalexceptions:blacksmith_hammer");
+        setFull3D();
     }
 
     public static HammerOperation getOperation(ItemStack stack) {

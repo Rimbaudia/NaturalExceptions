@@ -173,8 +173,11 @@ public final class StarRainWorldMaterializer {
         long[] shares = StarRainCraterPlan.splitMilligrams(total.milligrams(), core.size());
         for (int i = 0; i < core.size(); i++) {
             if (shares[i] <= 0L) continue;
-            placements.add(new Placement(core.get(i), coreParcel(impact, MaterialQuantity.ofMilligrams(shares[i])),
-                NEBlocks.fallenStarCell));
+            placements.add(
+                new Placement(
+                    core.get(i),
+                    coreParcel(impact, MaterialQuantity.ofMilligrams(shares[i])),
+                    NEBlocks.fallenStarCell));
         }
         for (FluidCellKey key : crust) {
             placements.add(new Placement(key, crustParcel(impact), NEBlocks.impactCrust));
@@ -186,11 +189,8 @@ public final class StarRainWorldMaterializer {
         MaterialRef ref = BuiltinMaterials.STELLAR_MATTER.ref();
         CanonicalMaterialKey key = CanonicalMaterialKey
             .of(BuiltinMaterials.STELLAR_MATTER_COMPOSITION, MaterialPhase.LIQUID, null, null);
-        ActiveThermalState thermal = ActiveThermalState.atTemperature(
-            CORE_TEMPERATURE_K,
-            1.0,
-            mass.toKilograms(),
-            BuiltinMaterials.STELLAR_MATTER_PROPERTIES);
+        ActiveThermalState thermal = ActiveThermalState
+            .atTemperature(CORE_TEMPERATURE_K, 1.0, mass.toKilograms(), BuiltinMaterials.STELLAR_MATTER_PROPERTIES);
         return new FluidParcel(ref, key, BuiltinMaterials.STELLAR_MATTER_COMPOSITION, mass, thermal, impact.id());
     }
 
@@ -199,11 +199,8 @@ public final class StarRainWorldMaterializer {
             .ofKilograms(BuiltinMaterials.IMPACT_CRUST_PROPERTIES.density() * CRUST_FILL);
         CanonicalMaterialKey key = CanonicalMaterialKey
             .of(BuiltinMaterials.IMPACT_CRUST_COMPOSITION, MaterialPhase.SOLID, null, null);
-        ActiveThermalState thermal = ActiveThermalState.atTemperature(
-            CRUST_TEMPERATURE_K,
-            0.0,
-            mass.toKilograms(),
-            BuiltinMaterials.IMPACT_CRUST_PROPERTIES);
+        ActiveThermalState thermal = ActiveThermalState
+            .atTemperature(CRUST_TEMPERATURE_K, 0.0, mass.toKilograms(), BuiltinMaterials.IMPACT_CRUST_PROPERTIES);
         return new FluidParcel(
             BuiltinMaterials.IMPACT_CRUST.ref(),
             key,
@@ -281,7 +278,8 @@ public final class StarRainWorldMaterializer {
         for (Object object : world.getEntitiesWithinAABB(net.minecraft.entity.player.EntityPlayer.class, bounds)) {
             net.minecraft.entity.player.EntityPlayer player = (net.minecraft.entity.player.EntityPlayer) object;
             if (player.getDistanceSq(x + 0.5D, y + 0.5D, z + 0.5D) <= radius * radius) {
-                player.addChatMessage(new net.minecraft.util.ChatComponentText(StarRainPresentation.impactMessage(impact)));
+                player.addChatMessage(
+                    new net.minecraft.util.ChatComponentText(StarRainPresentation.impactMessage(impact)));
             }
         }
     }

@@ -59,7 +59,8 @@ public final class BlockSmelterTuyere extends Block implements naturalexceptions
     public double[][] parts(int metadata) {
         int facing = metadata >= 2 && metadata <= 5 ? metadata : 2;
         double[][] rotated = new double[PARTS.length][];
-        for (int i = 0; i < PARTS.length; i++) rotated[i] = naturalexceptions.minecraft.block.PartModel.rotate(PARTS[i], facing);
+        for (int i = 0; i < PARTS.length; i++)
+            rotated[i] = naturalexceptions.minecraft.block.PartModel.rotate(PARTS[i], facing);
         return rotated;
     }
 
@@ -100,7 +101,8 @@ public final class BlockSmelterTuyere extends Block implements naturalexceptions
         TileEntityStarterSmelter smelter = SmelterPortLookup.findTuyereController(world, x, y, z);
         if (smelter == null || smelter.getForcedDraftTicks() <= 0) return;
         double[] port = parts(world.getBlockMetadata(x, y, z))[4];
-        double px = x + (port[0] + port[3]) / 2.0, py = y + (port[1] + port[4]) / 2.0, pz = z + (port[2] + port[5]) / 2.0;
+        double px = x + (port[0] + port[3]) / 2.0, py = y + (port[1] + port[4]) / 2.0,
+            pz = z + (port[2] + port[5]) / 2.0;
         world.spawnParticle("smoke", px, py, pz, 0.0, 0.03, 0.0);
         if (random.nextInt(3) == 0) world.spawnParticle("flame", px, py, pz, 0.0, 0.01, 0.0);
     }

@@ -215,7 +215,9 @@ public final class BuiltinMaterials {
         .addTrait("low_toxicity")
         .build();
     public static final MaterialDefinition STELLAR_MATTER = new MaterialDefinition(
-        STELLAR_MATTER_MATERIAL_ID, "material.naturalexceptions.stellar_matter", STELLAR_MATTER_COMPOSITION,
+        STELLAR_MATTER_MATERIAL_ID,
+        "material.naturalexceptions.stellar_matter",
+        STELLAR_MATTER_COMPOSITION,
         STELLAR_MATTER_PROPERTIES);
 
     /** Ground rock fused into glassy crust around a fallen star; ordinary terrestrial matter, basalt-like. */
@@ -234,7 +236,9 @@ public final class BuiltinMaterials {
         .electricalResistivity(1.0e6)
         .build();
     public static final MaterialDefinition IMPACT_CRUST = new MaterialDefinition(
-        IMPACT_CRUST_MATERIAL_ID, "material.naturalexceptions.impact_crust", IMPACT_CRUST_COMPOSITION,
+        IMPACT_CRUST_MATERIAL_ID,
+        "material.naturalexceptions.impact_crust",
+        IMPACT_CRUST_COMPOSITION,
         IMPACT_CRUST_PROPERTIES);
 
     private BuiltinMaterials() {}

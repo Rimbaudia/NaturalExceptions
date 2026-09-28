@@ -108,21 +108,22 @@ public final class RenderCastingTable extends TileEntitySpecialRenderer {
             tessellator.addVertexWithUV(maxX, yBase, minZ, maxU, minV);
             tessellator.draw();
 
-            // Exterior walls
+            // Exterior walls: a thin strip of the texture, proportional to the wall height, not the whole icon.
+            double wallV = maxV - vH * Math.min(1.0, (yRim - yBase) / Math.max(1.0e-6, maxX - minX));
             tessellator.startDrawingQuads();
             // North exterior wall (-Z)
             tessellator.setNormal(0.0F, 0.0F, -1.0F);
             GL11.glColor4f(0.75F, 0.72F, 0.68F, 1.0F);
             tessellator.addVertexWithUV(minX, yBase, minZ, minU, maxV);
             tessellator.addVertexWithUV(maxX, yBase, minZ, maxU, maxV);
-            tessellator.addVertexWithUV(maxX, yRim, minZ, maxU, minV);
-            tessellator.addVertexWithUV(minX, yRim, minZ, minU, minV);
+            tessellator.addVertexWithUV(maxX, yRim, minZ, maxU, wallV);
+            tessellator.addVertexWithUV(minX, yRim, minZ, minU, wallV);
 
             // South exterior wall (+Z)
             tessellator.setNormal(0.0F, 0.0F, 1.0F);
             GL11.glColor4f(0.85F, 0.82F, 0.78F, 1.0F);
-            tessellator.addVertexWithUV(minX, yRim, maxZ, minU, minV);
-            tessellator.addVertexWithUV(maxX, yRim, maxZ, maxU, minV);
+            tessellator.addVertexWithUV(minX, yRim, maxZ, minU, wallV);
+            tessellator.addVertexWithUV(maxX, yRim, maxZ, maxU, wallV);
             tessellator.addVertexWithUV(maxX, yBase, maxZ, maxU, maxV);
             tessellator.addVertexWithUV(minX, yBase, maxZ, minU, maxV);
 
@@ -130,16 +131,16 @@ public final class RenderCastingTable extends TileEntitySpecialRenderer {
             tessellator.setNormal(-1.0F, 0.0F, 0.0F);
             GL11.glColor4f(0.65F, 0.62F, 0.58F, 1.0F);
             tessellator.addVertexWithUV(minX, yBase, minZ, minU, maxV);
-            tessellator.addVertexWithUV(minX, yRim, minZ, minU, minV);
-            tessellator.addVertexWithUV(minX, yRim, maxZ, maxU, minV);
+            tessellator.addVertexWithUV(minX, yRim, minZ, minU, wallV);
+            tessellator.addVertexWithUV(minX, yRim, maxZ, maxU, wallV);
             tessellator.addVertexWithUV(minX, yBase, maxZ, maxU, maxV);
 
             // East exterior wall (+X)
             tessellator.setNormal(1.0F, 0.0F, 0.0F);
             GL11.glColor4f(0.70F, 0.68F, 0.64F, 1.0F);
             tessellator.addVertexWithUV(maxX, yBase, maxZ, maxU, maxV);
-            tessellator.addVertexWithUV(maxX, yRim, maxZ, maxU, minV);
-            tessellator.addVertexWithUV(maxX, yRim, minZ, minU, minV);
+            tessellator.addVertexWithUV(maxX, yRim, maxZ, maxU, wallV);
+            tessellator.addVertexWithUV(maxX, yRim, minZ, minU, wallV);
             tessellator.addVertexWithUV(maxX, yBase, minZ, minU, maxV);
             tessellator.draw();
 

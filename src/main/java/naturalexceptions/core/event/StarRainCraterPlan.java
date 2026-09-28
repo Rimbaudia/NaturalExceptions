@@ -156,14 +156,16 @@ public final class StarRainCraterPlan {
                     double t = r / edge;
                     int floor = -(int) Math.floor(depth * Math.sqrt(Math.max(0.0, 1.0 - t * t)));
                     for (int dy = floor; dy <= CLEAR_ABOVE; dy++) {
-                        if (!inBall(dx, dy - ballCenterDy, dz, ballRadius)) cells.add(new Cell(dx, dy, dz, Role.CLEAR, 0));
+                        if (!inBall(dx, dy - ballCenterDy, dz, ballRadius))
+                            cells.add(new Cell(dx, dy, dz, Role.CLEAR, 0));
                     }
                     int liningDy = floor - 1;
                     if (!inBall(dx, liningDy - ballCenterDy, dz, ballRadius)) {
                         cells.add(new Cell(dx, liningDy, dz, Role.LINING, liningVariant(seed, dx, dz, severity)));
                     }
                 } else if (r <= edge + 1.5) {
-                    rim.add(new RimColumn(dx, dz, (int) Long.remainderUnsigned(mix(seed ^ key(dx, dz) ^ 0x52494dL), 3L)));
+                    rim.add(
+                        new RimColumn(dx, dz, (int) Long.remainderUnsigned(mix(seed ^ key(dx, dz) ^ 0x52494dL), 3L)));
                 }
             }
         }

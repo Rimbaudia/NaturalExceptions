@@ -29,6 +29,7 @@ public final class ItemBlacksmithTongs extends Item {
         setMaxDamage(100);
         setUnlocalizedName("blacksmithTongs");
         setTextureName("naturalexceptions:blacksmith_tongs");
+        setFull3D();
     }
 
     public static boolean hasWorkpiece(ItemStack tongs) {
@@ -256,5 +257,41 @@ public final class ItemBlacksmithTongs extends Item {
             return "Blacksmith Tongs (" + workpiece.getDisplayName() + ")";
         }
         return "Blacksmith Tongs";
+    }
+
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    private net.minecraft.util.IIcon workpieceIcon;
+
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public void registerIcons(net.minecraft.client.renderer.texture.IIconRegister register) {
+        itemIcon = register.registerIcon("naturalexceptions:blacksmith_tongs");
+        workpieceIcon = register.registerIcon("naturalexceptions:tongs_workpiece");
+    }
+
+    /** Pass 0: the tongs; pass 1: the stock held in the jaws, glowing if hot. */
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public boolean requiresMultipleRenderPasses() {
+        return true;
+    }
+
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public net.minecraft.util.IIcon getIcon(ItemStack stack, int pass) {
+        return pass == 1 && hasWorkpiece(stack) ? workpieceIcon : itemIcon;
+    }
+
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public int getColorFromItemStack(ItemStack stack, int pass) {
+        if (pass != 1 || !hasWorkpiece(stack)) return 0xFFFFFF;
+        ItemStack workpiece = getWorkpiece(stack);
+        naturalexceptions.core.fabrication.ComponentInstance component = ItemGenericComponent.getComponent(workpiece);
+        if (component == null) return 0xFFFFFF;
+        return HeatWords.seenMetalColour(
+            component.materialRef(),
+            component.stateKey(),
+            ItemGenericComponent.getThermalState(workpiece));
     }
 }

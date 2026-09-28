@@ -46,7 +46,7 @@ public final class BlockCastingTable extends BlockContainer {
     public void registerBlockIcons(IIconRegister reg) {
         iconTop = reg.registerIcon("naturalexceptions:casting_table_top");
         iconSide = reg.registerIcon("naturalexceptions:casting_table_side");
-        iconBottom = reg.registerIcon("naturalexceptions:starter_smelter_base");
+        iconBottom = reg.registerIcon("naturalexceptions:casting_table_bottom");
     }
 
     @Override

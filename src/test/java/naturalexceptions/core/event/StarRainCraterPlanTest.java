@@ -28,8 +28,14 @@ final class StarRainCraterPlanTest {
                 maxX = Math.max(maxX, cell.dx());
             }
             assertEquals(across[severity - 1], maxX - minX + 1, "ball width at severity " + severity);
-            assertEquals(crust[severity - 1], plan.cellsWithRole(StarRainCraterPlan.Role.CRUST).size());
-            assertEquals(core[severity - 1], plan.cellsWithRole(StarRainCraterPlan.Role.CORE).size());
+            assertEquals(
+                crust[severity - 1],
+                plan.cellsWithRole(StarRainCraterPlan.Role.CRUST)
+                    .size());
+            assertEquals(
+                core[severity - 1],
+                plan.cellsWithRole(StarRainCraterPlan.Role.CORE)
+                    .size());
         }
     }
 
@@ -49,7 +55,8 @@ final class StarRainCraterPlanTest {
         for (int severity = 1; severity <= 3; severity++) {
             StarRainCraterPlan plan = StarRainCraterPlan.of(severity, 7L * severity);
             for (StarRainCraterPlan.Cell cell : plan.cells()) {
-                assertTrue(Math.abs(cell.dx()) <= plan.horizontalReach() && Math.abs(cell.dz()) <= plan.horizontalReach());
+                assertTrue(
+                    Math.abs(cell.dx()) <= plan.horizontalReach() && Math.abs(cell.dz()) <= plan.horizontalReach());
                 if (cell.role() == StarRainCraterPlan.Role.CORE || cell.role() == StarRainCraterPlan.Role.CRUST) {
                     assertTrue(cell.dy() < 0, "the ball lies below the old surface, inside the crater");
                 }
@@ -58,7 +65,9 @@ final class StarRainCraterPlanTest {
                 double r = Math.sqrt(rim.dx() * rim.dx() + rim.dz() * rim.dz());
                 assertTrue(r > plan.radius() - 1.0 && r <= plan.horizontalReach());
             }
-            assertFalse(plan.rim().isEmpty());
+            assertFalse(
+                plan.rim()
+                    .isEmpty());
         }
     }
 

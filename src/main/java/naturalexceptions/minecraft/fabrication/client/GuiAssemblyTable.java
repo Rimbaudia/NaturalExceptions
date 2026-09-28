@@ -40,8 +40,6 @@ public final class GuiAssemblyTable extends GuiContainer {
         int inputsCenter = (ContainerAssemblyTable.HEAD_SLOT_X + ContainerAssemblyTable.HANDLE_SLOT_X) / 2 + 8;
         drawCenteredString("Head + Handle", inputsCenter, 18, 0x777777);
         drawCenteredString("Result", ContainerAssemblyTable.RESULT_SLOT_X + 8, 18, 0x777777);
-        drawCenteredString("+", 71, 39, 0x777777);
-        drawCenteredString("->", 112, 39, 0x777777);
 
         // Status indicator
         boolean hasHead = tileEntity.getStackInSlot(TileEntityAssemblyTable.SLOT_HEAD) != null;
@@ -81,10 +79,5 @@ public final class GuiAssemblyTable extends GuiContainer {
         int k = (this.width - this.xSize) / 2;
         int l = (this.height - this.ySize) / 2;
         this.drawTexturedModalRect(k, l, 0, 0, this.xSize, this.ySize);
-
-        // Clear only the baked arrow. The pixel-font arrow is drawn in the foreground.
-        drawRect(k + 99, l + 35, k + 125, l + 52, 0xFFC6C6C6);
-        // The baked plus is offset toward the head slot; center it in the input gap.
-        drawRect(k + 66, l + 35, k + 76, l + 52, 0xFFC6C6C6);
     }
 }

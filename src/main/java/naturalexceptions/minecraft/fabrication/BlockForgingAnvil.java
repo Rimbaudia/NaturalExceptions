@@ -22,7 +22,7 @@ import naturalexceptions.minecraft.item.ItemGenericComponent;
 /**
  * Forging Anvil block used for shaping and working metal components and blanks.
  */
-public final class BlockForgingAnvil extends BlockContainer {
+public final class BlockForgingAnvil extends BlockContainer implements naturalexceptions.minecraft.block.PartModel {
 
     @SideOnly(Side.CLIENT)
     private IIcon iconTop;
@@ -54,6 +54,44 @@ public final class BlockForgingAnvil extends BlockContainer {
         if (side == 1) return iconTop;
         if (side == 0) return iconBase;
         return iconSide;
+    }
+
+    /** Foot, waist, and a working face with a horn; the face stays flush with the block top for the workpiece. */
+    private static final double[][] PARTS = { { 0.125, 0.0, 0.1875, 0.875, 0.25, 0.8125 },
+        { 0.3125, 0.25, 0.3125, 0.6875, 0.625, 0.6875 }, { 0.1875, 0.625, 0.125, 0.8125, 1.0, 0.875 },
+        { 0.375, 0.75, 0.0, 0.625, 0.9375, 0.125 } };
+
+    @Override
+    public double[][] parts(int metadata) {
+        double[][] copy = new double[PARTS.length][];
+        for (int i = 0; i < PARTS.length; i++) copy[i] = PARTS[i].clone();
+        return copy;
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public IIcon partIcon(int index, int metadata) {
+        return index == 2 ? iconTop : index == 0 ? iconBase : iconSide;
+    }
+
+    @Override
+    public int inventoryMetadata() {
+        return 0;
+    }
+
+    @Override
+    public int getRenderType() {
+        return naturalexceptions.minecraft.block.PartModel.RenderType.id;
+    }
+
+    @Override
+    public boolean isOpaqueCube() {
+        return false;
+    }
+
+    @Override
+    public boolean renderAsNormalBlock() {
+        return false;
     }
 
     @Override

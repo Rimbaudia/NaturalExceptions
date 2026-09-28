@@ -38,10 +38,10 @@ public final class RenderAssemblyTable extends TileEntitySpecialRenderer {
         } else {
             // Render head on the left and handle on the right
             if (head != null) {
-                renderFlatItem(te, head, x + 0.12D, y + 1.002D, z + 0.25D, 0.40D, 0.50D);
+                renderFlatItem(te, head, x + 0.08D, y + 1.002D, z + 0.30D, 0.40D, 0.40D);
             }
             if (handle != null) {
-                renderFlatItem(te, handle, x + 0.52D, y + 1.002D, z + 0.25D, 0.40D, 0.50D);
+                renderFlatItem(te, handle, x + 0.52D, y + 1.002D, z + 0.30D, 0.40D, 0.40D);
             }
         }
     }
