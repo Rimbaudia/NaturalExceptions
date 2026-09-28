@@ -340,8 +340,8 @@ public final class ItemGenericComponent extends Item {
             }
         } catch (Throwable ignored) {}
 
-        if (showAdvanced) {
-            list.add("\u00a78--- Developer diagnostics (F3+H) ---");
+        if (advanced) {
+            list.add("\u00a78--- Developer diagnostics ---");
             list.add(String.format("  \u00a78Mass: %s", comp.mass()));
             if (thermal != null) {
                 list.add(String.format("  \u00a78Temperature: %.1f K (%.1f \u00b0C)", tempK, tempK - 273.15));
@@ -374,8 +374,6 @@ public final class ItemGenericComponent extends Item {
                         comp.damage()
                             .cracking()));
             }
-        } else {
-            list.add("\u00a78[Hold SHIFT for physical diagnostics]");
         }
     }
 

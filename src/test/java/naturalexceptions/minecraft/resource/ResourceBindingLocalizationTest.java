@@ -220,7 +220,7 @@ final class ResourceBindingLocalizationTest {
         NBTTagCompound badTag = new NBTTagCompound();
         badTag.setInteger("Format", 999);
         corruptMat.setTagCompound(badTag);
-        assertEquals("\u00a7cMaterial Sample (Corrupted)", corruptMat.getDisplayName());
+        assertEquals("Crumbled Sample", corruptMat.getDisplayName());
 
         // 2. Generic component
         ItemStack emptyComp = new ItemStack(NEItems.genericComponent);

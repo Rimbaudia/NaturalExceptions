@@ -21,6 +21,12 @@ public final class VanillaVisualLanguageAssetTest {
     private static final File BLOCKS_DIR = new File(ASSETS_DIR, "textures/blocks");
     private static final File ITEMS_DIR = new File(ASSETS_DIR, "textures/items");
 
+    /** A vertical strip of 16x16 frames with an animation descriptor is 16 pixels high per frame. */
+    private static int frameHeight(File file, BufferedImage img) {
+        boolean animated = new File(file.getPath() + ".mcmeta").isFile();
+        return animated && img.getHeight() % img.getWidth() == 0 ? img.getWidth() : img.getHeight();
+    }
+
     @Test
     void allBlockTexturesAreStrictly16x16() throws IOException {
         assertTrue(BLOCKS_DIR.exists() && BLOCKS_DIR.isDirectory(), "Blocks directory must exist");
@@ -32,7 +38,7 @@ public final class VanillaVisualLanguageAssetTest {
             BufferedImage img = ImageIO.read(f);
             assertNotNull(img, "Must read image: " + f.getName());
             assertEquals(16, img.getWidth(), "Block texture width must be 16: " + f.getName());
-            assertEquals(16, img.getHeight(), "Block texture height must be 16: " + f.getName());
+            assertEquals(16, frameHeight(f, img), "Block texture frame height must be 16: " + f.getName());
         }
     }
 
@@ -67,7 +73,7 @@ public final class VanillaVisualLanguageAssetTest {
             BufferedImage img = ImageIO.read(f);
             assertNotNull(img, "Must read image: " + f.getName());
             assertTrue(
-                img.getWidth() <= 16 && img.getHeight() <= 16,
+                img.getWidth() <= 16 && frameHeight(f, img) <= 16,
                 "Texture " + f.getName() + " is HD (" + img.getWidth() + "x" + img.getHeight() + "), expected 16x16");
         }
     }

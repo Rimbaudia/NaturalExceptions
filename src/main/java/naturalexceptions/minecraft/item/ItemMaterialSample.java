@@ -217,12 +217,13 @@ public final class ItemMaterialSample extends Item {
             }
 
             if (ref.isAuthored() && BuiltinContent.materials().getAuthored(ref) == null) {
-                return "Material Sample (Unresolved)";
+                // Matter the game cannot name is described by what the eye sees, not as an error.
+                return isLiquid ? "Unfamiliar Molten Matter" : "Unfamiliar Fragment";
             }
 
             return isLiquid ? "Molten Material Sample" : "Material Sample";
         } catch (PersistenceValidationException e) {
-            return "\u00a7cMaterial Sample (Corrupted)";
+            return "Crumbled Sample";
         }
     }
 
@@ -388,8 +389,8 @@ public final class ItemMaterialSample extends Item {
                 }
             }
 
-            if (showShift || advanced) {
-                list.add("\u00a78--- Developer diagnostics (F3+H) ---");
+            if (advanced) {
+                list.add("\u00a78--- Developer diagnostics ---");
                 if (key != null) {
                     list.add("  \u00a78A field assay can estimate density.");
                 }
@@ -400,7 +401,7 @@ public final class ItemMaterialSample extends Item {
                 list.add("\u00a78Right-click to record an observation");
             }
         } catch (PersistenceValidationException e) {
-            list.add("\u00a7cCorrupted data: " + e.getMessage());
+            list.add("\u00a77Too crumbled to tell what it is.");
         }
     }
 

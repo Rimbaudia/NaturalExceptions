@@ -600,8 +600,8 @@ public final class ItemGenericAssembly extends Item {
             }
         } catch (Throwable ignored) {}
 
-        if (showShift || advanced) {
-            list.add("\u00a78--- Developer diagnostics (F3+H) ---");
+        if (advanced) {
+            list.add("\u00a78--- Developer diagnostics ---");
             list.add("  \u00a78Total Mass: " + assembly.totalMass());
             if (!assembly.isBroken()) {
                 double wear = assembly.head()
@@ -617,8 +617,6 @@ public final class ItemGenericAssembly extends Item {
                     String
                         .format("  \u00a78Strain: Wear %.1f%% | Deform %.1f%% | Cracks %.1f%%", wear, deform, cracks));
             }
-        } else {
-            list.add("\u00a78[Hold SHIFT for physical diagnostics]");
         }
     }
 

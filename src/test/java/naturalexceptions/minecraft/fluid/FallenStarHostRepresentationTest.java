@@ -125,23 +125,40 @@ final class FallenStarHostRepresentationTest {
     @Test void customHostTexturesExistAsAuthoredSixteenPixelResources() {
         for (String texture : Arrays.asList("blocks/fallen_star_solid.png", "blocks/fallen_star_molten.png",
             "blocks/fluid_liquid.png", "blocks/fluid_solid.png", "items/fluid_vessel_empty.png",
-            "items/fluid_vessel_filled.png")) {
+            "items/fluid_vessel_frame.png", "items/fluid_vessel_contents.png", "items/filter_mask.png",
+            "items/field_dressing.png", "items/field_assay.png", "items/refractory_brick.png",
+            "items/refractory_mix.png", "items/almanac.png")) {
             File file = new File("src/main/resources/assets/naturalexceptions/textures", texture);
-            assertNotNull(file);
             org.junit.jupiter.api.Assertions.assertTrue(file.isFile(), texture);
             try {
                 java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(file);
                 assertEquals(16, image.getWidth(), texture);
-                assertEquals(16, image.getHeight(), texture);
+                // Animated textures are vertical strips of 16x16 frames with an animation descriptor.
+                assertEquals(0, image.getHeight() % 16, texture);
+                if (image.getHeight() > 16) {
+                    org.junit.jupiter.api.Assertions.assertTrue(new File(file.getPath() + ".mcmeta").isFile(), texture);
+                }
             } catch (java.io.IOException error) { throw new AssertionError(error); }
         }
         try {
-            java.awt.image.BufferedImage empty = javax.imageio.ImageIO.read(new File(
-                "src/main/resources/assets/naturalexceptions/textures/items/fluid_vessel_empty.png"));
-            java.awt.image.BufferedImage filled = javax.imageio.ImageIO.read(new File(
-                "src/main/resources/assets/naturalexceptions/textures/items/fluid_vessel_filled.png"));
-            org.junit.jupiter.api.Assertions.assertNotEquals(empty.getRGB(8, 10), filled.getRGB(8, 10),
-                "filled vessel icon should visibly contain cyan liquid");
+            String dir = "src/main/resources/assets/naturalexceptions/textures/";
+            java.awt.image.BufferedImage molten = javax.imageio.ImageIO.read(new File(dir + "blocks/fallen_star_molten.png"));
+            java.awt.image.BufferedImage solid = javax.imageio.ImageIO.read(new File(dir + "blocks/fallen_star_solid.png"));
+            org.junit.jupiter.api.Assertions.assertTrue(meanLuminance(molten) > meanLuminance(solid) + 40.0,
+                "molten stellar matter reads brighter than the set glass");
+            java.awt.image.BufferedImage frame = javax.imageio.ImageIO.read(new File(dir + "items/fluid_vessel_frame.png"));
+            java.awt.image.BufferedImage contents = javax.imageio.ImageIO.read(new File(dir + "items/fluid_vessel_contents.png"));
+            assertEquals(0, frame.getRGB(7, 11) >>> 24, "the jar interior lets the tinted contents show through");
+            assertEquals(255, contents.getRGB(7, 11) >>> 24, "the contents layer fills the jar body");
         } catch (java.io.IOException error) { throw new AssertionError(error); }
+    }
+
+    private static double meanLuminance(java.awt.image.BufferedImage image) {
+        double total = 0.0;
+        for (int y = 0; y < 16; y++) for (int x = 0; x < 16; x++) {
+            int rgb = image.getRGB(x, y);
+            total += 0.3 * ((rgb >> 16) & 255) + 0.59 * ((rgb >> 8) & 255) + 0.11 * (rgb & 255);
+        }
+        return total / 256.0;
     }
 }

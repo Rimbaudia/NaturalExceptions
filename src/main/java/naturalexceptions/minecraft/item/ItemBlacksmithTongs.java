@@ -116,7 +116,7 @@ public final class ItemBlacksmithTongs extends Item {
                     player.addChatMessage(
                         new ChatComponentText(
                             String.format(
-                                "\u00a7b[Blacksmith Tongs] Quenched %s in water! (Cooled to 293 K | Quenched)",
+                                "\u00a7b[Blacksmith Tongs] Quenched %s in water with a hiss.",
                                 wp.getDisplayName())));
                 }
                 return true;
@@ -235,7 +235,7 @@ public final class ItemBlacksmithTongs extends Item {
                 }
             } catch (Throwable ignored) {}
 
-            if (showAdvanced && thermal != null) {
+            if (advanced && thermal != null) {
                 list.add(
                     String.format(
                         "  \u00a78Temperature: %.1f K (%.1f \u00b0C)",

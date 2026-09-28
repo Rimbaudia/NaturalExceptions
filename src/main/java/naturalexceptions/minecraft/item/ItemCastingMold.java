@@ -665,11 +665,9 @@ public final class ItemCastingMold extends Item {
         if (thermal == null) {
             return "The cast metal's thermal state is unavailable; extraction is blocked.";
         }
-        return String.format(
-            "The cast metal is still molten/hot (%.1f K)! Solidifies below %.1f K.",
-            thermal.temperatureKelvin(),
-            thermal.properties()
-                .meltingPointKelvin());
+        return "The metal in the mold is " + HeatWords.describe(thermal.temperatureKelvin())
+            + (thermal.phase() == naturalexceptions.core.material.MaterialPhase.LIQUID ? " and still liquid" : "")
+            + ". Let it cool and set first.";
     }
 
     private static String extractionFailureMessage(ItemStack stack) {
@@ -738,8 +736,8 @@ public final class ItemCastingMold extends Item {
                 }
             } catch (Throwable ignored) {}
 
-            if (showAdvanced) {
-                list.add("\u00a78--- Developer diagnostics (F3+H) ---");
+            if (advanced) {
+                list.add("\u00a78--- Developer diagnostics ---");
                 list.add(String.format("  \u00a78Temperature: %.1f K (%.1f \u00b0C)", temp, celsius));
             }
             String diagnostic = getPayloadDiagnostic(stack);

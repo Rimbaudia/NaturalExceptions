@@ -40,7 +40,8 @@ public final class ItemFluidVessel extends Item {
     public static final long CAPACITY_MICROLITRES = 1_000_000L;
     private static final String KEY_PARCEL = "FluidParcel";
     @SideOnly(Side.CLIENT) private IIcon emptyIcon;
-    @SideOnly(Side.CLIENT) private IIcon filledIcon;
+    @SideOnly(Side.CLIENT) private IIcon frameIcon;
+    @SideOnly(Side.CLIENT) private IIcon contentsIcon;
     public ItemFluidVessel() {
         setMaxStackSize(1); setUnlocalizedName("fluidVessel"); setTextureName("naturalexceptions:fluid_vessel_empty");
     }
@@ -48,12 +49,42 @@ public final class ItemFluidVessel extends Item {
     @Override @SideOnly(Side.CLIENT)
     public void registerIcons(IIconRegister register) {
         emptyIcon = register.registerIcon("naturalexceptions:fluid_vessel_empty");
-        filledIcon = register.registerIcon("naturalexceptions:fluid_vessel_filled");
+        frameIcon = register.registerIcon("naturalexceptions:fluid_vessel_frame");
+        contentsIcon = register.registerIcon("naturalexceptions:fluid_vessel_contents");
         itemIcon = emptyIcon;
     }
 
+    /** Pass 0 is the contents (tinted by what they are), pass 1 the glass jar drawn over them. */
     @Override @SideOnly(Side.CLIENT)
-    public IIcon getIconIndex(ItemStack stack) { return isFilled(stack) ? filledIcon : emptyIcon; }
+    public boolean requiresMultipleRenderPasses() { return true; }
+
+    @Override @SideOnly(Side.CLIENT)
+    public IIcon getIcon(ItemStack stack, int pass) {
+        if (!isFilled(stack)) return emptyIcon;
+        return pass == 0 ? contentsIcon : frameIcon;
+    }
+
+    @Override @SideOnly(Side.CLIENT)
+    public IIcon getIconIndex(ItemStack stack) { return isFilled(stack) ? frameIcon : emptyIcon; }
+
+    @Override @SideOnly(Side.CLIENT)
+    public int getColorFromItemStack(ItemStack stack, int pass) {
+        if (pass != 0 || !isFilled(stack)) return 0xFFFFFF;
+        return contentsColour(contents(stack));
+    }
+
+    /** What the contents look like through the glass: water clear-blue, hot matter glowing, the rest its colour. */
+    public static int contentsColour(FluidParcel parcel) {
+        if (parcel == null) return 0xFFFFFF;
+        if (parcel.composition().contains(ResourceId.of("minecraft", "water"))) return 0x3F76E4;
+        double kelvin = parcel.thermalState().temperatureKelvin();
+        if (parcel.phase() == MaterialPhase.LIQUID) {
+            return naturalexceptions.core.material.MaterialAppearance.getMoltenColor(parcel.materialRef(),
+                parcel.stateKey(), kelvin) & 0xFFFFFF;
+        }
+        return naturalexceptions.core.material.MaterialAppearance.getSolidColor(parcel.materialRef(),
+            parcel.stateKey()) & 0xFFFFFF;
+    }
 
     /** Affordable early-game 1 L glass vessel recipe. */
     public static net.minecraft.item.crafting.IRecipe survivalRecipe(Item item) {
@@ -100,6 +131,16 @@ public final class ItemFluidVessel extends Item {
         FluidParcel portion = parcel.extract(MaterialQuantity.ofMilligrams(fitMg));
         fluids.disturb(key);
         return portion;
+    }
+
+    /** Coarse fill level a person can see through the glass. */
+    public static String fillWords(long volumeMicrolitres) {
+        double fraction = volumeMicrolitres / (double) CAPACITY_MICROLITRES;
+        if (fraction >= 0.9) return "Full";
+        if (fraction >= 0.6) return "Mostly full";
+        if (fraction >= 0.35) return "About half full";
+        if (fraction >= 0.1) return "A little in the bottom";
+        return "A few drops";
     }
 
     public static boolean isFilled(ItemStack stack) {
@@ -183,7 +224,7 @@ public final class ItemFluidVessel extends Item {
             // cannot consume the parcel that is still owned by world state.
             if (!existing.materialRef().equals(incoming.materialRef())
                 || !existing.composition().equals(incoming.composition())) {
-                player.addChatMessage(new ChatComponentText("This spatial cell can only receive the same liquid material."));
+                player.addChatMessage(new ChatComponentText("\u00a77That pool is a different liquid; they would not mix."));
                 return false;
             }
             FluidVessel receiver = new FluidVessel(CAPACITY_MICROLITRES, FluidInteractionRules.sameMaterialOnly());
@@ -217,9 +258,10 @@ public final class ItemFluidVessel extends Item {
         try { saved.fluids().put(target, parcel); }
         catch (RuntimeException error) { world.setBlockToAir(tx, ty, tz); return false; }
         setContents(stack, null); saved.markDirty(); world.markBlockForUpdate(tx, ty, tz);
-        player.addChatMessage(new ChatComponentText("Spilled " + parcel.mass() + " of "
+        player.addChatMessage(new ChatComponentText("\u00a77You pour out the "
             + naturalexceptions.minecraft.knowledge.KnowledgePresentation.materialName(player, parcel.materialRef(),
-                parcel.stateKey())));
+                parcel.stateKey()).toLowerCase(java.util.Locale.ROOT)
+            + "."));
         return true;
     }
 
@@ -228,6 +270,12 @@ public final class ItemFluidVessel extends Item {
         if (world.isRemote || player == null) return stack;
         FluidParcel parcel = contents(stack);
         if (parcel == null) return stack;
+        double kelvin = parcel.thermalState().temperatureKelvin();
+        if (parcel.phase() != MaterialPhase.LIQUID || kelvin > 333.15 || kelvin < 273.15) {
+            player.addChatMessage(new ChatComponentText("\u00a77" + (parcel.phase() != MaterialPhase.LIQUID
+                ? "It has set solid in the vessel." : kelvin > 333.15 ? "Far too hot to drink." : "It is frozen.")));
+            return stack;
+        }
         MaterialQuantity amount = parcel.mass().compareTo(MaterialQuantity.ofGrams(250.0)) <= 0
             ? parcel.mass() : MaterialQuantity.ofGrams(250.0);
         FluidParcel ingested = amount.equals(parcel.mass()) ? parcel : parcel.extract(amount);
@@ -239,10 +287,10 @@ public final class ItemFluidVessel extends Item {
             body.replenishHydrationMillilitres(Math.min(250.0, ingested.volumeMicrolitres() / 1000.0));
         if (amount.equals(parcel.mass())) setContents(stack, null);
         else setContents(stack, parcel);
-        player.addChatMessage(new ChatComponentText("Ingested " + ingested.mass() + " of "
+        player.addChatMessage(new ChatComponentText("\u00a77You drink some "
             + naturalexceptions.minecraft.knowledge.KnowledgePresentation.materialName(player,
-                ingested.materialRef(), ingested.stateKey())
-            + "; biological suitability is evaluated from material traits."));
+                ingested.materialRef(), ingested.stateKey()).toLowerCase(java.util.Locale.ROOT)
+            + "."));
         return stack;
     }
 
@@ -272,16 +320,17 @@ public final class ItemFluidVessel extends Item {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public void addInformation(ItemStack stack, EntityPlayer player, List tooltip, boolean advanced) {
         FluidParcel parcel = contents(stack);
-        if (parcel == null) { tooltip.add("Empty fluid vessel (1 L capacity)"); return; }
-        tooltip.add("Material: " + naturalexceptions.minecraft.knowledge.KnowledgePresentation.materialName(player,
+        if (parcel == null) { tooltip.add("\u00a77Empty. Holds about a litre."); return; }
+        tooltip.add("\u00a7f" + naturalexceptions.minecraft.knowledge.KnowledgePresentation.materialName(player,
             parcel.materialRef(), parcel.stateKey()));
-        tooltip.add("Quantity: " + parcel.mass() + " | " + parcel.volumeMicrolitres() + " µL");
-        tooltip.add("State: " + (parcel.phase() == MaterialPhase.LIQUID ? "liquid" : "solid"));
+        tooltip.add("\u00a77" + fillWords(parcel.volumeMicrolitres()) + ", "
+            + (parcel.phase() == MaterialPhase.LIQUID ? "liquid" : "set solid"));
         double temperature = parcel.thermalState().temperatureKelvin();
         if (temperature >= 1273.15) tooltip.add("Visibly glowing hot; unsafe to handle directly");
         else if (temperature >= 373.15) tooltip.add("Dangerously hot to touch");
         else if (temperature >= 310.15) tooltip.add("Warm to the touch");
         else if (temperature <= 273.15) tooltip.add("Cold to the touch");
-        if (advanced) tooltip.add(String.format("Observed temperature: %.1f K", temperature));
+        if (advanced) tooltip.add(String.format("\u00a78%s, %d \u00b5L, %.1f K", parcel.mass(),
+            parcel.volumeMicrolitres(), temperature));
     }
 }

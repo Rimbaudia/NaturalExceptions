@@ -12,7 +12,7 @@ import naturalexceptions.minecraft.biology.BiologicalProperties;
 
 /** Minimal consumable dressing/splint kit that changes one active injury process. */
 public final class ItemBandage extends Item {
-    public ItemBandage() { setMaxStackSize(16); setUnlocalizedName("bandage"); setTextureName("minecraft:paper"); }
+    public ItemBandage() { setMaxStackSize(16); setUnlocalizedName("bandage"); setTextureName("naturalexceptions:field_dressing"); }
     @Override public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
         if (world.isRemote || player == null) return stack;
         BiologicalState state = BiologicalProperties.get(player).state();

@@ -405,8 +405,8 @@ public final class ItemFoundryLadle extends Item {
                 }
             } catch (Throwable ignored) {}
 
-            if (showAdvanced) {
-                list.add("\u00a78--- Developer diagnostics (F3+H) ---");
+            if (advanced) {
+                list.add("\u00a78--- Developer diagnostics ---");
                 list.add(
                     String
                         .format("  \u00a78Temperature: %.1f K (%.1f \u00b0C) | T_melt = %.0f K", tempK, tempC, meltK));

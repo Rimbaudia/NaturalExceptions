@@ -17,7 +17,7 @@ import naturalexceptions.minecraft.network.PacketKnowledgeSnapshot;
 
 /** Minimal instrument: assay the first sample in inventory and record approximate density. */
 public final class ItemFieldAssay extends Item {
-    public ItemFieldAssay() { setUnlocalizedName("fieldAssay"); setTextureName("minecraft:compass"); setMaxStackSize(1); }
+    public ItemFieldAssay() { setUnlocalizedName("fieldAssay"); setTextureName("naturalexceptions:field_assay"); setMaxStackSize(1); }
 
     @Override public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
         if (world == null || world.isRemote || player == null) return stack;

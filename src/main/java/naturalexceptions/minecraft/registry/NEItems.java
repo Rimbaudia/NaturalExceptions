@@ -109,10 +109,10 @@ public final class NEItems {
             .setCreativeTab(NECreativeTab.INSTANCE);
 
         refractoryMix = new Item().setUnlocalizedName("refractoryMix")
-            .setTextureName("minecraft:clay_ball")
+            .setTextureName("naturalexceptions:refractory_mix")
             .setCreativeTab(NECreativeTab.INSTANCE);
         refractoryBrick = new Item().setUnlocalizedName("refractoryBrick")
-            .setTextureName("minecraft:brick")
+            .setTextureName("naturalexceptions:refractory_brick")
             .setCreativeTab(NECreativeTab.INSTANCE);
 
         materialSample = new ItemMaterialSample();

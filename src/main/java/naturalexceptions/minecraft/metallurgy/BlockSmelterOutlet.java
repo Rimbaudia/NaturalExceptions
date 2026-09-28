@@ -144,7 +144,7 @@ public final class BlockSmelterOutlet extends BlockContainer {
             if (smelter == null) {
                 if (!world.isRemote) {
                     player.addChatMessage(
-                        new ChatComponentText("\u00a7c[Outlet] No connected Starter Smelter found behind outlet."));
+                        new ChatComponentText("\u00a7c[Outlet] This outlet is not set into the wall of a Starter Smelter."));
                 }
                 return true;
             }
@@ -163,7 +163,7 @@ public final class BlockSmelterOutlet extends BlockContainer {
                     if (!world.isRemote) {
                         player.addChatMessage(
                             new ChatComponentText(
-                                "\u00a7a[Outlet] Poured " + mass + " of molten metal back into smelter via outlet."));
+                                "\u00a7a[Outlet] Poured the ladle back into the smelter."));
                     }
                     return true;
                 }
@@ -177,14 +177,14 @@ public final class BlockSmelterOutlet extends BlockContainer {
                             .getFilledMass(held);
                         player.addChatMessage(
                             new ChatComponentText(
-                                "\u00a7a[Outlet] Scooped molten metal into Foundry Ladle (" + mass + ")."));
+                                "\u00a7a[Outlet] Drew molten metal into the ladle."));
                     }
                     return true;
                 } else {
                     if (!world.isRemote) {
                         player.addChatMessage(
                             new ChatComponentText(
-                                "\u00a7c[Outlet] Smelter crucible has no molten liquid metal ready to draw."));
+                                "\u00a7c[Outlet] There is no molten metal the ladle can reach yet."));
                     }
                     return true;
                 }

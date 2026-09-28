@@ -10,7 +10,7 @@ import net.minecraft.world.World;
 /** Simple reusable inhalation barrier; its finite attenuation is applied from its worn state. */
 public final class ItemExposureMask extends Item {
     private static final String KEY_WORN = "Worn";
-    public ItemExposureMask() { setMaxStackSize(1); setUnlocalizedName("exposureMask"); setTextureName("minecraft:leather_helmet"); }
+    public ItemExposureMask() { setMaxStackSize(1); setUnlocalizedName("exposureMask"); setTextureName("naturalexceptions:filter_mask"); }
     public static boolean isWorn(ItemStack stack) {
         return stack != null && stack.hasTagCompound() && stack.getTagCompound().getBoolean(KEY_WORN);
     }
@@ -20,7 +20,7 @@ public final class ItemExposureMask extends Item {
         boolean worn = !stack.getTagCompound().getBoolean(KEY_WORN);
         stack.getTagCompound().setBoolean(KEY_WORN, worn);
         player.addChatMessage(new ChatComponentText(worn
-            ? "You wear the filter mask; it reduces inhaled dose while intact."
+            ? "You tie on the filter mask. Breathing smoke is easier, not safe."
             : "You remove the filter mask."));
         return stack;
     }
