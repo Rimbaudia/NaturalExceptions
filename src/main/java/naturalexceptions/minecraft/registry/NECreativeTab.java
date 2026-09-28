@@ -29,6 +29,8 @@ public final class NECreativeTab extends CreativeTabs {
         if (NEBlocks.smelterTuyere != null) list.add(new net.minecraft.item.ItemStack(NEBlocks.smelterTuyere));
         if (NEBlocks.smelterOutlet != null) list.add(new net.minecraft.item.ItemStack(NEBlocks.smelterOutlet));
         if (NEBlocks.castingTable != null) list.add(new net.minecraft.item.ItemStack(NEBlocks.castingTable));
+        if (NEBlocks.moldAssemblyTable != null)
+            list.add(new net.minecraft.item.ItemStack(NEBlocks.moldAssemblyTable));
         if (NEBlocks.assemblyTable != null) list.add(new net.minecraft.item.ItemStack(NEBlocks.assemblyTable));
         if (NEBlocks.forgingAnvil != null) list.add(new net.minecraft.item.ItemStack(NEBlocks.forgingAnvil));
         if (NEBlocks.refractoryBrick != null) list.add(new net.minecraft.item.ItemStack(NEBlocks.refractoryBrick));
@@ -62,7 +64,14 @@ public final class NECreativeTab extends CreativeTabs {
         if (NEItems.blacksmithTongs != null) list.add(new net.minecraft.item.ItemStack(NEItems.blacksmithTongs));
         if (NEItems.foundryLadle != null) list.add(new net.minecraft.item.ItemStack(NEItems.foundryLadle));
         if (NEItems.bellows != null) list.add(new net.minecraft.item.ItemStack(NEItems.bellows));
+        if (NEItems.fluidVessel != null) list.add(new net.minecraft.item.ItemStack(NEItems.fluidVessel));
         if (NEItems.bandage != null) list.add(new net.minecraft.item.ItemStack(NEItems.bandage));
         if (NEItems.exposureMask != null) list.add(new net.minecraft.item.ItemStack(NEItems.exposureMask));
+
+        // 6. Knowledge & observation
+        if (NEItems.startingManual != null) list.add(new net.minecraft.item.ItemStack(NEItems.startingManual));
+        if (NEItems.foundryNotes != null) list.add(new net.minecraft.item.ItemStack(NEItems.foundryNotes));
+        if (NEItems.fieldAssay != null) list.add(new net.minecraft.item.ItemStack(NEItems.fieldAssay));
+        if (NEItems.knowledgeRecord != null) list.add(new net.minecraft.item.ItemStack(NEItems.knowledgeRecord));
     }
 }

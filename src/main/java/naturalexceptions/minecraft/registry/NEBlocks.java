@@ -147,15 +147,6 @@ public final class NEBlocks {
 
         try {
             GameRegistry.addRecipe(new net.minecraft.item.ItemStack(smelterOutlet), "B B", " B ", 'B', refractoryBrick);
-            if (NEItems.copperIngot != null) {
-                GameRegistry.addRecipe(
-                    new net.minecraft.item.ItemStack(smelterTuyere),
-                    "BCB",
-                    'B',
-                    refractoryBrick,
-                    'C',
-                    NEItems.copperIngot);
-            }
             GameRegistry
                 .addRecipe(new net.minecraft.item.ItemStack(starterSmelter), "BBB", "B B", "BBB", 'B', refractoryBrick);
             GameRegistry.addRecipe(new net.minecraft.item.ItemStack(castingTable), "BBB", "B B", 'B', refractoryBrick);
@@ -180,6 +171,9 @@ public final class NEBlocks {
 
             GameRegistry
                 .addRecipe(new net.minecraft.item.ItemStack(refractoryBrick), "BB", "BB", 'B', NEItems.refractoryBrick);
+        } catch (Throwable ignored) {}
+        try {
+            naturalexceptions.minecraft.recipe.SurvivalEquipmentRecipes.register();
         } catch (Throwable ignored) {}
 
         MaterialBindingRegistry.global()

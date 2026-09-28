@@ -130,7 +130,9 @@ public final class RecipeToolAssembly implements IRecipe {
         }
         GeometryId geom = comp.geometryId();
         // Heads are working components (not handles, rods, or raw ingots)
-        if (geom != GeometryId.HANDLE && geom != GeometryId.ROD && geom != GeometryId.BLANK) {
+        if (geom != GeometryId.HANDLE && geom != GeometryId.ROD && geom != GeometryId.BLANK
+            && geom != GeometryId.INGOT
+            && geom != GeometryId.PLATE) {
             return comp;
         }
         return null;
