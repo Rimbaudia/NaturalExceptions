@@ -85,6 +85,23 @@ public final class ItemFluidVessel extends Item {
         return false;
     }
 
+    /**
+     * Takes as much of a spatial liquid parcel as one vessel holds. Whatever does not fit stays in the cell;
+     * nothing is removed from the world before the vessel can accept it.
+     */
+    public static FluidParcel scoopFromCell(naturalexceptions.core.fluid.FluidWorldState fluids, FluidCellKey key,
+        FluidParcel parcel) {
+        if (fluids == null || key == null || parcel == null) return null;
+        if (parcel.volumeMicrolitres() <= CAPACITY_MICROLITRES) return fluids.remove(key);
+        // Volume is proportional to mass; a small margin absorbs microlitre rounding.
+        long fitMg = (long) Math.floor(0.999 * parcel.mass().milligrams() * CAPACITY_MICROLITRES
+            / parcel.volumeMicrolitres());
+        if (fitMg <= 0L || fitMg >= parcel.mass().milligrams()) return null;
+        FluidParcel portion = parcel.extract(MaterialQuantity.ofMilligrams(fitMg));
+        fluids.disturb(key);
+        return portion;
+    }
+
     public static boolean isFilled(ItemStack stack) {
         return stack != null && stack.hasTagCompound() && stack.getTagCompound().hasKey(KEY_PARCEL, 10);
     }
@@ -116,8 +133,12 @@ public final class ItemFluidVessel extends Item {
             if (hit instanceof naturalexceptions.minecraft.fluid.BlockFluidCell) {
                 FluidParcel parcel = saved.fluids().parcelAt(hitKey);
                 if (parcel == null || parcel.phase() != MaterialPhase.LIQUID) return false;
-                parcel = saved.fluids().remove(hitKey);
-                setContents(stack, parcel); saved.markDirty(); world.setBlockToAir(x, y, z);
+                FluidParcel scooped = scoopFromCell(saved.fluids(), hitKey, parcel);
+                if (scooped == null) return false;
+                setContents(stack, scooped); saved.markDirty();
+                if (saved.fluids().parcelAt(hitKey) == null) world.setBlockToAir(x, y, z);
+                else naturalexceptions.minecraft.fluid.BlockFluidCell.refreshHost(world, hitKey,
+                    saved.fluids().parcelAt(hitKey));
                 world.markBlockForUpdate(x, y, z); return true;
             }
             net.minecraft.tileentity.TileEntity tile = world.getTileEntity(x, y, z);

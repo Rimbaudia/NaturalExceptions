@@ -65,12 +65,14 @@ final class P8WorldStateTest {
     @Test
     void completedBloodNightLeavesOnePersistentRegionalConsequence() {
         P8WorldState state = new P8WorldState(99L, 2, 0L);
-        state.advance(0L);
+        naturalexceptions.core.anomaly.RegionKey witnessed = naturalexceptions.core.anomaly.RegionKey.fromBlock(100, -40);
+        state.advance(0L, java.util.Collections.singletonList(witnessed));
         long completion = 63L * NaturalCalendar.TICKS_PER_DAY;
-        assertTrue(state.advance(completion));
+        assertTrue(state.advance(completion, java.util.Collections.singletonList(witnessed)));
         assertEquals(1, state.destabilization().regionCount());
+        assertTrue(state.destabilization().value(witnessed) > 0.0, "the region where it was witnessed");
         assertTrue(state.destabilization().derivedGlobal() > 0.0);
-        state.advance(completion);
+        state.advance(completion, java.util.Collections.singletonList(witnessed));
         assertEquals(1, state.destabilization().regionCount()); // event completion is idempotent
     }
 

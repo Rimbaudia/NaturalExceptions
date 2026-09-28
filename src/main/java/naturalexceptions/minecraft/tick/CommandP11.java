@@ -292,7 +292,8 @@ public final class CommandP11 extends CommandBase {
                         .nextDueTick()));
     }
 
-    private static Map<naturalexceptions.core.id.DeterministicId, Long> remainingSiteMasses(NEWorldSavedData saved) {
+    /** Recoverable stellar mass per resolved impact (in-flight or still on site). */
+    public static Map<naturalexceptions.core.id.DeterministicId, Long> remainingSiteMasses(NEWorldSavedData saved) {
         Map<DeterministicId, Long> result = new HashMap<>();
         if (saved == null || saved.p11() == null) return result;
         List<StarRainImpact> impacts = saved.p11()

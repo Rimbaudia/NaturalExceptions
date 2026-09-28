@@ -32,6 +32,8 @@ public final class P8WorldState {
     private final DestabilizationField destabilization;
     private long scheduledBloodNightYear = -1;
     private long lastCalendarYear = -1;
+    /** Transient: re-derived after load, because regular Star Rain scheduling is idempotent by identity. */
+    private long lastStarRainCheckDay = -1;
 
     public P8WorldState(long seed, int epoch, long creationTick) {
         this(seed, epoch, creationTick, new WorldEventSchedule(), new SpatialAnomalyIndex(),
@@ -58,6 +60,15 @@ public final class P8WorldState {
 
     /** Coarse server wake-up. Event identities/history are persisted; missed active intervals are not replayed. */
     public synchronized boolean advance(long nowTick) {
+        return advance(nowTick, java.util.Collections.<RegionKey>emptyList());
+    }
+
+    /**
+     * As {@link #advance(long)}, where {@code witnessedRegions} are the regions the event was actually experienced
+     * in (for a world-wide event: where players are). A completed Blood Night destabilizes its own target region,
+     * or for a world-wide one the witnessed regions; never an unrelated region.
+     */
+    public synchronized boolean advance(long nowTick, java.util.Collection<RegionKey> witnessedRegions) {
         if (nowTick < 0) throw new IllegalArgumentException("time must be nonnegative");
         boolean changed = false;
         NaturalCalendar.Position calendar = NaturalCalendar.at(nowTick);
@@ -65,11 +76,16 @@ public final class P8WorldState {
             lastCalendarYear = calendar.year();
             changed |= scheduleNextBloodNight(calendar.year(), nowTick);
         }
+        if (calendar.absoluteDay() != lastStarRainCheckDay) {
+            lastStarRainCheckDay = calendar.absoluteDay();
+            changed |= scheduleNextRegularStarRain(nowTick);
+        }
         for (EventRecord event : events.advance(nowTick)) {
             changed = true;
             if (event.phase() == EventPhase.COMPLETED && BLOOD_NIGHT.equals(event.type())) {
-                RegionKey target = deterministicDestabilizedRegion(event.id());
-                destabilization.increase(target, BLOOD_NIGHT, event.id(), 0.38, event.endsAtTick());
+                for (RegionKey target : destabilizationTargets(event, witnessedRegions)) {
+                    destabilization.increase(target, BLOOD_NIGHT, event.id(), 0.38, event.endsAtTick());
+                }
             }
         }
         boolean coarseUpdate = destabilization.isCoarseUpdateDue(nowTick);
@@ -119,9 +135,68 @@ public final class P8WorldState {
         return false;
     }
 
-    private RegionKey deterministicDestabilizedRegion(DeterministicId source) {
-        long bits = Long.parseUnsignedLong(source.hex().substring(0, 16), 16);
-        return new RegionKey((short) bits, (short) (bits >>> 16));
+    /** At most this many witnessed regions are destabilized by one world-wide event. */
+    public static final int MAX_WITNESSED_REGIONS = 8;
+
+    static List<RegionKey> destabilizationTargets(EventRecord event, java.util.Collection<RegionKey> witnessed) {
+        List<RegionKey> targets = new ArrayList<>();
+        if (!event.targetRegion().isGlobal()) {
+            targets.add(new RegionKey(event.targetRegion().x(), event.targetRegion().z()));
+            return targets;
+        }
+        if (witnessed == null) return targets;
+        java.util.TreeSet<RegionKey> ordered = new java.util.TreeSet<>(witnessed);
+        for (RegionKey region : ordered) {
+            if (targets.size() >= MAX_WITNESSED_REGIONS) break;
+            targets.add(region);
+        }
+        return targets;
+    }
+
+    /** Ordinary Star Rain: once per season, on a deterministic night, after the protected first one settles. */
+    public static final long REGULAR_STAR_RAIN_PERIOD_TICKS = NaturalCalendar.DAYS_PER_SEASON
+        * NaturalCalendar.TICKS_PER_DAY;
+    /** Nightfall within the chosen day; showers last through the night. */
+    static final long STAR_RAIN_NIGHTFALL_TICK = 13_000L;
+    static final long STAR_RAIN_DURATION_TICKS = 10_000L;
+    static final long STAR_RAIN_COOLDOWN_TICKS = 6L * NaturalCalendar.TICKS_PER_DAY;
+
+    /** Deterministic start tick of the {@code ordinal}th ordinary Star Rain window. */
+    public long regularStarRainStart(long ordinal) {
+        long hash = mix(seed ^ (ordinal * 0x9e3779b97f4a7c15L) ^ ((long) epoch << 41) ^ 0x5354415252414e53L);
+        long day = 4L + Long.remainderUnsigned(hash, NaturalCalendar.DAYS_PER_SEASON - 8L);
+        return ordinal * REGULAR_STAR_RAIN_PERIOD_TICKS + day * NaturalCalendar.TICKS_PER_DAY
+            + STAR_RAIN_NIGHTFALL_TICK;
+    }
+
+    private boolean protectedStarRainSettled() {
+        for (EventRecord event : events.snapshot()
+            .events()) {
+            if (event.protectedOpportunity() && EventRecord.PROTECTED_STAR_RAIN.equals(event.type()))
+                return event.phase() == EventPhase.COMPLETED;
+        }
+        return false;
+    }
+
+    private boolean scheduleNextRegularStarRain(long nowTick) {
+        if (!protectedStarRainSettled()) return false;
+        long ordinal = nowTick / REGULAR_STAR_RAIN_PERIOD_TICKS;
+        for (int attempt = 0; attempt < 2; attempt++, ordinal++) {
+            long start = regularStarRainStart(ordinal);
+            if (start <= nowTick) continue;
+            EventRecord rain = EventInstanceFactory.regular(seed, epoch, EventRecord.PROTECTED_STAR_RAIN,
+                EventRegion.global(), ordinal, start, STAR_RAIN_DURATION_TICKS, STAR_RAIN_COOLDOWN_TICKS, null, 0);
+            return events.schedule(rain);
+        }
+        return false;
+    }
+
+    /** True while a Blood Night is active over this block position. */
+    public synchronized boolean bloodNightActiveAt(int x, int z, long nowTick) {
+        for (EventInfluence influence : activeInfluencesAt(x, z, nowTick)) {
+            if (BLOOD_NIGHT.equals(influence.eventType())) return true;
+        }
+        return false;
     }
 
     public synchronized StrangeSeason strangeSeasonAt(long nowTick) {

@@ -32,6 +32,7 @@ public final class NEWorldTickHandler {
     private long lastElectricalSolves;
     private long lastElectricalThermalWork;
     private final StarRainWorldMaterializer starRainMaterializer = new StarRainWorldMaterializer();
+    private final naturalexceptions.minecraft.event.P8WorldPresence p8Presence = new naturalexceptions.minecraft.event.P8WorldPresence();
 
     public NEWorldTickHandler(SubsystemProfiler profiler, int perTickBudget, Consumer<ScheduledEvent> eventConsumer) {
         this.profiler = profiler != null ? profiler : new SubsystemProfiler();
@@ -142,7 +143,8 @@ public final class NEWorldTickHandler {
                     && record.phase() == naturalexceptions.core.event.EventPhase.SCHEDULED) starRainStarts.add(record.id());
             }
         }
-        boolean p8Changed = data.p8() != null && data.p8().advance(worldTime);
+        boolean p8Changed = data.p8() != null
+            && data.p8().advance(worldTime, naturalexceptions.minecraft.event.P8WorldPresence.witnessedRegions(world));
         if (p8Changed) {
             data.markDirty();
             profiler.incrementCounter(SUBSYSTEM_SCHEDULER, "p8_state_transitions", 1L);
@@ -158,11 +160,28 @@ public final class NEWorldTickHandler {
             }
         }
 
+        if (world != null) p8Presence.tick(world, data, worldTime);
+
         if (data.p8() != null) {
             net.minecraft.util.ChunkCoordinates spawn = world != null ? world.getSpawnPoint() : null;
             int centerX = spawn != null ? spawn.posX : 0;
             int centerZ = spawn != null ? spawn.posZ : 0;
-            if (data.p11().synchronize(data.p8().events().snapshot(), centerX, centerZ)) data.markDirty();
+            // Aim a starting shower where someone can witness it.
+            if (world != null && !world.playerEntities.isEmpty()) {
+                net.minecraft.entity.player.EntityPlayer witness = (net.minecraft.entity.player.EntityPlayer) world.playerEntities
+                    .get(0);
+                centerX = net.minecraft.util.MathHelper.floor_double(witness.posX);
+                centerZ = net.minecraft.util.MathHelper.floor_double(witness.posZ);
+            }
+            // Impacts are placed when a shower actually starts (not when it is scheduled), around a witness.
+            naturalexceptions.core.event.EventScheduleSnapshot schedule = data.p8().events().snapshot();
+            java.util.List<naturalexceptions.core.event.EventRecord> started = new java.util.ArrayList<>();
+            for (naturalexceptions.core.event.EventRecord record : schedule.events()) {
+                if (record.phase() != naturalexceptions.core.event.EventPhase.SCHEDULED) started.add(record);
+            }
+            if (data.p11().synchronize(new naturalexceptions.core.event.EventScheduleSnapshot(started,
+                java.util.Collections.<naturalexceptions.core.event.EventCooldownHistory>emptyList(),
+                schedule.lastAdvancedTick()), centerX, centerZ)) data.markDirty();
         }
 
         long starRainStartNanos = System.nanoTime();
@@ -172,6 +191,7 @@ public final class NEWorldTickHandler {
             for (StarRainImpact impact : data.p11().dueImpacts(worldTime, 2)) {
                 if (data.p11().resolve(impact.id())) {
                     impactsResolved++;
+                    naturalexceptions.minecraft.event.P8WorldPresence.announceImpact(world, impact);
                     if (world != null && starRainMaterializer.materialize(world, data, impact)) sitesMaterialized++;
                 }
             }

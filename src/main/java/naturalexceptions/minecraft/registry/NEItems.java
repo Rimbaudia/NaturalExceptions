@@ -18,6 +18,7 @@ public final class NEItems {
 
     public static naturalexceptions.minecraft.item.ItemBellows bellows;
     public static naturalexceptions.minecraft.item.ItemFluidVessel fluidVessel;
+    public static naturalexceptions.minecraft.item.ItemAlmanac almanac;
     public static naturalexceptions.minecraft.item.ItemBandage bandage;
     public static naturalexceptions.minecraft.item.ItemExposureMask exposureMask;
     public static Item copperIngot;
@@ -148,6 +149,8 @@ public final class NEItems {
         knowledgeRecord.setCreativeTab(NECreativeTab.INSTANCE);
         bellows = new naturalexceptions.minecraft.item.ItemBellows();
         bellows.setCreativeTab(NECreativeTab.INSTANCE);
+        almanac = new naturalexceptions.minecraft.item.ItemAlmanac();
+        almanac.setCreativeTab(NECreativeTab.INSTANCE);
         fluidVessel = new naturalexceptions.minecraft.item.ItemFluidVessel();
         fluidVessel.setCreativeTab(NECreativeTab.INSTANCE);
         bandage = new naturalexceptions.minecraft.item.ItemBandage();
@@ -158,6 +161,12 @@ public final class NEItems {
         try {
             GameRegistry.registerItem(bellows, "bellows");
             GameRegistry.registerItem(fluidVessel, "fluid_vessel");
+            GameRegistry.registerItem(almanac, "almanac");
+            GameRegistry.addShapelessRecipe(
+                new ItemStack(almanac),
+                net.minecraft.init.Items.book,
+                net.minecraft.init.Items.paper,
+                new ItemStack(net.minecraft.init.Items.coal, 1, net.minecraftforge.oredict.OreDictionary.WILDCARD_VALUE));
             GameRegistry.registerItem(bandage, "bandage");
             GameRegistry.registerItem(exposureMask, "exposure_mask");
             GameRegistry.registerItem(copperIngot, "copper_ingot");

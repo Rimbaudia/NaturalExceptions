@@ -97,6 +97,11 @@ public final class NaturalExceptions {
             .isClient()) {
             registerClientRenderers();
             MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.client.NEItemTooltipEventHandler());
+            naturalexceptions.minecraft.client.P8ClientCues cues = new naturalexceptions.minecraft.client.P8ClientCues();
+            MinecraftForge.EVENT_BUS.register(cues);
+            FMLCommonHandler.instance()
+                .bus()
+                .register(cues);
             naturalexceptions.minecraft.knowledge.client.NEKnowledgeKeyHandler.register();
         }
     }

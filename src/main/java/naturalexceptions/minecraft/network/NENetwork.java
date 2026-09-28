@@ -29,6 +29,7 @@ public final class NENetwork {
             clientHandler = PacketKnowledgeSnapshot.ServerRegistrationHandler.class;
         }
         registerClientboundSnapshotHandler(clientHandler);
+        CHANNEL.registerMessage(PacketP8Status.Handler.class, PacketP8Status.class, 2, Side.CLIENT);
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
