@@ -33,7 +33,10 @@ public final class NEOverworldGenerator implements IWorldGenerator {
 
     private static final long ECOLOGY_GRASS_CHANNEL = 0x45434f5f47524153L;
     private static final int SEA_LEVEL = 63;
-    private static final int TERRAIN_ADJUSTMENT_MAX = 2;
+    /** Relief-field value above which a meadow is lifted by one block. */
+    private static final double RISE_THRESHOLD = 0.8;
+    private static final long BOULDER_CHANNEL = 0x424f554c44455253L;
+    private static final long SCAR_CHANNEL = 0x5155494554534352L;
 
     public static void register() {
         GameRegistry.registerWorldGenerator(new NEOverworldGenerator(), 0);
@@ -95,36 +98,23 @@ public final class NEOverworldGenerator implements IWorldGenerator {
         return result;
     }
 
-    /** Retains vanilla's recognizable bulk terrain while applying a small NE-owned coarse relief field. */
+    /**
+     * Retains vanilla's bulk terrain. The NE relief field only lifts high-tendency meadows by one block, so it forms
+     * broad gentle rises; it never digs single-column gouges or stacks dirt onto rock.
+     */
     private void adjustBaseTerrain(World world, int chunkX, int chunkZ, OverworldSample[][] samples) {
         int originX = chunkX * 16;
         int originZ = chunkZ * 16;
         for (int localX = 0; localX < 16; localX++) {
             for (int localZ = 0; localZ < 16; localZ++) {
+                if (samples[localX][localZ].elevationTendency() < RISE_THRESHOLD) continue;
                 int x = originX + localX;
                 int z = originZ + localZ;
                 int surfaceY = world.getHeightValue(x, z) - 1;
                 if (surfaceY < SEA_LEVEL || surfaceY >= 250) continue;
-                Block surface = world.getBlock(x, surfaceY, z);
-                if (!isNaturalSurface(surface)) continue;
-                double elevation = samples[localX][localZ].elevationTendency();
-                int adjustment = (int) Math.round((elevation - 0.5) * (TERRAIN_ADJUSTMENT_MAX * 2.0));
-                adjustment = Math.max(-TERRAIN_ADJUSTMENT_MAX, Math.min(TERRAIN_ADJUSTMENT_MAX, adjustment));
-                if (adjustment > 0) {
-                    for (int y = 1; y <= adjustment; y++) {
-                        world.setBlock(x, surfaceY + y, z, Blocks.dirt, 0, 2);
-                    }
-                    world.setBlock(x, surfaceY, z, Blocks.dirt, 0, 2);
-                    world.setBlock(x, surfaceY + adjustment, z, Blocks.grass, 0, 2);
-                } else if (adjustment < 0) {
-                    for (int y = 0; y < -adjustment; y++) {
-                        world.setBlockToAir(x, surfaceY - y, z);
-                    }
-                    int loweredSurface = surfaceY + adjustment;
-                    if (world.getBlock(x, loweredSurface, z) == Blocks.dirt) {
-                        world.setBlock(x, loweredSurface, z, Blocks.grass, 0, 2);
-                    }
-                }
+                if (world.getBlock(x, surfaceY, z) != Blocks.grass || !world.isAirBlock(x, surfaceY + 1, z)) continue;
+                world.setBlock(x, surfaceY, z, Blocks.dirt, 0, 2);
+                world.setBlock(x, surfaceY + 1, z, Blocks.grass, 0, 2);
             }
         }
     }
@@ -169,12 +159,17 @@ public final class NEOverworldGenerator implements IWorldGenerator {
                 int y = world.getHeightValue(x, z) - 1;
                 if (y < SEA_LEVEL || y >= 250) continue;
                 Block top = world.getBlock(x, y, z);
-                SoilContext soil = samples[localX][localZ].soil();
-                if ((soil == SoilContext.ALLUVIAL || soil == SoilContext.THIN_ROCKY)
-                    && (top == Blocks.grass || top == Blocks.dirt || top == Blocks.stone)) {
+                if (top != Blocks.grass) continue;
+                OverworldSample sample = samples[localX][localZ];
+                SoilContext soil = sample.soil();
+                // Surface cues stay local: gravel only on low wet-basin banks, bare rock only on the steepest
+                // rocky ground, coarse dry earth only in the driest core. Elsewhere the grass is left alone.
+                if (soil == SoilContext.ALLUVIAL && y <= SEA_LEVEL + 1) {
                     world.setBlock(x, y, z, Blocks.gravel, 0, 2);
-                } else if (soil == SoilContext.DRY_SAND && (top == Blocks.grass || top == Blocks.dirt)) {
-                    world.setBlock(x, y, z, Blocks.sand, 0, 2);
+                } else if (soil == SoilContext.THIN_ROCKY && sample.slope() > 0.40) {
+                    world.setBlock(x, y, z, Blocks.stone, 0, 2);
+                } else if (soil == SoilContext.DRY_SAND && sample.moisture() < 0.20) {
+                    world.setBlock(x, y, z, Blocks.dirt, 1, 2);
                 }
             }
         }
@@ -237,16 +232,23 @@ public final class NEOverworldGenerator implements IWorldGenerator {
             for (int cellZ = minCellZ; cellZ <= maxCellZ; cellZ++) {
                 WorldgenSite site = sites.structureAtCell(cellX, cellZ);
                 if (site == null) continue;
-                for (int dx = -2; dx <= 2; dx++) {
-                    for (int dz = -2; dz <= 2; dz++) {
-                        if (Math.abs(dx) + Math.abs(dz) > 3) continue;
+                // A small weathered boulder: a core block, a capstone, and a few deterministic neighbours.
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dz = -1; dz <= 1; dz++) {
                         int x = site.x() + dx;
                         int z = site.z() + dz;
                         if (x < originX || x >= originX + 16 || z < originZ || z >= originZ + 16) continue;
+                        boolean core = dx == 0 && dz == 0;
+                        if (!core && (Math.abs(dx) + Math.abs(dz) > 1
+                            || !sites.generation()
+                                .passesChanceAt(x, z, BOULDER_CHANNEL, 0.5))) continue;
                         int y = world.getHeightValue(x, z) - 1;
-                        if (y >= SEA_LEVEL && y < 250 && isNaturalSurface(world.getBlock(x, y, z))) {
-                            world.setBlock(x, y, z, Blocks.cobblestone, 0, 2);
-                        }
+                        if (y < SEA_LEVEL || y >= 249 || !isNaturalSurface(world.getBlock(x, y, z))) continue;
+                        Block rock = sites.generation()
+                            .passesChanceAt(x, z, BOULDER_CHANNEL ^ 1L, 0.45) ? Blocks.mossy_cobblestone
+                                : Blocks.cobblestone;
+                        world.setBlock(x, y + 1, z, rock, 0, 2);
+                        if (core && world.isAirBlock(x, y + 2, z)) world.setBlock(x, y + 2, z, Blocks.stone, 0, 2);
                     }
                 }
             }
@@ -266,11 +268,29 @@ public final class NEOverworldGenerator implements IWorldGenerator {
                 if (site == null) continue;
                 int x = site.x();
                 int z = site.z();
+                // A quiet scar reads as withered ground: grass gives way to coarse earth and a few dead bushes.
+                witherPatch(world, sites, originX, originZ, x, z);
+            }
+        }
+    }
+
+    private void witherPatch(World world, WorldgenSites sites, int originX, int originZ, int centerX, int centerZ) {
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                int x = centerX + dx;
+                int z = centerZ + dz;
                 if (x < originX || x >= originX + 16 || z < originZ || z >= originZ + 16) continue;
+                if (dx * dx + dz * dz > 5) continue;
+                boolean edge = dx * dx + dz * dz > 2;
+                if (edge && !sites.generation()
+                    .passesChanceAt(x, z, SCAR_CHANNEL, 0.55)) continue;
                 int y = world.getHeightValue(x, z) - 1;
-                if (y < SEA_LEVEL || y >= 250 || !isNaturalSurface(world.getBlock(x, y, z))) continue;
-                world.setBlock(x, y, z, Blocks.obsidian, 0, 2);
-                world.setBlock(x, y + 1, z, Blocks.glowstone, 0, 2);
+                if (y < SEA_LEVEL || y >= 250 || world.getBlock(x, y, z) != Blocks.grass) continue;
+                world.setBlock(x, y, z, Blocks.dirt, 1, 2);
+                if (world.isAirBlock(x, y + 1, z) && sites.generation()
+                    .passesChanceAt(x, z, SCAR_CHANNEL ^ 1L, 0.2)) {
+                    world.setBlock(x, y + 1, z, Blocks.deadbush, 0, 2);
+                }
             }
         }
     }

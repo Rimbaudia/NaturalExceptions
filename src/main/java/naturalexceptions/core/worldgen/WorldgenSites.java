@@ -12,6 +12,10 @@ public final class WorldgenSites {
 
     private final OverworldGeneration generation;
 
+    public OverworldGeneration generation() {
+        return generation;
+    }
+
     public WorldgenSites(OverworldGeneration generation) {
         this.generation = Objects.requireNonNull(generation, "generation");
     }
