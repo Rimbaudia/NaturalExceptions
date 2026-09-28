@@ -1,6 +1,7 @@
 package naturalexceptions.minecraft.fluid;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -76,8 +77,17 @@ final class FallenStarHostRepresentationTest {
         FluidParcel solid = new FluidParcel(BuiltinMaterials.STELLAR_MATTER.ref(), liquidKey.withPhase(MaterialPhase.SOLID),
             composition, mass, ActiveThermalState.atTemperature(1100.0, 1.0, mass.toKilograms(),
                 BuiltinMaterials.STELLAR_MATTER_PROPERTIES));
-        assertEquals(0, BlockFluidCell.metadataFor(liquid) & 16);
-        assertEquals(16, BlockFluidCell.metadataFor(solid) & 16);
+        int liquidMeta = BlockFluidCell.metadataFor(liquid);
+        int solidMeta = BlockFluidCell.metadataFor(solid);
+        // Minecraft 1.7.10 stores only four metadata bits; the encoding must survive that.
+        assertTrue(liquidMeta >= 0 && liquidMeta <= 15 && solidMeta >= 0 && solidMeta <= 15);
+        assertEquals(false, BlockFluidCell.isSolidMetadata(liquidMeta));
+        assertEquals(true, BlockFluidCell.isSolidMetadata(solidMeta));
+        assertEquals(BlockFluidCell.KIND_GLOWING_SOLID, BlockFluidCell.kindOf(solidMeta));
+        FluidParcel cold = new FluidParcel(BuiltinMaterials.STELLAR_MATTER.ref(), liquidKey.withPhase(MaterialPhase.SOLID),
+            composition, mass, ActiveThermalState.atTemperature(300.0, 0.0, mass.toKilograms(),
+                BuiltinMaterials.STELLAR_MATTER_PROPERTIES));
+        assertEquals(BlockFluidCell.KIND_SOLID, BlockFluidCell.kindOf(BlockFluidCell.metadataFor(cold)));
 
         ItemFluidVessel vessel = new ItemFluidVessel();
         net.minecraft.item.crafting.IRecipe recipe = ItemFluidVessel.survivalRecipe(vessel);

@@ -103,6 +103,19 @@ public final class BiologicalEvents {
         applyMovement(target, state);
     }
 
+    private static final ThermalContactLimiter CONTACT_LIMITER = new ThermalContactLimiter();
+
+    /**
+     * Sustained contact with hot matter (standing in or on it). Resolved at most once per second per body with
+     * energy proportional to the time in contact, through the same P10 thermal interaction as any other contact.
+     */
+    public static void applySustainedThermalContact(EntityLivingBase target, ResourceId region,
+        double temperatureKelvin, double joulesPerSecond) {
+        if (target == null || target.worldObj == null || target.worldObj.isRemote) return;
+        double joules = CONTACT_LIMITER.admit(target, target.worldObj.getTotalWorldTime(), joulesPerSecond);
+        if (joules > 0.0) applyThermalContact(target, region, temperatureKelvin, joules);
+    }
+
     /** One second of bounded, quantitative combustion-smoke exposure from nearby vanilla fire/furnace blocks. */
     public static double applyCombustionSmoke(BiologicalState state, long worldTick) {
         if (state == null) throw new NullPointerException("state");

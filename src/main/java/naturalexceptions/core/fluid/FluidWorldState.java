@@ -53,6 +53,7 @@ public final class FluidWorldState {
         if (parcel.volumeMicrolitres() > MAX_CELL_VOLUME_MICROLITRES) {
             throw new IllegalArgumentException("One cell cannot contain more than one block-volume");
         }
+        requireQueueRoom(key);
         if (parcel.reconcilePhase()) hostPhaseChanges.add(key);
         invalidateAround(key);
         cells.put(key, parcel);
@@ -102,14 +103,27 @@ public final class FluidWorldState {
                 continue;
             }
             worked++;
+            int bandBefore = incandescenceBand(parcel.thermalState().temperatureKelvin());
             FiniteThermalBody body = new FiniteThermalBody(parcel.thermalState());
             ThermalTransfer.exchangeElapsed(body, new AmbientReservoir(ThermodynamicModel.DEFAULT_AMBIENT_TEMPERATURE_K),
                 ambientConductance(parcel), elapsedSeconds);
-            if (parcel.reconcilePhase()) hostPhaseChanges.add(key);
+            if (parcel.reconcilePhase()
+                || incandescenceBand(parcel.thermalState().temperatureKelvin()) != bandBefore) hostPhaseChanges.add(key);
             refreshThermalActivity(key, parcel);
             if (activeThermalCells.contains(key)) thermalWorkQueue.addLast(key);
         }
         return worked;
+    }
+
+    /**
+     * Coarse visible-glow band (0 none, 1 dull red, 2 bright, 3 white-hot). A band change is a visible host change
+     * even without a phase change, so it is queued with phase changes for host refresh.
+     */
+    public static int incandescenceBand(double kelvin) {
+        if (kelvin >= 1300.0) return 3;
+        if (kelvin >= 1000.0) return 2;
+        if (kelvin >= 798.0) return 1;
+        return 0;
     }
 
     private static double ambientConductance(FluidParcel parcel) {
@@ -168,15 +182,30 @@ public final class FluidWorldState {
         if (amount.portion(1.0).isZero()) return false;
         double volume = preview.volumeMicrolitres() * (double) amount.milligrams() / preview.mass().milligrams();
         if (volume > MAX_CELL_VOLUME_MICROLITRES) return false;
+        if (cells.size() >= MAX_CELLS || !hasQueueRoom(key)) return false;
         FluidParcel spilled = vessel.drain(amount);
         if (spilled == null) return false;
-        put(key, spilled);
+        if (spilled.volumeMicrolitres() > MAX_CELL_VOLUME_MICROLITRES) {
+            vessel.restoreDrained(spilled);
+            return false;
+        }
+        try {
+            put(key, spilled);
+        } catch (RuntimeException refused) {
+            // Only rebuild bookkeeping can fail after the cell accepted the parcel; the matter is then in the world.
+            if (cells.get(key) == spilled) return true;
+            vessel.restoreDrained(spilled);
+            return false;
+        }
         return true;
     }
 
     /** Limited one-cell displacement; no flow is advanced unless a caller explicitly disturbs/moves the cell. */
     public synchronized boolean move(FluidCellKey from, FluidCellKey to) {
         if (from == null || to == null || !cells.containsKey(from) || cells.containsKey(to)) return false;
+        // Removal and placement together can enqueue both neighbourhoods; refuse before moving any matter.
+        if (!hasQueueRoom(from) || !hasQueueRoom(to)
+            || dirtySeeds.size() + 14 + regionSize(from) + regionSize(to) > maxQueuedSeeds) return false;
         FluidParcel parcel = remove(from);
         put(to, parcel);
         return true;
@@ -188,6 +217,30 @@ public final class FluidWorldState {
         invalidateAround(key);
         enqueue(key);
         enqueueNeighbors(key);
+    }
+
+    /** Conservative upper bound on the dirty seeds a put at {@code key} can enqueue, checked before mutation. */
+    private boolean hasQueueRoom(FluidCellKey key) {
+        Set<FluidRegion> affected = new LinkedHashSet<>();
+        FluidRegion own = regionsByCell.get(key);
+        if (own != null) affected.add(own);
+        int needed = 1;
+        for (FluidCellKey n : key.neighbors()) {
+            FluidRegion region = regionsByCell.get(n);
+            if (region != null) affected.add(region);
+            if (cells.containsKey(n)) needed++;
+        }
+        for (FluidRegion region : affected) needed += region.cells().size();
+        return dirtySeeds.size() + needed <= maxQueuedSeeds;
+    }
+
+    private int regionSize(FluidCellKey key) {
+        FluidRegion region = regionsByCell.get(key);
+        return region == null ? 0 : region.cells().size();
+    }
+
+    private void requireQueueRoom(FluidCellKey key) {
+        if (!hasQueueRoom(key)) throw new IllegalStateException("Fluid dirty seed queue capacity exceeded");
     }
 
     private void invalidateAround(FluidCellKey key) {

@@ -20,6 +20,7 @@ public final class ExhaustSink {
 
     private MaterialQuantity totalVentedMass = MaterialQuantity.ZERO;
     private final Map<ResourceId, MaterialQuantity> ventedByConstituent = new HashMap<>();
+    private double ventedEnergyJoules;
 
     public ExhaustSink() {}
 
@@ -47,7 +48,20 @@ public final class ExhaustSink {
         ventedByConstituent.put(constituent, current.add(mass));
     }
 
+    /** Thermal energy carried out of the vessel by vented matter (a declared sink, not a loss of accounting). */
+    public double ventedEnergyJoules() {
+        return ventedEnergyJoules;
+    }
+
+    public void ventEnergy(double joules) {
+        if (!Double.isFinite(joules) || joules < 0.0) {
+            throw new IllegalArgumentException("Vented energy must be finite and non-negative: " + joules);
+        }
+        ventedEnergyJoules += joules;
+    }
+
     public void reset() {
+        ventedEnergyJoules = 0.0;
         totalVentedMass = MaterialQuantity.ZERO;
         ventedByConstituent.clear();
     }

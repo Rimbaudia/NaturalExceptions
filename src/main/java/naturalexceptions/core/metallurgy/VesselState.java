@@ -43,6 +43,8 @@ public final class VesselState {
     public static final double CONVECTIVE_HEAT_COEFF = 12.0;
     public static final double INTERLAYER_CONDUCTANCE_W_PER_K = 100.0;
 
+    private double surroundingsHeatJoules;
+
     private final MaterialQuantity capacity;
     private final VesselLining lining;
     private final FuelBurnState fuelState;
@@ -66,6 +68,11 @@ public final class VesselState {
         this.fuelState = Objects.requireNonNull(fuelState, "fuelState");
         this.exhaustSink = Objects.requireNonNull(exhaustSink, "exhaustSink");
         this.propertyResolver = Objects.requireNonNull(propertyResolver, "propertyResolver");
+    }
+
+    /** Cumulative heat radiated/convected into the surroundings (transient accounting, not persisted). */
+    public double surroundingsHeatJoules() {
+        return surroundingsHeatJoules;
     }
 
     public MaterialQuantity capacity() {
@@ -200,6 +207,7 @@ public final class VesselState {
         double combustionJoules = fuelState.step(deltaTicks, effectiveDraft);
         long totalMg = totalMass().milligrams();
 
+        double absorbedCombustionJoules = 0.0;
         if (combustionJoules > 0.0 && !layers.isEmpty() && totalMg > 0L) {
             double baseFlame = fuelState.flameTemperatureK() > 0.0 ? fuelState.flameTemperatureK()
                 : FLAME_TEMPERATURE_K;
@@ -216,8 +224,13 @@ public final class VesselState {
                 if (qIn > 0.0) {
                     layer.thermalState()
                         .addEnergyJoules(qIn);
+                    absorbedCombustionJoules += qIn;
                 }
             }
+        }
+        // Combustion heat the charge could not absorb leaves with the flue gas.
+        if (combustionJoules > absorbedCombustionJoules) {
+            exhaustSink.ventEnergy(combustionJoules - absorbedCombustionJoules);
         }
 
         // 2. Heat exchange with ambient (Stefan-Boltzmann radiation + natural convection)
@@ -234,8 +247,9 @@ public final class VesselState {
                         * (Math.pow(temp, 4.0) - Math.pow(ambientTempK, 4.0))
                         * deltaSeconds;
                     double qConv = CONVECTIVE_HEAT_COEFF * layerArea * (temp - ambientTempK) * deltaSeconds;
-                    double qLoss = Math.max(0.0, qRad + qConv);
+                    double qLoss = Math.min(thermal.energyJoules(), Math.max(0.0, qRad + qConv));
                     thermal.removeEnergyJoules(qLoss);
+                    surroundingsHeatJoules += qLoss;
                 }
             }
         }
@@ -312,53 +326,69 @@ public final class VesselState {
                     OreFeedstockDefinition oreDef = findFeedstock(layer);
                     boolean isRawOre = oreDef != null;
 
+                    // Energy is authoritative: the charge's own thermal energy is partitioned by mass. The
+                    // products keep whatever melt fraction that energy supports and absorb any remaining latent
+                    // heat from the fire; the vented gas carries its share to the declared exhaust sink.
+                    double chargeJoules = layer.thermalState()
+                        .energyJoules();
+                    long chargeMg = layer.mass()
+                        .milligrams();
                     if (isRawOre) {
                         MaterialQuantity[] portions = oreDef.partition(layer.mass());
                         MaterialQuantity metalMass = portions[0];
                         MaterialQuantity slagMass = portions[1];
                         MaterialQuantity gasMass = portions[2];
+                        double metalJoules = share(chargeJoules, metalMass, chargeMg);
+                        double slagJoules = share(chargeJoules, slagMass, chargeMg);
+                        double gasJoules = Math.max(0.0, chargeJoules - metalJoules - slagJoules);
 
                         exhaustSink.vent(ExhaustSink.EXHAUST_GAS, gasMass);
+                        exhaustSink.ventEnergy(gasJoules);
 
-                        ActiveThermalState metalThermal = ActiveThermalState
-                            .atTemperature(temp, 1.0, metalMass.toKilograms(), oreDef.metallicProperties());
-                        AggregateLayer metalLayer = new AggregateLayer(
-                            oreDef.metallicProductRef(),
-                            CanonicalMaterialKey.of(oreDef.metallicProductComposition())
-                                .asMolten(),
-                            oreDef.metallicProductComposition(),
-                            metalMass,
-                            metalThermal,
-                            AggregatePhaseType.MOLTEN_METAL);
-                        newLayers.add(metalLayer);
+                        if (!metalMass.isZero()) {
+                            AggregateLayer metalLayer = new AggregateLayer(
+                                oreDef.metallicProductRef(),
+                                CanonicalMaterialKey.of(oreDef.metallicProductComposition())
+                                    .asMolten(),
+                                oreDef.metallicProductComposition(),
+                                metalMass,
+                                new ActiveThermalState(
+                                    metalJoules,
+                                    metalMass.toKilograms(),
+                                    oreDef.metallicProperties()),
+                                AggregatePhaseType.MOLTEN_METAL);
+                            newLayers.add(metalLayer);
+                        }
 
-                        ActiveThermalState slagThermal = ActiveThermalState
-                            .atTemperature(temp, 1.0, slagMass.toKilograms(), OreFeedstockDefinition.SLAG_PROPERTIES);
-                        AggregateLayer slagLayer = new AggregateLayer(
-                            OreFeedstockDefinition.SLAG_REF,
-                            CanonicalMaterialKey.of(CanonicalComposition.of(OreFeedstockDefinition.SLAG_RESOURCE_ID))
-                                .asMolten(),
-                            CanonicalComposition.of(OreFeedstockDefinition.SLAG_RESOURCE_ID),
-                            slagMass,
-                            slagThermal,
-                            AggregatePhaseType.SLAG);
-                        newLayers.add(slagLayer);
+                        if (!slagMass.isZero()) {
+                            AggregateLayer slagLayer = new AggregateLayer(
+                                OreFeedstockDefinition.SLAG_REF,
+                                CanonicalMaterialKey
+                                    .of(CanonicalComposition.of(OreFeedstockDefinition.SLAG_RESOURCE_ID))
+                                    .asMolten(),
+                                CanonicalComposition.of(OreFeedstockDefinition.SLAG_RESOURCE_ID),
+                                slagMass,
+                                new ActiveThermalState(
+                                    slagJoules,
+                                    slagMass.toKilograms(),
+                                    OreFeedstockDefinition.SLAG_PROPERTIES),
+                                AggregatePhaseType.SLAG);
+                            newLayers.add(slagLayer);
+                        }
                     } else {
-                        // Already refined metal or alloy: melts directly into MOLTEN_METAL
-                        ActiveThermalState moltenThermal = ActiveThermalState.atTemperature(
-                            temp,
-                            1.0,
-                            layer.mass()
-                                .toKilograms(),
-                            layer.thermalState()
-                                .properties());
+                        // Already refined metal or alloy keeps its exact thermal state; only its role changes.
                         AggregateLayer moltenLayer = new AggregateLayer(
                             layer.materialRef(),
                             layer.stateKey()
                                 .asMolten(),
                             layer.composition(),
                             layer.mass(),
-                            moltenThermal,
+                            new ActiveThermalState(
+                                chargeJoules,
+                                layer.mass()
+                                    .toKilograms(),
+                                layer.thermalState()
+                                    .properties()),
                             AggregatePhaseType.MOLTEN_METAL);
                         newLayers.add(moltenLayer);
                     }
@@ -369,6 +399,11 @@ public final class VesselState {
 
         layers.removeAll(toRemove);
         layers.addAll(newLayers);
+    }
+
+    private static double share(double joules, MaterialQuantity part, long wholeMg) {
+        if (wholeMg <= 0L || part.isZero()) return 0.0;
+        return joules * ((double) part.milligrams() / (double) wholeMg);
     }
 
     private static OreFeedstockDefinition findFeedstock(AggregateLayer layer) {

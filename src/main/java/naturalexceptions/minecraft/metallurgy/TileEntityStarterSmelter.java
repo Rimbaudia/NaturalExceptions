@@ -554,8 +554,8 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
                 || vesselState.totalMass().add(mass).compareTo(vesselState.capacity()) > 0) return false;
             AggregateLayer layer = parcel.toAggregateLayer();
             vesselState.remelt(layer);
+            // The reusable vessel is emptied, never consumed with its contents.
             ItemFluidVessel.setContents(stack, null);
-            stack.stackSize--;
             markDirty();
             if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
             return true;
@@ -572,6 +572,7 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
             MaterialProperties props = resolveMaterialProperties(ref, effectiveKey);
             ActiveThermalState thermal = ItemMaterialSample.getThermalState(stack, props);
             MaterialQuantity mass = ItemMaterialSample.getMass(stack);
+            if (!hasGeometricRoom(mass, props)) return false;
             if (vesselState.totalMass()
                 .add(mass)
                 .compareTo(vesselState.capacity()) > 0) {
@@ -1019,6 +1020,55 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
     public static String getFeedRejectionDiagnostic(ItemStack stack) {
         if (stack == null) return null;
         return naturalexceptions.core.material.VanillaResourceClassification.getRejectionReason(stack);
+    }
+
+    // --- Break safety ---
+
+    /** Stack-tag key carrying a broken controller's vessel, fire, hearth, and slot contents. */
+    public static final String CONTENTS_TAG = "SmelterContents";
+
+    /** True when breaking this controller would otherwise discard matter, fuel, or heat. */
+    private boolean creativeRemoval;
+
+    public void markCreativeRemoval() {
+        creativeRemoval = true;
+    }
+
+    public boolean isCreativeRemoval() {
+        return creativeRemoval;
+    }
+
+    public boolean hasPreservableContents() {
+        if (hearthWorkpiece != null) return true;
+        for (ItemStack stack : inventory) {
+            if (stack != null) return true;
+        }
+        return !vesselState.layers()
+            .isEmpty()
+            || vesselState.fuelState()
+                .remainingTicks() > 0;
+    }
+
+    /** Serializes everything that must survive the controller being broken and re-placed. */
+    public NBTTagCompound writeContentsTag() {
+        NBTTagCompound contents = new NBTTagCompound();
+        writeToNBT(contents);
+        contents.removeTag("id");
+        contents.removeTag("x");
+        contents.removeTag("y");
+        contents.removeTag("z");
+        return contents;
+    }
+
+    /** Restores contents carried by a dropped controller. */
+    public void readContentsTag(NBTTagCompound contents) {
+        NBTTagCompound positioned = (NBTTagCompound) contents.copy();
+        positioned.setString("id", "starter_smelter");
+        positioned.setInteger("x", xCoord);
+        positioned.setInteger("y", yCoord);
+        positioned.setInteger("z", zCoord);
+        readFromNBT(positioned);
+        markDirty();
     }
 
     // --- Persistence & Networking ---

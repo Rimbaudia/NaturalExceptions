@@ -142,6 +142,26 @@ public final class FluidVessel {
         return result;
     }
 
+    /**
+     * Returns a parcel just produced by {@link #drain} after its destination refused it. Identical matter rejoins
+     * its source layer; otherwise the whole parcel is re-added. Capacity is not re-checked because the matter
+     * occupied this vessel a moment ago.
+     */
+    void restoreDrained(FluidParcel parcel) {
+        Objects.requireNonNull(parcel, "parcel");
+        for (FluidParcel existing : contents) {
+            if (existing.materialRef().equals(parcel.materialRef())
+                && existing.composition().equals(parcel.composition())) {
+                existing.mergeSameMaterial(parcel);
+                parcel.copyAndConsume();
+                sortLayers();
+                return;
+            }
+        }
+        contents.add(parcel);
+        sortLayers();
+    }
+
     private FluidParcel compatibleTarget(FluidParcel incoming) {
         for (FluidParcel existing : contents) {
             if (rules.classify(existing, incoming) != FluidInteractionRules.Result.IMMISCIBLE) return existing;

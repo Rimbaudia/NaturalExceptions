@@ -89,6 +89,29 @@ final class FluidWorldStateTest {
     }
 
     @Test
+    void refusedSpillLeavesSourceVesselUntouched() {
+        FluidWorldState world = new FluidWorldState(1);
+        world.put(new FluidCellKey(0, 40, 64, 40), water(1000L));
+        FluidVessel vessel = new FluidVessel(300000L, FluidInteractionRules.sameMaterialOnly());
+        vessel.fill(water(200000L));
+        double energyBefore = vessel.totalThermalEnergyJoules();
+
+        // The bounded rebuild queue is full, so the destination cannot accept matter.
+        assertFalse(world.spillFrom(vessel, new FluidCellKey(0, 4, 64, 4), MaterialQuantity.ofMilligrams(100000L)));
+        assertEquals(200000L, vessel.totalMass().milligrams());
+        assertEquals(1, vessel.contents().size());
+        assertEquals(energyBefore, vessel.totalThermalEnergyJoules(), 1.0e-9);
+        assertEquals(1000L, world.totalMass().milligrams());
+
+        // Occupied destinations are refused before draining too.
+        FluidWorldState roomy = new FluidWorldState(32);
+        FluidCellKey occupied = new FluidCellKey(0, 1, 64, 1);
+        roomy.put(occupied, water(1000L));
+        assertFalse(roomy.spillFrom(vessel, occupied, MaterialQuantity.ofMilligrams(1000L)));
+        assertEquals(200000L, vessel.totalMass().milligrams());
+    }
+
+    @Test
     void hotSpatialFluidUsesSharedThermalStateThenSleepsAfterSolidifying() {
         FluidWorldState world = new FluidWorldState(16);
         FluidCellKey key = new FluidCellKey(0, 8, 70, 8);

@@ -25,19 +25,42 @@ public class BlockFluidCell extends Block {
     @SideOnly(Side.CLIENT) private IIcon liquidCellIcon;
     @SideOnly(Side.CLIENT) private IIcon solidCellIcon;
     public BlockFluidCell() {
-        super(Material.water); setBlockName("fluidCell"); setBlockTextureName("minecraft:water_still");
-        setBlockBounds(0, 0, 0, 1, 0.875F, 1); setHardness(0.1F); setLightOpacity(2);
+        this(Material.water);
+        setBlockName("fluidCell"); setBlockTextureName("minecraft:water_still");
+        setLightOpacity(2);
     }
+
+    protected BlockFluidCell(Material material) {
+        super(material);
+        setBlockBounds(0, 0, 0, 1, 0.875F, 1); setHardness(0.1F);
+    }
+
+    // Block metadata is four bits: two for the host kind and two for the fill level in quarters.
+    public static final int KIND_LIQUID = 0;
+    public static final int KIND_WATER = 1;
+    public static final int KIND_SOLID = 2;
+    public static final int KIND_GLOWING_SOLID = 3;
+    /** Draper point: solid matter this hot visibly glows. */
+    public static final double GLOW_TEMPERATURE_K = 798.0;
+
     public static int metadataFor(FluidParcel parcel) {
         if (parcel == null) return 0;
         boolean water = parcel.composition().contains(naturalexceptions.core.id.ResourceId.of("minecraft", "water"));
         boolean solid = parcel.phase() != naturalexceptions.core.material.MaterialPhase.LIQUID;
         long volume = parcel.volumeMicrolitres();
-        int level = (int) Math.max(1L, Math.min(8L, (volume * 8L
+        int quarters = (int) Math.max(1L, Math.min(4L, (volume * 4L
             + naturalexceptions.core.fluid.FluidWorldState.MAX_CELL_VOLUME_MICROLITRES - 1L)
             / naturalexceptions.core.fluid.FluidWorldState.MAX_CELL_VOLUME_MICROLITRES));
-        return (water ? 8 : 0) | (solid ? 16 : 0) | (level - 1);
+        int kind;
+        if (solid) kind = parcel.thermalState().temperatureKelvin() >= GLOW_TEMPERATURE_K
+            ? KIND_GLOWING_SOLID : KIND_SOLID;
+        else kind = water ? KIND_WATER : KIND_LIQUID;
+        return (kind << 2) | (quarters - 1);
     }
+    public static int kindOf(int metadata) { return (metadata >> 2) & 3; }
+    public static boolean isSolidMetadata(int metadata) { return kindOf(metadata) >= KIND_SOLID; }
+    public static float heightOf(int metadata) { return ((metadata & 3) + 1) / 4.0F; }
+
     @Override public boolean isOpaqueCube() { return false; }
     @Override public boolean renderAsNormalBlock() { return false; }
     @Override public int getRenderBlockPass() { return 1; }
@@ -51,19 +74,47 @@ public class BlockFluidCell extends Block {
         return true;
     }
     @Override public void setBlockBoundsBasedOnState(IBlockAccess access, int x, int y, int z) {
-        int metadata = access.getBlockMetadata(x, y, z);
-        int eighths = (metadata & 7) + 1;
-        setBlockBounds(0.0F, 0.0F, 0.0F, 1.0F, eighths / 8.0F, 1.0F);
+        setBlockBounds(0.0F, 0.0F, 0.0F, 1.0F, heightOf(access.getBlockMetadata(x, y, z)), 1.0F);
     }
+    @Override public void setBlockBoundsForItemRender() { setBlockBounds(0.0F, 0.0F, 0.0F, 1.0F, 0.5F, 1.0F); }
+    /** Liquid parcels can be waded into; solidified parcels are solid ground. */
     @Override public net.minecraft.util.AxisAlignedBB getCollisionBoundingBoxFromPool(World world, int x, int y, int z) {
-        return null;
+        int metadata = world.getBlockMetadata(x, y, z);
+        if (!isSolidMetadata(metadata)) return null;
+        return net.minecraft.util.AxisAlignedBB.getBoundingBox(x, y, z, x + 1, y + heightOf(metadata), z + 1);
     }
+
+    @Override public boolean hasTileEntity(int metadata) { return true; }
+    @Override public net.minecraft.tileentity.TileEntity createTileEntity(World world, int metadata) {
+        return new TileEntityFluidCell();
+    }
+
+    /** Material tint, supplied by the server from canonical appearance so different liquids read differently. */
+    @Override
+    @SideOnly(Side.CLIENT)
+    public int colorMultiplier(IBlockAccess access, int x, int y, int z) {
+        if (kindOf(access.getBlockMetadata(x, y, z)) == KIND_WATER) return 0xFFFFFF;
+        net.minecraft.tileentity.TileEntity tile = access.getTileEntity(x, y, z);
+        return tile instanceof TileEntityFluidCell ? ((TileEntityFluidCell) tile).color() : 0xFFFFFF;
+    }
+
+    /** Hot liquids and glowing solids light their surroundings. */
+    @Override public int getLightValue(IBlockAccess access, int x, int y, int z) {
+        int kind = kindOf(access.getBlockMetadata(x, y, z));
+        if (kind == KIND_LIQUID || kind == KIND_GLOWING_SOLID) {
+            net.minecraft.tileentity.TileEntity tile = access.getTileEntity(x, y, z);
+            if (tile instanceof TileEntityFluidCell) return ((TileEntityFluidCell) tile).lightLevel();
+        }
+        return 0;
+    }
+
     @Override public int quantityDropped(Random random) { return 0; }
     @Override
     @SideOnly(Side.CLIENT)
     public IIcon getIcon(int side, int metadata) {
-        if ((metadata & 16) != 0) return solidCellIcon;
-        if ((metadata & 8) != 0) return net.minecraft.init.Blocks.water.getIcon(0, 0);
+        int kind = kindOf(metadata);
+        if (kind >= KIND_SOLID) return solidCellIcon;
+        if (kind == KIND_WATER) return net.minecraft.init.Blocks.water.getIcon(0, 0);
         return liquidCellIcon;
     }
 
@@ -83,8 +134,12 @@ public class BlockFluidCell extends Block {
         int metadata = metadataFor(parcel);
         if (world.getBlockMetadata(key.x(), key.y(), key.z()) != metadata) {
             world.setBlockMetadataWithNotify(key.x(), key.y(), key.z(), metadata, 3);
-            world.markBlockForUpdate(key.x(), key.y(), key.z());
         }
+        net.minecraft.tileentity.TileEntity tile = world.getTileEntity(key.x(), key.y(), key.z());
+        if (tile instanceof TileEntityFluidCell) ((TileEntityFluidCell) tile).refreshFromWorld();
+        // Tint and glow travel in the host tile's description packet; resend after any visible change.
+        world.markBlockForUpdate(key.x(), key.y(), key.z());
+        world.updateLightByType(net.minecraft.world.EnumSkyBlock.Block, key.x(), key.y(), key.z());
     }
 
     public ItemStack recoveryStack(FluidParcel parcel) {

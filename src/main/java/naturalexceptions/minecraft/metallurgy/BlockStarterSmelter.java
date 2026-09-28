@@ -91,6 +91,18 @@ public final class BlockStarterSmelter extends BlockContainer {
         if (l == 1) world.setBlockMetadataWithNotify(x, y, z, 5, 2); // East
         if (l == 2) world.setBlockMetadataWithNotify(x, y, z, 3, 2); // South
         if (l == 3) world.setBlockMetadataWithNotify(x, y, z, 4, 2); // West
+        if (!world.isRemote && stack != null
+            && stack.hasTagCompound()
+            && stack.getTagCompound()
+                .hasKey(TileEntityStarterSmelter.CONTENTS_TAG, 10)) {
+            TileEntity te = world.getTileEntity(x, y, z);
+            if (te instanceof TileEntityStarterSmelter) {
+                ((TileEntityStarterSmelter) te).readContentsTag(
+                    stack.getTagCompound()
+                        .getCompoundTag(TileEntityStarterSmelter.CONTENTS_TAG));
+                world.markBlockForUpdate(x, y, z);
+            }
+        }
     }
 
     @Override
@@ -326,25 +338,57 @@ public final class BlockStarterSmelter extends BlockContainer {
         return true;
     }
 
+    /**
+     * The controller is always dropped from {@link #breakBlock} so that contents can travel with it; vanilla's
+     * chance-based drop path (explosions) must not also drop, or lose, a copy.
+     */
+    @Override
+    public int quantityDropped(java.util.Random random) {
+        return 0;
+    }
+
+    @Override
+    public void onBlockHarvested(World world, int x, int y, int z, int meta, EntityPlayer player) {
+        TileEntity te = world.getTileEntity(x, y, z);
+        if (te instanceof TileEntityStarterSmelter && player != null && player.capabilities.isCreativeMode) {
+            ((TileEntityStarterSmelter) te).markCreativeRemoval();
+        }
+        super.onBlockHarvested(world, x, y, z, meta, player);
+    }
+
     @Override
     public void breakBlock(World world, int x, int y, int z, net.minecraft.block.Block block, int meta) {
         TileEntity te = world.getTileEntity(x, y, z);
-        if (te instanceof TileEntityStarterSmelter) {
-            TileEntityStarterSmelter smelter = (TileEntityStarterSmelter) te;
-            ItemStack hw = smelter.getHearthWorkpiece();
-            if (hw != null) {
-                float rx = world.rand.nextFloat() * 0.8F + 0.1F;
-                float ry = world.rand.nextFloat() * 0.8F + 0.1F;
-                float rz = world.rand.nextFloat() * 0.8F + 0.1F;
+        if (!world.isRemote && te instanceof TileEntityStarterSmelter) {
+            ItemStack drop = createDrop((TileEntityStarterSmelter) te);
+            if (drop != null) {
                 net.minecraft.entity.item.EntityItem entityItem = new net.minecraft.entity.item.EntityItem(
                     world,
-                    x + rx,
-                    y + ry,
-                    z + rz,
-                    hw);
+                    x + 0.5D,
+                    y + 0.5D,
+                    z + 0.5D,
+                    drop);
+                entityItem.delayBeforeCanPickup = 10;
                 world.spawnEntityInWorld(entityItem);
             }
         }
         super.breakBlock(world, x, y, z, block, meta);
+    }
+
+    /**
+     * Builds the controller drop. A controller holding any fire, charge, melt, slag, hearth workpiece, or slot item
+     * carries all of it (including thermal energy) in the stack; nothing is silently deleted. An empty controller
+     * broken in creative mode drops nothing, matching vanilla creative removal.
+     */
+    public static ItemStack createDrop(TileEntityStarterSmelter smelter) {
+        boolean contents = smelter.hasPreservableContents();
+        if (!contents && smelter.isCreativeRemoval()) return null;
+        ItemStack drop = new ItemStack(naturalexceptions.minecraft.registry.NEBlocks.starterSmelter);
+        if (contents) {
+            net.minecraft.nbt.NBTTagCompound tag = new net.minecraft.nbt.NBTTagCompound();
+            tag.setTag(TileEntityStarterSmelter.CONTENTS_TAG, smelter.writeContentsTag());
+            drop.setTagCompound(tag);
+        }
+        return drop;
     }
 }

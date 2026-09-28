@@ -140,7 +140,8 @@ final class FeedstockInsertionIntegrationTest {
 
         assertTrue(TileEntityStarterSmelter.isSmeltableFeed(vessel));
         assertTrue(smelter.insertFeed(vessel));
-        assertEquals(0, vessel.stackSize);
+        assertEquals(1, vessel.stackSize, "The reusable vessel is returned, not consumed");
+        assertFalse(naturalexceptions.minecraft.item.ItemFluidVessel.isFilled(vessel));
         AggregateLayer layer = smelter.vesselState().layers().get(0);
         assertEquals(BuiltinMaterials.STELLAR_MATTER.ref(), layer.materialRef());
         assertEquals(mass, layer.mass());

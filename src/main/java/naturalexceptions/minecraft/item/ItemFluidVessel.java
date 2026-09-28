@@ -174,7 +174,12 @@ public final class ItemFluidVessel extends Item {
                 return false;
             }
             saved.fluids().remove(hitKey);
-            saved.fluids().put(hitKey, receiver.contents().get(0));
+            try {
+                saved.fluids().put(hitKey, receiver.contents().get(0));
+            } catch (RuntimeException refused) {
+                saved.fluids().put(hitKey, existing);
+                return false;
+            }
             setContents(stack, null); saved.markDirty(); world.markBlockForUpdate(x, y, z);
             return true;
         }

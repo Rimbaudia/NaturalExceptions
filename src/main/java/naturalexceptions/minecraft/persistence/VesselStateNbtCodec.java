@@ -33,6 +33,7 @@ public final class VesselStateNbtCodec {
     public static final String KEY_FUEL_LABEL = "FuelLabel";
     public static final String KEY_EXHAUST_TOTAL_MG = "ExhaustTotalMg";
     public static final String KEY_EXHAUST_CONSTITUENTS = "ExhaustConstituents";
+    public static final String KEY_EXHAUST_ENERGY = "ExhaustEnergy";
     public static final String KEY_LAYERS = "Layers";
 
     public static final String KEY_LAYER_REF = "MaterialRef";
@@ -103,6 +104,10 @@ public final class VesselStateNbtCodec {
             exhaustList.appendTag(tag);
         }
         nbt.setTag(KEY_EXHAUST_CONSTITUENTS, exhaustList);
+        nbt.setDouble(
+            KEY_EXHAUST_ENERGY,
+            state.exhaustSink()
+                .ventedEnergyJoules());
 
         NBTTagList layersList = new NBTTagList();
         for (AggregateLayer layer : state.layers()) {
@@ -180,6 +185,10 @@ public final class VesselStateNbtCodec {
             }
         }
 
+        if (nbt.hasKey(KEY_EXHAUST_ENERGY)) {
+            double vented = nbt.getDouble(KEY_EXHAUST_ENERGY);
+            if (Double.isFinite(vented) && vented > 0.0) exhaustSink.ventEnergy(vented);
+        }
         VesselState vessel = new VesselState(capacity, lining, fuelState, exhaustSink, resolver);
 
         if (nbt.hasKey(KEY_LAYERS, 9)) {
