@@ -244,10 +244,29 @@ public final class NEWorldTickHandler {
                     .resolve(impact.id())) {
                     impactsResolved++;
                     naturalexceptions.minecraft.event.P8WorldPresence.announceImpact(world, impact);
+                    // Seen falling when someone is near enough to watch; otherwise it simply lands.
+                    if (world != null && launchIfWatched(world, impact)) continue;
                     if (world != null && starRainMaterializer.materialize(world, data, impact)) sitesMaterialized++;
                 }
             }
             if (impactsResolved > 0) data.markDirty();
+        }
+        // Impacts whose falling star was lost (unload, restart) or whose crater chunks were not yet loaded.
+        if (world != null && worldTime % 100L == 0L
+            && data.p11()
+                .awaitingMaterializationCount() > 0) {
+            int retries = 0;
+            for (StarRainImpact impact : data.p11()
+                .snapshot()) {
+                if (retries >= 2) break;
+                if (!impact.isResolved() || impact.isMaterialized()
+                    || naturalexceptions.minecraft.event.EntityFallingStar.isInFlight(impact.id())
+                    || !world.getChunkProvider()
+                        .chunkExists(impact.x() >> 4, impact.z() >> 4))
+                    continue;
+                retries++;
+                if (starRainMaterializer.materialize(world, data, impact)) sitesMaterialized++;
+            }
         }
         profiler.incrementCounter(SUBSYSTEM_STAR_RAIN, "impacts_resolved", impactsResolved);
         profiler.incrementCounter(SUBSYSTEM_STAR_RAIN, "sites_materialized", sitesMaterialized);
@@ -295,6 +314,25 @@ public final class NEWorldTickHandler {
             data.scheduler()
                 .pendingCount());
         profiler.setQueuedWork(SUBSYSTEM_SCHEDULER, workQueue.size());
+    }
+
+    /** Launches a visible falling star if a player is close enough to watch it land. */
+    private static boolean launchIfWatched(net.minecraft.world.World world, StarRainImpact impact) {
+        if (!world.getChunkProvider()
+            .chunkExists(impact.x() >> 4, impact.z() >> 4)) return false;
+        boolean watched = false;
+        for (Object object : world.playerEntities) {
+            net.minecraft.entity.player.EntityPlayer player = (net.minecraft.entity.player.EntityPlayer) object;
+            double dx = player.posX - impact.x(), dz = player.posZ - impact.z();
+            if (dx * dx + dz * dz <= 400.0 * 400.0) {
+                watched = true;
+                break;
+            }
+        }
+        if (!watched) return false;
+        double surfaceY = world.getTopSolidOrLiquidBlock(impact.x(), impact.z());
+        return world
+            .spawnEntityInWorld(naturalexceptions.minecraft.event.EntityFallingStar.launch(world, impact, surfaceY));
     }
 
     private void defaultHandleEvent(ScheduledEvent event) {

@@ -79,6 +79,14 @@ public final class NaturalExceptions {
             .bus()
             .register(new naturalexceptions.minecraft.knowledge.KnowledgeServerTasks());
         NEOverworldGenerator.register();
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.event.EntityFallingStar.class,
+            "fallen_star",
+            0,
+            this,
+            256,
+            1,
+            true);
         MinecraftForge.EVENT_BUS.register(new NEChunkGenerationHistory());
         cpw.mods.fml.common.network.NetworkRegistry.INSTANCE
             .registerGuiHandler(this, new naturalexceptions.minecraft.gui.NEGuiHandler());
@@ -112,6 +120,9 @@ public final class NaturalExceptions {
 
     @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
     private void registerClientRenderers() {
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.event.EntityFallingStar.class,
+            new naturalexceptions.minecraft.event.client.RenderFallingStar());
         cpw.mods.fml.client.registry.RenderingRegistry
             .registerBlockHandler(new naturalexceptions.minecraft.metallurgy.client.RenderSmelterOutletBlock());
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
