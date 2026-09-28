@@ -15,7 +15,7 @@ import naturalexceptions.minecraft.network.PacketKnowledgeSnapshot;
 
 /** Blank records export one subject's evidence; filled records import it as transferred evidence. */
 public final class ItemKnowledgeRecord extends Item {
-    public ItemKnowledgeRecord() { setUnlocalizedName("knowledgeRecord"); setTextureName("minecraft:book"); setMaxStackSize(1); }
+    public ItemKnowledgeRecord() { setUnlocalizedName("knowledgeRecord"); setTextureName("naturalexceptions:knowledge_record"); setMaxStackSize(1); }
 
     @Override public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
         if (stack == null || world == null || world.isRemote || player == null) return stack;

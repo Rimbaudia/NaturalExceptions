@@ -89,30 +89,6 @@ public final class ItemCastingMold extends Item {
     @SideOnly(Side.CLIENT)
     private IIcon iconHandleFill;
 
-    @SideOnly(Side.CLIENT)
-    private IIcon iconIngotFilled;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconIngotSolid;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconPickHeadFilled;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconPickHeadSolid;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconPlateFilled;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconPlateSolid;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconRodFilled;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconRodSolid;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconBladeFilled;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconBladeSolid;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconHandleFilled;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconHandleSolid;
 
     public ItemCastingMold() {
         setUnlocalizedName("castingMold");
@@ -783,18 +759,6 @@ public final class ItemCastingMold extends Item {
         this.iconBladeFill = reg.registerIcon("naturalexceptions:mold_blade_fill");
         this.iconHandleFill = reg.registerIcon("naturalexceptions:mold_handle_fill");
 
-        this.iconIngotFilled = reg.registerIcon("naturalexceptions:mold_ingot_filled");
-        this.iconIngotSolid = reg.registerIcon("naturalexceptions:mold_ingot_solid");
-        this.iconPickHeadFilled = reg.registerIcon("naturalexceptions:mold_pick_head_filled");
-        this.iconPickHeadSolid = reg.registerIcon("naturalexceptions:mold_pick_head_solid");
-        this.iconPlateFilled = reg.registerIcon("naturalexceptions:mold_plate_filled");
-        this.iconPlateSolid = reg.registerIcon("naturalexceptions:mold_plate_solid");
-        this.iconRodFilled = reg.registerIcon("naturalexceptions:mold_rod_filled");
-        this.iconRodSolid = reg.registerIcon("naturalexceptions:mold_rod_solid");
-        this.iconBladeFilled = reg.registerIcon("naturalexceptions:mold_blade_filled");
-        this.iconBladeSolid = reg.registerIcon("naturalexceptions:mold_blade_solid");
-        this.iconHandleFilled = reg.registerIcon("naturalexceptions:mold_handle_filled");
-        this.iconHandleSolid = reg.registerIcon("naturalexceptions:mold_handle_solid");
     }
 
     @Override

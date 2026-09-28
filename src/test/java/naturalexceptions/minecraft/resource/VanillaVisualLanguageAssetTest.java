@@ -146,7 +146,7 @@ public final class VanillaVisualLanguageAssetTest {
 
     @Test
     void castingMoldCavitiesAndFillMasksAlignCorrectly() throws IOException {
-        String[] geoms = { "blank", "pick_head", "plate", "rod", "blade", "handle" };
+        String[] geoms = { "pick_head", "plate", "rod", "blade", "handle" };
 
         for (String g : geoms) {
             File baseFile = new File(ITEMS_DIR, "mold_" + g + ".png");

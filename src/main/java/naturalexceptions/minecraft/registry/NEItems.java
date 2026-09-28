@@ -138,12 +138,12 @@ public final class NEItems {
         startingManual = new naturalexceptions.minecraft.item.ItemKnowledgeBook(
             naturalexceptions.content.knowledge.BuiltinKnowledgeSources.STARTING_MANUAL,
             "fieldManual",
-            "minecraft:book");
+            "naturalexceptions:field_manual");
         startingManual.setCreativeTab(NECreativeTab.INSTANCE);
         foundryNotes = new naturalexceptions.minecraft.item.ItemKnowledgeBook(
             naturalexceptions.content.knowledge.BuiltinKnowledgeSources.FOUNDRY_NOTES,
             "foundryNotes",
-            "minecraft:writable_book");
+            "naturalexceptions:foundry_notes");
         foundryNotes.setCreativeTab(NECreativeTab.INSTANCE);
         fieldAssay = new naturalexceptions.minecraft.item.ItemFieldAssay();
         fieldAssay.setCreativeTab(NECreativeTab.INSTANCE);
