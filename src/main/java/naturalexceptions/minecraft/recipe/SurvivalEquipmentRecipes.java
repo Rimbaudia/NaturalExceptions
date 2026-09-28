@@ -43,7 +43,8 @@ public final class SurvivalEquipmentRecipes {
 
         // Blacksmith Hammer: a cast ingot as the head on a stick.
         if (NEItems.blacksmithHammer != null) {
-            recipes.add(new RecipeCastParts(1, 2, new Cell[] { ingot, stick }, new ItemStack(NEItems.blacksmithHammer)));
+            recipes
+                .add(new RecipeCastParts(1, 2, new Cell[] { ingot, stick }, new ItemStack(NEItems.blacksmithHammer)));
         }
         // Blacksmith Tongs: two cast rods crossed.
         if (NEItems.blacksmithTongs != null) {

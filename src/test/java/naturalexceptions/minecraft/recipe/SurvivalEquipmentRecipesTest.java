@@ -84,8 +84,10 @@ final class SurvivalEquipmentRecipesTest {
 
         ItemStack hammer = craft(grid(cast(GeometryId.INGOT), null, null, stick));
         assertEquals(NEItems.blacksmithHammer, itemOf(hammer));
-        assertTrue(hammer.getTagCompound()
-            .hasKey(RecipeCastParts.PARTS_TAG), "the hammer records the metal it was made from");
+        assertTrue(
+            hammer.getTagCompound()
+                .hasKey(RecipeCastParts.PARTS_TAG),
+            "the hammer records the metal it was made from");
 
         assertEquals(
             NEItems.blacksmithTongs,

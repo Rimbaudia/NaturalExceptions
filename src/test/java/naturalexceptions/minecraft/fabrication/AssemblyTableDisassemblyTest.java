@@ -85,8 +85,12 @@ final class AssemblyTableDisassemblyTest {
         assertEquals(originalHead.materialRef(), h.materialRef());
         assertEquals(originalHead.mass(), h.mass(), "no mass lost");
         assertEquals(originalHead.manufacturingState(), h.manufacturingState());
-        assertEquals(0.25, h.damage()
-            .wear(), 1.0e-9, "damage from use travels with the part");
+        assertEquals(
+            0.25,
+            h.damage()
+                .wear(),
+            1.0e-9,
+            "damage from use travels with the part");
         assertEquals(originalHandle.instanceId(), g.instanceId());
         assertEquals(originalHandle.mass(), g.mass());
         assertEquals(
@@ -112,8 +116,9 @@ final class AssemblyTableDisassemblyTest {
     @Test
     void assembledToolNoLongerDropsOnlyItsHandleAsAContainerItem() {
         ItemStack tool = ToolAssemblyCarrier.assemble(copperPickHead(), ItemGenericComponent.createWoodenHandle());
-        assertFalse(tool.getItem()
-            .hasContainerItem(tool));
+        assertFalse(
+            tool.getItem()
+                .hasContainerItem(tool));
         assertTrue(ToolAssemblyCarrier.isDisassemblable(tool));
     }
 }

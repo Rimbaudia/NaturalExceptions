@@ -9,13 +9,13 @@ import org.apache.logging.log4j.Logger;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 import cpw.mods.fml.relauncher.Side;
+import naturalexceptions.core.event.StarRainImpact;
 import naturalexceptions.core.id.ResourceId;
 import naturalexceptions.core.profile.SubsystemProfiler;
 import naturalexceptions.core.queue.BoundedWorkQueue;
 import naturalexceptions.core.scheduler.ScheduledEvent;
-import naturalexceptions.minecraft.persistence.NEWorldSavedData;
 import naturalexceptions.minecraft.event.StarRainWorldMaterializer;
-import naturalexceptions.core.event.StarRainImpact;
+import naturalexceptions.minecraft.persistence.NEWorldSavedData;
 
 public final class NEWorldTickHandler {
 
@@ -80,8 +80,8 @@ public final class NEWorldTickHandler {
 
     /** Runs the ordinary server-side domain path at a simulated time for operator-only acceptance tooling. */
     public void advanceForDevelopment(NEWorldSavedData data, net.minecraft.world.World world, long simulatedTime) {
-        if (data == null || world == null || world.isRemote || world.provider.dimensionId != 0
-            || simulatedTime < 0L) return;
+        if (data == null || world == null || world.isRemote || world.provider.dimensionId != 0 || simulatedTime < 0L)
+            return;
         tickWorld(data, simulatedTime, world);
     }
 
@@ -90,21 +90,26 @@ public final class NEWorldTickHandler {
 
         long fluidStartNanos = System.nanoTime();
         int fluidWork = 0;
-        if (data.fluids().dirtyCellCount() > 0) {
-            fluidWork = data.fluids().processDirty(perTickBudget);
+        if (data.fluids()
+            .dirtyCellCount() > 0) {
+            fluidWork = data.fluids()
+                .processDirty(perTickBudget);
             if (fluidWork > 0) data.markDirty();
             profiler.incrementCounter(SUBSYSTEM_FLUIDS, "region_cells_rebuilt", fluidWork);
         }
         java.util.function.Predicate<naturalexceptions.core.fluid.FluidCellKey> loadedFluidCell = key -> world == null
-            || world.getChunkProvider().chunkExists(key.x() >> 4, key.z() >> 4);
-        int thermalFluidWork = data.fluids().activeThermalCellCount() > 0
-            ? data.fluids().processThermalWork(0.05, perTickBudget, loadedFluidCell) : 0;
+            || world.getChunkProvider()
+                .chunkExists(key.x() >> 4, key.z() >> 4);
+        int thermalFluidWork = data.fluids()
+            .activeThermalCellCount() > 0 ? data.fluids()
+                .processThermalWork(0.05, perTickBudget, loadedFluidCell) : 0;
         if (thermalFluidWork > 0) data.markDirty();
         int fluidHostsRefreshed = 0;
         if (world != null) {
             for (naturalexceptions.core.fluid.FluidCellKey key : data.fluids()
                 .drainHostPhaseChanges(perTickBudget, loadedFluidCell)) {
-                naturalexceptions.core.fluid.FluidParcel parcel = data.fluids().parcelAt(key);
+                naturalexceptions.core.fluid.FluidParcel parcel = data.fluids()
+                    .parcelAt(key);
                 if (parcel != null) {
                     naturalexceptions.minecraft.fluid.BlockFluidCell.refreshHost(world, key, parcel);
                     fluidHostsRefreshed++;
@@ -113,46 +118,80 @@ public final class NEWorldTickHandler {
         }
         profiler.incrementCounter(SUBSYSTEM_FLUIDS, "thermal_coupling_work", thermalFluidWork);
         profiler.incrementCounter(SUBSYSTEM_FLUIDS, "host_phase_updates", fluidHostsRefreshed);
-        profiler.setActiveCount(SUBSYSTEM_FLUIDS, data.fluids().dirtyCellCount()
-            + data.fluids().activeThermalCellCount());
-        profiler.setQueuedWork(SUBSYSTEM_FLUIDS, data.fluids().dirtyCellCount());
-        profiler.setSleepingCount(SUBSYSTEM_FLUIDS, data.fluids().sleepingRegionCount());
+        profiler.setActiveCount(
+            SUBSYSTEM_FLUIDS,
+            data.fluids()
+                .dirtyCellCount()
+                + data.fluids()
+                    .activeThermalCellCount());
+        profiler.setQueuedWork(
+            SUBSYSTEM_FLUIDS,
+            data.fluids()
+                .dirtyCellCount());
+        profiler.setSleepingCount(
+            SUBSYSTEM_FLUIDS,
+            data.fluids()
+                .sleepingRegionCount());
         profiler.recordElapsedNanos(SUBSYSTEM_FLUIDS, "region_and_thermal_work", System.nanoTime() - fluidStartNanos);
 
         long electricalStartNanos = System.nanoTime();
-        int electricalWork = data.electrical().processWork(0.05, perTickBudget);
+        int electricalWork = data.electrical()
+            .processWork(0.05, perTickBudget);
         if (electricalWork > 0) data.markDirty();
         profiler.incrementCounter(SUBSYSTEM_ELECTRICAL, "solver_and_thermal_work", electricalWork);
-        long solves = data.electrical().solveWork();
-        long thermal = data.electrical().thermalWork();
+        long solves = data.electrical()
+            .solveWork();
+        long thermal = data.electrical()
+            .thermalWork();
         profiler.incrementCounter(SUBSYSTEM_ELECTRICAL, "solves", Math.max(0L, solves - lastElectricalSolves));
-        profiler.incrementCounter(SUBSYSTEM_ELECTRICAL, "dirty_topologies_solved",
+        profiler.incrementCounter(
+            SUBSYSTEM_ELECTRICAL,
+            "dirty_topologies_solved",
             Math.max(0L, solves - lastElectricalSolves));
-        profiler.incrementCounter(SUBSYSTEM_ELECTRICAL, "thermal_coupling", Math.max(0L, thermal - lastElectricalThermalWork));
+        profiler.incrementCounter(
+            SUBSYSTEM_ELECTRICAL,
+            "thermal_coupling",
+            Math.max(0L, thermal - lastElectricalThermalWork));
         lastElectricalSolves = solves;
         lastElectricalThermalWork = thermal;
-        profiler.setActiveCount(SUBSYSTEM_ELECTRICAL, data.electrical().activeNetworkCount());
-        profiler.setSleepingCount(SUBSYSTEM_ELECTRICAL, data.electrical().sleepingNetworkCount());
-        profiler.setQueuedWork(SUBSYSTEM_ELECTRICAL, data.electrical().queuedWorkCount());
+        profiler.setActiveCount(
+            SUBSYSTEM_ELECTRICAL,
+            data.electrical()
+                .activeNetworkCount());
+        profiler.setSleepingCount(
+            SUBSYSTEM_ELECTRICAL,
+            data.electrical()
+                .sleepingNetworkCount());
+        profiler.setQueuedWork(
+            SUBSYSTEM_ELECTRICAL,
+            data.electrical()
+                .queuedWorkCount());
         profiler.recordElapsedNanos(SUBSYSTEM_ELECTRICAL, "network_work", System.nanoTime() - electricalStartNanos);
 
         java.util.Set<naturalexceptions.core.id.DeterministicId> starRainStarts = new java.util.LinkedHashSet<>();
         if (data.p8() != null) {
-            for (naturalexceptions.core.event.EventRecord record : data.p8().events().snapshot().events()) {
+            for (naturalexceptions.core.event.EventRecord record : data.p8()
+                .events()
+                .snapshot()
+                .events()) {
                 if (naturalexceptions.core.event.EventRecord.PROTECTED_STAR_RAIN.equals(record.type())
-                    && record.phase() == naturalexceptions.core.event.EventPhase.SCHEDULED) starRainStarts.add(record.id());
+                    && record.phase() == naturalexceptions.core.event.EventPhase.SCHEDULED)
+                    starRainStarts.add(record.id());
             }
         }
-        boolean p8Changed = data.p8() != null
-            && data.p8().advance(worldTime, naturalexceptions.minecraft.event.P8WorldPresence.witnessedRegions(world));
+        boolean p8Changed = data.p8() != null && data.p8()
+            .advance(worldTime, naturalexceptions.minecraft.event.P8WorldPresence.witnessedRegions(world));
         if (p8Changed) {
             data.markDirty();
             profiler.incrementCounter(SUBSYSTEM_SCHEDULER, "p8_state_transitions", 1L);
         }
         if (world != null && !starRainStarts.isEmpty()) {
-            for (naturalexceptions.core.event.EventRecord record : data.p8().events().snapshot().events()) {
-                if (!starRainStarts.contains(record.id()) || record.phase() != naturalexceptions.core.event.EventPhase.ACTIVE)
-                    continue;
+            for (naturalexceptions.core.event.EventRecord record : data.p8()
+                .events()
+                .snapshot()
+                .events()) {
+                if (!starRainStarts.contains(record.id())
+                    || record.phase() != naturalexceptions.core.event.EventPhase.ACTIVE) continue;
                 String cue = naturalexceptions.minecraft.event.StarRainPresentation.eventStartMessage(record);
                 if (cue != null) for (net.minecraft.entity.player.EntityPlayer player : world.playerEntities) {
                     player.addChatMessage(new net.minecraft.util.ChatComponentText(cue));
@@ -174,22 +213,35 @@ public final class NEWorldTickHandler {
                 centerZ = net.minecraft.util.MathHelper.floor_double(witness.posZ);
             }
             // Impacts are placed when a shower actually starts (not when it is scheduled), around a witness.
-            naturalexceptions.core.event.EventScheduleSnapshot schedule = data.p8().events().snapshot();
+            naturalexceptions.core.event.EventScheduleSnapshot schedule = data.p8()
+                .events()
+                .snapshot();
             java.util.List<naturalexceptions.core.event.EventRecord> started = new java.util.ArrayList<>();
             for (naturalexceptions.core.event.EventRecord record : schedule.events()) {
                 if (record.phase() != naturalexceptions.core.event.EventPhase.SCHEDULED) started.add(record);
             }
-            if (data.p11().synchronize(new naturalexceptions.core.event.EventScheduleSnapshot(started,
-                java.util.Collections.<naturalexceptions.core.event.EventCooldownHistory>emptyList(),
-                schedule.lastAdvancedTick()), centerX, centerZ)) data.markDirty();
+            if (data.p11()
+                .synchronize(
+                    new naturalexceptions.core.event.EventScheduleSnapshot(
+                        started,
+                        java.util.Collections.<naturalexceptions.core.event.EventCooldownHistory>emptyList(),
+                        schedule.lastAdvancedTick()),
+                    centerX,
+                    centerZ))
+                data.markDirty();
         }
 
         long starRainStartNanos = System.nanoTime();
         int impactsResolved = 0;
         int sitesMaterialized = 0;
-        if (data.p11().nextDueTick() != -1L && data.p11().nextDueTick() <= worldTime) {
-            for (StarRainImpact impact : data.p11().dueImpacts(worldTime, 2)) {
-                if (data.p11().resolve(impact.id())) {
+        if (data.p11()
+            .nextDueTick() != -1L
+            && data.p11()
+                .nextDueTick() <= worldTime) {
+            for (StarRainImpact impact : data.p11()
+                .dueImpacts(worldTime, 2)) {
+                if (data.p11()
+                    .resolve(impact.id())) {
                     impactsResolved++;
                     naturalexceptions.minecraft.event.P8WorldPresence.announceImpact(world, impact);
                     if (world != null && starRainMaterializer.materialize(world, data, impact)) sitesMaterialized++;
@@ -199,11 +251,24 @@ public final class NEWorldTickHandler {
         }
         profiler.incrementCounter(SUBSYSTEM_STAR_RAIN, "impacts_resolved", impactsResolved);
         profiler.incrementCounter(SUBSYSTEM_STAR_RAIN, "sites_materialized", sitesMaterialized);
-        profiler.setQueuedWork(SUBSYSTEM_STAR_RAIN, data.p11().pendingCount()
-            + data.p11().awaitingMaterializationCount());
-        profiler.setActiveCount(SUBSYSTEM_STAR_RAIN, data.p11().pendingCount());
-        profiler.setSleepingCount(SUBSYSTEM_STAR_RAIN, data.p11().impactCount()
-            - data.p11().pendingCount() - data.p11().awaitingMaterializationCount());
+        profiler.setQueuedWork(
+            SUBSYSTEM_STAR_RAIN,
+            data.p11()
+                .pendingCount()
+                + data.p11()
+                    .awaitingMaterializationCount());
+        profiler.setActiveCount(
+            SUBSYSTEM_STAR_RAIN,
+            data.p11()
+                .pendingCount());
+        profiler.setSleepingCount(
+            SUBSYSTEM_STAR_RAIN,
+            data.p11()
+                .impactCount()
+                - data.p11()
+                    .pendingCount()
+                - data.p11()
+                    .awaitingMaterializationCount());
         profiler.recordElapsedNanos(SUBSYSTEM_STAR_RAIN, "due_impact_work", System.nanoTime() - starRainStartNanos);
 
         // 1. Check if scheduler has any events due

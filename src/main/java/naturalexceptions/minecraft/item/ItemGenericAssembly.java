@@ -556,10 +556,18 @@ public final class ItemGenericAssembly extends Item {
             return;
         }
 
-        String headMat = naturalexceptions.minecraft.knowledge.KnowledgePresentation.materialName(player,
-            assembly.head().materialRef(), assembly.head().stateKey());
-        String handleMat = naturalexceptions.minecraft.knowledge.KnowledgePresentation.materialName(player,
-            assembly.handle().materialRef(), assembly.handle().stateKey());
+        String headMat = naturalexceptions.minecraft.knowledge.KnowledgePresentation.materialName(
+            player,
+            assembly.head()
+                .materialRef(),
+            assembly.head()
+                .stateKey());
+        String handleMat = naturalexceptions.minecraft.knowledge.KnowledgePresentation.materialName(
+            player,
+            assembly.handle()
+                .materialRef(),
+            assembly.handle()
+                .stateKey());
 
         list.add("  \u00a77Head: \u00a7f" + headMat);
         list.add("  \u00a77Handle: \u00a7f" + handleMat);
@@ -627,7 +635,9 @@ public final class ItemGenericAssembly extends Item {
             GeometryId blank = BlankGeometry.get(stack);
             return blank == null ? "Tool Assembly" : "Blank " + formatGeometryName(blank);
         }
-        return naturalexceptions.core.material.MaterialNameResolver.formatToolGeometry(assembly.head().geometryId());
+        return naturalexceptions.core.material.MaterialNameResolver.formatToolGeometry(
+            assembly.head()
+                .geometryId());
     }
 
     @Override

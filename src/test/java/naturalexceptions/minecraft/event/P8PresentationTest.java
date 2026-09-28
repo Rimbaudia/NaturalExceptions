@@ -33,8 +33,13 @@ final class P8PresentationTest {
         long now = 30L * NaturalCalendar.TICKS_PER_DAY + 100L;
         assertTrue(state.scheduleBloodNight(EventRegion.of(0, 0), 9L, now - 50L, 24_000L, 0L));
         state.advance(now);
-        List<String> lines = ItemAlmanac.lines(state, Collections.<StarRainImpact>emptyList(),
-            Collections.<DeterministicId, Long>emptyMap(), now, 10, 10);
+        List<String> lines = ItemAlmanac.lines(
+            state,
+            Collections.<StarRainImpact>emptyList(),
+            Collections.<DeterministicId, Long>emptyMap(),
+            now,
+            10,
+            10);
         String all = String.join("\n", lines);
         assertTrue(all.contains("Day 7 of Summer, year 1"), all);
         assertTrue(all.contains("Blood Night"), all);
@@ -45,8 +50,7 @@ final class P8PresentationTest {
     void almanacPointsAtAnUnrecoveredImpact() {
         DeterministicId parent = DeterministicId.derive("test", "parent");
         DeterministicId id = DeterministicId.derive("test", "impact");
-        StarRainImpact impact = new StarRainImpact(parent, id, 0, 10L, 300, 0, 1, MaterialQuantity.ZERO,
-            true, true);
+        StarRainImpact impact = new StarRainImpact(parent, id, 0, 10L, 300, 0, 1, MaterialQuantity.ZERO, true, true);
         Map<DeterministicId, Long> remaining = Collections.singletonMap(id, 400_000L);
         List<String> lines = ItemAlmanac.lines(null, Collections.singletonList(impact), remaining, 1000L, 0, 0);
         String all = String.join("\n", lines);

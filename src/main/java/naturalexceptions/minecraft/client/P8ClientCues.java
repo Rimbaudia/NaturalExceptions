@@ -59,10 +59,22 @@ public final class P8ClientCues {
             int y = MathHelper.floor_double(player.posY) + world.rand.nextInt(7) - 3;
             if (world.getBlock(x, y, z)
                 .getMaterial() == Material.water && world.isAirBlock(x, y + 1, z)) {
-                world.spawnParticle("reddust", x + world.rand.nextDouble(), y + 1.02, z + world.rand.nextDouble(),
-                    0.45, 0.02, 0.02);
-                world.spawnParticle("bubble", x + world.rand.nextDouble(), y + 0.9, z + world.rand.nextDouble(), 0.0,
-                    0.04, 0.0);
+                world.spawnParticle(
+                    "reddust",
+                    x + world.rand.nextDouble(),
+                    y + 1.02,
+                    z + world.rand.nextDouble(),
+                    0.45,
+                    0.02,
+                    0.02);
+                world.spawnParticle(
+                    "bubble",
+                    x + world.rand.nextDouble(),
+                    y + 0.9,
+                    z + world.rand.nextDouble(),
+                    0.0,
+                    0.04,
+                    0.0);
             }
         }
     }

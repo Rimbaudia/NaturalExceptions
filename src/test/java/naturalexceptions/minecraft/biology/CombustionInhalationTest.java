@@ -12,9 +12,17 @@ import naturalexceptions.core.biology.ExposureProtection;
 import naturalexceptions.core.biology.ExposureRoute;
 
 final class CombustionInhalationTest {
-    @Test void nearbyCombustionAccumulatesDoseAndFilterMaskReducesRatherThanBlocksIt() {
-        BiologicalState bare = new BiologicalState(BodyPlanRegistry.standard().require(BuiltinBodyPlans.HUMAN_ID), 0L);
-        BiologicalState masked = new BiologicalState(BodyPlanRegistry.standard().require(BuiltinBodyPlans.HUMAN_ID), 0L);
+
+    @Test
+    void nearbyCombustionAccumulatesDoseAndFilterMaskReducesRatherThanBlocksIt() {
+        BiologicalState bare = new BiologicalState(
+            BodyPlanRegistry.standard()
+                .require(BuiltinBodyPlans.HUMAN_ID),
+            0L);
+        BiologicalState masked = new BiologicalState(
+            BodyPlanRegistry.standard()
+                .require(BuiltinBodyPlans.HUMAN_ID),
+            0L);
         masked.addExposureProtection(new ExposureProtection(ExposureRoute.INHALATION, 0.75));
 
         double firstBare = BiologicalEvents.applyCombustionSmoke(bare, 20.0, 20L);

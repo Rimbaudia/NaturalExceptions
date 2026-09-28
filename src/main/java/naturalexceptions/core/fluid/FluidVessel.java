@@ -10,6 +10,7 @@ import naturalexceptions.core.metallurgy.MaterialQuantity;
 
 /** Small finite container that stores parcels and stratifies them only when contents change. */
 public final class FluidVessel {
+
     private final long capacityMicrolitres;
     private final FluidInteractionRules rules;
     private final List<FluidParcel> contents = new ArrayList<>();
@@ -22,10 +23,21 @@ public final class FluidVessel {
         this.rules = Objects.requireNonNull(rules, "rules");
     }
 
-    public long capacityMicrolitres() { return capacityMicrolitres; }
-    public List<FluidParcel> contents() { return Collections.unmodifiableList(new ArrayList<>(contents)); }
-    public FluidParcel lastTransformation() { return lastTransformation; }
-    public double lastTransformationEnergyDeltaJoules() { return lastTransformationEnergyDeltaJoules; }
+    public long capacityMicrolitres() {
+        return capacityMicrolitres;
+    }
+
+    public List<FluidParcel> contents() {
+        return Collections.unmodifiableList(new ArrayList<>(contents));
+    }
+
+    public FluidParcel lastTransformation() {
+        return lastTransformation;
+    }
+
+    public double lastTransformationEnergyDeltaJoules() {
+        return lastTransformationEnergyDeltaJoules;
+    }
 
     public long occupiedVolumeMicrolitres() {
         long volume = 0L;
@@ -41,7 +53,8 @@ public final class FluidVessel {
 
     public double totalThermalEnergyJoules() {
         double total = 0.0;
-        for (FluidParcel parcel : contents) total += parcel.thermalState().energyJoules();
+        for (FluidParcel parcel : contents) total += parcel.thermalState()
+            .energyJoules();
         return total;
     }
 
@@ -53,8 +66,14 @@ public final class FluidVessel {
         long incomingVolume = incoming.volumeMicrolitres();
         MaterialQuantity accepted = incoming.mass();
         if (incomingVolume > free) {
-            long mg = Math.min(incoming.mass().milligrams(), Math.max(0L,
-                (long) Math.floor((double) incoming.mass().milligrams() * free / incomingVolume)));
+            long mg = Math.min(
+                incoming.mass()
+                    .milligrams(),
+                Math.max(
+                    0L,
+                    (long) Math.floor(
+                        (double) incoming.mass()
+                            .milligrams() * free / incomingVolume)));
             if (mg <= 0L) return MaterialQuantity.ZERO;
             accepted = MaterialQuantity.ofMilligrams(mg);
         }
@@ -63,8 +82,10 @@ public final class FluidVessel {
         if (target != null) {
             FluidInteractionRules.Result interaction = rules.classify(target, transferred);
             if (interaction == FluidInteractionRules.Result.MISCIBLE) {
-                if (target.materialRef().equals(transferred.materialRef())
-                    && target.composition().equals(transferred.composition())) {
+                if (target.materialRef()
+                    .equals(transferred.materialRef())
+                    && target.composition()
+                        .equals(transferred.composition())) {
                     target.mergeSameMaterial(transferred);
                 } else {
                     contents.remove(target);
@@ -79,18 +100,29 @@ public final class FluidVessel {
                     double productEnergyWeight = 0.0;
                     for (FluidParcel product : transformed.products()) {
                         productVolume = Math.addExact(productVolume, product.volumeMicrolitres());
-                        productMass = Math.addExact(productMass, product.mass().milligrams());
-                        productEnergyWeight += product.thermalState().energyJoules();
+                        productMass = Math.addExact(
+                            productMass,
+                            product.mass()
+                                .milligrams());
+                        productEnergyWeight += product.thermalState()
+                            .energyJoules();
                     }
                     if (otherVolume + productVolume > capacityMicrolitres)
                         throw new IllegalStateException("Transformation products exceed vessel capacity");
-                    long consumedMass = Math.addExact(target.mass().milligrams(), transferred.mass().milligrams());
-                    if (productMass != consumedMass)
-                        throw new IllegalArgumentException("Transformation must account for all consumed matter in products");
-                    double inputEnergy = target.thermalState().energyJoules() + transferred.thermalState().energyJoules();
+                    long consumedMass = Math.addExact(
+                        target.mass()
+                            .milligrams(),
+                        transferred.mass()
+                            .milligrams());
+                    if (productMass != consumedMass) throw new IllegalArgumentException(
+                        "Transformation must account for all consumed matter in products");
+                    double inputEnergy = target.thermalState()
+                        .energyJoules()
+                        + transferred.thermalState()
+                            .energyJoules();
                     double outputEnergy = inputEnergy + transformed.thermalEnergyDeltaJoules();
-                    if (!Double.isFinite(outputEnergy) || outputEnergy < 0.0)
-                        throw new IllegalArgumentException("Transformation energy exchange is outside the physical range");
+                    if (!Double.isFinite(outputEnergy) || outputEnergy < 0.0) throw new IllegalArgumentException(
+                        "Transformation energy exchange is outside the physical range");
                     List<FluidParcel> ownedProducts = new ArrayList<>();
                     for (FluidParcel product : transformed.products()) ownedProducts.add(product.copyAndConsume());
                     FluidParcel first = ownedProducts.get(0);
@@ -100,13 +132,15 @@ public final class FluidVessel {
                         double share;
                         if (productIndex == ownedProducts.size() - 1) share = outputEnergy - allocatedEnergy;
                         else {
-                            double weight = productEnergyWeight > 0.0
-                                ? product.thermalState().energyJoules() / productEnergyWeight
-                                : product.mass().milligrams() / (double) productMass;
+                            double weight = productEnergyWeight > 0.0 ? product.thermalState()
+                                .energyJoules() / productEnergyWeight
+                                : product.mass()
+                                    .milligrams() / (double) productMass;
                             share = outputEnergy * weight;
                             allocatedEnergy += share;
                         }
-                        product.thermalState().setEnergyJoules(Math.max(0.0, share));
+                        product.thermalState()
+                            .setEnergyJoules(Math.max(0.0, share));
                     }
                     contents.remove(target);
                     contents.remove(transferred);
@@ -150,8 +184,10 @@ public final class FluidVessel {
     void restoreDrained(FluidParcel parcel) {
         Objects.requireNonNull(parcel, "parcel");
         for (FluidParcel existing : contents) {
-            if (existing.materialRef().equals(parcel.materialRef())
-                && existing.composition().equals(parcel.composition())) {
+            if (existing.materialRef()
+                .equals(parcel.materialRef())
+                && existing.composition()
+                    .equals(parcel.composition())) {
                 existing.mergeSameMaterial(parcel);
                 parcel.copyAndConsume();
                 sortLayers();
@@ -170,7 +206,14 @@ public final class FluidVessel {
     }
 
     private void sortLayers() {
-        contents.sort(Comparator.comparingDouble((FluidParcel p) -> p.thermalState().properties().density(p.phase()))
-            .reversed().thenComparing(p -> p.materialRef().asString()));
+        contents.sort(
+            Comparator.comparingDouble(
+                (FluidParcel p) -> p.thermalState()
+                    .properties()
+                    .density(p.phase()))
+                .reversed()
+                .thenComparing(
+                    p -> p.materialRef()
+                        .asString()));
     }
 }

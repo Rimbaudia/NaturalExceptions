@@ -11,9 +11,6 @@ import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChatComponentText;
 
-import naturalexceptions.core.assembly.AssemblyGraph;
-import naturalexceptions.core.fabrication.ComponentInstance;
-import naturalexceptions.minecraft.item.ItemGenericAssembly;
 import naturalexceptions.minecraft.recipe.RecipeToolAssembly;
 
 /**

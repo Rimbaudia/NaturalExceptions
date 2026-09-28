@@ -130,7 +130,7 @@ public final class AggregateLayer {
     /** Metal that can flow out of a tap: a molten-metal layer that is at least half liquid by melt fraction. */
     public boolean isPourable() {
         return phaseType() == AggregatePhaseType.MOLTEN_METAL
-            && (physicalPhase() == naturalexceptions.core.material.MaterialPhase.LIQUID || thermalState()
-                .meltFraction() >= 0.50);
+            && (physicalPhase() == naturalexceptions.core.material.MaterialPhase.LIQUID
+                || thermalState().meltFraction() >= 0.50);
     }
 }

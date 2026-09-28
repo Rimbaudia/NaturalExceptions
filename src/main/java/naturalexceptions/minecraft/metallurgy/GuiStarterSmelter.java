@@ -51,10 +51,12 @@ public final class GuiStarterSmelter extends GuiContainer {
         this.fontRendererObj.drawString("Fuel", 8, 58, 0x404040);
 
         double hottest = hottestLayerTemperature();
-        this.fontRendererObj.drawString(trim("Heat: " + heatBand(hottest), 110), 58, 54, hottest > 800 ? 0xAA5500 : 0x404040);
+        this.fontRendererObj
+            .drawString(trim("Heat: " + heatBand(hottest), 110), 58, 54, hottest > 800 ? 0xAA5500 : 0x404040);
         this.fontRendererObj.drawString(trim("Fire: " + fireText(), 110), 58, 64, 0x404040);
         SmelterOutletState state = tileEntity.outletState();
-        int stateColour = state == SmelterOutletState.READY || state == SmelterOutletState.POURING ? 0x2E7D32 : 0x404040;
+        int stateColour = state == SmelterOutletState.READY || state == SmelterOutletState.POURING ? 0x2E7D32
+            : 0x404040;
         this.fontRendererObj.drawString(trim("Tap: " + state.shortText(), 110), 58, 74, stateColour);
     }
 
@@ -62,8 +64,8 @@ public final class GuiStarterSmelter extends GuiContainer {
         int ticks = tileEntity.vesselState()
             .fuelState()
             .remainingTicks();
-        if (ticks <= 0) return tileEntity.getStackInSlot(TileEntityStarterSmelter.SLOT_FUEL) != null ? "catching"
-            : "out, add fuel";
+        if (ticks <= 0)
+            return tileEntity.getStackInSlot(TileEntityStarterSmelter.SLOT_FUEL) != null ? "catching" : "out, add fuel";
         return "burning, ~" + Math.max(1, ticks / 20) + "s";
     }
 
@@ -202,7 +204,8 @@ public final class GuiStarterSmelter extends GuiContainer {
 
     private double hottestLayerTemperature() {
         double hottest = 293.15;
-        for (AggregateLayer layer : tileEntity.vesselState().layers()) hottest = Math.max(hottest, layer.temperatureKelvin());
+        for (AggregateLayer layer : tileEntity.vesselState()
+            .layers()) hottest = Math.max(hottest, layer.temperatureKelvin());
         return hottest;
     }
 

@@ -51,9 +51,11 @@ final class VesselLatentHeatConservationTest {
 
         vessel.step(1, NO_LOSS_AMBIENT_K);
 
-        assertEquals(AggregatePhaseType.MOLTEN_METAL, vessel.layers()
-            .get(0)
-            .phaseType());
+        assertEquals(
+            AggregatePhaseType.MOLTEN_METAL,
+            vessel.layers()
+                .get(0)
+                .phaseType());
         assertEquals(before, vesselEnergy(vessel), 1.0e-6);
         assertTrue(
             vessel.layers()
@@ -72,8 +74,12 @@ final class VesselLatentHeatConservationTest {
             .get(0);
         double kg = charge.mass()
             .toKilograms();
-        double onset = ThermodynamicModel
-            .energyForTemperature(ore.metallicProperties().meltingPointKelvin(), 0.0, kg, ore.metallicProperties());
+        double onset = ThermodynamicModel.energyForTemperature(
+            ore.metallicProperties()
+                .meltingPointKelvin(),
+            0.0,
+            kg,
+            ore.metallicProperties());
         charge.thermalState()
             .setEnergyJoules(onset + 1.0);
         double before = vesselEnergy(vessel);

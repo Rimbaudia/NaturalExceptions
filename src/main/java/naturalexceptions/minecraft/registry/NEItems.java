@@ -136,11 +136,13 @@ public final class NEItems {
         blacksmithTongs = new naturalexceptions.minecraft.item.ItemBlacksmithTongs();
         blacksmithTongs.setCreativeTab(NECreativeTab.INSTANCE);
         startingManual = new naturalexceptions.minecraft.item.ItemKnowledgeBook(
-            naturalexceptions.content.knowledge.BuiltinKnowledgeSources.STARTING_MANUAL, "fieldManual",
+            naturalexceptions.content.knowledge.BuiltinKnowledgeSources.STARTING_MANUAL,
+            "fieldManual",
             "minecraft:book");
         startingManual.setCreativeTab(NECreativeTab.INSTANCE);
         foundryNotes = new naturalexceptions.minecraft.item.ItemKnowledgeBook(
-            naturalexceptions.content.knowledge.BuiltinKnowledgeSources.FOUNDRY_NOTES, "foundryNotes",
+            naturalexceptions.content.knowledge.BuiltinKnowledgeSources.FOUNDRY_NOTES,
+            "foundryNotes",
             "minecraft:writable_book");
         foundryNotes.setCreativeTab(NECreativeTab.INSTANCE);
         fieldAssay = new naturalexceptions.minecraft.item.ItemFieldAssay();
@@ -166,7 +168,10 @@ public final class NEItems {
                 new ItemStack(almanac),
                 net.minecraft.init.Items.book,
                 net.minecraft.init.Items.paper,
-                new ItemStack(net.minecraft.init.Items.coal, 1, net.minecraftforge.oredict.OreDictionary.WILDCARD_VALUE));
+                new ItemStack(
+                    net.minecraft.init.Items.coal,
+                    1,
+                    net.minecraftforge.oredict.OreDictionary.WILDCARD_VALUE));
             GameRegistry.registerItem(bandage, "bandage");
             GameRegistry.registerItem(exposureMask, "exposure_mask");
             GameRegistry.registerItem(copperIngot, "copper_ingot");
@@ -186,17 +191,35 @@ public final class NEItems {
             GameRegistry.registerItem(knowledgeRecord, "knowledge_record");
             GameRegistry.addShapedRecipe(
                 new ItemStack(foundryNotes),
-                " PF", " BB", "  ", 'P', net.minecraft.init.Items.paper, 'F', net.minecraft.init.Items.feather,
-                'B', net.minecraft.init.Items.book);
-            GameRegistry.addShapelessRecipe(new ItemStack(fieldAssay), net.minecraft.init.Items.compass,
-                net.minecraft.init.Items.iron_ingot, net.minecraft.init.Blocks.glass_pane);
-            GameRegistry.addShapelessRecipe(new ItemStack(knowledgeRecord), net.minecraft.init.Items.book,
+                " PF",
+                " BB",
+                "  ",
+                'P',
+                net.minecraft.init.Items.paper,
+                'F',
+                net.minecraft.init.Items.feather,
+                'B',
+                net.minecraft.init.Items.book);
+            GameRegistry.addShapelessRecipe(
+                new ItemStack(fieldAssay),
+                net.minecraft.init.Items.compass,
+                net.minecraft.init.Items.iron_ingot,
+                net.minecraft.init.Blocks.glass_pane);
+            GameRegistry.addShapelessRecipe(
+                new ItemStack(knowledgeRecord),
+                net.minecraft.init.Items.book,
                 net.minecraft.init.Items.paper);
             GameRegistry.addRecipe(naturalexceptions.minecraft.item.ItemFluidVessel.survivalRecipe(fluidVessel));
-            GameRegistry.addShapelessRecipe(new ItemStack(bandage, 2), net.minecraft.init.Items.paper,
-                net.minecraft.init.Items.string, net.minecraft.init.Blocks.wool);
-            GameRegistry.addShapelessRecipe(new ItemStack(exposureMask), net.minecraft.init.Items.leather,
-                net.minecraft.init.Items.string, net.minecraft.init.Blocks.wool);
+            GameRegistry.addShapelessRecipe(
+                new ItemStack(bandage, 2),
+                net.minecraft.init.Items.paper,
+                net.minecraft.init.Items.string,
+                net.minecraft.init.Blocks.wool);
+            GameRegistry.addShapelessRecipe(
+                new ItemStack(exposureMask),
+                net.minecraft.init.Items.leather,
+                net.minecraft.init.Items.string,
+                net.minecraft.init.Blocks.wool);
 
             try {
                 net.minecraftforge.oredict.OreDictionary.registerOre("ingotCopper", copperIngot);

@@ -9,23 +9,23 @@ import net.minecraft.nbt.NBTTagCompound;
 
 import naturalexceptions.content.BuiltinContent;
 import naturalexceptions.core.composition.CanonicalComposition;
-import naturalexceptions.core.material.CanonicalMaterialKey;
-import naturalexceptions.core.material.ConditioningHistory;
-import naturalexceptions.core.material.MaterialRef;
-import naturalexceptions.core.metallurgy.MaterialQuantity;
-import naturalexceptions.minecraft.persistence.MaterialCarrierNbtCodec;
-import naturalexceptions.minecraft.persistence.PersistenceValidationException;
-import naturalexceptions.minecraft.registry.NEItems;
 import naturalexceptions.core.knowledge.KnowledgeEvidence;
 import naturalexceptions.core.knowledge.KnowledgePrecision;
 import naturalexceptions.core.knowledge.KnowledgeProvenance;
 import naturalexceptions.core.knowledge.KnowledgeSubjectRef;
 import naturalexceptions.core.knowledge.PlayerKnowledge;
+import naturalexceptions.core.material.CanonicalMaterialKey;
+import naturalexceptions.core.material.MaterialRef;
+import naturalexceptions.core.metallurgy.MaterialQuantity;
 import naturalexceptions.minecraft.knowledge.PlayerKnowledgeProperties;
 import naturalexceptions.minecraft.network.NENetwork;
 import naturalexceptions.minecraft.network.PacketKnowledgeSnapshot;
+import naturalexceptions.minecraft.persistence.MaterialCarrierNbtCodec;
+import naturalexceptions.minecraft.persistence.PersistenceValidationException;
+import naturalexceptions.minecraft.registry.NEItems;
 
 public final class ItemMaterialSample extends Item {
+
     private static final String KEY_MASS_MILLIGRAMS = "MatterMassMg";
     private static final String KEY_PROVENANCE = "MatterProvenance";
 
@@ -62,7 +62,8 @@ public final class ItemMaterialSample extends Item {
     public static ItemStack createStack(MaterialRef ref, CanonicalMaterialKey stateKey, MaterialQuantity mass,
         naturalexceptions.core.thermal.ActiveThermalState thermalState) {
         if (mass == null || mass.isZero()) throw new IllegalArgumentException("Material samples need positive mass");
-        if (thermalState != null && MaterialQuantity.ofKilograms(thermalState.massKg()).milligrams() != mass.milligrams())
+        if (thermalState != null && MaterialQuantity.ofKilograms(thermalState.massKg())
+            .milligrams() != mass.milligrams())
             throw new IllegalArgumentException("Sample mass and thermal mass disagree");
         Item item = NEItems.materialSample != null ? NEItems.materialSample : new ItemMaterialSample();
         ItemStack stack = new ItemStack(item);
@@ -75,14 +76,19 @@ public final class ItemMaterialSample extends Item {
 
     /** Exact carrier mass; old carriers retain their historical 100 g fallback. */
     public static MaterialQuantity getMass(ItemStack stack) {
-        if (stack != null && stack.hasTagCompound() && stack.getTagCompound().hasKey(KEY_MASS_MILLIGRAMS, 99)) {
-            long milligrams = stack.getTagCompound().getLong(KEY_MASS_MILLIGRAMS);
+        if (stack != null && stack.hasTagCompound()
+            && stack.getTagCompound()
+                .hasKey(KEY_MASS_MILLIGRAMS, 99)) {
+            long milligrams = stack.getTagCompound()
+                .getLong(KEY_MASS_MILLIGRAMS);
             if (milligrams > 0L) return MaterialQuantity.ofMilligrams(milligrams);
             return MaterialQuantity.ZERO;
         }
         if (stack != null && stack.hasTagCompound()
-            && stack.getTagCompound().hasKey(MaterialCarrierNbtCodec.KEY_THERMAL, 10)) {
-            NBTTagCompound thermal = stack.getTagCompound().getCompoundTag(MaterialCarrierNbtCodec.KEY_THERMAL);
+            && stack.getTagCompound()
+                .hasKey(MaterialCarrierNbtCodec.KEY_THERMAL, 10)) {
+            NBTTagCompound thermal = stack.getTagCompound()
+                .getCompoundTag(MaterialCarrierNbtCodec.KEY_THERMAL);
             double kilograms = thermal.getDouble(MaterialCarrierNbtCodec.KEY_THERMAL_MASS);
             if (Double.isFinite(kilograms) && kilograms > 0.0) return MaterialQuantity.ofKilograms(kilograms);
         }
@@ -92,14 +98,24 @@ public final class ItemMaterialSample extends Item {
     public static void setProvenance(ItemStack stack, naturalexceptions.core.id.DeterministicId provenance) {
         if (stack == null) throw new IllegalArgumentException("Material carrier required");
         if (stack.getTagCompound() == null) stack.setTagCompound(new NBTTagCompound());
-        if (provenance == null) stack.getTagCompound().removeTag(KEY_PROVENANCE);
-        else stack.getTagCompound().setString(KEY_PROVENANCE, provenance.hex());
+        if (provenance == null) stack.getTagCompound()
+            .removeTag(KEY_PROVENANCE);
+        else stack.getTagCompound()
+            .setString(KEY_PROVENANCE, provenance.hex());
     }
 
     public static naturalexceptions.core.id.DeterministicId getProvenance(ItemStack stack) {
-        if (stack == null || !stack.hasTagCompound() || !stack.getTagCompound().hasKey(KEY_PROVENANCE, 8)) return null;
-        try { return naturalexceptions.core.id.DeterministicId.parse(stack.getTagCompound().getString(KEY_PROVENANCE)); }
-        catch (IllegalArgumentException invalid) { return null; }
+        if (stack == null || !stack.hasTagCompound()
+            || !stack.getTagCompound()
+                .hasKey(KEY_PROVENANCE, 8))
+            return null;
+        try {
+            return naturalexceptions.core.id.DeterministicId.parse(
+                stack.getTagCompound()
+                    .getString(KEY_PROVENANCE));
+        } catch (IllegalArgumentException invalid) {
+            return null;
+        }
     }
 
     public static naturalexceptions.core.thermal.ActiveThermalState getThermalState(ItemStack stack,
@@ -138,8 +154,8 @@ public final class ItemMaterialSample extends Item {
             return definition != null ? definition.properties() : null;
         }
         CanonicalMaterialKey key = getStateKey(stack);
-        return key != null ? new naturalexceptions.core.property.MaterialPropertyResolver().resolve(key).properties()
-            : null;
+        return key != null ? new naturalexceptions.core.property.MaterialPropertyResolver().resolve(key)
+            .properties() : null;
     }
 
     public static MaterialRef getMaterialRef(ItemStack stack) {
@@ -216,7 +232,8 @@ public final class ItemMaterialSample extends Item {
                 }
             }
 
-            if (ref.isAuthored() && BuiltinContent.materials().getAuthored(ref) == null) {
+            if (ref.isAuthored() && BuiltinContent.materials()
+                .getAuthored(ref) == null) {
                 // Matter the game cannot name is described by what the eye sees, not as an error.
                 return isLiquid ? "Unfamiliar Molten Matter" : "Unfamiliar Fragment";
             }
@@ -231,7 +248,9 @@ public final class ItemMaterialSample extends Item {
     public void onUpdate(ItemStack stack, net.minecraft.world.World world, net.minecraft.entity.Entity entity, int slot,
         boolean isSelected) {
         // Player aliases live only in PlayerKnowledge and are never inferred from ItemStack display names.
-        if (world == null || world.isRemote || !isSelected || !(entity instanceof net.minecraft.entity.EntityLivingBase)
+        if (world == null || world.isRemote
+            || !isSelected
+            || !(entity instanceof net.minecraft.entity.EntityLivingBase)
             || Math.floorMod(world.getTotalWorldTime(), 20L) != 0L
             || !MaterialCarrierNbtCodec.hasActiveThermalState(stack.getTagCompound())) return;
         try {
@@ -241,7 +260,8 @@ public final class ItemMaterialSample extends Item {
                 naturalexceptions.minecraft.biology.BiologicalEvents.applyThermalContact(
                     (net.minecraft.entity.EntityLivingBase) entity,
                     naturalexceptions.core.id.ResourceId.of("naturalexceptions", "right_arm"),
-                    thermal.temperatureKelvin(), 12.0);
+                    thermal.temperatureKelvin(),
+                    12.0);
             }
         } catch (RuntimeException invalid) { /* Malformed carriers do not become a damage source. */ }
     }
@@ -282,26 +302,45 @@ public final class ItemMaterialSample extends Item {
         PlayerKnowledgeProperties props = PlayerKnowledgeProperties.get(player);
         PlayerKnowledge knowledge = props.knowledge();
         String appearance = appearanceClass(MaterialAppearanceColor.color(ref, key));
-        boolean changed = knowledge.addEvidence(subject, new KnowledgeEvidence("appearance",
-            capitalize(appearance) + " metallic appearance", "inspection:appearance:" + appearance,
-            KnowledgeProvenance.EXPERIMENT, KnowledgePrecision.QUALITATIVE));
+        boolean changed = knowledge.addEvidence(
+            subject,
+            new KnowledgeEvidence(
+                "appearance",
+                capitalize(appearance) + " metallic appearance",
+                "inspection:appearance:" + appearance,
+                KnowledgeProvenance.EXPERIMENT,
+                KnowledgePrecision.QUALITATIVE));
         boolean liquid = isLiquidSample(stack);
-        changed |= knowledge.addEvidence(subject, new KnowledgeEvidence("phase", "Observed as " + (liquid ? "liquid" : "solid"),
-            "inspection:phase:" + liquid, KnowledgeProvenance.EXPERIMENT, KnowledgePrecision.QUALITATIVE));
+        changed |= knowledge.addEvidence(
+            subject,
+            new KnowledgeEvidence(
+                "phase",
+                "Observed as " + (liquid ? "liquid" : "solid"),
+                "inspection:phase:" + liquid,
+                KnowledgeProvenance.EXPERIMENT,
+                KnowledgePrecision.QUALITATIVE));
         if (changed && player instanceof net.minecraft.entity.player.EntityPlayerMP) {
-            NENetwork.CHANNEL.sendTo(new PacketKnowledgeSnapshot(props), (net.minecraft.entity.player.EntityPlayerMP) player);
+            NENetwork.CHANNEL
+                .sendTo(new PacketKnowledgeSnapshot(props), (net.minecraft.entity.player.EntityPlayerMP) player);
         }
-        player.addChatMessage(new net.minecraft.util.ChatComponentText("\u00a77Observed a " + appearance
-            + " metallic material, currently " + (liquid ? "liquid" : "solid") + "."));
+        player.addChatMessage(
+            new net.minecraft.util.ChatComponentText(
+                "\u00a77Observed a " + appearance
+                    + " metallic material, currently "
+                    + (liquid ? "liquid" : "solid")
+                    + "."));
     }
 
     private static boolean isLiquidSample(ItemStack stack) {
-        if (stack == null || !stack.hasTagCompound() || !MaterialCarrierNbtCodec.hasActiveThermalState(stack.getTagCompound())) return false;
+        if (stack == null || !stack.hasTagCompound()
+            || !MaterialCarrierNbtCodec.hasActiveThermalState(stack.getTagCompound())) return false;
         try {
             naturalexceptions.core.thermal.ActiveThermalState thermal = MaterialCarrierNbtCodec
                 .readThermalStateFromNbt(stack.getTagCompound(), propertiesFor(stack));
             return thermal != null && thermal.phase() == naturalexceptions.core.material.MaterialPhase.LIQUID;
-        } catch (Exception ignored) { return false; }
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     private static int appearanceColor(MaterialRef ref, CanonicalMaterialKey key) {
@@ -313,7 +352,10 @@ public final class ItemMaterialSample extends Item {
     }
 
     private static final class MaterialAppearanceColor {
-        static int color(MaterialRef ref, CanonicalMaterialKey key) { return appearanceColor(ref, key); }
+
+        static int color(MaterialRef ref, CanonicalMaterialKey key) {
+            return appearanceColor(ref, key);
+        }
     }
 
     @Override
@@ -349,18 +391,26 @@ public final class ItemMaterialSample extends Item {
             }
             String appearance = appearanceClass(appearanceColor(ref, key));
             KnowledgeSubjectRef subject = KnowledgeSubjectRef.material(ref);
-            PlayerKnowledge knowledge = player != null ? PlayerKnowledgeProperties.get(player).knowledge() : null;
-            String matName = naturalexceptions.core.knowledge.KnowledgeDisplay.resolve(subject, knowledge,
-                appearance, isLiquidSample(stack) ? "liquid" : "solid");
+            PlayerKnowledge knowledge = player != null ? PlayerKnowledgeProperties.get(player)
+                .knowledge() : null;
+            String matName = naturalexceptions.core.knowledge.KnowledgeDisplay
+                .resolve(subject, knowledge, appearance, isLiquidSample(stack) ? "liquid" : "solid");
             list.add("  \u00a77Material: \u00a7f" + matName);
             MaterialQuantity mass = getMass(stack);
-            list.add("  Weight: " + (mass.compareTo(MaterialQuantity.ofGrams(500.0)) >= 0
-                ? "heavy fragment" : "small sample"));
+            list.add(
+                "  Weight: "
+                    + (mass.compareTo(MaterialQuantity.ofGrams(500.0)) >= 0 ? "heavy fragment" : "small sample"));
             if (knowledge != null) {
                 int shown = 0;
                 for (KnowledgeEvidence evidence : knowledge.evidenceFor(subject)) {
                     if (shown++ >= 3) break;
-                    list.add("  \u00a78" + evidence.statement() + " [" + evidence.provenance().name().toLowerCase() + "]");
+                    list.add(
+                        "  \u00a78" + evidence.statement()
+                            + " ["
+                            + evidence.provenance()
+                                .name()
+                                .toLowerCase()
+                            + "]");
                 }
             }
             if (MaterialNamingTarget.canOpenNaming(stack)) {
@@ -380,9 +430,12 @@ public final class ItemMaterialSample extends Item {
                 naturalexceptions.core.thermal.ActiveThermalState thermal = MaterialCarrierNbtCodec
                     .readThermalStateFromNbt(stack.getTagCompound(), propertiesFor(stack));
                 if (thermal != null) {
-                    list.add("  \u00a7eObserved state: " + (thermal.phase() == naturalexceptions.core.material.MaterialPhase.LIQUID
-                        ? "Molten liquid" : "Solid fragment"));
-                    if (thermal.temperatureKelvin() >= 1273.15) list.add("  \u00a7cGlowing hot; unsafe to handle directly");
+                    list.add(
+                        "  \u00a7eObserved state: "
+                            + (thermal.phase() == naturalexceptions.core.material.MaterialPhase.LIQUID ? "Molten liquid"
+                                : "Solid fragment"));
+                    if (thermal.temperatureKelvin() >= 1273.15)
+                        list.add("  \u00a7cGlowing hot; unsafe to handle directly");
                     else if (thermal.temperatureKelvin() >= 373.15) list.add("  \u00a7cDangerously hot to touch");
                     else if (thermal.temperatureKelvin() >= 310.15) list.add("  \u00a7eWarm to the touch");
                     else if (thermal.temperatureKelvin() <= 273.15) list.add("  \u00a79Cold to the touch");

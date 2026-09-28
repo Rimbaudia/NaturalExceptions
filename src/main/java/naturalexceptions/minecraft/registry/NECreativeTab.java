@@ -29,8 +29,7 @@ public final class NECreativeTab extends CreativeTabs {
         if (NEBlocks.smelterTuyere != null) list.add(new net.minecraft.item.ItemStack(NEBlocks.smelterTuyere));
         if (NEBlocks.smelterOutlet != null) list.add(new net.minecraft.item.ItemStack(NEBlocks.smelterOutlet));
         if (NEBlocks.castingTable != null) list.add(new net.minecraft.item.ItemStack(NEBlocks.castingTable));
-        if (NEBlocks.moldAssemblyTable != null)
-            list.add(new net.minecraft.item.ItemStack(NEBlocks.moldAssemblyTable));
+        if (NEBlocks.moldAssemblyTable != null) list.add(new net.minecraft.item.ItemStack(NEBlocks.moldAssemblyTable));
         if (NEBlocks.assemblyTable != null) list.add(new net.minecraft.item.ItemStack(NEBlocks.assemblyTable));
         if (NEBlocks.forgingAnvil != null) list.add(new net.minecraft.item.ItemStack(NEBlocks.forgingAnvil));
         if (NEBlocks.refractoryBrick != null) list.add(new net.minecraft.item.ItemStack(NEBlocks.refractoryBrick));

@@ -135,11 +135,8 @@ public final class BlockFallenStar extends BlockFluidCell {
         double kelvin = parcel.thermalState()
             .temperatureKelvin();
         if (kelvin < 373.15) return;
-        naturalexceptions.minecraft.biology.BiologicalEvents.applySustainedThermalContact(
-            (EntityLivingBase) entity,
-            TORSO,
-            kelvin,
-            MOLTEN_CONTACT_JOULES_PER_SECOND);
+        naturalexceptions.minecraft.biology.BiologicalEvents
+            .applySustainedThermalContact((EntityLivingBase) entity, TORSO, kelvin, MOLTEN_CONTACT_JOULES_PER_SECOND);
     }
 
     /** Standing on hot solid matter burns through the soles at a lower, bounded rate. */
@@ -151,11 +148,8 @@ public final class BlockFallenStar extends BlockFluidCell {
         double kelvin = parcel.thermalState()
             .temperatureKelvin();
         if (kelvin < 373.15) return;
-        naturalexceptions.minecraft.biology.BiologicalEvents.applySustainedThermalContact(
-            (EntityLivingBase) entity,
-            LEFT_LEG,
-            kelvin,
-            SOLID_CONTACT_JOULES_PER_SECOND);
+        naturalexceptions.minecraft.biology.BiologicalEvents
+            .applySustainedThermalContact((EntityLivingBase) entity, LEFT_LEG, kelvin, SOLID_CONTACT_JOULES_PER_SECOND);
     }
 
     private static FluidParcel parcelAt(World world, int x, int y, int z) {

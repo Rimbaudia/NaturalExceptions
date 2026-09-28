@@ -264,7 +264,7 @@ public class TargetDrivenForgingTest {
         assertFalse(
             fullNormal.contains("--- Physical Diagnostics ---"),
             "Should not show advanced diagnostics by default");
-        assertTrue(fullNormal.contains("[Hold SHIFT for physical diagnostics]"), "Should show shift prompt");
+        assertFalse(fullNormal.contains("Hold SHIFT"), "Developer diagnostics are for F3+H only, not advertised");
 
         // Advanced tooltip (advanced = true)
         List<String> advancedInfo = new ArrayList<>();

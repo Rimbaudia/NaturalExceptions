@@ -49,8 +49,8 @@ public final class P8WorldPresence {
         if (world == null) return regions;
         for (Object object : world.playerEntities) {
             EntityPlayer player = (EntityPlayer) object;
-            RegionKey region = RegionKey.fromBlock(MathHelper.floor_double(player.posX),
-                MathHelper.floor_double(player.posZ));
+            RegionKey region = RegionKey
+                .fromBlock(MathHelper.floor_double(player.posX), MathHelper.floor_double(player.posZ));
             if (!regions.contains(region)) regions.add(region);
         }
         return regions;
@@ -69,7 +69,7 @@ public final class P8WorldPresence {
         NaturalCalendar.Season season = NaturalCalendar.at(worldTime)
             .season();
         if (lastSeason != null && lastSeason != season) {
-            broadcast(world, "§7" + P8Presentation.seasonBeginsMessage(season));
+            broadcast(world, "\u00a77" + P8Presentation.seasonBeginsMessage(season));
         }
         lastSeason = season;
 

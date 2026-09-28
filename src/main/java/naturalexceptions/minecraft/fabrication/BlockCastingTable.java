@@ -227,12 +227,12 @@ public final class BlockCastingTable extends BlockContainer {
         if (ItemCastingMold.isFilled(tableMold)) {
             ActiveThermalState thermal = ItemCastingMold.getThermalState(tableMold);
             double tempK = thermal != null ? thermal.temperatureKelvin() : 1400.0;
-            boolean molten = thermal != null
-                && thermal.phase() == naturalexceptions.core.material.MaterialPhase.LIQUID;
+            boolean molten = thermal != null && thermal.phase() == naturalexceptions.core.material.MaterialPhase.LIQUID;
             player.addChatMessage(
                 new ChatComponentText(
                     "\u00a7e[Casting Table] The metal is "
-                        + (molten ? "still molten" : "set, and " + naturalexceptions.minecraft.item.HeatWords.describe(tempK))
+                        + (molten ? "still molten"
+                            : "set, and " + naturalexceptions.minecraft.item.HeatWords.describe(tempK))
                         + ". "
                         + (molten ? "Let it cool before taking it out." : "Tongs can lift it off the table.")));
             return true;

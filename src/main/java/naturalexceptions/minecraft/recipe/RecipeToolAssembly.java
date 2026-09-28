@@ -7,7 +7,6 @@ import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.world.World;
 
 import naturalexceptions.content.material.BuiltinMaterials;
-import naturalexceptions.core.assembly.AssemblyGraph;
 import naturalexceptions.core.fabrication.ComponentInstance;
 import naturalexceptions.core.fabrication.GeometryId;
 import naturalexceptions.core.fabrication.ManufacturingState;
@@ -132,7 +131,8 @@ public final class RecipeToolAssembly implements IRecipe {
         }
         GeometryId geom = comp.geometryId();
         // Heads are working components (not handles, rods, or raw ingots)
-        if (geom != GeometryId.HANDLE && geom != GeometryId.ROD && geom != GeometryId.BLANK
+        if (geom != GeometryId.HANDLE && geom != GeometryId.ROD
+            && geom != GeometryId.BLANK
             && geom != GeometryId.INGOT
             && geom != GeometryId.PLATE) {
             return comp;

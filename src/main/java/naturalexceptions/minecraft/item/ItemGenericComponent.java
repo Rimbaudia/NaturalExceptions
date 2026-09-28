@@ -291,8 +291,9 @@ public final class ItemGenericComponent extends Item {
         ThermalCondition cond = getThermalCondition(tempK, props);
 
         list.add("\u00a76Geometry: \u00a7f" + formatGeometryName(comp.geometryId()));
-        list.add("  \u00a77Material: \u00a7f" + naturalexceptions.minecraft.knowledge.KnowledgePresentation
-            .materialName(player, comp.materialRef(), comp.stateKey()));
+        list.add(
+            "  \u00a77Material: \u00a7f" + naturalexceptions.minecraft.knowledge.KnowledgePresentation
+                .materialName(player, comp.materialRef(), comp.stateKey()));
         if (MaterialNamingTarget.canOpenNaming(stack)) {
             list.add("\u00a78Sneak-right-click to name generated material");
         }

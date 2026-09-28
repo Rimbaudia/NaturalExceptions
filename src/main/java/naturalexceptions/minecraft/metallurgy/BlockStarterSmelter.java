@@ -230,7 +230,8 @@ public final class BlockStarterSmelter extends BlockContainer {
                 world.markBlockForUpdate(x, y, z);
                 world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "step.stone", 1.0F, 1.0F);
                 player.addChatMessage(
-                    new ChatComponentText("\u00a7a[Starter Smelter] Added " + held.getDisplayName() + " to the charge."));
+                    new ChatComponentText(
+                        "\u00a7a[Starter Smelter] Added " + held.getDisplayName() + " to the charge."));
                 return true;
             }
             // Refused: the split-off charge goes back to the held stack instead of vanishing.
@@ -238,8 +239,9 @@ public final class BlockStarterSmelter extends BlockContainer {
             player.inventoryContainer.detectAndSendChanges();
             player.addChatMessage(
                 new ChatComponentText(
-                    "\u00a7c[Starter Smelter] " + (smelter.isStructureValid()
-                        ? "There is no room in the crucible for that." : SmelterOutletState.STRUCTURE_INCOMPLETE.hint())));
+                    "\u00a7c[Starter Smelter] "
+                        + (smelter.isStructureValid() ? "There is no room in the crucible for that."
+                            : SmelterOutletState.STRUCTURE_INCOMPLETE.hint())));
             return true;
         } else if (held != null) {
             String rejection = naturalexceptions.core.material.VanillaResourceClassification.getRejectionReason(held);
@@ -283,19 +285,16 @@ public final class BlockStarterSmelter extends BlockContainer {
                     && smelter.getStructureValidationResult()
                         .failureReason() != null ? smelter.getStructureValidationResult()
                             .failureReason() : "The 3x3x3 refractory shell is incomplete.";
-                player.addChatMessage(new ChatComponentText("\u00a7c[Starter Smelter] Structure incomplete: " + failure));
+                player
+                    .addChatMessage(new ChatComponentText("\u00a7c[Starter Smelter] Structure incomplete: " + failure));
                 return true;
             }
             SmelterOutletState state = smelter.outletState();
             player.addChatMessage(
                 new ChatComponentText(
-                    "\u00a7e[Starter Smelter] Formed. Fire "
-                        + (smelter.vesselState()
-                            .fuelState()
-                            .isBurning() ? "burning" : "out")
-                        + ". Tap: "
-                        + state.shortText()
-                        + "."));
+                    "\u00a7e[Starter Smelter] Formed. Fire " + (smelter.vesselState()
+                        .fuelState()
+                        .isBurning() ? "burning" : "out") + ". Tap: " + state.shortText() + "."));
             if (!state.canPour()) player.addChatMessage(new ChatComponentText("\u00a77" + state.hint()));
             if (player.capabilities.isCreativeMode || player.canCommandSenderUseCommand(2, "ne_smelter")) {
                 for (int i = 0; i < smelter.vesselState()

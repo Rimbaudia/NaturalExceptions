@@ -239,9 +239,8 @@ public final class NEOverworldGenerator implements IWorldGenerator {
                         int z = site.z() + dz;
                         if (x < originX || x >= originX + 16 || z < originZ || z >= originZ + 16) continue;
                         boolean core = dx == 0 && dz == 0;
-                        if (!core && (Math.abs(dx) + Math.abs(dz) > 1
-                            || !sites.generation()
-                                .passesChanceAt(x, z, BOULDER_CHANNEL, 0.5))) continue;
+                        if (!core && (Math.abs(dx) + Math.abs(dz) > 1 || !sites.generation()
+                            .passesChanceAt(x, z, BOULDER_CHANNEL, 0.5))) continue;
                         int y = world.getHeightValue(x, z) - 1;
                         if (y < SEA_LEVEL || y >= 249 || !isNaturalSurface(world.getBlock(x, y, z))) continue;
                         Block rock = sites.generation()

@@ -273,10 +273,12 @@ final class GeneratedMaterialPersistenceTest {
         List<String> genAdvTooltip = new ArrayList<>();
         item.addInformation(genStack, null, (List) genAdvTooltip, true);
         assertTrue(genAdvTooltip.contains("  \u00a78ID: " + genRef.asString()));
-        assertFalse(genAdvTooltip.contains("  \u00a78Microstructure: annealed"),
-                "Player tooltips must not disclose exact microstructure without evidence");
-        assertFalse(genAdvTooltip.contains("  \u00a78Conditioning: cold_worked"),
-                "Player tooltips must not disclose exact conditioning without evidence");
+        assertFalse(
+            genAdvTooltip.contains("  \u00a78Microstructure: annealed"),
+            "Player tooltips must not disclose exact microstructure without evidence");
+        assertFalse(
+            genAdvTooltip.contains("  \u00a78Conditioning: cold_worked"),
+            "Player tooltips must not disclose exact conditioning without evidence");
 
         // 3. Empty carrier
         ItemStack emptyStack = new ItemStack(item);
@@ -291,17 +293,19 @@ final class GeneratedMaterialPersistenceTest {
         corruptNbt.setInteger(MaterialCarrierNbtCodec.KEY_FORMAT, 2);
         corruptNbt.setString(MaterialCarrierNbtCodec.KEY_MATERIAL_REF, "bad:ref");
         corruptStack.setTagCompound(corruptNbt);
-        assertEquals("\u00a7cMaterial Sample (Corrupted)", item.getItemStackDisplayName(corruptStack));
+        assertEquals("Crumbled Sample", item.getItemStackDisplayName(corruptStack));
         assertNull(ItemMaterialSample.getMaterialRef(corruptStack));
 
         // 5. Unresolved authored carrier fails safely without exposing its content key
         MaterialRef unresolvedRef = MaterialRef.authored(ResourceId.of("naturalexceptions", "mythic_alloy_999"));
         ItemStack unresolvedStack = ItemMaterialSample.createStack(unresolvedRef);
-        assertEquals("Material Sample (Unresolved)", item.getItemStackDisplayName(unresolvedStack));
+        assertEquals("Unfamiliar Fragment", item.getItemStackDisplayName(unresolvedStack));
         List<String> unresolvedTooltip = new ArrayList<>();
         item.addInformation(unresolvedStack, null, (List) unresolvedTooltip, false);
         assertTrue(unresolvedTooltip.contains("\u00a77Material definition is missing in this installation."));
-        assertFalse(unresolvedTooltip.toString().contains("mythic_alloy_999"));
+        assertFalse(
+            unresolvedTooltip.toString()
+                .contains("mythic_alloy_999"));
     }
 
     @Test

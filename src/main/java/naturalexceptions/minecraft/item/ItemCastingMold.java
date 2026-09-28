@@ -712,8 +712,9 @@ public final class ItemCastingMold extends Item {
             MaterialProperties moldProps = thermal != null ? thermal.properties() : resolveContainedProperties(stack);
             ItemGenericComponent.ThermalCondition cond = ItemGenericComponent.getThermalCondition(temp, moldProps);
 
-            list.add("  \u00a77Material: " + naturalexceptions.minecraft.knowledge.KnowledgePresentation
-                .materialName(player, ref, getContainedStateKey(stack)));
+            list.add(
+                "  \u00a77Material: " + naturalexceptions.minecraft.knowledge.KnowledgePresentation
+                    .materialName(player, ref, getContainedStateKey(stack)));
             list.add("  \u00a77Fill: " + (isFilled(stack) ? "Full" : mass.isPositive() ? "Partially filled" : "Empty"));
             list.add("  \u00a77Heat: " + cond.label());
 

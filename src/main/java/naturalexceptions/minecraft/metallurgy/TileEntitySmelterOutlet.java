@@ -10,7 +10,6 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChatComponentText;
 
 import naturalexceptions.core.material.MaterialAppearance;
-import naturalexceptions.core.material.MaterialPhase;
 import naturalexceptions.core.material.MaterialRef;
 import naturalexceptions.core.metallurgy.AggregateLayer;
 import naturalexceptions.core.metallurgy.AggregatePhaseType;
@@ -183,8 +182,8 @@ public class TileEntitySmelterOutlet extends TileEntity {
             if (player != null) {
                 String progress = Double.isInfinite(minMeltPoint) ? "there is no metal in the crucible"
                     : maxTemp >= minMeltPoint ? "it is melting but still mostly solid"
-                    : maxTemp >= minMeltPoint * 0.75 ? "it is glowing but not yet at its melting heat"
-                        : "it is far too cool to flow";
+                        : maxTemp >= minMeltPoint * 0.75 ? "it is glowing but not yet at its melting heat"
+                            : "it is far too cool to flow";
                 tell(player, "\u00a7c", "Nothing in the crucible can be poured yet: " + progress + ".");
             }
             return false;

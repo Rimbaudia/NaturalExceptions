@@ -22,11 +22,7 @@ public final class P8Presentation {
     /** e.g. "Day 5 of Spring, year 1". */
     public static String dateLine(NaturalCalendar.Position position) {
         long dayOfSeason = position.dayOfYear() % NaturalCalendar.DAYS_PER_SEASON + 1;
-        return "Day " + dayOfSeason
-            + " of "
-            + seasonName(position.season())
-            + ", year "
-            + (position.year() + 1);
+        return "Day " + dayOfSeason + " of " + seasonName(position.season()) + ", year " + (position.year() + 1);
     }
 
     /** One line about how far into the season it is, in ordinary words. */
@@ -55,11 +51,11 @@ public final class P8Presentation {
     }
 
     public static String bloodNightBeginsMessage() {
-        return "§cThe moon rises the colour of rust. Still water stirs, and things move in the dark.";
+        return "\u00a7cThe moon rises the colour of rust. Still water stirs, and things move in the dark.";
     }
 
     public static String bloodNightEndsMessage() {
-        return "§7The red moon has passed. The land is quieter, though not quite as it was.";
+        return "\u00a77The red moon has passed. The land is quieter, though not quite as it was.";
     }
 
     public static String bloodNightAlmanacLine() {
@@ -87,7 +83,7 @@ public final class P8Presentation {
     /** Heard/seen from afar as the impact happens. */
     public static String distantImpactMessage(double dx, double dz) {
         double blocks = Math.sqrt(dx * dx + dz * dz);
-        return "§bA streak of light falls to the " + direction(dx, dz)
+        return "\u00a7bA streak of light falls to the " + direction(dx, dz)
             + ", "
             + distance(blocks)
             + ". Something may be worth finding there.";

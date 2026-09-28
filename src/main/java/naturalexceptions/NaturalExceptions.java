@@ -72,8 +72,12 @@ public final class NaturalExceptions {
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.knowledge.PlayerKnowledgeEvents());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.biology.BiologicalEvents());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.event.StarRainWorldMaterializer());
-        FMLCommonHandler.instance().bus().register(new naturalexceptions.minecraft.knowledge.PlayerKnowledgeEvents());
-        FMLCommonHandler.instance().bus().register(new naturalexceptions.minecraft.knowledge.KnowledgeServerTasks());
+        FMLCommonHandler.instance()
+            .bus()
+            .register(new naturalexceptions.minecraft.knowledge.PlayerKnowledgeEvents());
+        FMLCommonHandler.instance()
+            .bus()
+            .register(new naturalexceptions.minecraft.knowledge.KnowledgeServerTasks());
         NEOverworldGenerator.register();
         MinecraftForge.EVENT_BUS.register(new NEChunkGenerationHistory());
         cpw.mods.fml.common.network.NetworkRegistry.INSTANCE

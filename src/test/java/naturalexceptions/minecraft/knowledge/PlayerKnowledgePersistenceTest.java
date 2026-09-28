@@ -3,7 +3,11 @@ package naturalexceptions.minecraft.knowledge;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import net.minecraft.nbt.NBTTagCompound;
-import naturalexceptions.core.knowledge.*;
+import naturalexceptions.core.knowledge.KnowledgeEvidence;
+import naturalexceptions.core.knowledge.KnowledgePrecision;
+import naturalexceptions.core.knowledge.KnowledgeProvenance;
+import naturalexceptions.core.knowledge.KnowledgeSubjectRef;
+import naturalexceptions.core.knowledge.PlayerKnowledge;
 import naturalexceptions.core.material.MaterialRef;
 import naturalexceptions.core.id.ResourceId;
 

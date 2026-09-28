@@ -32,11 +32,11 @@ import naturalexceptions.core.property.MaterialProperties;
 import naturalexceptions.core.property.MaterialPropertyResolver;
 import naturalexceptions.core.thermal.ActiveThermalState;
 import naturalexceptions.minecraft.item.ItemCastingMold;
+import naturalexceptions.minecraft.item.ItemFluidVessel;
 import naturalexceptions.minecraft.item.ItemFoundryLadle;
 import naturalexceptions.minecraft.item.ItemGenericAssembly;
 import naturalexceptions.minecraft.item.ItemGenericComponent;
 import naturalexceptions.minecraft.item.ItemMaterialSample;
-import naturalexceptions.minecraft.item.ItemFluidVessel;
 import naturalexceptions.minecraft.persistence.VesselStateNbtCodec;
 import naturalexceptions.minecraft.registry.NEItems;
 
@@ -561,8 +561,14 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
             naturalexceptions.core.fluid.FluidParcel parcel = ItemFluidVessel.contents(stack);
             if (parcel == null) return false;
             MaterialQuantity mass = parcel.mass();
-            if (!hasGeometricRoom(mass, parcel.thermalState().properties())
-                || vesselState.totalMass().add(mass).compareTo(vesselState.capacity()) > 0) return false;
+            if (!hasGeometricRoom(
+                mass,
+                parcel.thermalState()
+                    .properties())
+                || vesselState.totalMass()
+                    .add(mass)
+                    .compareTo(vesselState.capacity()) > 0)
+                return false;
             AggregateLayer layer = parcel.toAggregateLayer();
             vesselState.remelt(layer);
             // The reusable vessel is emptied, never consumed with its contents.
@@ -1003,15 +1009,15 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
     public static String getFuelHeatLabel(ItemStack stack) {
         if (stack == null || stack.getItem() == null) return "Ordinary Heat";
         if (stack.getItem() == Items.blaze_rod || stack.getItem() == Items.blaze_powder) {
-            return "Blaze Fuel \u2014 Extreme Heat";
+            return "Blaze Fuel — Extreme Heat";
         }
         if (stack.getItem() == Items.coal) {
             if (stack.getItemDamage() == 1) {
-                return "Charcoal \u2014 Ordinary Heat";
+                return "Charcoal — Ordinary Heat";
             }
-            return "Coal \u2014 Strong Heat";
+            return "Coal — Strong Heat";
         }
-        return "Solid Fuel \u2014 Ordinary Heat";
+        return "Solid Fuel — Ordinary Heat";
     }
 
     public static String getFeedRejectionDiagnostic(ItemStack stack) {

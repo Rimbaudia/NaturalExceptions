@@ -144,7 +144,8 @@ public final class BlockSmelterOutlet extends BlockContainer {
             if (smelter == null) {
                 if (!world.isRemote) {
                     player.addChatMessage(
-                        new ChatComponentText("\u00a7c[Outlet] This outlet is not set into the wall of a Starter Smelter."));
+                        new ChatComponentText(
+                            "\u00a7c[Outlet] This outlet is not set into the wall of a Starter Smelter."));
                 }
                 return true;
             }
@@ -162,8 +163,7 @@ public final class BlockSmelterOutlet extends BlockContainer {
                     world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "liquid.lavapop", 1.0F, 1.0F);
                     if (!world.isRemote) {
                         player.addChatMessage(
-                            new ChatComponentText(
-                                "\u00a7a[Outlet] Poured the ladle back into the smelter."));
+                            new ChatComponentText("\u00a7a[Outlet] Poured the ladle back into the smelter."));
                     }
                     return true;
                 }
@@ -175,16 +175,14 @@ public final class BlockSmelterOutlet extends BlockContainer {
                     if (!world.isRemote) {
                         naturalexceptions.core.metallurgy.MaterialQuantity mass = naturalexceptions.minecraft.item.ItemFoundryLadle
                             .getFilledMass(held);
-                        player.addChatMessage(
-                            new ChatComponentText(
-                                "\u00a7a[Outlet] Drew molten metal into the ladle."));
+                        player
+                            .addChatMessage(new ChatComponentText("\u00a7a[Outlet] Drew molten metal into the ladle."));
                     }
                     return true;
                 } else {
                     if (!world.isRemote) {
                         player.addChatMessage(
-                            new ChatComponentText(
-                                "\u00a7c[Outlet] There is no molten metal the ladle can reach yet."));
+                            new ChatComponentText("\u00a7c[Outlet] There is no molten metal the ladle can reach yet."));
                     }
                     return true;
                 }

@@ -1,10 +1,12 @@
 package naturalexceptions.minecraft.item;
 
 import java.util.Locale;
+
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
+
 import naturalexceptions.core.knowledge.KnowledgeEvidence;
 import naturalexceptions.core.knowledge.KnowledgePrecision;
 import naturalexceptions.core.knowledge.KnowledgeProvenance;
@@ -17,9 +19,15 @@ import naturalexceptions.minecraft.network.PacketKnowledgeSnapshot;
 
 /** Minimal instrument: assay the first sample in inventory and record approximate density. */
 public final class ItemFieldAssay extends Item {
-    public ItemFieldAssay() { setUnlocalizedName("fieldAssay"); setTextureName("naturalexceptions:field_assay"); setMaxStackSize(1); }
 
-    @Override public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
+    public ItemFieldAssay() {
+        setUnlocalizedName("fieldAssay");
+        setTextureName("naturalexceptions:field_assay");
+        setMaxStackSize(1);
+    }
+
+    @Override
+    public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
         if (world == null || world.isRemote || player == null) return stack;
         for (int i = 0; i < player.inventory.getSizeInventory(); i++) {
             ItemStack sample = player.inventory.getStackInSlot(i);
@@ -33,16 +41,25 @@ public final class ItemFieldAssay extends Item {
             double high = density * 1.05;
             String statement = String.format(Locale.ROOT, "Density: %.0f-%.0f kg/m3", low, high);
             PlayerKnowledgeProperties knowledge = PlayerKnowledgeProperties.get(player);
-            boolean changed = knowledge.knowledge().addEvidence(KnowledgeSubjectRef.material(ref), new KnowledgeEvidence(
-                "density", statement, "field_assay:density:" + ref.asString(), KnowledgeProvenance.INSTRUMENT,
-                KnowledgePrecision.QUANTITATIVE));
+            boolean changed = knowledge.knowledge()
+                .addEvidence(
+                    KnowledgeSubjectRef.material(ref),
+                    new KnowledgeEvidence(
+                        "density",
+                        statement,
+                        "field_assay:density:" + ref.asString(),
+                        KnowledgeProvenance.INSTRUMENT,
+                        KnowledgePrecision.QUANTITATIVE));
             if (changed && player instanceof net.minecraft.entity.player.EntityPlayerMP) {
-                NENetwork.CHANNEL.sendTo(new PacketKnowledgeSnapshot(knowledge), (net.minecraft.entity.player.EntityPlayerMP) player);
+                NENetwork.CHANNEL.sendTo(
+                    new PacketKnowledgeSnapshot(knowledge),
+                    (net.minecraft.entity.player.EntityPlayerMP) player);
             }
             player.addChatMessage(new net.minecraft.util.ChatComponentText("\u00a7bField assay: " + statement));
             return stack;
         }
-        player.addChatMessage(new net.minecraft.util.ChatComponentText("\u00a77No supported material sample could be measured."));
+        player.addChatMessage(
+            new net.minecraft.util.ChatComponentText("\u00a77No supported material sample could be measured."));
         return stack;
     }
 }

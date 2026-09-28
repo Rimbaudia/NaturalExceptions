@@ -78,11 +78,7 @@ public final class ContainerStarterSmelter extends Container {
 
             // Machine slots (fuel, feed) to player inventory
             if (slotIndex < MACHINE_SLOTS) {
-                if (!this.mergeItemStack(
-                    itemstack1,
-                    MACHINE_SLOTS,
-                    this.inventorySlots.size(),
-                    true)) {
+                if (!this.mergeItemStack(itemstack1, MACHINE_SLOTS, this.inventorySlots.size(), true)) {
                     return null;
                 }
             } else {

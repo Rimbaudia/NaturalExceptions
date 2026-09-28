@@ -6,8 +6,10 @@ package naturalexceptions.minecraft.metallurgy;
  */
 public enum SmelterOutletState {
 
-    STRUCTURE_INCOMPLETE("waiting on structure", "The smelter walls are incomplete, so nothing is processed or poured."),
-    NO_OUTLET("no outlet fitted", "Place a Smelter Outlet against the outside of a wall, level with the controller, spout facing out."),
+    STRUCTURE_INCOMPLETE("waiting on structure",
+        "The smelter walls are incomplete, so nothing is processed or poured."),
+    NO_OUTLET("no outlet fitted",
+        "Place a Smelter Outlet against the outside of a wall, level with the controller, spout facing out."),
     NOTHING_MOLTEN("nothing molten yet", "Keep the fire fed; metal can only be poured once it is mostly liquid."),
     NO_TABLE("no table under spout", "Place a Casting Table directly below the outlet spout."),
     NO_MOLD("table has no mold", "Put an empty mold on the Casting Table under the spout."),

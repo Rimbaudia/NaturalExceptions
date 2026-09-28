@@ -72,8 +72,10 @@ final class SmelterBreakPreservationTest {
             drop.getTagCompound()
                 .getCompoundTag(TileEntityStarterSmelter.CONTENTS_TAG));
 
-        assertEquals(massBefore, replaced.vesselState()
-            .totalMass());
+        assertEquals(
+            massBefore,
+            replaced.vesselState()
+                .totalMass());
         assertEquals(
             energyBefore,
             replaced.vesselState()
@@ -139,10 +141,11 @@ final class SmelterBreakPreservationTest {
 
         smelter.vesselState()
             .addLayer(hotCopper(0.5, 1500.0));
-        assertTrue(smelter.hasPourableMetal() || smelter.vesselState()
-            .layers()
-            .stream()
-            .anyMatch(AggregateLayer::isPourable));
+        assertTrue(
+            smelter.hasPourableMetal() || smelter.vesselState()
+                .layers()
+                .stream()
+                .anyMatch(AggregateLayer::isPourable));
         // Without an outlet in the world, the GUI says so rather than offering a dead pour control.
         assertEquals(SmelterOutletState.NO_OUTLET, smelter.outletState());
     }
@@ -165,7 +168,10 @@ final class SmelterBreakPreservationTest {
                     CanonicalMaterialKey.of(slag),
                     slag,
                     MaterialQuantity.ofKilograms(kg),
-                    new ActiveThermalState(energy, kg, naturalexceptions.core.metallurgy.OreFeedstockDefinition.SLAG_PROPERTIES),
+                    new ActiveThermalState(
+                        energy,
+                        kg,
+                        naturalexceptions.core.metallurgy.OreFeedstockDefinition.SLAG_PROPERTIES),
                     AggregatePhaseType.SLAG));
         ItemStack skimmed = smelter.extractSlag(TileEntityStarterSmelter.SLAG_SKIM_AMOUNT);
         assertNotNull(skimmed);
