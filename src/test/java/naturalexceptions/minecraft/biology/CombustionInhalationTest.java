@@ -17,9 +17,9 @@ final class CombustionInhalationTest {
         BiologicalState masked = new BiologicalState(BodyPlanRegistry.standard().require(BuiltinBodyPlans.HUMAN_ID), 0L);
         masked.addExposureProtection(new ExposureProtection(ExposureRoute.INHALATION, 0.75));
 
-        double firstBare = BiologicalEvents.applyCombustionSmoke(bare, 20L);
-        double firstMasked = BiologicalEvents.applyCombustionSmoke(masked, 20L);
-        double secondBare = BiologicalEvents.applyCombustionSmoke(bare, 40L);
+        double firstBare = BiologicalEvents.applyCombustionSmoke(bare, 20.0, 20L);
+        double firstMasked = BiologicalEvents.applyCombustionSmoke(masked, 20.0, 20L);
+        double secondBare = BiologicalEvents.applyCombustionSmoke(bare, 20.0, 40L);
 
         assertTrue(firstBare > firstMasked);
         assertTrue(firstMasked > 0.0, "a physical filter reduces dose but is not immunity");

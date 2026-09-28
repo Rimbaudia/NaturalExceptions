@@ -9,7 +9,9 @@
     "MixinEntityPlayer",
     "EntityLivingBaseAccessor",
     "MixinEntityArrow",
-    "EntityArrowAccessor"
+    "EntityArrowAccessor",
+    "MixinEntityPlayerArmor",
+    "MixinEntityLivingBaseArmor"
   ],
   "client": [
     "MixinGuiContainerCreativeInventoryBrowser",

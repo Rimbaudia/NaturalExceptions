@@ -45,14 +45,18 @@ public final class BiologicalEvents {
     @SubscribeEvent public void onLivingHurt(LivingHurtEvent event) {
         if (event == null || event.entityLiving == null || event.entityLiving.worldObj.isRemote || event.ammount <= 0.0F) return;
         EntityLivingBase target = event.entityLiving;
+        HostDamageMapping.Category category = HostDamageMapping.categorize(event.source);
+        // Drowning, starvation, magic, the void and similar are not physical interactions; the host's
+        // own damage stands and is not disguised as a blow.
+        if (category == HostDamageMapping.Category.UNMODELLED) return;
         BiologicalState state = BiologicalProperties.get(target).state();
         if (state == null) return;
         float raw = event.ammount;
-        PhysicalInteraction.Type type = PhysicalInteraction.Type.IMPACT;
+        PhysicalInteraction.Type type = HostDamageMapping.interactionType(category);
         double energy = Math.max(1.0, raw * 55.0);
         double sharpness = 0.0, penetration = 0.0;
         Entity sourceEntity = event.source.getEntity();
-        if (sourceEntity instanceof EntityPlayer) {
+        if (category == HostDamageMapping.Category.PHYSICAL_HIT && sourceEntity instanceof EntityPlayer) {
             net.minecraft.item.ItemStack stack = ((EntityPlayer) sourceEntity).getHeldItem();
             if (stack != null && stack.getItem() instanceof ItemGenericAssembly) {
                 naturalexceptions.core.assembly.AssemblyGraph graph = ItemGenericAssembly.getAssembly(stack);
@@ -67,19 +71,45 @@ public final class BiologicalEvents {
                 }
             }
         }
-        if (event.source.isFireDamage()) type = PhysicalInteraction.Type.THERMAL;
         double before = state.condition();
-        PhysicalInteraction interaction = new PhysicalInteraction(type, TORSO, energy,
+        PhysicalInteraction interaction = new PhysicalInteraction(type, HostDamageMapping.region(category), energy,
             penetration, sharpness, type == PhysicalInteraction.Type.THERMAL ? 500.0 : 20.0);
         java.util.List<VanillaArmorAdapter.EquippedArmor> equippedArmor = VanillaArmorAdapter.capture(target);
         java.util.List<naturalexceptions.core.biology.ArmorLayer> armorLayers = new java.util.ArrayList<>();
         for (VanillaArmorAdapter.EquippedArmor armor : equippedArmor) armorLayers.add(armor.layer());
-        BiologicalInteractionResolver.apply(state, interaction, target.worldObj.getTotalWorldTime(), armorLayers);
+        long now = target.worldObj.getTotalWorldTime();
+        BiologicalInteractionResolver.apply(state, interaction, now, armorLayers);
         for (VanillaArmorAdapter.EquippedArmor armor : equippedArmor) armor.commit(target);
+        // Armor has absorbed and been worn by this hit here; the host armor step must not do it again.
+        if (!equippedArmor.isEmpty()) ArmorPathGate.markResolved(target, now);
         double lost = Math.max(0.0, before - state.condition());
         // Vanilla hearts are a derived compatibility summary; avoid applying both raw vanilla damage and injury damage.
         event.ammount = (float) Math.min(raw, target.getMaxHealth() * lost);
+        rememberDerivedHealth(target, state);
         applyMovement(target, state);
+    }
+
+    private static final String KEY_DERIVED_HEALTH = "naturalexceptions.derived_health";
+
+    /**
+     * Records the health the biological condition implies after this hit, so the periodic sync moves hearts only
+     * by later biological change and never undoes host damage that biology does not model.
+     */
+    private static void rememberDerivedHealth(EntityLivingBase target, BiologicalState state) {
+        if (target instanceof EntityPlayer) {
+            target.getEntityData()
+                .setFloat(KEY_DERIVED_HEALTH, (float) (target.getMaxHealth() * state.condition()));
+        }
+    }
+
+    /**
+     * Health after a periodic sync: follows biological change as a delta, never rises above what the body's
+     * condition allows, and keeps any additional unmodelled host damage until ordinary regeneration heals it.
+     */
+    static float syncedHealth(float currentHealth, float previousDerived, float derived) {
+        if (derived <= 0.0F) return 0.0F;
+        float next = currentHealth + (derived - previousDerived);
+        return Math.max(0.0F, Math.min(derived, next));
     }
 
     /** Routes direct environmental heat contact through the same shared P10 interaction resolver. */
@@ -116,10 +146,10 @@ public final class BiologicalEvents {
         if (joules > 0.0) applyThermalContact(target, region, temperatureKelvin, joules);
     }
 
-    /** One second of bounded, quantitative combustion-smoke exposure from nearby vanilla fire/furnace blocks. */
-    public static double applyCombustionSmoke(BiologicalState state, long worldTick) {
+    /** Inhales {@code grams} of combustion smoke (one second's worth from {@link SmelterSmoke}). */
+    public static double applyCombustionSmoke(BiologicalState state, double grams, long worldTick) {
         if (state == null) throw new NullPointerException("state");
-        return state.expose(COMBUSTION_SMOKE, SMOKE_PROPERTIES, ExposureRoute.INHALATION, 20.0, worldTick);
+        return state.expose(COMBUSTION_SMOKE, SMOKE_PROPERTIES, ExposureRoute.INHALATION, grams, worldTick);
     }
 
     @SubscribeEvent public void onLivingUpdate(LivingEvent.LivingUpdateEvent event) {
@@ -135,18 +165,23 @@ public final class BiologicalEvents {
                 && naturalexceptions.minecraft.item.ItemExposureMask.isWorn(stack))
                 state.addExposureProtection(new naturalexceptions.core.biology.ExposureProtection(ExposureRoute.INHALATION, 0.75));
         }
-        boolean smoke = nearCombustionSource(player);
+        double smokeGrams = SmelterSmoke.gramsPerSecondAt(player);
+        boolean smoke = smokeGrams > 0.0;
         if (smoke) {
-            applyCombustionSmoke(state, now);
+            applyCombustionSmoke(state, smokeGrams, now);
             if (!player.getEntityData().getBoolean(KEY_SMOKE_WARNING)) {
                 player.addChatMessage(new net.minecraft.util.ChatComponentText(
-                    "Smoke stings your breathing; a filter mask reduces the inhaled dose."));
+                    "\u00a77Smoke from the smelter fire stings your breathing. Open air or a filter mask helps."));
             }
         }
         player.getEntityData().setBoolean(KEY_SMOKE_WARNING, smoke);
         float derivedHealth = (float) (player.getMaxHealth() * state.condition());
-        if (derivedHealth <= 0.0F) player.setHealth(0.0F);
-        else if (Math.abs(player.getHealth() - derivedHealth) > 0.05F) player.setHealth(derivedHealth);
+        net.minecraft.nbt.NBTTagCompound data = player.getEntityData();
+        float previousDerived = data.hasKey(KEY_DERIVED_HEALTH) ? data.getFloat(KEY_DERIVED_HEALTH) : player.getHealth();
+        float synced = syncedHealth(player.getHealth(), previousDerived, derivedHealth);
+        data.setFloat(KEY_DERIVED_HEALTH, derivedHealth);
+        if (synced <= 0.0F) player.setHealth(0.0F);
+        else if (Math.abs(player.getHealth() - synced) > 0.05F) player.setHealth(synced);
         int derivedFood = (int) Math.round(20.0 * state.energyReserveJoules()
             / Math.max(1.0, state.physiology().energyCapacityJoules()));
         player.getFoodStats().setFoodLevel(Math.max(0, Math.min(20, derivedFood)));
@@ -182,21 +217,5 @@ public final class BiologicalEvents {
         double amount = Math.max(-0.75, Math.min(0.0, state.movementCapability() - 1.0));
         if (amount < -0.001) attribute.applyModifier(new AttributeModifier(BIOLOGY_MOVEMENT,
             "Natural Exceptions biological impairment", amount, 2));
-    }
-
-    private static boolean nearCombustionSource(EntityPlayer player) {
-        int px = (int) Math.floor(player.posX);
-        int py = (int) Math.floor(player.posY);
-        int pz = (int) Math.floor(player.posZ);
-        for (int x = px - 2; x <= px + 2; x++) {
-            for (int y = py - 1; y <= py + 2; y++) {
-                for (int z = pz - 2; z <= pz + 2; z++) {
-                    net.minecraft.block.Block block = player.worldObj.getBlock(x, y, z);
-                    if (block == net.minecraft.init.Blocks.fire || block == net.minecraft.init.Blocks.lit_furnace)
-                        return true;
-                }
-            }
-        }
-        return false;
     }
 }
