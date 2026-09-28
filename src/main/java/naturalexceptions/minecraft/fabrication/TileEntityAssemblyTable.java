@@ -52,17 +52,29 @@ public class TileEntityAssemblyTable extends TileEntity implements IInventory {
         if (inventory[0] == null || inventory[1] == null) {
             return null;
         }
-        ComponentInstance head = RecipeToolAssembly.extractHead(inventory[0]);
-        ComponentInstance handle = RecipeToolAssembly.extractHandle(inventory[1]);
-        if (head != null && handle != null) {
-            try {
-                AssemblyGraph assembly = AssemblyGraph.ofTool(head, handle);
-                return ItemGenericAssembly.createStack(assembly);
-            } catch (Exception e) {
-                return null;
-            }
+        return ToolAssemblyCarrier.assemble(inventory[0], inventory[1]);
+    }
+
+    /** A single assembled tool can be laid on an empty table to take it apart. */
+    public boolean canAcceptToolForDisassembly(ItemStack tool) {
+        return inventory[0] == null && inventory[1] == null
+            && tool != null
+            && tool.stackSize == 1
+            && ToolAssemblyCarrier.isDisassemblable(tool);
+    }
+
+    /** Splits the tool into its head and handle, which then sit in the two part slots. */
+    public boolean disassembleOntoTable(ItemStack tool) {
+        if (!canAcceptToolForDisassembly(tool)) return false;
+        ItemStack[] parts = ToolAssemblyCarrier.disassemble(tool);
+        if (parts == null) return false;
+        inventory[0] = parts[0];
+        inventory[1] = parts[1];
+        markDirty();
+        if (worldObj != null) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
-        return null;
+        return true;
     }
 
     @Override
@@ -124,6 +136,10 @@ public class TileEntityAssemblyTable extends TileEntity implements IInventory {
 
     @Override
     public void setInventorySlotContents(int slot, ItemStack stack) {
+        if (slot == SLOT_HEAD && stack != null && ToolAssemblyCarrier.isDisassemblable(stack)) {
+            disassembleOntoTable(stack);
+            return;
+        }
         if (slot >= 0 && slot < 2) {
             inventory[slot] = stack;
             if (stack != null && stack.stackSize > getInventoryStackLimit()) {
@@ -169,7 +185,7 @@ public class TileEntityAssemblyTable extends TileEntity implements IInventory {
     @Override
     public boolean isItemValidForSlot(int slot, ItemStack stack) {
         if (slot == SLOT_HEAD) {
-            return RecipeToolAssembly.extractHead(stack) != null;
+            return RecipeToolAssembly.extractHead(stack) != null || canAcceptToolForDisassembly(stack);
         }
         if (slot == SLOT_HANDLE) {
             return RecipeToolAssembly.extractHandle(stack) != null;
@@ -180,6 +196,19 @@ public class TileEntityAssemblyTable extends TileEntity implements IInventory {
     public boolean placeComponentInWorld(EntityPlayer player, ItemStack held) {
         if (held == null) {
             return false;
+        }
+        if (canAcceptToolForDisassembly(held)) {
+            String name = held.getDisplayName();
+            disassembleOntoTable(held);
+            player.setCurrentItemOrArmor(0, null);
+            player.inventoryContainer.detectAndSendChanges();
+            if (worldObj != null) {
+                worldObj.playSoundEffect(xCoord + 0.5D, yCoord + 0.5D, zCoord + 0.5D, "random.anvil_use", 0.4F, 0.8F);
+            }
+            player.addChatMessage(
+                new ChatComponentText(
+                    "\u00a7eTook apart \u00a7f" + name + "\u00a7e. Its head and handle are on the table."));
+            return true;
         }
         if (inventory[0] == null && RecipeToolAssembly.extractHead(held) != null) {
             inventory[0] = held.splitStack(1);

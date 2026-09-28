@@ -57,7 +57,7 @@ public final class GuiAssemblyTable extends GuiContainer {
         } else if (!hasHead && hasHandle) {
             drawCenteredString("\u00a7eInsert Tool Head", 88, 57, 0x888800);
         } else {
-            drawCenteredString("\u00a77Place Head & Handle", 88, 57, 0x888888);
+            drawCenteredString("\u00a77Head + handle, or a tool to take apart", 88, 57, 0x888888);
         }
     }
 

@@ -255,9 +255,9 @@ public final class CraftingKnowledgeProvider implements IKnowledgeProvider {
                 .description(
                     "The Assembly Table provides a dedicated workstation for tool fabrication and lossless disassembly.\n\n"
                         + "Place a Tool Head (Pick, Axe, Shovel, Hoe, Blade) in the head slot and a Handle in the handle slot "
-                        + "to assemble a finished tool. Place any assembled tool inside to cleanly disassemble it, "
-                        + "recovering both the head component and the handle without damage or loss.")
-                .addProperty("Operation", "Tool Assembly & Disassembly (100% component recovery)")
+                        + "to assemble a finished tool. To take a tool apart, put it in the head slot of the empty table: "
+                        + "the same head and handle come back, wear and all.")
+                .addProperty("Operation", "Tool assembly and disassembly")
                 .addProperty("Inputs", "1x Tool Head + 1x Handle")
                 .addAcquisition(
                     ProcessStep.builder()

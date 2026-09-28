@@ -446,26 +446,6 @@ public final class ItemGenericAssembly extends Item {
     }
 
     @Override
-    public boolean hasContainerItem(ItemStack stack) {
-        AssemblyGraph assembly = getAssembly(stack);
-        return assembly != null && assembly.handle() != null;
-    }
-
-    @Override
-    public ItemStack getContainerItem(ItemStack stack) {
-        AssemblyGraph assembly = getAssembly(stack);
-        if (assembly != null && assembly.handle() != null) {
-            return ItemGenericComponent.createStack(assembly.handle());
-        }
-        return null;
-    }
-
-    @Override
-    public boolean doesContainerItemLeaveCraftingGrid(ItemStack stack) {
-        return false;
-    }
-
-    @Override
     public boolean onBlockDestroyed(ItemStack stack, World world, Block block, int x, int y, int z,
         EntityLivingBase player) {
         if (world != null && world.isRemote) {
@@ -722,6 +702,13 @@ public final class ItemGenericAssembly extends Item {
                 world.playSoundEffect(0, 0, 0, "random.break", 0.8F, 0.8F);
             }
 
+            // The tool falls apart; its parts (the fractured head included) are dropped, never deleted.
+            if (entity != null && !entity.worldObj.isRemote) {
+                ItemStack[] parts = naturalexceptions.minecraft.fabrication.ToolAssemblyCarrier.disassemble(stack);
+                if (parts != null) {
+                    for (ItemStack part : parts) entity.entityDropItem(part, 0.5F);
+                }
+            }
             stack.stackSize--;
             if (stack.stackSize < 0) {
                 stack.stackSize = 0;

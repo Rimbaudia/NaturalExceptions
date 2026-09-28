@@ -102,8 +102,10 @@ public final class RecipeToolAssembly implements IRecipe {
             }
 
             if (head != null && handle != null) {
-                AssemblyGraph assembly = AssemblyGraph.ofTool(head, handle);
-                return ItemGenericAssembly.createStack(assembly);
+                // Same carrier as the Assembly Table so both paths keep the parts' extra data.
+                ItemStack headStack = extractHead(stack1) != null && extractHandle(stack2) != null ? stack1 : stack2;
+                ItemStack handleStack = headStack == stack1 ? stack2 : stack1;
+                return naturalexceptions.minecraft.fabrication.ToolAssemblyCarrier.assemble(headStack, handleStack);
             }
         }
 

@@ -87,8 +87,13 @@ public final class ContainerAssemblyTable extends Container {
                     return null;
                 }
             } else {
-                // Player inventory to machine slots
-                if (RecipeToolAssembly.extractHead(itemstack1) != null) {
+                // Player inventory to machine slots; a lone tool on an empty table is taken apart.
+                if (tileEntity.canAcceptToolForDisassembly(itemstack1)) {
+                    tileEntity.disassembleOntoTable(itemstack1);
+                    slot.putStack(null);
+                    detectAndSendChanges();
+                    return null;
+                } else if (RecipeToolAssembly.extractHead(itemstack1) != null) {
                     if (!this.mergeItemStack(itemstack1, 0, 1, false)) {
                         return null;
                     }
@@ -125,7 +130,7 @@ public final class ContainerAssemblyTable extends Container {
 
         @Override
         public boolean isItemValid(ItemStack stack) {
-            return RecipeToolAssembly.extractHead(stack) != null;
+            return inventory.isItemValidForSlot(getSlotIndex(), stack);
         }
     }
 

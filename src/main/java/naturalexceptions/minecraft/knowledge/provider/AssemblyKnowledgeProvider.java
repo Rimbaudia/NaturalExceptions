@@ -62,12 +62,14 @@ public final class AssemblyKnowledgeProvider implements IKnowledgeProvider {
                         + "\u2022 \u00a7eMining Speed & Hardness:\u00a7r Determined by the head material's physical density and hardness.\n"
                         + "\u2022 \u00a7eDurability:\u00a7r Derived from tensile strength, yield stress, and component mass.\n"
                         + "\u2022 \u00a7eHarvest Capability:\u00a7r Copper harvests stone/coal/copper (Level 1). Iron harvests redstone/diamond/gold (Level 2).\n\n"
-                        + "\u00a7l100% Reversible Disassembly:\u00a7r\n"
-                        + "Any assembled tool placed into an Assembly Table can be disassembled back into "
-                        + "its exact original Tool Head and Handle without damage or material loss!")
+                        + "\u00a7lTaking a tool apart:\u00a7r\n"
+                        + "Lay an assembled tool in the head slot of an empty Assembly Table (or right-click the table "
+                        + "holding it). It separates into the same head and handle it was made from, carrying any wear "
+                        + "they picked up in use. The crafting grid only assembles; it never takes tools apart.\n\n"
+                        + "A tool that breaks in use falls apart: its fractured head and its handle drop at your feet.")
                 .addProperty("Assembly Grid", "Shapeless (Head + Handle)")
-                .addProperty("Disassembly", "Assembly Table returns both historical components")
-                .addProperty("Component Loss", "0% (Full lossless recovery)")
+                .addProperty("Disassembly", "Assembly Table returns the same head and handle")
+                .addProperty("Component Loss", "None; wear from use is kept")
                 .addProperty("Harvest Level: Copper", "Level 1 (Stone, Coal, Copper)")
                 .addProperty("Harvest Level: Iron", "Level 2 (Iron, Redstone, Diamond)")
                 .addAcquisition(
@@ -82,11 +84,11 @@ public final class AssemblyKnowledgeProvider implements IKnowledgeProvider {
                 .addUsage(
                     ProcessStep.builder()
                         .operation("Tool Disassembly")
-                        .machine(tableStack, "Assembly Table / Crafting Grid")
+                        .machine(tableStack, "Assembly Table")
                         .addInput(pickaxeStack, "Assembled Tool")
                         .addOutput(pickHeadStack, "Recovered Tool Head")
                         .addOutput(handleStack, "Recovered Tool Handle")
-                        .addNote("100% lossless component recovery.")
+                        .addNote("Put the tool in the head slot of an empty table.")
                         .build())
                 .addRelated("assembly_table")
                 .addRelated("wooden_handle")
