@@ -26,6 +26,7 @@ public final class NEBlocks {
     public static Block moldAssemblyTable;
     public static Block fluidCell;
     public static Block fallenStarCell;
+    public static Block impactCrust;
 
     private NEBlocks() {}
 
@@ -60,6 +61,7 @@ public final class NEBlocks {
         fluidCell = new naturalexceptions.minecraft.fluid.BlockFluidCell();
         // A Fallen Star host without its canonical parcel would be fake matter; sites come only from impacts.
         fallenStarCell = new naturalexceptions.minecraft.fluid.BlockFallenStar();
+        impactCrust = new naturalexceptions.minecraft.fluid.BlockImpactCrust();
 
         try {
             net.minecraft.tileentity.TileEntity.addMapping(TileEntityStarterSmelter.class, "starter_smelter");
@@ -103,6 +105,7 @@ public final class NEBlocks {
             GameRegistry.registerBlock(moldAssemblyTable, "mold_assembly_table");
             GameRegistry.registerBlock(fluidCell, "fluid_cell");
             GameRegistry.registerBlock(fallenStarCell, "fallen_star_site");
+            GameRegistry.registerBlock(impactCrust, "impact_crust");
         } catch (Throwable t) {
             System.out.println("DEBUG registerBlock caught: " + t);
             t.printStackTrace();

@@ -67,27 +67,46 @@ final class StarRainWorldMaterializerTest {
 
         world.loaded = true;
         assertTrue(materializer.materialize(world, saved, impact));
-        assertEquals(NEBlocks.fallenStarCell, world.getBlock(impact.x(), 64, impact.z()));
-        FluidParcel parcel = saved.fluids()
-            .parcelAt(new FluidCellKey(0, impact.x(), 64, impact.z()));
-        assertNotNull(parcel);
-        assertEquals(impact.id(), parcel.provenanceId());
-        assertEquals(
-            originalMass,
-            parcel.mass()
-                .milligrams());
+        naturalexceptions.core.event.StarRainCraterPlan plan = naturalexceptions.core.event.StarRainCraterPlan
+            .of(impact.severity(), naturalexceptions.core.event.StarRainCraterPlan.seedOf(impact.id()));
+        int coreY = 64 + plan.ballCenterDy();
+        assertEquals(NEBlocks.fallenStarCell, world.getBlock(impact.x(), coreY, impact.z()), "molten core at the heart");
+        assertEquals(NEBlocks.impactCrust, world.getBlock(impact.x(), coreY + (impact.severity() >= 3 ? 2 : 1),
+            impact.z()), "fused crust shell above it");
+        assertEquals(Blocks.air, world.getBlock(impact.x() + plan.radius() - 1, 64, impact.z()), "crater cleared");
+        long stellar = 0L;
+        int crust = 0;
+        for (FluidParcel parcel : saved.fluids()
+            .snapshotCells()
+            .values()) {
+            assertEquals(impact.id(), parcel.provenanceId());
+            if (parcel.materialRef()
+                .equals(naturalexceptions.content.material.BuiltinMaterials.STELLAR_MATTER.ref())) {
+                stellar += parcel.mass()
+                    .milligrams();
+            } else crust++;
+        }
+        assertEquals(originalMass, stellar, "all stellar matter is in the core, none lost or created");
+        assertEquals(plan.cellsWithRole(naturalexceptions.core.event.StarRainCraterPlan.Role.CRUST).size(), crust);
         assertEquals(
             0L,
             impact.stellarMass()
                 .milligrams());
-        assertEquals(1, world.fluidPlacements);
+        int placements = world.fluidPlacements;
+        assertEquals(plan.cellsWithRole(naturalexceptions.core.event.StarRainCraterPlan.Role.CORE).size(), placements);
         assertFalse(materializer.materialize(world, saved, impact));
-        assertEquals(1, world.fluidPlacements);
-        assertEquals(
-            originalMass,
-            saved.fluids()
-                .totalMass()
-                .milligrams());
+        assertEquals(placements, world.fluidPlacements, "materializing twice does nothing");
+    }
+
+    @Test
+    void craterNeverDestroysTileEntitiesBedrockOrParcelHosts() {
+        NEBlocks.register();
+        assertTrue(StarRainWorldMaterializer.carvable(Blocks.stone, false, 1.5F));
+        assertTrue(StarRainWorldMaterializer.carvable(Blocks.planks, false, 2.0F), "builds in the blast zone are damaged");
+        assertFalse(StarRainWorldMaterializer.carvable(Blocks.chest, true, 2.5F), "tile entities are spared");
+        assertFalse(StarRainWorldMaterializer.carvable(Blocks.bedrock, false, -1.0F));
+        assertFalse(StarRainWorldMaterializer.carvable(Blocks.obsidian, false, -1.0F), "unbreakable stays");
+        assertFalse(StarRainWorldMaterializer.carvable(NEBlocks.fluidCell, false, 0.1F), "other parcels are never erased");
     }
 
     private static final class FakeWorld extends World {
@@ -148,6 +167,17 @@ final class StarRainWorldMaterializerTest {
         @Override
         public int getTopSolidOrLiquidBlock(int x, int z) {
             return 65;
+        }
+
+        @Override
+        public int getHeightValue(int x, int z) {
+            return 65;
+        }
+
+        @Override
+        public net.minecraft.world.Explosion newExplosion(Entity entity, double x, double y, double z, float size,
+            boolean flaming, boolean smoking) {
+            return null;
         }
 
         @Override

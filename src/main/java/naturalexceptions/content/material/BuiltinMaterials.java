@@ -218,5 +218,24 @@ public final class BuiltinMaterials {
         STELLAR_MATTER_MATERIAL_ID, "material.naturalexceptions.stellar_matter", STELLAR_MATTER_COMPOSITION,
         STELLAR_MATTER_PROPERTIES);
 
+    /** Ground rock fused into glassy crust around a fallen star; ordinary terrestrial matter, basalt-like. */
+    public static final ResourceId IMPACT_CRUST_RESOURCE_ID = ResourceId.of("naturalexceptions", "impact_crust");
+    public static final MaterialId IMPACT_CRUST_MATERIAL_ID = MaterialId.of("naturalexceptions", "impact_crust");
+    public static final CanonicalComposition IMPACT_CRUST_COMPOSITION = CanonicalComposition
+        .of(IMPACT_CRUST_RESOURCE_ID);
+    public static final MaterialProperties IMPACT_CRUST_PROPERTIES = MaterialProperties.builder()
+        .density(2.6)
+        .hardness(6.0)
+        .thermalConductivity(1.8)
+        .specificHeatSolid(840.0)
+        .specificHeatLiquid(1100.0)
+        .meltingPointKelvin(1450.0)
+        .latentHeatOfFusion(420000.0)
+        .electricalResistivity(1.0e6)
+        .build();
+    public static final MaterialDefinition IMPACT_CRUST = new MaterialDefinition(
+        IMPACT_CRUST_MATERIAL_ID, "material.naturalexceptions.impact_crust", IMPACT_CRUST_COMPOSITION,
+        IMPACT_CRUST_PROPERTIES);
+
     private BuiltinMaterials() {}
 }

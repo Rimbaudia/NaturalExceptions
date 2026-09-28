@@ -52,7 +52,13 @@ public final class BuiltinContent {
             "material",
             1L)
         .add(
-            BuiltinMaterials.STELLAR_MATTER.id().resourceId(),
+            BuiltinMaterials.STELLAR_MATTER.id()
+                .resourceId(),
+            "material",
+            1L)
+        .add(
+            BuiltinMaterials.IMPACT_CRUST.id()
+                .resourceId(),
             "material",
             1L)
         .build();
@@ -72,6 +78,7 @@ public final class BuiltinContent {
         MATERIALS.register(BuiltinMaterials.IRON);
         MATERIALS.register(BuiltinMaterials.GOLD);
         MATERIALS.register(BuiltinMaterials.STELLAR_MATTER);
+        MATERIALS.register(BuiltinMaterials.IMPACT_CRUST);
         registered = true;
     }
 

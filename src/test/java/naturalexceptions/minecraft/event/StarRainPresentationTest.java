@@ -20,7 +20,7 @@ final class StarRainPresentationTest {
         StarRainImpact impact = StarRainImpactFactory.create(event, 0, 0).get(0);
         DeterministicId impactId = impact.id();
         DeterministicId parentId = impact.parentEventId();
-        assertTrue(StarRainPresentation.impactMessage(impact).contains("cyan glow"));
+        assertTrue(StarRainPresentation.impactMessage(impact).contains("crater"));
         assertEquals(impactId, impact.id());
         assertEquals(parentId, impact.parentEventId());
     }

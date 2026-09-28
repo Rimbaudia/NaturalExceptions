@@ -11,7 +11,8 @@ import naturalexceptions.core.metallurgy.MaterialQuantity;
 public final class StarRainImpactFactory {
     public static final int IMPACTS_PER_EVENT = 4;
     private static final String ID_DOMAIN = "naturalexceptions:p11:star_rain_impact:v1";
-    private static final long MASS_PER_SEVERITY_MG = 400_000L;
+    /** Stellar core mass: 2, 4 or 8 kg for severity 1, 2, 3; the rest of the ball is fused terrestrial crust. */
+    public static final long CORE_MASS_SEVERITY_ONE_MG = 2_000_000L;
 
     private StarRainImpactFactory() { }
 
@@ -34,9 +35,13 @@ public final class StarRainImpactFactory {
             dueOffset = Math.max(1L, dueOffset);
             long dueTick = Math.addExact(event.scheduledAtTick(), dueOffset);
             impacts.add(new StarRainImpact(event.id(), id, ordinal, dueTick, centerX + dx, centerZ + dz,
-                severity, MaterialQuantity.ofMilligrams(MASS_PER_SEVERITY_MG * severity), false, false));
+                severity, MaterialQuantity.ofMilligrams(coreMassMilligrams(severity)), false, false));
         }
         return Collections.unmodifiableList(impacts);
+    }
+
+    public static long coreMassMilligrams(int severity) {
+        return CORE_MASS_SEVERITY_ONE_MG << (Math.max(1, Math.min(3, severity)) - 1);
     }
 
     private static long mix(long value) {

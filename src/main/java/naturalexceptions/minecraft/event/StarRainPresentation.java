@@ -13,6 +13,6 @@ public final class StarRainPresentation {
     }
 
     public static String impactMessage(StarRainImpact impact) {
-        return impact == null ? null : "A star has struck nearby. A cyan glow marks the impact site.";
+        return impact == null ? null : "\u00a7bA star has struck nearby, leaving a smoking crater. Its heart still glows.";
     }
 }

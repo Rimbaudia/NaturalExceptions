@@ -58,3 +58,5 @@ item.exposureMask.name=Filter Mask
 tile.fluidCell.name=Pooled Liquid
 tile.fallenStarSite.name=Fallen Star
 item.almanac.name=Almanac
+tile.impactCrust.name=Fused Impact Crust
+material.naturalexceptions.impact_crust=Fused Impact Crust
