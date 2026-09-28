@@ -5,26 +5,55 @@ itemGroup.naturalExceptions=Natural Exceptions
 tile.copperOre.name=Copper Ore
 tile.copperBlock.name=Block of Copper
 tile.refractoryBrick.name=Refractory Brick Block
+item.refractoryMix.name=Refractory Mix
+item.refractoryBrick.name=Refractory Brick
 tile.starterSmelter.name=Starter Smelter
 tile.castingTable.name=Casting Table
 tile.smelterOutlet.name=Smelter Outlet
+tile.smelterTuyere.name=Smelter Tuyere
+tile.forgingAnvil.name=Forging Anvil
+tile.assemblyTable.name=Assembly Table
+tile.moldAssemblyTable.name=Mold Assembly Table
+container.naturalexceptions.moldAssemblyTable=Mold Assembly Table
 
 # Items
-item.copperOreChunk.name=Copper Ore Chunk
+item.bellows.name=Hand Bellows
 item.copperIngot.name=Copper Ingot
 item.slagLump.name=Slag Lump
 item.materialSample.name=Material Sample
 item.castingMold.name=Casting Mold
 item.genericComponent.name=Component
 item.genericAssembly.name=Tool Assembly
+item.foundryLadle.name=Foundry Ladle
+item.blacksmithHammer.name=Blacksmith Hammer
+item.blacksmithTongs.name=Blacksmith Tongs
 
 # Materials
 material.naturalexceptions.copper=Copper
 material.naturalexceptions.tin=Tin
 material.naturalexceptions.lead=Lead
+material.naturalexceptions.bronze=Bronze
+material.naturalexceptions.iron=Iron
+material.naturalexceptions.gold=Gold
 material.naturalexceptions.wood=Wood
 material.naturalexceptions.slag=Slag
 
 # Containers / GUI
 container.starterSmelter=Starter Smelter
+container.forgingAnvil=Forging Anvil
+container.assemblyTable=Assembly Table
 
+# Keybindings
+key.categories.naturalexceptions=Natural Exceptions
+key.naturalexceptions.open_knowledge_browser=Open Knowledge Browser
+key.naturalexceptions.recipe_lookup=Recipe / Acquisition Lookup
+key.naturalexceptions.usage_lookup=Usage Lookup
+item.fieldManual.name=Natural Exceptions Field Manual
+item.foundryNotes.name=Foundry Notes
+item.fieldAssay.name=Field Assay
+item.knowledgeRecord.name=Knowledge Record
+item.fluidVessel.name=Fluid Vessel
+item.bandage.name=Field Dressing and Splint
+item.exposureMask.name=Filter Mask
+tile.fluidCell.name=Contained Fluid
+tile.fallenStarSite.name=Fallen Star Impact

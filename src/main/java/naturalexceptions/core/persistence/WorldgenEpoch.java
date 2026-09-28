@@ -5,6 +5,8 @@ import java.util.Objects;
 public final class WorldgenEpoch implements Comparable<WorldgenEpoch> {
 
     public static final WorldgenEpoch INITIAL = new WorldgenEpoch(1);
+    /** Generation contract introduced by the staged P6 Overworld pipeline. */
+    public static final WorldgenEpoch CURRENT = new WorldgenEpoch(2);
 
     private final int value;
 
@@ -17,6 +19,7 @@ public final class WorldgenEpoch implements Comparable<WorldgenEpoch> {
 
     public static WorldgenEpoch of(int value) {
         if (value == 1) return INITIAL;
+        if (value == 2) return CURRENT;
         return new WorldgenEpoch(value);
     }
 

@@ -42,7 +42,7 @@ public final class WorldMetadata {
     }
 
     public static WorldMetadata createNew(String worldId, String contentVersion) {
-        return create(worldId, SaveSchemaVersion.CURRENT, WorldgenEpoch.INITIAL, contentVersion, 0L);
+        return create(worldId, SaveSchemaVersion.CURRENT, WorldgenEpoch.CURRENT, contentVersion, 0L);
     }
 
     public String worldId() {

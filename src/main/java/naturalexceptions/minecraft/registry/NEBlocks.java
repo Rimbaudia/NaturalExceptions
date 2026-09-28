@@ -8,6 +8,7 @@ import naturalexceptions.minecraft.block.BlockCopperBlock;
 import naturalexceptions.minecraft.block.BlockCopperOre;
 import naturalexceptions.minecraft.fabrication.BlockCastingTable;
 import naturalexceptions.minecraft.metallurgy.BlockStarterSmelter;
+import naturalexceptions.minecraft.metallurgy.FeedstockItemRegistry;
 import naturalexceptions.minecraft.metallurgy.ItemBlockStarterSmelter;
 import naturalexceptions.minecraft.metallurgy.TileEntityStarterSmelter;
 
@@ -19,10 +20,18 @@ public final class NEBlocks {
     public static Block starterSmelter;
     public static Block castingTable;
     public static Block smelterOutlet;
+    public static Block smelterTuyere;
+    public static Block forgingAnvil;
+    public static Block assemblyTable;
+    public static Block moldAssemblyTable;
+    public static Block fluidCell;
+    public static Block fallenStarCell;
 
     private NEBlocks() {}
 
     public static void register() {
+        NEItems.ensureBootstrapped();
+        NEItems.register();
         if (copperOre != null) return;
 
         copperOre = new BlockCopperOre().setCreativeTab(NECreativeTab.INSTANCE);
@@ -38,8 +47,27 @@ public final class NEBlocks {
         smelterOutlet = new naturalexceptions.minecraft.metallurgy.BlockSmelterOutlet()
             .setCreativeTab(NECreativeTab.INSTANCE);
 
+        smelterTuyere = new naturalexceptions.minecraft.metallurgy.BlockSmelterTuyere()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+
+        forgingAnvil = new naturalexceptions.minecraft.fabrication.BlockForgingAnvil()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+
+        assemblyTable = new naturalexceptions.minecraft.fabrication.BlockAssemblyTable()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        moldAssemblyTable = new naturalexceptions.minecraft.fabrication.BlockMoldAssemblyTable()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        fluidCell = new naturalexceptions.minecraft.fluid.BlockFluidCell();
+        fallenStarCell = new naturalexceptions.minecraft.fluid.BlockFallenStar()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+
         try {
             net.minecraft.tileentity.TileEntity.addMapping(TileEntityStarterSmelter.class, "starter_smelter");
+        } catch (Throwable ignored) {}
+        try {
+            net.minecraft.tileentity.TileEntity.addMapping(
+                naturalexceptions.minecraft.fabrication.TileEntityMoldAssemblyTable.class,
+                "mold_assembly_table");
         } catch (Throwable ignored) {}
         try {
             net.minecraft.tileentity.TileEntity
@@ -49,6 +77,14 @@ public final class NEBlocks {
             net.minecraft.tileentity.TileEntity
                 .addMapping(naturalexceptions.minecraft.metallurgy.TileEntitySmelterOutlet.class, "smelter_outlet");
         } catch (Throwable ignored) {}
+        try {
+            net.minecraft.tileentity.TileEntity
+                .addMapping(naturalexceptions.minecraft.fabrication.TileEntityForgingAnvil.class, "forging_anvil");
+        } catch (Throwable ignored) {}
+        try {
+            net.minecraft.tileentity.TileEntity
+                .addMapping(naturalexceptions.minecraft.fabrication.TileEntityAssemblyTable.class, "assembly_table");
+        } catch (Throwable ignored) {}
 
         try {
             GameRegistry.registerBlock(copperOre, "copper_ore");
@@ -57,26 +93,93 @@ public final class NEBlocks {
             GameRegistry.registerBlock(starterSmelter, ItemBlockStarterSmelter.class, "starter_smelter");
             GameRegistry.registerBlock(castingTable, "casting_table");
             GameRegistry.registerBlock(smelterOutlet, "smelter_outlet");
+            GameRegistry.registerBlock(smelterTuyere, "smelter_tuyere");
+            GameRegistry.registerBlock(forgingAnvil, "forging_anvil");
+            GameRegistry.registerBlock(assemblyTable, "assembly_table");
+            GameRegistry.registerBlock(moldAssemblyTable, "mold_assembly_table");
+            GameRegistry.registerBlock(fluidCell, "fluid_cell");
+            GameRegistry.registerBlock(fallenStarCell, "fallen_star_site");
+        } catch (Throwable t) {
+            System.out.println("DEBUG registerBlock caught: " + t);
+            t.printStackTrace();
+        }
 
+        try {
             GameRegistry.registerTileEntity(TileEntityStarterSmelter.class, "starter_smelter");
+        } catch (Throwable ignored) {}
+        try {
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.fabrication.TileEntityMoldAssemblyTable.class,
+                "mold_assembly_table");
+        } catch (Throwable ignored) {}
+        try {
             GameRegistry.registerTileEntity(
                 naturalexceptions.minecraft.fabrication.TileEntityCastingTable.class,
                 "casting_table");
+        } catch (Throwable ignored) {}
+        try {
             GameRegistry.registerTileEntity(
                 naturalexceptions.minecraft.metallurgy.TileEntitySmelterOutlet.class,
                 "smelter_outlet");
+        } catch (Throwable ignored) {}
+        try {
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.fabrication.TileEntityForgingAnvil.class,
+                "forging_anvil");
+        } catch (Throwable ignored) {}
+        try {
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.fabrication.TileEntityAssemblyTable.class,
+                "assembly_table");
+        } catch (Throwable ignored) {}
 
+        try {
+            net.minecraftforge.oredict.OreDictionary.registerOre("oreCopper", copperOre);
+            net.minecraftforge.oredict.OreDictionary.registerOre("blockCopper", copperBlock);
+        } catch (Throwable ignored) {}
+
+        try {
             GameRegistry.addRecipe(new net.minecraft.item.ItemStack(smelterOutlet), "B B", " B ", 'B', refractoryBrick);
+            if (NEItems.copperIngot != null) {
+                GameRegistry.addRecipe(
+                    new net.minecraft.item.ItemStack(smelterTuyere),
+                    "BCB",
+                    'B',
+                    refractoryBrick,
+                    'C',
+                    NEItems.copperIngot);
+            }
             GameRegistry
                 .addRecipe(new net.minecraft.item.ItemStack(starterSmelter), "BBB", "B B", "BBB", 'B', refractoryBrick);
             GameRegistry.addRecipe(new net.minecraft.item.ItemStack(castingTable), "BBB", "B B", 'B', refractoryBrick);
-        } catch (Throwable t) {
-            // Allows unit testing without LaunchClassLoader
-        }
+            GameRegistry.addRecipe(
+                new net.minecraft.item.ItemStack(assemblyTable),
+                "PPP",
+                "B B",
+                "B B",
+                'P',
+                net.minecraft.init.Blocks.planks,
+                'B',
+                refractoryBrick);
+            GameRegistry.addRecipe(
+                new net.minecraft.item.ItemStack(moldAssemblyTable),
+                "PPP",
+                " B ",
+                "B B",
+                'P',
+                net.minecraft.init.Blocks.planks,
+                'B',
+                refractoryBrick);
+
+            GameRegistry
+                .addRecipe(new net.minecraft.item.ItemStack(refractoryBrick), "BB", "BB", 'B', NEItems.refractoryBrick);
+        } catch (Throwable ignored) {}
 
         MaterialBindingRegistry.global()
             .bind(copperOre, BuiltinMaterials.COPPER.id());
         MaterialBindingRegistry.global()
             .bind(copperBlock, BuiltinMaterials.COPPER.id());
+
+        FeedstockItemRegistry.registerBuiltins();
     }
 }

@@ -28,4 +28,4 @@ Gradle is executed using a Java 25 daemon, producing Java-8-compatible mod bytec
 ```
 
 > [!NOTE]
-> The bootstrap copper generator included in P0 is a temporary development bridge to verify registration, drops, assets, and runtime integration. It will be replaced in P6 by the staged Natural Exceptions world-generation pipeline.
+> P0's bootstrap copper scatter has been replaced by the P6 staged Overworld materializer. See [the P6 generation boundary](docs/architecture/p6-staged-overworld-generation-boundary.md) for its deterministic fields, geology-gated copper, host-terrain compromise, and chunk-history rules.

@@ -11,19 +11,19 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.IIcon;
-import net.minecraft.util.MathHelper;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
-import naturalexceptions.minecraft.item.ItemCastingMold;
 
 /**
  * Smelter Outlet spout block that physically pours molten metal from an adjacent
  * Smelter vessel down into a Casting Table below.
  */
 public final class BlockSmelterOutlet extends BlockContainer {
+
+    public static int renderId = -1;
 
     @SideOnly(Side.CLIENT)
     private IIcon blockIconRefractory;
@@ -53,28 +53,62 @@ public final class BlockSmelterOutlet extends BlockContainer {
 
     @Override
     public int getRenderType() {
-        return -1; // TileEntitySpecialRenderer
+        return renderId;
     }
 
     @Override
     public void setBlockBoundsBasedOnState(IBlockAccess world, int x, int y, int z) {
-        int meta = world.getBlockMetadata(x, y, z);
-        switch (meta) {
-            case 2: // North (spout points North into z - 1)
-                setBlockBounds(0.25F, 0.2F, 0.0F, 0.75F, 0.65F, 0.7F);
-                break;
-            case 3: // South (spout points South into z + 1)
-                setBlockBounds(0.25F, 0.2F, 0.3F, 0.75F, 0.65F, 1.0F);
-                break;
-            case 4: // West (spout points West into x - 1)
-                setBlockBounds(0.0F, 0.2F, 0.25F, 0.7F, 0.65F, 0.75F);
-                break;
-            case 5: // East (spout points East into x + 1)
-                setBlockBounds(0.3F, 0.2F, 0.25F, 1.0F, 0.65F, 0.75F);
-                break;
-            default:
-                setBlockBounds(0.25F, 0.2F, 0.25F, 0.75F, 0.65F, 0.75F);
-                break;
+        setGeometryBounds(SmelterOutletGeometry.bounds(world.getBlockMetadata(x, y, z)));
+    }
+
+    private void setGeometryBounds(double[] b) {
+        setBlockBounds((float) b[0], (float) b[1], (float) b[2], (float) b[3], (float) b[4], (float) b[5]);
+    }
+
+    @Override
+    public void setBlockBoundsForItemRender() {
+        setGeometryBounds(SmelterOutletGeometry.bounds(2));
+    }
+
+    @Override
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public void addCollisionBoxesToList(World world, int x, int y, int z, AxisAlignedBB mask, java.util.List boxes,
+        net.minecraft.entity.Entity entity) {
+        for (double[] b : SmelterOutletGeometry.parts(world.getBlockMetadata(x, y, z))) {
+            AxisAlignedBB box = AxisAlignedBB
+                .getBoundingBox(x + b[0], y + b[1], z + b[2], x + b[3], y + b[4], z + b[5]);
+            if (mask.intersectsWith(box)) boxes.add(box);
+        }
+    }
+
+    private boolean attached(World world, int x, int y, int z, int facing) {
+        return SmelterPortLookup.findOutletController(world, x, y, z, facing) != null;
+    }
+
+    @Override
+    public boolean canPlaceBlockAt(World world, int x, int y, int z) {
+        if (!super.canPlaceBlockAt(world, x, y, z)) return false;
+        for (int facing = 2; facing <= 5; facing++) {
+            if (attached(world, x, y, z, facing)) return true;
+        }
+        return false;
+    }
+
+    @Override
+    public int onBlockPlaced(World world, int x, int y, int z, int side, float hitX, float hitY, float hitZ,
+        int metadata) {
+        if (side >= 2 && attached(world, x, y, z, side)) return side;
+        for (int facing = 2; facing <= 5; facing++) {
+            if (attached(world, x, y, z, facing)) return facing;
+        }
+        return 2;
+    }
+
+    @Override
+    public void onNeighborBlockChange(World world, int x, int y, int z, Block neighbor) {
+        if (!world.isRemote && !attached(world, x, y, z, world.getBlockMetadata(x, y, z))) {
+            dropBlockAsItem(world, x, y, z, 0, 0);
+            world.setBlockToAir(x, y, z);
         }
     }
 
@@ -86,15 +120,7 @@ public final class BlockSmelterOutlet extends BlockContainer {
 
     @Override
     public void onBlockPlacedBy(World world, int x, int y, int z, EntityLivingBase player, ItemStack stack) {
-        // Set facing away from the block the player clicked or toward player look
-        int l = MathHelper.floor_double((double) (player.rotationYaw * 4.0F / 360.0F) + 0.5D) & 3;
-        int facing = 2;
-        if (l == 0) facing = 2; // North
-        if (l == 1) facing = 5; // East
-        if (l == 2) facing = 3; // South
-        if (l == 3) facing = 4; // West
-
-        world.setBlockMetadataWithNotify(x, y, z, facing, 2);
+        int facing = world.getBlockMetadata(x, y, z);
         TileEntity te = world.getTileEntity(x, y, z);
         if (te instanceof TileEntitySmelterOutlet) {
             ((TileEntitySmelterOutlet) te).setFacing(facing);
@@ -109,55 +135,80 @@ public final class BlockSmelterOutlet extends BlockContainer {
             return false;
         }
         TileEntitySmelterOutlet outlet = (TileEntitySmelterOutlet) te;
+        if (world.isRemote) return true;
         ItemStack held = player.getHeldItem();
 
-        // 1. Holding empty mold: pour directly into held mold from connected smelter
-        if (held != null && held.getItem() instanceof ItemCastingMold) {
-            if (!ItemCastingMold.isFilled(held)) {
-                TileEntityStarterSmelter smelter = outlet.findConnectedSmelter();
-                if (smelter == null) {
+        // 0. Holding Foundry Ladle: scoop molten metal from outlet spout or pour back
+        if (held != null && held.getItem() instanceof naturalexceptions.minecraft.item.ItemFoundryLadle) {
+            TileEntityStarterSmelter smelter = outlet.findConnectedSmelter();
+            if (smelter == null) {
+                if (!world.isRemote) {
                     player.addChatMessage(
                         new ChatComponentText("\u00a7c[Outlet] No connected Starter Smelter found behind outlet."));
+                }
+                return true;
+            }
+            if (player.isSneaking() && naturalexceptions.minecraft.item.ItemFoundryLadle.hasMetal(held)) {
+                // Return molten metal from ladle back through spout into crucible
+                naturalexceptions.core.metallurgy.MaterialQuantity mass = naturalexceptions.minecraft.item.ItemFoundryLadle
+                    .getFilledMass(held);
+                naturalexceptions.core.metallurgy.AggregateLayer drained = naturalexceptions.minecraft.item.ItemFoundryLadle
+                    .drainMetal(held, mass);
+                if (drained != null) {
+                    smelter.vesselState()
+                        .remelt(drained);
+                    smelter.markDirty();
+                    world.markBlockForUpdate(smelter.xCoord, smelter.yCoord, smelter.zCoord);
+                    world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "liquid.lavapop", 1.0F, 1.0F);
+                    if (!world.isRemote) {
+                        player.addChatMessage(
+                            new ChatComponentText(
+                                "\u00a7a[Outlet] Poured " + mass + " of molten metal back into smelter via outlet."));
+                    }
                     return true;
                 }
-                ItemStack singleMold = held.stackSize == 1 ? held : held.splitStack(1);
-                if (smelter.pourIntoMold(singleMold)) {
-                    if (singleMold != held) {
-                        if (!player.inventory.addItemStackToInventory(singleMold)) {
-                            player.dropPlayerItemWithRandomChoice(singleMold, false);
-                        }
-                    }
+            } else {
+                // Scoop / draw molten metal from smelter via outlet spout
+                if (smelter.pourIntoLadle(held)) {
                     player.inventoryContainer.detectAndSendChanges();
                     world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "liquid.lavapop", 1.0F, 1.0F);
-                    player.addChatMessage(
-                        new ChatComponentText(
-                            "\u00a7a[Outlet] Poured molten metal directly into " + singleMold.getDisplayName()));
+                    if (!world.isRemote) {
+                        naturalexceptions.core.metallurgy.MaterialQuantity mass = naturalexceptions.minecraft.item.ItemFoundryLadle
+                            .getFilledMass(held);
+                        player.addChatMessage(
+                            new ChatComponentText(
+                                "\u00a7a[Outlet] Scooped molten metal into Foundry Ladle (" + mass + ")."));
+                    }
                     return true;
                 } else {
-                    if (singleMold != held) {
-                        held.stackSize++;
+                    if (!world.isRemote) {
+                        player.addChatMessage(
+                            new ChatComponentText(
+                                "\u00a7c[Outlet] Smelter crucible has no molten liquid metal ready to draw."));
                     }
-                    player.addChatMessage(
-                        new ChatComponentText("\u00a7c[Outlet] Smelter crucible has no molten liquid metal ready."));
                     return true;
                 }
             }
         }
 
-        // 2. Normal activation: Trigger physical pouring into casting table below
+        // Pouring into a mold is done by aligning a Casting Table beneath this spout.
         return outlet.startPouring(player);
     }
+
+    @SideOnly(Side.CLIENT)
+    private IIcon blockIconSpout;
 
     @Override
     @SideOnly(Side.CLIENT)
     public void registerBlockIcons(IIconRegister reg) {
         this.blockIconRefractory = reg.registerIcon("naturalexceptions:refractory_brick_block");
-        this.blockIcon = this.blockIconRefractory;
+        this.blockIconSpout = reg.registerIcon("naturalexceptions:smelter_outlet");
+        this.blockIcon = this.blockIconSpout;
     }
 
     @Override
     @SideOnly(Side.CLIENT)
     public IIcon getIcon(int side, int meta) {
-        return this.blockIconRefractory;
+        return this.blockIconSpout != null ? this.blockIconSpout : this.blockIconRefractory;
     }
 }

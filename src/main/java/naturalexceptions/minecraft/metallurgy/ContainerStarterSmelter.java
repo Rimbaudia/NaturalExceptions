@@ -8,12 +8,7 @@ import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.Packet;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntityFurnace;
-import net.minecraft.util.ChatComponentText;
-
-import naturalexceptions.core.metallurgy.AggregateLayer;
-import naturalexceptions.minecraft.item.ItemCastingMold;
 
 /**
  * Server-authoritative inventory container for the Starter Smelter.
@@ -32,7 +27,7 @@ public final class ContainerStarterSmelter extends Container {
         addSlotToContainer(new SlotFeed(tileEntity, TileEntityStarterSmelter.SLOT_FEED, 36, 20));
 
         // Slot 2: Mold / Output (x=134, y=36)
-        addSlotToContainer(new SlotMold(tileEntity, TileEntityStarterSmelter.SLOT_MOLD, 134, 36));
+        addSlotToContainer(new SlotOutput(tileEntity, TileEntityStarterSmelter.SLOT_MOLD, 134, 36));
 
         // Player Inventory (3 rows of 9)
         for (int row = 0; row < 3; row++) {
@@ -72,133 +67,10 @@ public final class ContainerStarterSmelter extends Container {
 
     @Override
     public boolean enchantItem(EntityPlayer player, int actionId) {
-        if (actionId == 0) {
-            // Action 0: Pour Metal
-            ItemStack moldSlot = tileEntity.getStackInSlot(TileEntityStarterSmelter.SLOT_MOLD);
-            if (moldSlot != null && moldSlot.getItem() instanceof ItemCastingMold
-                && !ItemCastingMold.isFilled(moldSlot)) {
-                ItemStack singleMold = moldSlot.stackSize == 1 ? moldSlot : moldSlot.splitStack(1);
-                if (tileEntity.pourIntoMold(singleMold)) {
-                    if (singleMold != moldSlot) {
-                        if (moldSlot.stackSize <= 0) {
-                            tileEntity.setInventorySlotContents(TileEntityStarterSmelter.SLOT_MOLD, singleMold);
-                        } else {
-                            if (!player.inventory.addItemStackToInventory(singleMold)) {
-                                player.dropPlayerItemWithRandomChoice(singleMold, false);
-                            }
-                        }
-                    }
-                    player.addChatMessage(new ChatComponentText("\u00a7aPoured molten metal into mold."));
-                    detectAndSendChanges();
-                    return true;
-                } else {
-                    if (singleMold != moldSlot) {
-                        moldSlot.stackSize++;
-                    }
-                    sendDiagnosticPourFailure(player);
-                    return false;
-                }
-            }
-
-            ItemStack held = player.getHeldItem();
-            if (held != null && held.getItem() instanceof ItemCastingMold && !ItemCastingMold.isFilled(held)) {
-                ItemStack singleMold = held.stackSize == 1 ? held : held.splitStack(1);
-                if (tileEntity.pourIntoMold(singleMold)) {
-                    if (singleMold != held) {
-                        if (!player.inventory.addItemStackToInventory(singleMold)) {
-                            player.dropPlayerItemWithRandomChoice(singleMold, false);
-                        }
-                    }
-                    player.addChatMessage(new ChatComponentText("\u00a7aPoured molten metal into held mold."));
-                    detectAndSendChanges();
-                    return true;
-                } else {
-                    if (singleMold != held) {
-                        held.stackSize++;
-                    }
-                    sendDiagnosticPourFailure(player);
-                    return false;
-                }
-            }
-
-            // Check adjacent casting table for empty mold
-            if (tileEntity.getWorldObj() != null) {
-                int[][] offsets = { { 0, 0, 1 }, { 0, 0, -1 }, { 1, 0, 0 }, { -1, 0, 0 }, { 0, -1, 1 }, { 0, -1, -1 },
-                    { 1, -1, 0 }, { -1, -1, 0 }, { 0, -1, 0 }, { 0, 1, 0 }, { 0, 1, 1 }, { 0, 1, -1 }, { 1, 1, 0 },
-                    { -1, 1, 0 } };
-                for (int[] off : offsets) {
-                    TileEntity te = tileEntity.getWorldObj()
-                        .getTileEntity(
-                            tileEntity.xCoord + off[0],
-                            tileEntity.yCoord + off[1],
-                            tileEntity.zCoord + off[2]);
-                    if (te instanceof naturalexceptions.minecraft.fabrication.TileEntityCastingTable) {
-                        naturalexceptions.minecraft.fabrication.TileEntityCastingTable table = (naturalexceptions.minecraft.fabrication.TileEntityCastingTable) te;
-                        ItemStack tableMold = table.getMold();
-                        if (tableMold != null && !ItemCastingMold.isFilled(tableMold)) {
-                            if (tileEntity.pourIntoMold(tableMold)) {
-                                table.markDirty();
-                                tileEntity.getWorldObj()
-                                    .markBlockForUpdate(table.xCoord, table.yCoord, table.zCoord);
-                                player.addChatMessage(
-                                    new ChatComponentText(
-                                        "\u00a7aPoured molten metal into adjacent Casting Table mold."));
-                                detectAndSendChanges();
-                                return true;
-                            } else {
-                                sendDiagnosticPourFailure(player);
-                                return false;
-                            }
-                        }
-                    }
-                }
-            }
-
-            player.addChatMessage(
-                new ChatComponentText(
-                    "\u00a7eInsert an empty Casting Mold into the mold slot or onto adjacent Casting Table."));
-            return false;
-        }
-
-        if (actionId == 1) {
-            // Action 1: Skim Slag
-            ItemStack slag = tileEntity.skimSlag();
-            if (slag != null) {
-                ItemStack outputSlot = tileEntity.getStackInSlot(TileEntityStarterSmelter.SLOT_MOLD);
-                if (outputSlot == null) {
-                    tileEntity.setInventorySlotContents(TileEntityStarterSmelter.SLOT_MOLD, slag);
-                } else
-                    if (outputSlot.getItem() == slag.getItem() && outputSlot.stackSize < outputSlot.getMaxStackSize()) {
-                        outputSlot.stackSize++;
-                    } else {
-                        if (!player.inventory.addItemStackToInventory(slag)) {
-                            player.dropPlayerItemWithRandomChoice(slag, false);
-                        }
-                    }
-                player.addChatMessage(new ChatComponentText("\u00a7eSkimmed molten slag from vessel surface."));
-                detectAndSendChanges();
-                return true;
-            } else {
-                player.addChatMessage(new ChatComponentText("\u00a77No slag layer present to skim."));
-                return false;
-            }
-        }
+        // Liquid transfer is physical: use the side-wall outlet/Casting Table or the Foundry Ladle.
+        if (actionId == 0) return false;
 
         return false;
-    }
-
-    private void sendDiagnosticPourFailure(EntityPlayer player) {
-        double maxTemp = 293.15;
-        for (AggregateLayer l : tileEntity.vesselState()
-            .layers()) {
-            if (l.temperatureKelvin() > maxTemp) {
-                maxTemp = l.temperatureKelvin();
-            }
-        }
-        player.addChatMessage(
-            new ChatComponentText(
-                String
-                    .format("\u00a7cNo pourable liquid metal available (Crucible: %.0f K, need >= 1358 K).", maxTemp)));
     }
 
     @Override
@@ -226,14 +98,6 @@ public final class ContainerStarterSmelter extends Container {
                         itemstack1,
                         TileEntityStarterSmelter.SLOT_FUEL,
                         TileEntityStarterSmelter.SLOT_FUEL + 1,
-                        false)) {
-                        return null;
-                    }
-                } else if (itemstack1.getItem() instanceof ItemCastingMold) {
-                    if (!this.mergeItemStack(
-                        itemstack1,
-                        TileEntityStarterSmelter.SLOT_MOLD,
-                        TileEntityStarterSmelter.SLOT_MOLD + 1,
                         false)) {
                         return null;
                     }
@@ -284,20 +148,20 @@ public final class ContainerStarterSmelter extends Container {
         }
     }
 
-    private static final class SlotMold extends Slot {
+    private static final class SlotOutput extends Slot {
 
-        public SlotMold(IInventory inv, int index, int x, int y) {
+        public SlotOutput(IInventory inv, int index, int x, int y) {
             super(inv, index, x, y);
         }
 
         @Override
         public boolean isItemValid(ItemStack stack) {
-            return stack != null && stack.getItem() instanceof ItemCastingMold;
+            return false;
         }
 
         @Override
         public int getSlotStackLimit() {
-            return 1;
+            return 64;
         }
     }
 }

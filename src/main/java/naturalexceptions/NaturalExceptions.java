@@ -15,7 +15,8 @@ import naturalexceptions.minecraft.gravity.NEGravityTickHandler;
 import naturalexceptions.minecraft.registry.NEBlocks;
 import naturalexceptions.minecraft.registry.NEItems;
 import naturalexceptions.minecraft.tick.NEWorldTickHandler;
-import naturalexceptions.minecraft.worldgen.BootstrapCopperGenerator;
+import naturalexceptions.minecraft.worldgen.NEChunkGenerationHistory;
+import naturalexceptions.minecraft.worldgen.NEOverworldGenerator;
 
 @Mod(
     modid = NaturalExceptions.MOD_ID,
@@ -38,11 +39,43 @@ public final class NaturalExceptions {
         BuiltinContent.register();
         NEItems.register();
         NEBlocks.register();
+
+        if (event.getSide()
+            .isClient()) {
+            registerResourcePacks();
+        }
+    }
+
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    private void registerResourcePacks() {
+        try {
+            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getMinecraft();
+            if (mc != null) {
+                java.util.List<net.minecraft.client.resources.IResourcePack> packs = cpw.mods.fml.relauncher.ReflectionHelper
+                    .getPrivateValue(
+                        net.minecraft.client.Minecraft.class,
+                        mc,
+                        "defaultResourcePacks",
+                        "field_110449_ao");
+                if (packs != null) {
+                    packs.add(new naturalexceptions.minecraft.client.resource.VanillaToolResourcePack());
+                }
+            }
+        } catch (Throwable ignored) {
+            // Headless or test environment without Minecraft client
+        }
     }
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
-        BootstrapCopperGenerator.register();
+        naturalexceptions.minecraft.network.NENetwork.init();
+        MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.knowledge.PlayerKnowledgeEvents());
+        MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.biology.BiologicalEvents());
+        MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.event.StarRainWorldMaterializer());
+        FMLCommonHandler.instance().bus().register(new naturalexceptions.minecraft.knowledge.PlayerKnowledgeEvents());
+        FMLCommonHandler.instance().bus().register(new naturalexceptions.minecraft.knowledge.KnowledgeServerTasks());
+        NEOverworldGenerator.register();
+        MinecraftForge.EVENT_BUS.register(new NEChunkGenerationHistory());
         cpw.mods.fml.common.network.NetworkRegistry.INSTANCE
             .registerGuiHandler(this, new naturalexceptions.minecraft.gui.NEGuiHandler());
 
@@ -57,20 +90,36 @@ public final class NaturalExceptions {
             .bus()
             .register(gravityTickHandler);
 
+        naturalexceptions.minecraft.knowledge.KnowledgeRegistry.instance()
+            .init();
+
         if (event.getSide()
             .isClient()) {
             registerClientRenderers();
+            MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.client.NEItemTooltipEventHandler());
+            naturalexceptions.minecraft.knowledge.client.NEKnowledgeKeyHandler.register();
         }
     }
 
     @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
     private void registerClientRenderers() {
+        cpw.mods.fml.client.registry.RenderingRegistry
+            .registerBlockHandler(new naturalexceptions.minecraft.metallurgy.client.RenderSmelterOutletBlock());
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
             naturalexceptions.minecraft.fabrication.TileEntityCastingTable.class,
             new naturalexceptions.minecraft.fabrication.client.RenderCastingTable());
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
             naturalexceptions.minecraft.metallurgy.TileEntitySmelterOutlet.class,
             new naturalexceptions.minecraft.metallurgy.client.RenderSmelterOutlet());
+        cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
+            naturalexceptions.minecraft.fabrication.TileEntityForgingAnvil.class,
+            new naturalexceptions.minecraft.fabrication.client.RenderForgingAnvil());
+        cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
+            naturalexceptions.minecraft.metallurgy.TileEntityStarterSmelter.class,
+            new naturalexceptions.minecraft.metallurgy.client.RenderStarterSmelter());
+        cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
+            naturalexceptions.minecraft.fabrication.TileEntityAssemblyTable.class,
+            new naturalexceptions.minecraft.fabrication.client.RenderAssemblyTable());
     }
 
     @Mod.EventHandler
@@ -79,6 +128,10 @@ public final class NaturalExceptions {
             event.registerServerCommand(new CommandDebugGravityBody());
             event.registerServerCommand(new CommandDebugGravity());
             event.registerServerCommand(new naturalexceptions.minecraft.metallurgy.CommandSmelter());
+            event.registerServerCommand(new naturalexceptions.minecraft.tick.CommandP8());
+            event.registerServerCommand(new naturalexceptions.minecraft.tick.CommandP9());
+            event.registerServerCommand(new naturalexceptions.minecraft.tick.CommandP11());
+            event.registerServerCommand(new naturalexceptions.minecraft.biology.CommandBiology());
         }
     }
 

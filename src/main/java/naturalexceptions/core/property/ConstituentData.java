@@ -106,9 +106,25 @@ public final class ConstituentData {
     public static final ResourceId ID_SN = ResourceId.of("naturalexceptions", "tin");
     public static final ResourceId ID_ZN = ResourceId.of("naturalexceptions", "zinc");
     public static final ResourceId ID_PB = ResourceId.of("naturalexceptions", "lead");
+    public static final ResourceId ID_FE = ResourceId.of("naturalexceptions", "iron");
+    public static final ResourceId ID_AU = ResourceId.of("naturalexceptions", "gold");
     public static final ResourceId ID_STELLAR = ResourceId.of("naturalexceptions", "stellar_matter");
 
     static {
+        register(
+            new ConstituentData(
+                ID_FE,
+                7.87, // g/cm³
+                4.5, // Mohs hardness
+                18.0, // conductivity
+                80.4, // W/(m·K)
+                449.0, // J/(kg·K) solid
+                820.0, // J/(kg·K) liquid
+                1811.0, // K (1538 °C)
+                247000.0, // J/kg
+                9.71e-8, // Ω·m
+                Collections.singleton("ferromagnetic")));
+
         register(
             new ConstituentData(
                 ID_CU,
@@ -167,16 +183,30 @@ public final class ConstituentData {
 
         register(
             new ConstituentData(
+                ID_AU,
+                19.30, // g/cm³
+                2.5, // Mohs hardness
+                70.0, // conductivity
+                318.0, // W/(m·K)
+                129.0, // J/(kg·K) solid
+                150.0, // J/(kg·K) liquid
+                1337.33, // K (1064.18 °C)
+                64000.0, // J/kg
+                2.21e-8, // Ω·m
+                Collections.singleton("malleable")));
+
+        register(
+            new ConstituentData(
                 ID_STELLAR,
-                15.0,
-                10.0,
-                200.0,
-                2000.0,
+                8.2,
+                5.5,
+                40.0,
+                800.0,
                 1500.0,
                 1600.0,
-                3500.0,
+                1300.0,
                 800000.0,
-                1.0e-10,
+                2.0e-8,
                 Collections.singleton("stellar_radiant")));
     }
 

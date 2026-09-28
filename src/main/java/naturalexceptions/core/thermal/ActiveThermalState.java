@@ -24,10 +24,10 @@ public final class ActiveThermalState {
     private MaterialProperties properties;
 
     public ActiveThermalState(double energyJoules, double massKg, MaterialProperties properties) {
-        if (energyJoules < 0.0) {
-            throw new IllegalArgumentException("Thermal energy cannot be negative: " + energyJoules);
+        if (!Double.isFinite(energyJoules) || energyJoules < 0.0) {
+            throw new IllegalArgumentException("Thermal energy must be finite and non-negative: " + energyJoules);
         }
-        if (massKg <= 0.0) {
+        if (!Double.isFinite(massKg) || massKg <= 0.0) {
             throw new IllegalArgumentException("Mass must be strictly positive: " + massKg);
         }
         this.energyJoules = energyJoules;
@@ -77,28 +77,28 @@ public final class ActiveThermalState {
     }
 
     public void addEnergyJoules(double joules) {
-        if (joules < 0.0) {
-            throw new IllegalArgumentException("Energy addition must be non-negative: " + joules);
+        if (!Double.isFinite(joules) || joules < 0.0 || !Double.isFinite(energyJoules + joules)) {
+            throw new IllegalArgumentException("Energy addition must be finite, non-negative, and representable: " + joules);
         }
         energyJoules += joules;
     }
 
     public void removeEnergyJoules(double joules) {
-        if (joules < 0.0) {
-            throw new IllegalArgumentException("Energy removal must be non-negative: " + joules);
+        if (!Double.isFinite(joules) || joules < 0.0) {
+            throw new IllegalArgumentException("Energy removal must be finite and non-negative: " + joules);
         }
         energyJoules = Math.max(0.0, energyJoules - joules);
     }
 
     public void setEnergyJoules(double joules) {
-        if (joules < 0.0) {
-            throw new IllegalArgumentException("Thermal energy cannot be negative: " + joules);
+        if (!Double.isFinite(joules) || joules < 0.0) {
+            throw new IllegalArgumentException("Thermal energy must be finite and non-negative: " + joules);
         }
         this.energyJoules = joules;
     }
 
     public void setMassKg(double massKg) {
-        if (massKg <= 0.0) {
+        if (!Double.isFinite(massKg) || massKg <= 0.0) {
             throw new IllegalArgumentException("Mass must be strictly positive: " + massKg);
         }
         this.massKg = massKg;

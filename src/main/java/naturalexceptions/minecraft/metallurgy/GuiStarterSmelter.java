@@ -3,7 +3,6 @@ package naturalexceptions.minecraft.metallurgy;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.util.ResourceLocation;
@@ -12,7 +11,9 @@ import org.lwjgl.opengl.GL11;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import naturalexceptions.core.material.MaterialAppearance;
 import naturalexceptions.core.metallurgy.AggregateLayer;
+import naturalexceptions.core.metallurgy.AggregatePhaseType;
 
 /**
  * Client-side graphical user interface for the Starter Smelter.
@@ -34,24 +35,6 @@ public final class GuiStarterSmelter extends GuiContainer {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public void initGui() {
-        super.initGui();
-        this.buttonList.clear();
-        // Button 0: Pour Metal (Action 0)
-        this.buttonList.add(new GuiButton(0, this.guiLeft + 60, this.guiTop + 47, 32, 18, "Pour"));
-        // Button 1: Skim Slag (Action 1)
-        this.buttonList.add(new GuiButton(1, this.guiLeft + 94, this.guiTop + 47, 32, 18, "Skim"));
-    }
-
-    @Override
-    protected void actionPerformed(GuiButton button) {
-        if (button.enabled) {
-            this.mc.playerController.sendEnchantPacket(this.inventorySlots.windowId, button.id);
-        }
-    }
-
-    @Override
     protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
         // Title
         this.fontRendererObj.drawString("Starter Smelter", 8, 6, 0x404040);
@@ -63,35 +46,40 @@ public final class GuiStarterSmelter extends GuiContainer {
             this.fontRendererObj.drawString("\u00a74Broken", 130, 6, 0xAA0000);
         }
 
-        // Monitor info inside the dark display area (x=62 to 125, y=19 to 44)
-        if (tileEntity.vesselState()
-            .fuelState()
-            .isBurning()) {
-            int ticks = tileEntity.vesselState()
-                .fuelState()
-                .remainingTicks();
-            this.fontRendererObj.drawString("\u00a76" + ticks + "t", 64, 21, 0xFFFFFF);
-        } else {
-            this.fontRendererObj.drawString("\u00a77Cold", 64, 21, 0x888888);
-        }
-
         double maxTemp = 293.15;
-        for (AggregateLayer l : tileEntity.vesselState()
-            .layers()) {
-            if (l.temperatureKelvin() > maxTemp) {
-                maxTemp = l.temperatureKelvin();
-            }
-        }
+        for (AggregateLayer layer : tileEntity.vesselState()
+            .layers()) maxTemp = Math.max(maxTemp, layer.temperatureKelvin());
+        String capacity = fillBand(tileEntity.fillFraction());
+        this.fontRendererObj.drawString(trim(String.format("%s  %s", heatBand(maxTemp), capacity), 70), 58, 55,
+            maxTemp > 600 ? 0xAA5500 : 0x404040);
+        this.fontRendererObj.drawString(
+            trim(
+                String.format(
+                    "Fill %s  Fuel %s",
+                    fillBand(tileEntity.fillFraction()),
+                    tileEntity.vesselState()
+                        .fuelState()
+                        .isBurning() ? "burning" : "idle"),
+                70),
+            58,
+            65,
+            0x404040);
+        this.fontRendererObj.drawString(trim("Outlet " + compactOutletStatus(), 70), 58, 75, 0x404040);
+    }
 
-        if (tileEntity.vesselState()
-            .layers()
-            .isEmpty()) {
-            this.fontRendererObj.drawString("\u00a78Empty", 64, 32, 0x666666);
-        } else {
-            int color = maxTemp > 1350.0 ? 0xFFAA00 : 0xAAAAAA;
-            String tempStr = String.format("%.0fK", maxTemp);
-            this.fontRendererObj.drawString(tempStr, 64, 32, color);
-        }
+    private String compactOutletStatus() {
+        String status = tileEntity.outletStatus();
+        if ("NO ACCESSIBLE LIQUID".equals(status)) return "no liquid";
+        if ("RECEIVER MISSING".equals(status)) return "need receiver";
+        if ("RECEIVER FULL".equals(status)) return "receiver full";
+        return status.toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private String trim(String text, int width) {
+        String result = text;
+        while (!result.isEmpty() && fontRendererObj.getStringWidth(result) > width)
+            result = result.substring(0, result.length() - 1);
+        return result;
     }
 
     @Override
@@ -102,6 +90,27 @@ public final class GuiStarterSmelter extends GuiContainer {
         int k = this.guiLeft;
         int l = this.guiTop;
         this.drawTexturedModalRect(k, l, 0, 0, this.xSize, this.ySize);
+        drawLayerStack(k + 63, l + 12, 60, 37);
+    }
+
+    private void drawLayerStack(int x, int y, int width, int height) {
+        drawRect(x, y, x + width, y + height, 0xFF373737);
+        drawRect(x + 1, y + 1, x + width - 1, y + height - 1, 0xFFB8B8B8);
+        double capacity = tileEntity.vesselCapacityLitres();
+        if (capacity <= 0.0) return;
+        int bottom = y + height - 1;
+        for (AggregateLayer layer : tileEntity.vesselState()
+            .layers()) {
+            int segment = (int) Math.ceil(height * layer.occupiedVolumeLitres() / capacity);
+            if (segment <= 0) continue;
+            int color = layer.phaseType() == AggregatePhaseType.SLAG ? 0xFF51463B
+                : MaterialAppearance.getMoltenColor(layer.materialRef(), layer.stateKey(), layer.temperatureKelvin())
+                    | 0xFF000000;
+            int top = Math.max(y + 1, bottom - segment);
+            drawRect(x + 1, top, x + width - 1, bottom, color);
+            bottom = top;
+            if (bottom <= y + 1) break;
+        }
     }
 
     @Override
@@ -109,18 +118,21 @@ public final class GuiStarterSmelter extends GuiContainer {
         super.drawScreen(mouseX, mouseY, partialTicks);
 
         // Hover over monitor area (x between guiLeft + 61 and guiLeft + 120, y between guiTop + 18 and guiTop + 44)
-        if (mouseX >= this.guiLeft + 61 && mouseX <= this.guiLeft + 120
-            && mouseY >= this.guiTop + 18
-            && mouseY <= this.guiTop + 44) {
+        if (mouseX >= this.guiLeft + 61 && mouseX <= this.guiLeft + 125
+            && mouseY >= this.guiTop + 10
+            && mouseY <= this.guiTop + 50) {
             List<String> tooltip = new ArrayList<>();
-            tooltip.add("\u00a76--- Smelter Vessel Contents ---");
-            tooltip.add(
-                "\u00a77Total Charge: " + tileEntity.vesselState()
-                    .totalMass());
-            tooltip.add(
-                "\u00a77Burn Ticks: " + tileEntity.vesselState()
-                    .fuelState()
-                    .remainingTicks());
+            tooltip.add("\u00a76--- Smelter contents ---");
+            tooltip.add("\u00a77Charge: " + fillBand(tileEntity.fillFraction()));
+            if (tileEntity.vesselState()
+                .fuelState()
+                .isBurning()) {
+                tooltip.add(
+                    "\u00a77Fuel: \u00a7f" + tileEntity.vesselState()
+                        .fuelState()
+                        .fuelLabel());
+            }
+            tooltip.add("\u00a77Heat: " + heatBand(hottestLayerTemperature()));
 
             List<AggregateLayer> layers = tileEntity.vesselState()
                 .layers();
@@ -129,18 +141,13 @@ public final class GuiStarterSmelter extends GuiContainer {
             } else {
                 for (int i = 0; i < layers.size(); i++) {
                     AggregateLayer l = layers.get(i);
-                    String phaseCol = l.phaseType() == naturalexceptions.core.metallurgy.AggregatePhaseType.MOLTEN_METAL
-                        ? "\u00a7a"
-                        : "\u00a7e";
-                    tooltip.add(
-                        String.format(
-                            "%s[%d] %s: %s @ %.1f K (%s)",
-                            phaseCol,
-                            i,
-                            l.phaseType(),
-                            l.mass(),
-                            l.temperatureKelvin(),
-                            l.physicalPhase()));
+                    String phase = l.phaseType() == AggregatePhaseType.SLAG ? "dark residue"
+                        : l.physicalPhase() == naturalexceptions.core.material.MaterialPhase.LIQUID ? "liquid metal"
+                            : "solid metal";
+                    String materialName = naturalexceptions.minecraft.knowledge.KnowledgePresentation.materialName(
+                        this.mc.thePlayer, l.materialRef(), l.stateKey());
+                    tooltip.add(String.format("\u00a77Layer %d: %s, %s, %s", i + 1, materialName, phase,
+                        heatBand(l.temperatureKelvin())));
                 }
             }
 
@@ -157,5 +164,27 @@ public final class GuiStarterSmelter extends GuiContainer {
 
             this.drawHoveringText(tooltip, mouseX, mouseY, fontRendererObj);
         }
+    }
+
+    private double hottestLayerTemperature() {
+        double hottest = 293.15;
+        for (AggregateLayer layer : tileEntity.vesselState().layers()) hottest = Math.max(hottest, layer.temperatureKelvin());
+        return hottest;
+    }
+
+    private static String fillBand(double fill) {
+        if (fill <= 0.01) return "empty";
+        if (fill < 0.30) return "low";
+        if (fill < 0.70) return "partly filled";
+        if (fill < 0.97) return "nearly full";
+        return "full";
+    }
+
+    private static String heatBand(double kelvin) {
+        if (kelvin < 330) return "cool";
+        if (kelvin < 500) return "warm";
+        if (kelvin < 800) return "hot";
+        if (kelvin < 1100) return "glowing hot";
+        return "molten heat";
     }
 }

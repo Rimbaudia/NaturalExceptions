@@ -29,6 +29,8 @@ public final class VesselStateNbtCodec {
     public static final String KEY_FUEL_REMAINING = "FuelRemaining";
     public static final String KEY_FUEL_TOTAL = "FuelTotal";
     public static final String KEY_FUEL_POWER = "FuelPower";
+    public static final String KEY_FUEL_FLAME_TEMP = "FuelFlameTemp";
+    public static final String KEY_FUEL_LABEL = "FuelLabel";
     public static final String KEY_EXHAUST_TOTAL_MG = "ExhaustTotalMg";
     public static final String KEY_EXHAUST_CONSTITUENTS = "ExhaustConstituents";
     public static final String KEY_LAYERS = "Layers";
@@ -70,6 +72,14 @@ public final class VesselStateNbtCodec {
             KEY_FUEL_POWER,
             state.fuelState()
                 .powerWatts());
+        nbt.setDouble(
+            KEY_FUEL_FLAME_TEMP,
+            state.fuelState()
+                .flameTemperatureK());
+        nbt.setString(
+            KEY_FUEL_LABEL,
+            state.fuelState()
+                .fuelLabel());
 
         nbt.setLong(
             KEY_EXHAUST_TOTAL_MG,
@@ -127,13 +137,23 @@ public final class VesselStateNbtCodec {
     }
 
     public static VesselState readFromNbt(NBTTagCompound nbt, MaterialPropertyResolver resolver) {
+        return readFromNbt(nbt, resolver, VesselState.DEFAULT_CAPACITY);
+    }
+
+    public static VesselState readFromNbt(NBTTagCompound nbt, MaterialPropertyResolver resolver,
+        MaterialQuantity defaultCapacity) {
         if (nbt == null) {
-            return new VesselState();
+            return new VesselState(
+                defaultCapacity != null ? defaultCapacity : VesselState.DEFAULT_CAPACITY,
+                new VesselLining(),
+                new FuelBurnState(),
+                new ExhaustSink(),
+                resolver != null ? resolver : new MaterialPropertyResolver());
         }
 
         MaterialQuantity capacity = nbt.hasKey(KEY_CAPACITY_MG, 99)
             ? MaterialQuantity.ofMilligrams(nbt.getLong(KEY_CAPACITY_MG))
-            : VesselState.DEFAULT_CAPACITY;
+            : (defaultCapacity != null ? defaultCapacity : VesselState.DEFAULT_CAPACITY);
 
         double liningDamage = nbt.getDouble(KEY_LINING_DAMAGE);
         double liningMaxTemp = nbt.hasKey(KEY_LINING_MAX_TEMP, 99) ? nbt.getDouble(KEY_LINING_MAX_TEMP)
@@ -144,7 +164,10 @@ public final class VesselStateNbtCodec {
         int fuelTotal = nbt.getInteger(KEY_FUEL_TOTAL);
         double fuelPower = nbt.hasKey(KEY_FUEL_POWER, 99) ? nbt.getDouble(KEY_FUEL_POWER)
             : (FuelBurnState.JOULES_PER_BURN_TICK * FuelBurnState.TICKS_PER_SECOND);
-        FuelBurnState fuelState = new FuelBurnState(fuelRemaining, fuelTotal, fuelPower);
+        double fuelFlameTemp = nbt.hasKey(KEY_FUEL_FLAME_TEMP, 99) ? nbt.getDouble(KEY_FUEL_FLAME_TEMP)
+            : FuelBurnState.DEFAULT_FLAME_TEMPERATURE_K;
+        String fuelLabel = nbt.hasKey(KEY_FUEL_LABEL, 8) ? nbt.getString(KEY_FUEL_LABEL) : "Ordinary Heat";
+        FuelBurnState fuelState = new FuelBurnState(fuelRemaining, fuelTotal, fuelPower, fuelFlameTemp, fuelLabel);
 
         ExhaustSink exhaustSink = new ExhaustSink();
         if (nbt.hasKey(KEY_EXHAUST_CONSTITUENTS, 9)) {

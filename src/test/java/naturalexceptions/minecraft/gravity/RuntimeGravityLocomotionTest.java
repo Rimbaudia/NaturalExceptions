@@ -16,6 +16,7 @@ import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.Vec3;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -27,8 +28,14 @@ import naturalexceptions.core.gravity.RadialGravitySource;
 import naturalexceptions.core.gravity.UniformGravityField;
 import naturalexceptions.core.gravity.Vector3d;
 import naturalexceptions.minecraft.mixin.EntityLivingBaseAccessor;
+import naturalexceptions.minecraft.registry.NEItems;
 
 final class RuntimeGravityLocomotionTest {
+
+    @BeforeAll
+    static void init() {
+        NEItems.ensureBootstrapped();
+    }
 
     private static final double EPSILON = 1e-6;
 

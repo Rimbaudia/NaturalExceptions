@@ -9,7 +9,9 @@ import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChatComponentText;
 
+import naturalexceptions.core.material.MaterialAppearance;
 import naturalexceptions.core.material.MaterialPhase;
+import naturalexceptions.core.material.MaterialRef;
 import naturalexceptions.core.metallurgy.AggregateLayer;
 import naturalexceptions.core.metallurgy.AggregatePhaseType;
 import naturalexceptions.minecraft.fabrication.TileEntityCastingTable;
@@ -22,22 +24,31 @@ import naturalexceptions.minecraft.item.ItemCastingMold;
  * Connects a Starter Smelter vessel to a Casting Table below, streaming
  * glowing liquid metal across physical world space over active pour ticks.
  */
-public final class TileEntitySmelterOutlet extends TileEntity {
+public class TileEntitySmelterOutlet extends TileEntity {
 
     public static final int TOTAL_POUR_TICKS = 30;
 
     private int facing = 2; // 2=North, 3=South, 4=West, 5=East
     private boolean isPouring = false;
     private int pourTicks = 0;
+    private int streamColor = 0xFF8822;
 
     public TileEntitySmelterOutlet() {}
 
+    public int getStreamColor() {
+        return streamColor;
+    }
+
     public int getFacing() {
+        if (worldObj != null) {
+            int metadata = worldObj.getBlockMetadata(xCoord, yCoord, zCoord);
+            if (metadata >= 2 && metadata <= 5) return metadata;
+        }
         return facing;
     }
 
     public void setFacing(int facing) {
-        this.facing = facing;
+        this.facing = facing >= 2 && facing <= 5 ? facing : 2;
         markDirty();
     }
 
@@ -50,48 +61,19 @@ public final class TileEntitySmelterOutlet extends TileEntity {
     }
 
     public TileEntityStarterSmelter findConnectedSmelter() {
-        if (worldObj == null) return null;
-        // The smelter is behind the outlet (opposite to facing direction)
-        int backX = xCoord - getFrontOffsetX(facing);
-        int backY = yCoord;
-        int backZ = zCoord - getFrontOffsetZ(facing);
-
-        TileEntity te = worldObj.getTileEntity(backX, backY, backZ);
-        if (te instanceof TileEntityStarterSmelter) {
-            return (TileEntityStarterSmelter) te;
-        }
-
-        // Fallback: check all 4 horizontal neighbors
-        int[][] dirs = { { 0, -1 }, { 0, 1 }, { -1, 0 }, { 1, 0 } };
-        for (int[] d : dirs) {
-            TileEntity neighbor = worldObj.getTileEntity(xCoord + d[0], yCoord, zCoord + d[1]);
-            if (neighbor instanceof TileEntityStarterSmelter) {
-                return (TileEntityStarterSmelter) neighbor;
-            }
-        }
-        return null;
+        return SmelterPortLookup.findOutletController(worldObj, xCoord, yCoord, zCoord, getFacing());
     }
 
     public TileEntityCastingTable findTargetCastingTable() {
         if (worldObj == null) return null;
-        // The casting table is directly below the spout, or 1 block down and forward
-        int frontX = xCoord + getFrontOffsetX(facing);
-        int frontZ = zCoord + getFrontOffsetZ(facing);
-
-        // Check directly below spout
-        TileEntity te = worldObj.getTileEntity(frontX, yCoord - 1, frontZ);
-        if (te instanceof TileEntityCastingTable) {
-            return (TileEntityCastingTable) te;
-        }
-
-        // Check directly below outlet block
-        te = worldObj.getTileEntity(xCoord, yCoord - 1, zCoord);
+        // The lip is at the center of this block; the receiving table must be beneath it.
+        TileEntity te = worldObj.getTileEntity(xCoord, yCoord - 1, zCoord);
         if (te instanceof TileEntityCastingTable) {
             return (TileEntityCastingTable) te;
         }
 
         // Check 2 blocks below
-        te = worldObj.getTileEntity(frontX, yCoord - 2, frontZ);
+        te = worldObj.getTileEntity(xCoord, yCoord - 2, zCoord);
         if (te instanceof TileEntityCastingTable) {
             return (TileEntityCastingTable) te;
         }
@@ -100,6 +82,7 @@ public final class TileEntitySmelterOutlet extends TileEntity {
     }
 
     public boolean startPouring(EntityPlayer player) {
+        if (worldObj != null && worldObj.isRemote) return true;
         if (isPouring) {
             if (player != null) {
                 player.addChatMessage(
@@ -114,36 +97,6 @@ public final class TileEntitySmelterOutlet extends TileEntity {
                 player.addChatMessage(
                     new ChatComponentText(
                         "\u00a7c[Smelter Outlet] No connected Starter Smelter found behind this outlet."));
-            }
-            return false;
-        }
-
-        // Check thermal state: must have liquid metal
-        boolean hasLiquid = false;
-        double maxTemp = 293.15;
-        for (AggregateLayer l : smelter.vesselState()
-            .layers()) {
-            if (l.temperatureKelvin() > maxTemp) {
-                maxTemp = l.temperatureKelvin();
-            }
-            if (l.phaseType() == AggregatePhaseType.MOLTEN_METAL && (l.physicalPhase() == MaterialPhase.LIQUID
-                || l.thermalState()
-                    .meltFraction() >= 0.50
-                || l.temperatureKelvin() >= l.thermalState()
-                    .properties()
-                    .meltingPointKelvin())) {
-                hasLiquid = true;
-                break;
-            }
-        }
-
-        if (!hasLiquid) {
-            if (player != null) {
-                player.addChatMessage(
-                    new ChatComponentText(
-                        String.format(
-                            "\u00a7c[Smelter Outlet] Crucible charge is not molten (Current: %.0f K, need >= 1358 K).",
-                            maxTemp)));
             }
             return false;
         }
@@ -176,6 +129,64 @@ public final class TileEntitySmelterOutlet extends TileEntity {
             return false;
         }
 
+        MaterialRef existingRef = ItemCastingMold.getContainedMaterialRef(tableMold);
+
+        // Check thermal state: must have liquid metal
+        boolean hasLiquid = false;
+        double maxTemp = 293.15;
+        double minMeltPoint = Double.POSITIVE_INFINITY;
+        AggregateLayer liquidToPour = null;
+        for (AggregateLayer l : smelter.vesselState()
+            .layers()) {
+            if (l.phaseType() == AggregatePhaseType.SLAG) {
+                continue;
+            }
+            if (l.temperatureKelvin() > maxTemp) {
+                maxTemp = l.temperatureKelvin();
+            }
+            double mp = l.thermalState()
+                .properties()
+                .meltingPointKelvin();
+            if (mp > 0 && mp < minMeltPoint) {
+                minMeltPoint = mp;
+            }
+            if (l.phaseType() == AggregatePhaseType.MOLTEN_METAL
+                && (l.physicalPhase() == MaterialPhase.LIQUID || l.thermalState()
+                    .meltFraction() >= 0.50 || (mp > 0 && l.temperatureKelvin() >= mp))) {
+                hasLiquid = true;
+                liquidToPour = l;
+                break;
+            }
+        }
+
+        if (!hasLiquid) {
+            if (player != null) {
+                String requirement = Double.isInfinite(minMeltPoint) ? "no material melting point is available"
+                    : String.format("need >= %.0f K", minMeltPoint);
+                player.addChatMessage(
+                    new ChatComponentText(
+                        String.format(
+                            "\u00a7c[Smelter Outlet] Crucible charge has no compatible molten metal ready (Current: %.0f K, %s).",
+                            maxTemp,
+                            requirement)));
+            }
+            return false;
+        }
+
+        // VesselState orders reachable dense liquid layers first. An outlet cannot skip a
+        // physically intervening layer to draw a requested material from deeper in the vessel.
+        if (liquidToPour != null && existingRef != null && !existingRef.equals(liquidToPour.materialRef())) {
+            if (player != null) player.addChatMessage(
+                new ChatComponentText(
+                    "\u00a7c[Smelter Outlet] The lowest accessible liquid layer is a different material."));
+            return false;
+        }
+
+        if (liquidToPour != null) {
+            this.streamColor = MaterialAppearance
+                .getMoltenColor(liquidToPour.materialRef(), liquidToPour.stateKey(), liquidToPour.temperatureKelvin());
+        }
+
         // Initiate physical flowing stream
         this.isPouring = true;
         this.pourTicks = TOTAL_POUR_TICKS;
@@ -195,6 +206,31 @@ public final class TileEntitySmelterOutlet extends TileEntity {
         return true;
     }
 
+    public boolean pourIntoTarget(TileEntityStarterSmelter smelter, TileEntityCastingTable table) {
+        if (smelter == null || table == null) {
+            return false;
+        }
+        ItemStack tableMold = table.getMold();
+        if (tableMold == null || ItemCastingMold.isFilled(tableMold)) {
+            return false;
+        }
+        boolean success = smelter.pourIntoMold(tableMold);
+        if (success) {
+            table.markDirty();
+            if (worldObj != null) {
+                worldObj.markBlockForUpdate(table.xCoord, table.yCoord, table.zCoord);
+                worldObj.playSoundEffect(
+                    table.xCoord + 0.5D,
+                    table.yCoord + 0.5D,
+                    table.zCoord + 0.5D,
+                    "liquid.lavapop",
+                    1.0F,
+                    0.8F);
+            }
+        }
+        return success;
+    }
+
     @Override
     public void updateEntity() {
         if (!isPouring) {
@@ -203,9 +239,9 @@ public final class TileEntitySmelterOutlet extends TileEntity {
 
         // Particle and sound effects while flowing
         if (worldObj != null) {
-            double spoutX = xCoord + 0.5D + getFrontOffsetX(facing) * 0.4D;
-            double spoutY = yCoord + 0.35D;
-            double spoutZ = zCoord + 0.5D + getFrontOffsetZ(facing) * 0.4D;
+            double spoutX = xCoord + SmelterOutletGeometry.STREAM_X;
+            double spoutY = yCoord + SmelterOutletGeometry.STREAM_Y;
+            double spoutZ = zCoord + SmelterOutletGeometry.STREAM_Z;
 
             // Spurt lava droplets and flame down along the stream
             worldObj.spawnParticle("lava", spoutX, spoutY, spoutZ, 0.0D, -0.1D, 0.0D);
@@ -231,28 +267,23 @@ public final class TileEntitySmelterOutlet extends TileEntity {
             return;
         }
 
+        TileEntityStarterSmelter smelter = findConnectedSmelter();
+        TileEntityCastingTable table = findTargetCastingTable();
+        if (smelter == null || table == null || table.getMold() == null || ItemCastingMold.isFilled(table.getMold())) {
+            isPouring = false;
+            pourTicks = 0;
+            markDirty();
+            if (worldObj != null) {
+                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            }
+            return;
+        }
+
         pourTicks--;
         if (pourTicks <= 0) {
             // Pour complete: transfer metal
             isPouring = false;
-            TileEntityStarterSmelter smelter = findConnectedSmelter();
-            TileEntityCastingTable table = findTargetCastingTable();
-
-            if (smelter != null && table != null
-                && table.getMold() != null
-                && !ItemCastingMold.isFilled(table.getMold())) {
-                if (smelter.pourIntoMold(table.getMold())) {
-                    table.markDirty();
-                    worldObj.markBlockForUpdate(table.xCoord, table.yCoord, table.zCoord);
-                    worldObj.playSoundEffect(
-                        table.xCoord + 0.5D,
-                        table.yCoord + 0.5D,
-                        table.zCoord + 0.5D,
-                        "liquid.lavapop",
-                        1.0F,
-                        0.8F);
-                }
-            }
+            pourIntoTarget(smelter, table);
 
             markDirty();
             if (worldObj != null) {
@@ -293,6 +324,7 @@ public final class TileEntitySmelterOutlet extends TileEntity {
         tag.setInteger("Facing", facing);
         tag.setBoolean("IsPouring", isPouring);
         tag.setInteger("PourTicks", pourTicks);
+        tag.setInteger("StreamColor", streamColor);
     }
 
     @Override
@@ -300,9 +332,13 @@ public final class TileEntitySmelterOutlet extends TileEntity {
         try {
             super.readFromNBT(tag);
         } catch (RuntimeException ignored) {}
-        this.facing = tag.getInteger("Facing");
+        int savedFacing = tag.getInteger("Facing");
+        this.facing = savedFacing >= 2 && savedFacing <= 5 ? savedFacing : 2;
         this.isPouring = tag.getBoolean("IsPouring");
         this.pourTicks = tag.getInteger("PourTicks");
+        if (tag.hasKey("StreamColor")) {
+            this.streamColor = tag.getInteger("StreamColor");
+        }
     }
 
     @Override

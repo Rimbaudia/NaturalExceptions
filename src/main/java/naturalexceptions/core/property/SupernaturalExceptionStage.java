@@ -17,10 +17,10 @@ public final class SupernaturalExceptionStage implements PropertyResolverStage {
         CanonicalComposition comp = context.composition();
 
         if (comp.contains(ConstituentData.ID_STELLAR)) {
-            context.set(MaterialProperties.KEY_HARDNESS, 99.0);
-            context.set(MaterialProperties.KEY_CONDUCTIVITY, 500.0);
-            context.set(MaterialProperties.KEY_THERMAL_CONDUCTIVITY, 5000.0);
-            context.set(MaterialProperties.KEY_MELTING_POINT, 3500.0);
+            // The authored stellar constituent carries ordinary, processable mechanical/thermal values. The
+            // exception is its anomalous heat-transfer affinity, which increases continuously with its fraction.
+            double fraction = comp.fraction(ConstituentData.ID_STELLAR);
+            context.add(MaterialProperties.KEY_THERMAL_CONDUCTIVITY, 120.0 * fraction);
             context.addTrace("supernatural:stellar_override");
         }
     }

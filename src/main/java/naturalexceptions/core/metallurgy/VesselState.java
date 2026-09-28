@@ -35,10 +35,10 @@ public final class VesselState {
 
     public static final MaterialQuantity DEFAULT_CAPACITY = MaterialQuantity.ofKilograms(50.0);
 
-    public static final double FLAME_TEMPERATURE_K = 1750.0;
-    public static final double COMBUSTION_CONDUCTANCE_W_PER_K = 50.0;
+    public static final double FLAME_TEMPERATURE_K = 1950.0;
+    public static final double COMBUSTION_CONDUCTANCE_W_PER_K = 90.0;
     public static final double STEFAN_BOLTZMANN_SIGMA = 5.670374419e-8;
-    public static final double CRUCIBLE_EXPOSED_AREA_M2 = 0.06;
+    public static final double CRUCIBLE_EXPOSED_AREA_M2 = 0.020;
     public static final double EMISSIVITY = 0.80;
     public static final double CONVECTIVE_HEAT_COEFF = 12.0;
     public static final double INTERLAYER_CONDUCTANCE_W_PER_K = 100.0;
@@ -110,8 +110,19 @@ public final class VesselState {
         return sum;
     }
 
+    /** Sum of resolved layer volumes in litres; independent of the legacy mass safety ceiling. */
+    public double totalOccupiedVolumeLitres() {
+        double litres = 0.0;
+        for (AggregateLayer layer : layers) litres += layer.occupiedVolumeLitres();
+        return Double.isFinite(litres) ? litres : 0.0;
+    }
+
     public void addFuel(int burnTicks) {
         fuelState.addFuel(burnTicks);
+    }
+
+    public void addFuel(int burnTicks, double flameTempK, String label) {
+        fuelState.addFuel(burnTicks, flameTempK, label);
     }
 
     public void addLayer(AggregateLayer layer) {
@@ -124,7 +135,7 @@ public final class VesselState {
         sortLayers();
     }
 
-    public void addOreChunk(OreFeedstockDefinition oreDef) {
+    public void addRawOre(OreFeedstockDefinition oreDef) {
         Objects.requireNonNull(oreDef, "oreDef");
         MaterialQuantity mass = oreDef.standardChunkMass();
         ActiveThermalState ambientThermal = ActiveThermalState.ambient(mass.toKilograms(), oreDef.metallicProperties());
@@ -139,6 +150,11 @@ public final class VesselState {
             ambientThermal,
             AggregatePhaseType.SOLID_CHARGE);
         addLayer(solidLayer);
+    }
+
+    @Deprecated
+    public void addOreChunk(OreFeedstockDefinition oreDef) {
+        addRawOre(oreDef);
     }
 
     public void addComponentCharge(ComponentInstance component, MaterialProperties properties) {
@@ -163,25 +179,39 @@ public final class VesselState {
     }
 
     /**
-     * Steps the vessel simulation by deltaTicks.
+     * Steps the vessel simulation by deltaTicks with natural draft airflow.
      */
     public void step(int deltaTicks, double ambientTempK) {
+        step(deltaTicks, ambientTempK, 1.0);
+    }
+
+    /**
+     * Steps the vessel simulation by deltaTicks with variable combustion air draft.
+     *
+     * @param airMultiplier draft airflow multiplier (1.0 = standard natural draft, >1.0 = tuyere / forced blast)
+     */
+    public void step(int deltaTicks, double ambientTempK, double airMultiplier) {
         if (deltaTicks <= 0) return;
 
         double deltaSeconds = (double) deltaTicks / FuelBurnState.TICKS_PER_SECOND;
+        double effectiveDraft = Math.max(0.2, Math.min(3.0, airMultiplier));
 
         // 1. Combustion energy release with physical flame temperature boundary
-        double combustionJoules = fuelState.step(deltaTicks);
+        double combustionJoules = fuelState.step(deltaTicks, effectiveDraft);
         long totalMg = totalMass().milligrams();
 
         if (combustionJoules > 0.0 && !layers.isEmpty() && totalMg > 0L) {
+            double baseFlame = fuelState.flameTemperatureK() > 0.0 ? fuelState.flameTemperatureK()
+                : FLAME_TEMPERATURE_K;
+            double effectiveFlameTemp = baseFlame + (effectiveDraft - 1.0) * 350.0;
+            double effectiveConductance = COMBUSTION_CONDUCTANCE_W_PER_K * effectiveDraft;
             for (AggregateLayer layer : layers) {
                 double fraction = (double) layer.mass()
                     .milligrams() / (double) totalMg;
                 double currentTemp = layer.temperatureKelvin();
-                double deltaTFlame = Math.max(0.0, FLAME_TEMPERATURE_K - currentTemp);
+                double deltaTFlame = Math.max(0.0, effectiveFlameTemp - currentTemp);
                 // Heat transfer rate bounded by (T_flame - T_charge) and fuel combustion energy
-                double qTransferCap = (COMBUSTION_CONDUCTANCE_W_PER_K * fraction * deltaTFlame) * deltaSeconds;
+                double qTransferCap = (effectiveConductance * fraction * deltaTFlame) * deltaSeconds;
                 double qIn = Math.min(combustionJoules * fraction, qTransferCap);
                 if (qIn > 0.0) {
                     layer.thermalState()
@@ -279,9 +309,8 @@ public final class VesselState {
 
                 if (temp >= meltPoint || layer.thermalState()
                     .phase() == MaterialPhase.LIQUID) {
-                    OreFeedstockDefinition oreDef = OreFeedstockDefinition.copperOreChunk();
-                    boolean isRawOre = layer.composition()
-                        .contains(oreDef.feedstockId());
+                    OreFeedstockDefinition oreDef = findFeedstock(layer);
+                    boolean isRawOre = oreDef != null;
 
                     if (isRawOre) {
                         MaterialQuantity[] portions = oreDef.partition(layer.mass());
@@ -295,14 +324,9 @@ public final class VesselState {
                             .atTemperature(temp, 1.0, metalMass.toKilograms(), oreDef.metallicProperties());
                         AggregateLayer metalLayer = new AggregateLayer(
                             oreDef.metallicProductRef(),
-                            CanonicalMaterialKey.of(
-                                CanonicalComposition.of(
-                                    oreDef.metallicProductRef()
-                                        .authoredId()))
+                            CanonicalMaterialKey.of(oreDef.metallicProductComposition())
                                 .asMolten(),
-                            CanonicalComposition.of(
-                                oreDef.metallicProductRef()
-                                    .authoredId()),
+                            oreDef.metallicProductComposition(),
                             metalMass,
                             metalThermal,
                             AggregatePhaseType.MOLTEN_METAL);
@@ -345,6 +369,18 @@ public final class VesselState {
 
         layers.removeAll(toRemove);
         layers.addAll(newLayers);
+    }
+
+    private static OreFeedstockDefinition findFeedstock(AggregateLayer layer) {
+        if (layer.composition()
+            .constituentCount() != 1) {
+            return null;
+        }
+        ResourceId feedstockId = layer.composition()
+            .constituents()
+            .iterator()
+            .next();
+        return OreFeedstockDefinition.forFeedstockId(feedstockId);
     }
 
     private void mixMoltenMetalLayers() {
@@ -400,7 +436,7 @@ public final class VesselState {
         CanonicalComposition mixedComp = compBuilder.build();
         CanonicalMaterialKey mixedKey = CanonicalMaterialKey.of(mixedComp)
             .asMolten();
-        MaterialRef mixedRef = MaterialRef.generatedFrom(mixedKey);
+        MaterialRef mixedRef = resolveMixedRef(mixedComp, mixedKey);
 
         ResolvedProperties resolved = propertyResolver.resolve(mixedRef, mixedComp, MaterialPhase.LIQUID);
         ActiveThermalState mixedThermal = new ActiveThermalState(
@@ -416,6 +452,23 @@ public final class VesselState {
             mixedThermal,
             AggregatePhaseType.MOLTEN_METAL);
         layers.add(mergedLayer);
+    }
+
+    private static MaterialRef resolveMixedRef(CanonicalComposition comp, CanonicalMaterialKey key) {
+        if (comp.constituentCount() == 1) {
+            ResourceId res = comp.constituents()
+                .iterator()
+                .next();
+            MaterialRef authored = MaterialRef.authored(res);
+            if (naturalexceptions.content.BuiltinContent.materials()
+                .getAuthored(authored) != null) {
+                return authored;
+            }
+        }
+        if (comp.equals(naturalexceptions.content.material.BuiltinMaterials.BRONZE_COMPOSITION)) {
+            return naturalexceptions.content.material.BuiltinMaterials.BRONZE.ref();
+        }
+        return MaterialRef.generatedFrom(key);
     }
 
     public void sortLayers() {
@@ -444,6 +497,14 @@ public final class VesselState {
      * Taps and extracts liquid metal from the bottom of the vessel.
      */
     public AggregateLayer pourLiquidMetal(MaterialQuantity desiredMass) {
+        return pourLiquidMetal(null, desiredMass);
+    }
+
+    /**
+     * Taps and extracts liquid metal of a specific material (or any liquid metal if null) from the vessel.
+     * Cleanly partitions mass and thermal energy proportionally between the extracted layer and vessel layer.
+     */
+    public AggregateLayer pourLiquidMetal(MaterialRef requestedMaterial, MaterialQuantity desiredMass) {
         Objects.requireNonNull(desiredMass, "desiredMass");
         if (desiredMass.isZero()) {
             return null;
@@ -452,8 +513,14 @@ public final class VesselState {
         for (int i = 0; i < layers.size(); i++) {
             AggregateLayer l = layers.get(i);
             if (l.phaseType() == AggregatePhaseType.MOLTEN_METAL
+                && (requestedMaterial == null || requestedMaterial.equals(l.materialRef()))
                 && (l.physicalPhase() == MaterialPhase.LIQUID || l.thermalState()
-                    .meltFraction() >= 0.50)) {
+                    .meltFraction() >= 0.50
+                    || (l.thermalState()
+                        .properties() != null && l.temperatureKelvin()
+                            >= l.thermalState()
+                                .properties()
+                                .meltingPointKelvin()))) {
                 MaterialQuantity extractAmount = l.mass()
                     .compareTo(desiredMass) <= 0 ? l.mass() : desiredMass;
                 ActiveThermalState extractedThermal = l.extractMass(extractAmount);
@@ -525,7 +592,10 @@ public final class VesselState {
                 .isEquilibratedWith(ambientTempK, 2.0)) {
                 return false;
             }
-            if (layer.phaseType() == AggregatePhaseType.SOLID_CHARGE && layer.temperatureKelvin() >= 1350.0) {
+            if (layer.phaseType() == AggregatePhaseType.SOLID_CHARGE
+                && layer.temperatureKelvin() >= layer.thermalState()
+                    .properties()
+                    .meltingPointKelvin()) {
                 return false;
             }
         }

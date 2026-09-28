@@ -112,50 +112,58 @@ public final class BlockStarterSmelter extends BlockContainer {
         TileEntityStarterSmelter smelter = (TileEntityStarterSmelter) te;
         ItemStack held = player.getHeldItem();
 
-        // 1. Direct outlet interaction: pour directly into held empty casting mold
-        if (held != null && held.getItem() instanceof naturalexceptions.minecraft.item.ItemCastingMold) {
-            if (!naturalexceptions.minecraft.item.ItemCastingMold.isFilled(held)) {
-                ItemStack singleMold = held.stackSize == 1 ? held : held.splitStack(1);
-                if (smelter.pourIntoMold(singleMold)) {
-                    if (singleMold != held) {
-                        if (!player.inventory.addItemStackToInventory(singleMold)) {
-                            player.dropPlayerItemWithRandomChoice(singleMold, false);
-                        }
-                    }
-                    player.inventoryContainer.detectAndSendChanges();
+        // -1. Blacksmith Tongs interaction: heat held workpiece in smelter hearth
+        if (held != null && held.getItem() instanceof naturalexceptions.minecraft.item.ItemBlacksmithTongs) {
+            return held.getItem()
+                .onItemUse(held, player, world, x, y, z, side, hitX, hitY, hitZ);
+        }
+
+        // 0. Direct ladle interaction: scoop molten metal or return metal to smelter
+        if (held != null && held.getItem() instanceof naturalexceptions.minecraft.item.ItemFoundryLadle) {
+            if (player.isSneaking() && naturalexceptions.minecraft.item.ItemFoundryLadle.hasMetal(held)) {
+                // Return molten metal from ladle back to crucible
+                naturalexceptions.core.metallurgy.MaterialQuantity mass = naturalexceptions.minecraft.item.ItemFoundryLadle
+                    .getFilledMass(held);
+                naturalexceptions.core.metallurgy.AggregateLayer drained = naturalexceptions.minecraft.item.ItemFoundryLadle
+                    .drainMetal(held, mass);
+                if (drained != null) {
+                    smelter.vesselState()
+                        .remelt(drained);
+                    smelter.markDirty();
+                    world.markBlockForUpdate(x, y, z);
                     world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "liquid.lavapop", 1.0F, 1.0F);
                     player.addChatMessage(
-                        new ChatComponentText("\u00a7aPoured molten metal into " + singleMold.getDisplayName()));
+                        new ChatComponentText("\u00a7aPoured " + mass + " of molten metal back into Starter Smelter."));
+                    return true;
+                }
+            } else {
+                // Scoop molten metal from smelter into ladle
+                if (smelter.pourIntoLadle(held)) {
+                    player.inventoryContainer.detectAndSendChanges();
+                    world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "liquid.lavapop", 1.0F, 1.0F);
+                    naturalexceptions.core.metallurgy.MaterialQuantity mass = naturalexceptions.minecraft.item.ItemFoundryLadle
+                        .getFilledMass(held);
+                    player.addChatMessage(
+                        new ChatComponentText("\u00a7aScooped molten metal into Foundry Ladle (" + mass + ")."));
                     return true;
                 } else {
-                    if (singleMold != held) {
-                        held.stackSize++;
-                    }
-                    double maxTemp = 293.15;
-                    for (naturalexceptions.core.metallurgy.AggregateLayer l : smelter.vesselState()
-                        .layers()) {
-                        if (l.temperatureKelvin() > maxTemp) {
-                            maxTemp = l.temperatureKelvin();
-                        }
-                    }
                     player.addChatMessage(
-                        new ChatComponentText(
-                            String.format(
-                                "\u00a7cNo accessible liquid metal in smelter to pour (Crucible: %.0f K, need >= 1358 K).",
-                                maxTemp)));
+                        new ChatComponentText("\u00a7cNo accessible molten metal in smelter to scoop into ladle."));
                     return true;
                 }
             }
         }
 
-        // 2. Direct fuel feeding from hand (sneak right-click feeds up to 16, normal feeds 1)
-        if (held != null && net.minecraft.tileentity.TileEntityFurnace.getItemBurnTime(held) > 0) {
-            int burnTimePerItem = net.minecraft.tileentity.TileEntityFurnace.getItemBurnTime(held);
+        // Direct fuel feeding from hand (sneak right-click feeds up to 16, normal feeds 1)
+        if (held != null && TileEntityStarterSmelter.getFuelBurnTime(held) > 0) {
+            int burnTimePerItem = TileEntityStarterSmelter.getFuelBurnTime(held);
+            double flameTemp = TileEntityStarterSmelter.getFuelFlameTemp(held);
+            String heatLabel = TileEntityStarterSmelter.getFuelHeatLabel(held);
             int countToFeed = player.isSneaking() ? Math.min(held.stackSize, 16) : 1;
             int totalBurnAdded = burnTimePerItem * countToFeed;
 
             smelter.vesselState()
-                .addFuel(totalBurnAdded);
+                .addFuel(totalBurnAdded, flameTemp, heatLabel);
 
             if (held.getItem()
                 .hasContainerItem(held)) {
@@ -184,8 +192,9 @@ public final class BlockStarterSmelter extends BlockContainer {
             player.addChatMessage(
                 new ChatComponentText(
                     String.format(
-                        "\u00a76[Starter Smelter] Fed %dx fuel to fire. (Fire duration: %d ticks / %.0fs)",
+                        "\u00a76[Starter Smelter] Fed %dx fuel to fire (%s). (Fire duration: %d ticks / %.0fs)",
                         countToFeed,
+                        heatLabel,
                         remaining,
                         remaining / 20.0)));
             return true;
@@ -207,15 +216,70 @@ public final class BlockStarterSmelter extends BlockContainer {
                         "\u00a7a[Starter Smelter] Added 1x " + held.getDisplayName() + " to crucible charge."));
                 return true;
             }
+        } else if (held != null) {
+            String rejection = naturalexceptions.core.material.VanillaResourceClassification.getRejectionReason(held);
+            if (rejection != null) {
+                player.addChatMessage(new ChatComponentText("\u00a7c[Starter Smelter] " + rejection));
+                return true;
+            }
         }
 
-        // 2. Developer/debug inspect: sneak right-click outputs coarse status to chat
-        if (player.isSneaking()) {
-            smelter.validateStructure();
-            if (!smelter.isStructureValid()) {
+        // 2b. Hearth Workpiece bare-hand retrieval / scalding burn guard
+        if (held == null && smelter.getHearthWorkpiece() != null && !player.isSneaking()) {
+            ItemStack hw = smelter.getHearthWorkpiece();
+            naturalexceptions.core.thermal.ActiveThermalState thermal = naturalexceptions.minecraft.item.ItemGenericComponent
+                .getThermalState(hw);
+            double tempK = thermal != null ? thermal.temperatureKelvin() : 293.15;
+            if (tempK > 373.15) {
+                player.attackEntityFrom(net.minecraft.util.DamageSource.onFire, 1.0F);
+                world.playSoundEffect(player.posX, player.posY, player.posZ, "random.fizz", 0.7F, 1.2F);
                 player.addChatMessage(
                     new ChatComponentText(
-                        "\u00a7c[Starter Smelter] Structure Incomplete! Requires solid hearth base. (Use /ne_smelter structure)"));
+                        String.format(
+                            "\u00a7c[Starter Smelter] Ouch! The metal in the hearth is scalding hot (%.0f K / %.0f \u00b0C)! Use blacksmith tongs to handle it.",
+                            tempK,
+                            tempK - 273.15)));
+                return true;
+            } else {
+                smelter.setHearthWorkpiece(null);
+                if (!player.inventory.addItemStackToInventory(hw)) {
+                    player.dropPlayerItemWithRandomChoice(hw, false);
+                }
+                player.inventoryContainer.detectAndSendChanges();
+                world.playSoundEffect(x + 0.5D, y + 0.5D, z + 0.5D, "step.stone", 1.0F, 0.8F);
+                player.addChatMessage(
+                    new ChatComponentText("\u00a7eRetrieved \u00a7f" + hw.getDisplayName() + " \u00a7efrom hearth."));
+                return true;
+            }
+        }
+
+        // 2c. Developer/debug inspect: sneak right-click outputs coarse status to chat
+        if (player.isSneaking()) {
+            if (smelter.getHearthWorkpiece() != null) {
+                ItemStack hw = smelter.getHearthWorkpiece();
+                naturalexceptions.core.thermal.ActiveThermalState thermal = naturalexceptions.minecraft.item.ItemGenericComponent
+                    .getThermalState(hw);
+                double tempK = thermal != null ? thermal.temperatureKelvin() : 293.15;
+                player.addChatMessage(
+                    new ChatComponentText(
+                        String.format(
+                            "\u00a7e[Hearth Workpiece] \u00a7f%s \u00a77(T: %.0f K / %.0f \u00b0C)",
+                            hw.getDisplayName(),
+                            tempK,
+                            tempK - 273.15)));
+            }
+
+            smelter.validateStructure();
+            if (!smelter.isStructureValid()) {
+                String failure = smelter.getStructureValidationResult() != null
+                    && smelter.getStructureValidationResult()
+                        .failureReason() != null ? smelter.getStructureValidationResult()
+                            .failureReason() : "Requires complete 3x3x3 refractory structure";
+                player.addChatMessage(
+                    new ChatComponentText(
+                        "\u00a7c[Starter Smelter] Structure incomplete or outdated — open Knowledge Browser for current layout. ("
+                            + failure
+                            + ")"));
                 return true;
             }
 
@@ -260,5 +324,27 @@ public final class BlockStarterSmelter extends BlockContainer {
             y,
             z);
         return true;
+    }
+
+    @Override
+    public void breakBlock(World world, int x, int y, int z, net.minecraft.block.Block block, int meta) {
+        TileEntity te = world.getTileEntity(x, y, z);
+        if (te instanceof TileEntityStarterSmelter) {
+            TileEntityStarterSmelter smelter = (TileEntityStarterSmelter) te;
+            ItemStack hw = smelter.getHearthWorkpiece();
+            if (hw != null) {
+                float rx = world.rand.nextFloat() * 0.8F + 0.1F;
+                float ry = world.rand.nextFloat() * 0.8F + 0.1F;
+                float rz = world.rand.nextFloat() * 0.8F + 0.1F;
+                net.minecraft.entity.item.EntityItem entityItem = new net.minecraft.entity.item.EntityItem(
+                    world,
+                    x + rx,
+                    y + ry,
+                    z + rz,
+                    hw);
+                world.spawnEntityInWorld(entityItem);
+            }
+        }
+        super.breakBlock(world, x, y, z, block, meta);
     }
 }

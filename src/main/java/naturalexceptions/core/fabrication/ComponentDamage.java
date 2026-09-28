@@ -29,7 +29,7 @@ public final class ComponentDamage {
         this.wear = Math.max(0.0, Math.min(1.0, wear));
         this.deformation = Math.max(0.0, Math.min(1.0, deformation));
         this.cracking = Math.max(0.0, Math.min(1.0, cracking));
-        this.fractured = fractured || this.cracking >= 1.0;
+        this.fractured = fractured || this.cracking >= 1.0 || this.wear >= 1.0;
     }
 
     public double wear() {
@@ -55,6 +55,9 @@ public final class ComponentDamage {
     public void addWear(double amount) {
         if (amount <= 0.0 || fractured) return;
         this.wear = Math.min(1.0, this.wear + amount);
+        if (this.wear >= 1.0) {
+            this.fractured = true;
+        }
     }
 
     public void addDeformation(double amount) {
@@ -85,12 +88,17 @@ public final class ComponentDamage {
         this.deformation = Math.max(0.0, this.deformation - amount);
     }
 
+    public void repairCracking(double amount) {
+        if (amount <= 0.0 || fractured) return;
+        this.cracking = Math.max(0.0, this.cracking - amount);
+    }
+
     /**
      * Continuous capability degradation factor in [0.0, 1.0].
      * Returns 0.0 if fractured.
      */
     public double effectiveMultiplier() {
-        if (fractured) {
+        if (fractured || wear >= 1.0) {
             return 0.0;
         }
         double factor = 1.0 - (wear * 0.40) - (deformation * 0.35) - (cracking * 0.25);

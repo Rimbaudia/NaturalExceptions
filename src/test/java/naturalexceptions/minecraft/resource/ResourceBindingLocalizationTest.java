@@ -67,7 +67,10 @@ final class ResourceBindingLocalizationTest {
             NEBlocks.copperBlock,
             NEBlocks.refractoryBrick,
             NEBlocks.starterSmelter,
-            NEBlocks.castingTable);
+            NEBlocks.castingTable,
+            NEBlocks.smelterOutlet,
+            NEBlocks.smelterTuyere,
+            NEBlocks.forgingAnvil);
 
         for (Block b : blocks) {
             assertNotNull(b, "Registered block must not be null");
@@ -88,13 +91,18 @@ final class ResourceBindingLocalizationTest {
     @Test
     void allRegisteredItemsHaveLocalization() {
         List<Item> items = Arrays.asList(
-            NEItems.copperOreChunk,
+            NEItems.bellows,
             NEItems.copperIngot,
             NEItems.slagLump,
             NEItems.materialSample,
             NEItems.castingMold,
             NEItems.genericComponent,
-            NEItems.genericAssembly);
+            NEItems.genericAssembly,
+            NEItems.foundryLadle,
+            NEItems.blacksmithHammer,
+            NEItems.blacksmithTongs,
+            NEItems.refractoryMix,
+            NEItems.refractoryBrick);
 
         for (Item item : items) {
             assertNotNull(item, "Registered item must not be null");
@@ -126,7 +134,10 @@ final class ResourceBindingLocalizationTest {
             NEBlocks.copperBlock,
             NEBlocks.refractoryBrick,
             NEBlocks.starterSmelter,
-            NEBlocks.castingTable);
+            NEBlocks.castingTable,
+            NEBlocks.smelterOutlet,
+            NEBlocks.smelterTuyere,
+            NEBlocks.forgingAnvil);
 
         for (Block b : blocks) {
             assertEquals(
@@ -136,13 +147,18 @@ final class ResourceBindingLocalizationTest {
         }
 
         List<Item> items = Arrays.asList(
-            NEItems.copperOreChunk,
+            NEItems.bellows,
             NEItems.copperIngot,
             NEItems.slagLump,
             NEItems.materialSample,
             NEItems.castingMold,
             NEItems.genericComponent,
-            NEItems.genericAssembly);
+            NEItems.genericAssembly,
+            NEItems.foundryLadle,
+            NEItems.blacksmithHammer,
+            NEItems.blacksmithTongs,
+            NEItems.refractoryMix,
+            NEItems.refractoryBrick);
 
         for (Item item : items) {
             assertEquals(
@@ -169,9 +185,13 @@ final class ResourceBindingLocalizationTest {
     }
 
     @Test
-    void declaredItemTexturesExistInAssets() {
-        String[] itemTextures = { "copper_ore_chunk.png", "copper_ingot.png", "molten_slag_lump.png",
-            "material_sample.png", "ingot_casting_mold.png", "hammered_copper_plate.png", "blacksmith_hammer.png" };
+    void declaredItemTexturesExistInAssets() throws Exception {
+        String[] itemTextures = { "bellows.png", "copper_ingot.png", "molten_slag_lump.png", "material_sample.png",
+            "ingot_casting_mold.png", "hammered_copper_plate.png", "blacksmith_hammer.png", "tool_handle.png",
+            "tool_handle_pickaxe.png", "tool_handle_axe.png", "tool_handle_shovel.png", "tool_handle_hoe.png",
+            "tool_handle_sword.png", "tool_pickaxe_head.png", "tool_axe_head.png", "tool_shovel_head.png",
+            "tool_hoe_head.png", "tool_blade.png", "component_handle.png", "component_pick_head.png",
+            "component_axe_head.png", "component_shovel_head.png", "component_hoe_head.png", "component_blade.png" };
 
         File itemDir = new File(ASSETS_DIR, "textures/items");
         assertTrue(itemDir.exists() && itemDir.isDirectory(), "Item texture directory must exist");
@@ -180,6 +200,13 @@ final class ResourceBindingLocalizationTest {
             File texFile = new File(itemDir, tex);
             assertTrue(texFile.exists(), "Item texture missing from assets: " + tex);
             assertTrue(texFile.length() > 0, "Item texture must not be empty: " + tex);
+
+            if (tex.startsWith("tool_") || tex.startsWith("component_")) {
+                java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(texFile);
+                assertNotNull(img, "Must read image: " + tex);
+                assertEquals(16, img.getWidth(), "Tool item must be 16x16: " + tex);
+                assertEquals(16, img.getHeight(), "Tool item must be 16x16: " + tex);
+            }
         }
     }
 
@@ -205,11 +232,11 @@ final class ResourceBindingLocalizationTest {
 
         // 3. Casting mold
         ItemStack emptyMold = new ItemStack(NEItems.castingMold);
-        assertEquals("Casting Mold", emptyMold.getDisplayName());
+        assertEquals("Unshaped Blank Mold", emptyMold.getDisplayName());
 
         ItemStack corruptMold = new ItemStack(NEItems.castingMold);
         corruptMold.setTagCompound(new NBTTagCompound());
-        assertEquals("Casting Mold", corruptMold.getDisplayName());
+        assertEquals("Unshaped Blank Mold", corruptMold.getDisplayName());
 
         // 4. Generic assembly
         ItemStack emptyTool = new ItemStack(NEItems.genericAssembly);
@@ -221,16 +248,16 @@ final class ResourceBindingLocalizationTest {
     }
 
     @Test
-    void genericCarriersHaveDynamicPlayerFacingNames() {
+    void genericCarrierNamesDoNotRevealUnrecordedMaterials() {
         // Authored solid material sample
         ItemStack cuSample = ItemMaterialSample.createStack(BuiltinMaterials.COPPER.ref());
-        assertEquals("Material Sample (Copper)", cuSample.getDisplayName());
+        assertEquals("Material Sample", cuSample.getDisplayName());
 
         // Authored liquid material sample
         ActiveThermalState hotCu = ActiveThermalState
             .atTemperature(1400.0, 1.0, 0.1, BuiltinMaterials.COPPER_PROPERTIES);
         ItemStack hotCuSample = ItemMaterialSample.createStack(BuiltinMaterials.COPPER.ref(), null, hotCu);
-        assertEquals("Material Sample (Molten Copper)", hotCuSample.getDisplayName());
+        assertEquals("Molten Material Sample", hotCuSample.getDisplayName());
 
         // Generated material sample
         CanonicalComposition genComp = CanonicalComposition.builder()
@@ -240,7 +267,7 @@ final class ResourceBindingLocalizationTest {
             .build();
         MaterialRef genRef = MaterialRef.generatedFrom(genComp);
         ItemStack genSample = ItemMaterialSample.createStack(genRef, genComp);
-        assertEquals("Material Sample (Generated Alloy)", genSample.getDisplayName());
+        assertEquals("Material Sample", genSample.getDisplayName());
         assertFalse(
             genSample.getDisplayName()
                 .contains("generated_"),
@@ -254,7 +281,7 @@ final class ResourceBindingLocalizationTest {
             MaterialQuantity.ofGrams(268.8),
             ManufacturingState.FINISHED);
         ItemStack headStack = ItemGenericComponent.createStack(cuHead);
-        assertEquals("Copper Pick Head", headStack.getDisplayName());
+        assertEquals("Pick Head", headStack.getDisplayName());
 
         // Component: Wood handle
         ComponentInstance woodHandle = new ComponentInstance(
@@ -264,7 +291,7 @@ final class ResourceBindingLocalizationTest {
             MaterialQuantity.ofGrams(100.0),
             ManufacturingState.FINISHED);
         ItemStack handleStack = ItemGenericComponent.createStack(woodHandle);
-        assertEquals("Wood Handle", handleStack.getDisplayName());
+        assertEquals("Handle", handleStack.getDisplayName());
 
         // Casting mold: Pick Head
         ItemStack pickMold = ItemCastingMold.createStack(GeometryId.PICK_HEAD);
@@ -273,7 +300,7 @@ final class ResourceBindingLocalizationTest {
         // Assembly: Copper + Wood Pick
         AssemblyGraph tool = AssemblyGraph.ofTool(cuHead, woodHandle);
         ItemStack toolStack = ItemGenericAssembly.createStack(tool);
-        assertEquals("Copper + Wood Pick", toolStack.getDisplayName());
+        assertEquals("Pickaxe", toolStack.getDisplayName());
         assertFalse(
             toolStack.getDisplayName()
                 .contains("itemAssembly"),
@@ -283,14 +310,14 @@ final class ResourceBindingLocalizationTest {
         cuHead.damage()
             .fracture();
         ItemStack brokenTool = ItemGenericAssembly.createStack(tool);
-        assertEquals("Broken Copper Pick", brokenTool.getDisplayName());
+        assertEquals("Pickaxe", brokenTool.getDisplayName());
     }
 
     @Test
     void creativeSubItemsArePopulatedWithMeaningfulContent() {
         List<ItemStack> subItems = new ArrayList<>();
         NEItems.genericComponent.getSubItems(NEItems.genericComponent, NECreativeTab.INSTANCE, subItems);
-        assertTrue(subItems.size() >= 3, "GenericComponent must provide representative demo stacks in creative");
+        assertEquals(10, subItems.size(), "One material-free component per geometry");
 
         List<ItemStack> moldSubItems = new ArrayList<>();
         NEItems.castingMold.getSubItems(NEItems.castingMold, NECreativeTab.INSTANCE, moldSubItems);
@@ -298,6 +325,6 @@ final class ResourceBindingLocalizationTest {
 
         List<ItemStack> toolSubItems = new ArrayList<>();
         NEItems.genericAssembly.getSubItems(NEItems.genericAssembly, NECreativeTab.INSTANCE, toolSubItems);
-        assertTrue(toolSubItems.size() >= 2, "GenericAssembly must provide assembled demo tool in creative");
+        assertEquals(5, toolSubItems.size(), "One material-free carrier per tool geometry");
     }
 }

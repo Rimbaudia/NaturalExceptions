@@ -12,6 +12,9 @@
     "EntityArrowAccessor"
   ],
   "client": [
+    "MixinGuiContainerCreativeInventoryBrowser",
+    "MixinGuiContainerInventoryBrowser",
+    "MixinGuiScreenInventoryBrowserTooltip",
     "MixinEntityRenderer",
     "MixinRendererLivingEntity",
     "MixinModelBiped"

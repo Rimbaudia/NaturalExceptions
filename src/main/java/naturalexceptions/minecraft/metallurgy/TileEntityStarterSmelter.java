@@ -2,7 +2,7 @@ package naturalexceptions.minecraft.metallurgy;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
-import net.minecraft.inventory.IInventory;
+import net.minecraft.inventory.ISidedInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -12,65 +12,221 @@ import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntityFurnace;
 
+import naturalexceptions.content.material.BuiltinMaterials;
+import naturalexceptions.core.assembly.AssemblyGraph;
+import naturalexceptions.core.composition.CanonicalComposition;
 import naturalexceptions.core.fabrication.ComponentGeometry;
+import naturalexceptions.core.fabrication.ComponentInstance;
 import naturalexceptions.core.fabrication.GeometryId;
 import naturalexceptions.core.material.CanonicalMaterialKey;
 import naturalexceptions.core.material.MaterialPhase;
 import naturalexceptions.core.material.MaterialRef;
 import naturalexceptions.core.metallurgy.AggregateLayer;
 import naturalexceptions.core.metallurgy.AggregatePhaseType;
+import naturalexceptions.core.metallurgy.ExhaustSink;
+import naturalexceptions.core.metallurgy.FuelBurnState;
 import naturalexceptions.core.metallurgy.MaterialQuantity;
-import naturalexceptions.core.metallurgy.OreFeedstockDefinition;
+import naturalexceptions.core.metallurgy.VesselLining;
 import naturalexceptions.core.metallurgy.VesselState;
 import naturalexceptions.core.property.MaterialProperties;
 import naturalexceptions.core.property.MaterialPropertyResolver;
 import naturalexceptions.core.thermal.ActiveThermalState;
 import naturalexceptions.minecraft.item.ItemCastingMold;
+import naturalexceptions.minecraft.item.ItemFoundryLadle;
+import naturalexceptions.minecraft.item.ItemGenericAssembly;
 import naturalexceptions.minecraft.item.ItemGenericComponent;
 import naturalexceptions.minecraft.item.ItemMaterialSample;
+import naturalexceptions.minecraft.item.ItemFluidVessel;
 import naturalexceptions.minecraft.persistence.VesselStateNbtCodec;
-import naturalexceptions.minecraft.registry.NEBlocks;
 import naturalexceptions.minecraft.registry.NEItems;
 
 /**
  * TileEntity hosting the physical Starter Smelter vessel.
  *
  * <p>
+ * Simulates real multicomponent molten metal and slag layers, conservation of mass and enthalpy,
+ * fractional pouring, environmental heat loss, fuel combustion kinetics, and tuyere forced air draft.
  * Implements bounded, active-only simulation: cold and equilibrated vessels sleep.
- * Implements IInventory to support container slots:
+ * Implements ISidedInventory to support automated container slots:
  * <ul>
- * <li>Slot 0: Fuel input (solid combustible items)</li>
+ * <li>Slot 0: Fuel buffer (charcoal, coal, wood)</li>
  * <li>Slot 1: Feed input (ore chunks, solid scrap, raw charge)</li>
- * <li>Slot 2: Mold / physical extraction outlet (casting molds, receivers)</li>
+ * <li>Slot 2: Mold / physical extraction outlet (casting molds, receivers, ladles)</li>
  * </ul>
  */
-public final class TileEntityStarterSmelter extends TileEntity implements IInventory {
+public final class TileEntityStarterSmelter extends TileEntity implements ISidedInventory {
 
     public static final int SLOT_FUEL = 0;
     public static final int SLOT_FEED = 1;
     public static final int SLOT_MOLD = 2;
+    public static final int SLOT_OUTPUT = SLOT_MOLD;
     public static final int INVENTORY_SIZE = 3;
+    /** Emergency mass-safety ceiling only. Player capacity is geometry-derived in litres. */
+    public static final MaterialQuantity CAPACITY = MaterialQuantity.ofKilograms(5000.0);
 
     private final ItemStack[] inventory = new ItemStack[INVENTORY_SIZE];
-    private VesselState vesselState = new VesselState();
+    private VesselState vesselState = new VesselState(
+        CAPACITY,
+        new VesselLining(),
+        new FuelBurnState(),
+        new ExhaustSink(),
+        new MaterialPropertyResolver());
     private boolean structureValid = true;
+    private int forcedDraftTicks = 0;
+    private ItemStack hearthWorkpiece;
+    private naturalexceptions.minecraft.multiblock.SmelterVesselGeometry vesselGeometry;
+    private boolean overCapacity;
 
     public TileEntityStarterSmelter() {}
+
+    public ItemStack getHearthWorkpiece() {
+        return hearthWorkpiece;
+    }
+
+    public void setHearthWorkpiece(ItemStack stack) {
+        this.hearthWorkpiece = stack;
+        markDirty();
+        if (worldObj != null) {
+            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+        }
+    }
+
+    public double getHearthTemperature() {
+        double temp = 293.15;
+        if (vesselState != null && vesselState.fuelState()
+            .isBurning()) {
+            double flameTemp = forcedDraftTicks > 0 ? 1800.0 : 1300.0;
+            if (flameTemp > temp) {
+                temp = flameTemp;
+            }
+        }
+        if (vesselState != null) {
+            for (AggregateLayer layer : vesselState.layers()) {
+                if (layer.temperatureKelvin() > temp) {
+                    temp = layer.temperatureKelvin();
+                }
+            }
+        }
+        return temp;
+    }
 
     public VesselState vesselState() {
         return vesselState;
     }
 
+    private naturalexceptions.minecraft.multiblock.MultiblockValidationResult structureValidationResult = naturalexceptions.minecraft.multiblock.MultiblockValidationResult
+        .ok();
+
     public boolean isStructureValid() {
         return structureValid;
     }
 
+    public naturalexceptions.minecraft.multiblock.MultiblockValidationResult getStructureValidationResult() {
+        return structureValidationResult;
+    }
+
+    public int getFacing() {
+        if (worldObj == null) return 2;
+        int meta = getBlockMetadata();
+        return meta >= 2 && meta <= 5 ? meta : 2;
+    }
+
     public void validateStructure() {
         if (worldObj != null) {
-            this.structureValid = worldObj.getBlock(xCoord, yCoord - 1, zCoord)
-                .getMaterial()
-                .isSolid();
+            vesselGeometry = naturalexceptions.minecraft.multiblock.StarterSmelterDefinition.INSTANCE
+                .discoverVessel(worldObj, xCoord, yCoord, zCoord, getFacing());
+            overCapacity = vesselGeometry != null && occupiedVolumeLitres() > vesselGeometry.capacityLitres();
+            this.structureValidationResult = naturalexceptions.minecraft.multiblock.StarterSmelterDefinition.INSTANCE
+                .validate(worldObj, xCoord, yCoord, zCoord, getFacing());
+            if (overCapacity)
+                this.structureValidationResult = naturalexceptions.minecraft.multiblock.MultiblockValidationResult.fail(
+                    xCoord,
+                    yCoord,
+                    zCoord,
+                    null,
+                    "Vessel contents exceed the repaired cavity capacity; remove material before restarting.");
+            this.structureValid = structureValidationResult.isValid();
         }
+    }
+
+    public void invalidateVesselGeometry() {
+        vesselGeometry = null;
+    }
+
+    public naturalexceptions.minecraft.multiblock.SmelterVesselGeometry vesselGeometry() {
+        if (vesselGeometry == null && worldObj != null) {
+            vesselGeometry = naturalexceptions.minecraft.multiblock.StarterSmelterDefinition.INSTANCE
+                .discoverVessel(worldObj, xCoord, yCoord, zCoord, getFacing());
+        }
+        return vesselGeometry;
+    }
+
+    public double vesselCapacityLitres() {
+        naturalexceptions.minecraft.multiblock.SmelterVesselGeometry geometry = vesselGeometry();
+        return geometry == null ? 0.0 : geometry.capacityLitres();
+    }
+
+    public double occupiedVolumeLitres() {
+        return vesselState.totalOccupiedVolumeLitres();
+    }
+
+    public double fillFraction() {
+        double capacity = vesselCapacityLitres();
+        return capacity <= 0.0 ? 0.0 : Math.min(1.0, occupiedVolumeLitres() / capacity);
+    }
+
+    public boolean isOverCapacity() {
+        return overCapacity;
+    }
+
+    public String outletStatus() {
+        TileEntitySmelterOutlet outlet = SmelterPortLookup.findOutlet(worldObj, vesselGeometry());
+        if (outlet == null) return "NO OUTLET";
+        boolean accessibleLiquid = false;
+        for (AggregateLayer layer : vesselState.layers()) {
+            if (layer.phaseType() == AggregatePhaseType.MOLTEN_METAL
+                && (layer.physicalPhase() == naturalexceptions.core.material.MaterialPhase.LIQUID
+                    || layer.thermalState()
+                        .meltFraction() >= 0.50)) {
+                accessibleLiquid = true;
+                break;
+            }
+            if (layer.phaseType() == AggregatePhaseType.MOLTEN_METAL) break;
+        }
+        if (!accessibleLiquid) return "NO ACCESSIBLE LIQUID";
+        if (outlet.isPouring()) return "POURING";
+        naturalexceptions.minecraft.fabrication.TileEntityCastingTable receiver = outlet.findTargetCastingTable();
+        if (receiver == null || receiver.getMold() == null) return "RECEIVER MISSING";
+        if (naturalexceptions.minecraft.item.ItemCastingMold.isFilled(receiver.getMold())) return "RECEIVER FULL";
+        return "OUTLET READY";
+    }
+
+    private boolean hasGeometricRoom(MaterialQuantity addedMass, MaterialProperties properties) {
+        double density = properties != null ? properties.density() : 5.0;
+        if (!Double.isFinite(density) || density <= 0.0) density = 5.0;
+        return hasGeometricRoomLitres(addedMass.toKilograms() / density);
+    }
+
+    private boolean hasGeometricRoomLitres(double addedLitres) {
+        naturalexceptions.minecraft.multiblock.SmelterVesselGeometry geometry = vesselGeometry();
+        if (geometry == null) return true; // Domain-only callers have no world geometry to validate.
+        return !overCapacity
+            && occupiedVolumeLitres() + Math.max(0.0, addedLitres) <= geometry.capacityLitres() + 1.0e-8;
+    }
+
+    public void boostForcedDraft(int ticks) {
+        if (ticks <= 0) return;
+        this.forcedDraftTicks = Math.max(this.forcedDraftTicks, Math.min(100, ticks));
+        markDirty();
+    }
+
+    public int getForcedDraftTicks() {
+        return forcedDraftTicks;
+    }
+
+    public int countAttachedTuyeres() {
+        if (worldObj == null) return 0;
+        return SmelterPortLookup.countAttachedTuyeres(worldObj, vesselGeometry());
     }
 
     @Override
@@ -79,14 +235,22 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
             return;
         }
 
-        validateStructure();
+        if (vesselGeometry == null || worldObj == null || worldObj.getTotalWorldTime() % 10L == 0L) validateStructure();
+
+        // A damaged/downsized shell pauses processing. Its contents remain authoritative and are never discarded.
+        if (worldObj != null && !structureValid) {
+            if (forcedDraftTicks > 0) forcedDraftTicks--;
+            return;
+        }
 
         // 1. Auto-feed fuel from slot 0 if fire is low/empty (buffers up to ~3200 ticks of fire)
         if (inventory[SLOT_FUEL] != null && vesselState.fuelState()
             .remainingTicks() <= 1600) {
-            int burnTicks = TileEntityFurnace.getItemBurnTime(inventory[SLOT_FUEL]);
+            int burnTicks = getFuelBurnTime(inventory[SLOT_FUEL]);
             if (burnTicks > 0) {
-                vesselState.addFuel(burnTicks);
+                double flameTemp = getFuelFlameTemp(inventory[SLOT_FUEL]);
+                String heatLabel = getFuelHeatLabel(inventory[SLOT_FUEL]);
+                vesselState.addFuel(burnTicks, flameTemp, heatLabel);
                 ItemStack fuelStack = inventory[SLOT_FUEL];
                 if (fuelStack.getItem() != null && fuelStack.getItem()
                     .hasContainerItem(fuelStack)) {
@@ -117,13 +281,99 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
             }
         }
 
-        // 3. Active-only thermal stepping
+        // 3. Continuous physical heating, annealing, and meltdown of hearth workpiece
+        if (hearthWorkpiece != null) {
+            double hearthTemp = getHearthTemperature();
+            ActiveThermalState thermal = ItemGenericComponent.getThermalState(hearthWorkpiece);
+            MaterialProperties props = thermal != null ? thermal.properties() : null;
+            if (props == null) {
+                ComponentInstance comp = ItemGenericComponent.getComponent(hearthWorkpiece);
+                if (comp != null) {
+                    props = new MaterialPropertyResolver().resolve(
+                        comp.materialRef(),
+                        comp.stateKey()
+                            .composition(),
+                        comp.stateKey()
+                            .phase())
+                        .properties();
+                }
+            }
+            if (props == null) {
+                props = BuiltinMaterials.COPPER_PROPERTIES;
+            }
+            double curTemp = thermal != null ? thermal.temperatureKelvin() : 293.15;
+            double massKg = thermal != null ? thermal.massKg() : 0.5;
+
+            if (curTemp < hearthTemp) {
+                double dt = 0.05; // 1 tick = 0.05 s
+                double h = 250.0; // Convective/radiative heat transfer coefficient in flame hearth
+                double area = 0.02; // Representative workpiece surface area (~200 cm²)
+                double q = h * area * (hearthTemp - curTemp) * dt;
+
+                double curEnergy = thermal != null ? thermal.energyJoules()
+                    : naturalexceptions.core.thermal.ThermodynamicModel
+                        .energyForTemperature(curTemp, 0.0, massKg, props);
+                double newEnergy = curEnergy + q;
+                ActiveThermalState newThermal = new ActiveThermalState(newEnergy, massKg, props);
+                ItemGenericComponent.saveThermalState(hearthWorkpiece, newThermal);
+
+                // Continuous physical annealing when reaching recrystallization temperature
+                ItemGenericComponent.checkAnneal(hearthWorkpiece);
+
+                // Meltdown into vessel molten layer if heated past melting point and fully melted
+                if (newThermal.phase() == MaterialPhase.LIQUID && newThermal.meltFraction() >= 1.0) {
+                    ComponentInstance comp = ItemGenericComponent.getComponent(hearthWorkpiece);
+                    MaterialRef ref = comp != null ? comp.materialRef() : BuiltinMaterials.COPPER.ref();
+                    CanonicalMaterialKey key = comp != null ? comp.stateKey()
+                        : CanonicalMaterialKey.of(BuiltinMaterials.COPPER_COMPOSITION);
+                    AggregateLayer molten = new AggregateLayer(
+                        ref,
+                        key,
+                        key.composition(),
+                        MaterialQuantity.ofKilograms(massKg),
+                        newThermal,
+                        AggregatePhaseType.MOLTEN_METAL);
+                    vesselState.remelt(molten);
+                    hearthWorkpiece = null;
+                    if (worldObj != null) {
+                        worldObj
+                            .playSoundEffect(xCoord + 0.5D, yCoord + 0.5D, zCoord + 0.5D, "liquid.lavapop", 1.0F, 1.0F);
+                    }
+                }
+                markDirty();
+            } else if (curTemp > hearthTemp) {
+                double dt = 0.05;
+                double h = 25.0;
+                double area = 0.02;
+                double q = h * area * (curTemp - hearthTemp) * dt;
+                double curEnergy = thermal != null ? thermal.energyJoules()
+                    : naturalexceptions.core.thermal.ThermodynamicModel
+                        .energyForTemperature(curTemp, 0.0, massKg, props);
+                double ambientEnergy = naturalexceptions.core.thermal.ThermodynamicModel
+                    .energyForTemperature(hearthTemp, 0.0, massKg, props);
+                double newEnergy = Math.max(ambientEnergy, curEnergy - q);
+                ActiveThermalState newThermal = new ActiveThermalState(newEnergy, massKg, props);
+                ItemGenericComponent.saveThermalState(hearthWorkpiece, newThermal);
+                markDirty();
+            }
+            if (worldObj != null && worldObj.getTotalWorldTime() % 20L == 0L) {
+                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            }
+        }
+
+        // 4. Only actively pumped, connected nozzles supply forced air. Draft expires even without fuel.
+        if (worldObj != null && forcedDraftTicks > 0 && countAttachedTuyeres() == 0) forcedDraftTicks = 0;
         if (!vesselState.isDormant(293.15)) {
-            vesselState.step(1, 293.15);
+            double airMultiplier = forcedDraftTicks > 0 ? 1.60 : 1.0;
+            vesselState.step(1, 293.15, airMultiplier);
+            markDirty();
+        }
+        if (forcedDraftTicks > 0) {
+            forcedDraftTicks--;
             markDirty();
         }
 
-        // 4. Periodic network synchronization for tracking clients
+        // 5. Periodic network synchronization for tracking clients
         if (worldObj != null && worldObj.getTotalWorldTime() % 10L == 0L) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
         }
@@ -131,9 +381,11 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
 
     public boolean insertFuel(ItemStack stack) {
         if (stack == null) return false;
-        int burnTicks = TileEntityFurnace.getItemBurnTime(stack);
+        int burnTicks = getFuelBurnTime(stack);
         if (burnTicks > 0) {
-            vesselState.addFuel(burnTicks);
+            double flameTemp = getFuelFlameTemp(stack);
+            String heatLabel = getFuelHeatLabel(stack);
+            vesselState.addFuel(burnTicks, flameTemp, heatLabel);
             stack.stackSize--;
             markDirty();
             if (worldObj != null) {
@@ -146,10 +398,25 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
 
     public boolean insertFeed(ItemStack stack) {
         if (stack == null || stack.stackSize <= 0) return false;
+        if (!naturalexceptions.core.material.VanillaResourceClassification.isMeltable(stack)
+            && naturalexceptions.core.material.VanillaResourceClassification.getRejectionReason(stack) != null) {
+            return false;
+        }
 
-        if (stack.getItem() == NEItems.copperOreChunk
-            || net.minecraft.block.Block.getBlockFromItem(stack.getItem()) == NEBlocks.copperOre) {
-            vesselState.addOreChunk(OreFeedstockDefinition.copperOreChunk());
+        FeedstockItemRegistry.ResolvedInput registeredInput = FeedstockItemRegistry.resolve(stack);
+        if (registeredInput != null) {
+            MaterialQuantity needed = registeredInput.inputMass();
+            if (!hasGeometricRoom(needed, registeredInput.properties())) return false;
+            if (vesselState.totalMass()
+                .add(needed)
+                .compareTo(vesselState.capacity()) > 0) {
+                return false;
+            }
+            if (registeredInput.kind() == FeedstockItemRegistry.InputKind.RAW_ORE) {
+                vesselState.addRawOre(registeredInput.definition());
+            } else {
+                remeltIngot(registeredInput);
+            }
             stack.stackSize--;
             markDirty();
             if (worldObj != null) {
@@ -158,76 +425,71 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
             return true;
         }
 
-        if (stack.getItem() == NEItems.copperIngot) {
-            MaterialQuantity mass = MaterialQuantity.ofKilograms(1.0);
-            ActiveThermalState thermal = ActiveThermalState.ambient(
-                1.0,
-                OreFeedstockDefinition.copperOreChunk()
-                    .metallicProperties());
-            AggregateLayer layer = new AggregateLayer(
-                naturalexceptions.content.material.BuiltinMaterials.COPPER.ref(),
-                CanonicalMaterialKey.of(naturalexceptions.content.material.BuiltinMaterials.COPPER_COMPOSITION),
-                naturalexceptions.content.material.BuiltinMaterials.COPPER_COMPOSITION,
-                mass,
-                thermal,
-                AggregatePhaseType.SOLID_CHARGE);
-            vesselState.remelt(layer);
-            stack.stackSize--;
-            markDirty();
-            if (worldObj != null) {
-                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-            }
-            return true;
-        }
-
+        // 1. NE Generic Components (Pick head, blade, plate, rod, blank)
         if (stack.getItem() instanceof ItemGenericComponent) {
-            GeometryId geom = ItemGenericComponent.getGeometry(stack);
-            double vol = ComponentGeometry.forId(geom)
-                .volumeCm3();
-            double massKg = (vol * 8.96) / 1000.0;
-            MaterialQuantity mass = MaterialQuantity.ofKilograms(massKg);
-            ActiveThermalState thermal = ActiveThermalState.ambient(
-                massKg,
-                OreFeedstockDefinition.copperOreChunk()
-                    .metallicProperties());
-            AggregateLayer layer = new AggregateLayer(
-                naturalexceptions.content.material.BuiltinMaterials.COPPER.ref(),
-                CanonicalMaterialKey.of(naturalexceptions.content.material.BuiltinMaterials.COPPER_COMPOSITION),
-                naturalexceptions.content.material.BuiltinMaterials.COPPER_COMPOSITION,
-                mass,
-                thermal,
-                AggregatePhaseType.SOLID_CHARGE);
-            vesselState.remelt(layer);
-            stack.stackSize--;
-            markDirty();
-            if (worldObj != null) {
-                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            ComponentInstance comp = ItemGenericComponent.getComponent(stack);
+            if (comp != null) {
+                if (!hasGeometricRoom(comp.mass(), ItemGenericComponent.resolveProperties(comp))) return false;
+                if (vesselState.totalMass()
+                    .add(comp.mass())
+                    .compareTo(vesselState.capacity()) > 0) {
+                    return false;
+                }
+                if (remeltComponent(comp)) {
+                    stack.stackSize--;
+                    markDirty();
+                    if (worldObj != null) {
+                        worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+                    }
+                    return true;
+                }
             }
-            return true;
         }
 
-        if (stack.getItem() instanceof ItemMaterialSample) {
-            MaterialRef ref = ItemMaterialSample.getMaterialRef(stack);
-            CanonicalMaterialKey key = ItemMaterialSample.getStateKey(stack);
-            ActiveThermalState thermal = ItemMaterialSample
-                .getThermalState(stack, MaterialProperties.of(8.96, 3.0, 100.0));
-            if (ref != null) {
-                MaterialQuantity mass = thermal != null ? MaterialQuantity.ofKilograms(thermal.massKg())
-                    : MaterialQuantity.ofGrams(100.0);
-                ActiveThermalState effectiveThermal = thermal != null ? thermal
-                    : ActiveThermalState.ambient(mass.toKilograms(), MaterialProperties.of(8.96, 3.0, 100.0));
-                AggregateLayer layer = new AggregateLayer(
-                    ref,
-                    key != null ? key
-                        : CanonicalMaterialKey.of(
-                            key != null ? key.composition()
-                                : naturalexceptions.content.material.BuiltinMaterials.COPPER_COMPOSITION),
-                    key != null ? key.composition()
-                        : naturalexceptions.content.material.BuiltinMaterials.COPPER_COMPOSITION,
-                    mass,
-                    effectiveThermal,
-                    AggregatePhaseType.SOLID_CHARGE);
-                vesselState.remelt(layer);
+        // 2. Tool Assembly (Head + Handle remelt)
+        if (stack.getItem() instanceof ItemGenericAssembly) {
+            AssemblyGraph assembly = ItemGenericAssembly.getAssembly(stack);
+            if (assembly != null) {
+                MaterialQuantity totalAssemblyMass = MaterialQuantity.ZERO;
+                if (assembly.head() != null) totalAssemblyMass = totalAssemblyMass.add(
+                    assembly.head()
+                        .mass());
+                if (assembly.handle() != null && !BuiltinMaterials.WOOD.ref()
+                    .equals(
+                        assembly.handle()
+                            .materialRef())) {
+                    totalAssemblyMass = totalAssemblyMass.add(
+                        assembly.handle()
+                            .mass());
+                }
+                double assemblyLitres = 0.0;
+                if (assembly.head() != null) assemblyLitres += volumeLitres(
+                    assembly.head()
+                        .mass(),
+                    ItemGenericComponent.resolveProperties(assembly.head()));
+                if (assembly.handle() != null && !BuiltinMaterials.WOOD.ref()
+                    .equals(
+                        assembly.handle()
+                            .materialRef()))
+                    assemblyLitres += volumeLitres(
+                        assembly.handle()
+                            .mass(),
+                        ItemGenericComponent.resolveProperties(assembly.handle()));
+                if (!hasGeometricRoomLitres(assemblyLitres)) return false;
+                if (vesselState.totalMass()
+                    .add(totalAssemblyMass)
+                    .compareTo(vesselState.capacity()) > 0) {
+                    return false;
+                }
+                ComponentInstance head = assembly.head();
+                if (head != null) {
+                    remeltComponent(head);
+                }
+                ComponentInstance handle = assembly.handle();
+                if (handle != null && !BuiltinMaterials.WOOD.ref()
+                    .equals(handle.materialRef())) {
+                    remeltComponent(handle);
+                }
                 stack.stackSize--;
                 markDirty();
                 if (worldObj != null) {
@@ -237,7 +499,197 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
             }
         }
 
+        // 3. Filled Casting Mold (Remelt contained metal)
+        if (stack.getItem() instanceof ItemCastingMold) {
+            if (ItemCastingMold.hasMetal(stack)) {
+                MaterialQuantity mass = ItemCastingMold.getFilledMass(stack);
+                if (!hasGeometricRoom(mass, propertiesFor(stack))) return false;
+                if (vesselState.totalMass()
+                    .add(mass)
+                    .compareTo(vesselState.capacity()) > 0) {
+                    return false;
+                }
+                MaterialRef ref = ItemCastingMold.getContainedMaterialRef(stack);
+                CanonicalMaterialKey key = ItemCastingMold.getContainedStateKey(stack);
+                CanonicalMaterialKey effectiveKey = canonicalKeyFor(ref, key);
+                if (ref == null || effectiveKey == null) {
+                    ItemCastingMold.clearContainedPayload(stack);
+                    markDirty();
+                    if (worldObj != null) {
+                        worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+                    }
+                    return true;
+                }
+                ActiveThermalState thermal = ItemCastingMold.getThermalState(stack);
+                if (thermal == null) {
+                    thermal = ActiveThermalState
+                        .ambient(mass.toKilograms(), resolveMaterialProperties(ref, effectiveKey));
+                }
+                AggregateLayer layer = new AggregateLayer(
+                    ref,
+                    effectiveKey,
+                    effectiveKey.composition(),
+                    mass,
+                    thermal,
+                    thermal.phase() == MaterialPhase.LIQUID ? AggregatePhaseType.MOLTEN_METAL
+                        : AggregatePhaseType.SOLID_CHARGE);
+                vesselState.remelt(layer);
+                if (stack.hasTagCompound()) {
+                    ItemCastingMold.clearContainedPayload(stack);
+                }
+                markDirty();
+                if (worldObj != null) {
+                    worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+                }
+                return true;
+            }
+        }
+
+        // 3b. Canonical molten matter from the P9 vessel uses the same aggregate/remelting path.
+        if (stack.getItem() instanceof ItemFluidVessel) {
+            naturalexceptions.core.fluid.FluidParcel parcel = ItemFluidVessel.contents(stack);
+            if (parcel == null) return false;
+            MaterialQuantity mass = parcel.mass();
+            if (!hasGeometricRoom(mass, parcel.thermalState().properties())
+                || vesselState.totalMass().add(mass).compareTo(vesselState.capacity()) > 0) return false;
+            AggregateLayer layer = parcel.toAggregateLayer();
+            vesselState.remelt(layer);
+            ItemFluidVessel.setContents(stack, null);
+            stack.stackSize--;
+            markDirty();
+            if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            return true;
+        }
+
+        // 4. Material Samples
+        if (stack.getItem() instanceof ItemMaterialSample) {
+            MaterialRef ref = ItemMaterialSample.getMaterialRef(stack);
+            CanonicalMaterialKey key = ItemMaterialSample.getStateKey(stack);
+            CanonicalMaterialKey effectiveKey = canonicalKeyFor(ref, key);
+            if (ref == null || effectiveKey == null) {
+                return false;
+            }
+            MaterialProperties props = resolveMaterialProperties(ref, effectiveKey);
+            ActiveThermalState thermal = ItemMaterialSample.getThermalState(stack, props);
+            MaterialQuantity mass = ItemMaterialSample.getMass(stack);
+            if (vesselState.totalMass()
+                .add(mass)
+                .compareTo(vesselState.capacity()) > 0) {
+                return false;
+            }
+            ActiveThermalState effectiveThermal = thermal != null ? thermal
+                : ActiveThermalState.ambient(mass.toKilograms(), props);
+            AggregateLayer layer = new AggregateLayer(
+                ref,
+                effectiveKey,
+                effectiveKey.composition(),
+                mass,
+                effectiveThermal,
+                AggregatePhaseType.SOLID_CHARGE);
+            vesselState.remelt(layer);
+            stack.stackSize--;
+            markDirty();
+            if (worldObj != null) {
+                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            }
+            return true;
+        }
+
+        // 5. Foundry Ladle (Remelt contained metal)
+        if (stack.getItem() instanceof ItemFoundryLadle) {
+            if (ItemFoundryLadle.hasMetal(stack)) {
+                MaterialQuantity mass = ItemFoundryLadle.getFilledMass(stack);
+                if (!hasGeometricRoom(mass, propertiesFor(stack))) return false;
+                if (vesselState.totalMass()
+                    .add(mass)
+                    .compareTo(vesselState.capacity()) > 0) {
+                    return false;
+                }
+                AggregateLayer drained = ItemFoundryLadle.drainMetal(stack, mass);
+                if (drained != null) {
+                    vesselState.remelt(drained);
+                    markDirty();
+                    if (worldObj != null) {
+                        worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+                    }
+                    return true;
+                }
+            }
+        }
+
         return false;
+    }
+
+    private static double volumeLitres(MaterialQuantity mass, MaterialProperties properties) {
+        double density = properties != null ? properties.density() : 5.0;
+        return mass.toKilograms() / (Double.isFinite(density) && density > 0 ? density : 5.0);
+    }
+
+    private MaterialProperties propertiesFor(ItemStack stack) {
+        if (stack != null && stack.getItem() instanceof ItemCastingMold) {
+            ActiveThermalState thermal = ItemCastingMold.getThermalState(stack);
+            if (thermal != null) return thermal.properties();
+            MaterialRef ref = ItemCastingMold.getContainedMaterialRef(stack);
+            CanonicalMaterialKey key = ItemCastingMold.getContainedStateKey(stack);
+            if (ref != null && key != null)
+                return new MaterialPropertyResolver().resolve(ref, key.composition(), key.phase())
+                    .properties();
+        }
+        if (stack != null && stack.getItem() instanceof ItemFoundryLadle) {
+            ActiveThermalState thermal = ItemFoundryLadle.getThermalState(stack);
+            if (thermal != null) return thermal.properties();
+        }
+        return BuiltinMaterials.COPPER_PROPERTIES;
+    }
+
+    private void remeltIngot(FeedstockItemRegistry.ResolvedInput input) {
+        MaterialQuantity mass = input.inputMass();
+        ActiveThermalState thermal = ActiveThermalState.ambient(mass.toKilograms(), input.properties());
+        AggregateLayer layer = new AggregateLayer(
+            input.materialRef(),
+            CanonicalMaterialKey.of(input.composition()),
+            input.composition(),
+            mass,
+            thermal,
+            AggregatePhaseType.SOLID_CHARGE);
+        vesselState.remelt(layer);
+    }
+
+    private boolean remeltComponent(ComponentInstance comp) {
+        MaterialRef ref = comp.materialRef();
+        CanonicalMaterialKey key = comp.stateKey();
+        CanonicalMaterialKey effectiveKey = canonicalKeyFor(ref, key);
+        if (ref == null || effectiveKey == null) {
+            return false;
+        }
+        MaterialQuantity mass = comp.mass();
+        MaterialProperties props = resolveMaterialProperties(ref, effectiveKey);
+        ActiveThermalState thermal = ActiveThermalState.ambient(mass.toKilograms(), props);
+        AggregateLayer layer = new AggregateLayer(
+            ref,
+            effectiveKey,
+            effectiveKey.composition(),
+            mass,
+            thermal,
+            AggregatePhaseType.SOLID_CHARGE);
+        vesselState.remelt(layer);
+        return true;
+    }
+
+    private static CanonicalMaterialKey canonicalKeyFor(MaterialRef ref, CanonicalMaterialKey key) {
+        if (key != null) {
+            return key;
+        }
+        if (ref != null && ref.isAuthored()) {
+            return CanonicalMaterialKey.of(CanonicalComposition.of(ref.authoredId()));
+        }
+        return null;
+    }
+
+    private static MaterialProperties resolveMaterialProperties(MaterialRef ref, CanonicalMaterialKey key) {
+        MaterialRef effectiveRef = ref != null ? ref : MaterialRef.generatedFrom(key);
+        return new MaterialPropertyResolver().resolve(effectiveRef, key.composition(), key.phase())
+            .properties();
     }
 
     public boolean pourIntoMold(ItemStack moldStack) {
@@ -249,21 +701,74 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
             geom = GeometryId.BLANK;
         }
         ComponentGeometry geomDef = ComponentGeometry.forId(geom);
+        MaterialRef existingRef = ItemCastingMold.getContainedMaterialRef(moldStack);
 
         for (AggregateLayer l : vesselState.layers()) {
             if (l.phaseType() == AggregatePhaseType.MOLTEN_METAL && (l.physicalPhase() == MaterialPhase.LIQUID
                 || l.thermalState()
                     .meltFraction() >= 0.50
-                || l.temperatureKelvin() >= l.thermalState()
-                    .properties()
-                    .meltingPointKelvin())) {
-                MaterialQuantity needed = geomDef.requiredMass(
+                || (l.thermalState()
+                    .properties() != null && l.temperatureKelvin()
+                        >= l.thermalState()
+                            .properties()
+                            .meltingPointKelvin()))) {
+                if (existingRef != null && !existingRef.equals(l.materialRef())) {
+                    continue; // Skip incompatible metal for partially filled mold
+                }
+                MaterialQuantity required = geomDef.requiredMass(
                     l.thermalState()
                         .properties()
                         .density());
-                AggregateLayer poured = vesselState.pourLiquidMetal(needed);
+                MaterialQuantity current = ItemCastingMold.getFilledMass(moldStack);
+                MaterialQuantity needed = required.compareTo(current) > 0 ? required.subtract(current)
+                    : MaterialQuantity.ZERO;
+                if (needed.isZero()) {
+                    return false;
+                }
+                MaterialQuantity transferAmount = l.mass()
+                    .compareTo(needed) <= 0 ? l.mass() : needed;
+                AggregateLayer poured = vesselState.pourLiquidMetal(l.materialRef(), transferAmount);
                 if (poured != null) {
                     ItemCastingMold.fillMold(moldStack, poured);
+                    markDirty();
+                    if (worldObj != null) {
+                        worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public boolean pourIntoLadle(ItemStack ladleStack) {
+        if (ladleStack == null || !(ladleStack.getItem() instanceof ItemFoundryLadle)) {
+            return false;
+        }
+        MaterialQuantity current = ItemFoundryLadle.getFilledMass(ladleStack);
+        if (current.compareTo(ItemFoundryLadle.CAPACITY) >= 0) {
+            return false;
+        }
+        MaterialQuantity room = ItemFoundryLadle.CAPACITY.subtract(current);
+        MaterialRef existingRef = ItemFoundryLadle.getContainedMaterialRef(ladleStack);
+
+        for (AggregateLayer l : vesselState.layers()) {
+            if (l.phaseType() == AggregatePhaseType.MOLTEN_METAL && (l.physicalPhase() == MaterialPhase.LIQUID
+                || l.thermalState()
+                    .meltFraction() >= 0.50
+                || (l.thermalState()
+                    .properties() != null && l.temperatureKelvin()
+                        >= l.thermalState()
+                            .properties()
+                            .meltingPointKelvin()))) {
+                if (existingRef != null && !existingRef.equals(l.materialRef())) {
+                    continue; // Skip incompatible metal for partially filled ladle
+                }
+                MaterialQuantity transferAmount = l.mass()
+                    .compareTo(room) <= 0 ? l.mass() : room;
+                AggregateLayer poured = vesselState.pourLiquidMetal(l.materialRef(), transferAmount);
+                if (poured != null) {
+                    ItemFoundryLadle.fillLadle(ladleStack, poured);
                     markDirty();
                     if (worldObj != null) {
                         worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
@@ -289,7 +794,8 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
                     if (worldObj != null) {
                         worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
                     }
-                    return new ItemStack(NEItems.slagLump != null ? NEItems.slagLump : NEItems.copperOreChunk);
+                    return new ItemStack(
+                        NEItems.slagLump != null ? NEItems.slagLump : net.minecraft.init.Items.clay_ball);
                 }
             }
         }
@@ -304,7 +810,7 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
                 worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
             }
             return ItemMaterialSample
-                .createStack(extracted.materialRef(), extracted.stateKey(), extracted.thermalState());
+                .createStack(extracted.materialRef(), extracted.stateKey(), extracted.mass(), extracted.thermalState());
         }
         return null;
     }
@@ -317,7 +823,7 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
                 worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
             }
             return ItemMaterialSample
-                .createStack(extracted.materialRef(), extracted.stateKey(), extracted.thermalState());
+                .createStack(extracted.materialRef(), extracted.stateKey(), extracted.mass(), extracted.thermalState());
         }
         return null;
     }
@@ -407,30 +913,112 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
     @Override
     public void closeInventory() {}
 
+    private static final int[] SLOTS_TOP = new int[] { SLOT_FEED };
+    private static final int[] SLOTS_BOTTOM = new int[] { SLOT_MOLD, SLOT_FUEL };
+    private static final int[] SLOTS_SIDES = new int[] { SLOT_FUEL, SLOT_FEED, SLOT_MOLD };
+
+    @Override
+    public int[] getAccessibleSlotsFromSide(int side) {
+        if (side == 0) return SLOTS_BOTTOM;
+        if (side == 1) return SLOTS_TOP;
+        return SLOTS_SIDES;
+    }
+
+    @Override
+    public boolean canInsertItem(int slot, ItemStack stack, int side) {
+        return isItemValidForSlot(slot, stack);
+    }
+
+    @Override
+    public boolean canExtractItem(int slot, ItemStack stack, int side) {
+        if (slot == SLOT_MOLD)
+            return stack != null && stack.getItem() == naturalexceptions.minecraft.registry.NEItems.slagLump;
+        if (slot == SLOT_FUEL) {
+            return stack != null && stack.getItem() != null && TileEntityFurnace.getItemBurnTime(stack) == 0;
+        }
+        return false;
+    }
+
     @Override
     public boolean isItemValidForSlot(int slot, ItemStack stack) {
         if (stack == null) return false;
         if (slot == SLOT_FUEL) {
-            return TileEntityFurnace.getItemBurnTime(stack) > 0;
+            return getFuelBurnTime(stack) > 0;
         }
         if (slot == SLOT_FEED) {
             return isSmeltableFeed(stack);
         }
-        if (slot == SLOT_MOLD) {
-            return stack.getItem() instanceof ItemCastingMold;
-        }
+        if (slot == SLOT_MOLD) return false;
         return true;
     }
 
     public static boolean isSmeltableFeed(ItemStack stack) {
         if (stack == null) return false;
-        if (stack.getItem() == NEItems.copperOreChunk) return true;
-        if (stack.getItem() == NEItems.copperIngot) return true;
-        if (stack.getItem() instanceof ItemGenericComponent) return true;
-        if (stack.getItem() instanceof ItemMaterialSample) return true;
-        if (net.minecraft.block.Block.getBlockFromItem(stack.getItem()) == NEBlocks.copperOre) return true;
-        if (net.minecraft.block.Block.getBlockFromItem(stack.getItem()) == NEBlocks.copperBlock) return true;
+        if (!naturalexceptions.core.material.VanillaResourceClassification.isMeltable(stack)
+            && naturalexceptions.core.material.VanillaResourceClassification.getRejectionReason(stack) != null) {
+            return false;
+        }
+        if (FeedstockItemRegistry.isRegistered(stack)) return true;
+        if (stack.getItem() instanceof ItemGenericComponent) {
+            return ItemGenericComponent.getComponent(stack) != null;
+        }
+        if (stack.getItem() instanceof ItemMaterialSample) {
+            return ItemMaterialSample.getMaterialRef(stack) != null;
+        }
+        if (stack.getItem() instanceof ItemFluidVessel) {
+            return ItemFluidVessel.contents(stack) != null;
+        }
+        if (stack.getItem() instanceof ItemGenericAssembly) {
+            return ItemGenericAssembly.getAssembly(stack) != null;
+        }
+        if (stack.getItem() instanceof ItemCastingMold) {
+            return ItemCastingMold.hasMetal(stack);
+        }
+        if (stack.getItem() instanceof ItemFoundryLadle) {
+            return ItemFoundryLadle.hasMetal(stack);
+        }
         return false;
+    }
+
+    public static int getFuelBurnTime(ItemStack stack) {
+        if (stack == null || stack.getItem() == null) return 0;
+        if (stack.getItem() == Items.blaze_powder) {
+            return 1200;
+        }
+        return TileEntityFurnace.getItemBurnTime(stack);
+    }
+
+    public static double getFuelFlameTemp(ItemStack stack) {
+        if (stack == null || stack.getItem() == null) return FuelBurnState.DEFAULT_FLAME_TEMPERATURE_K;
+        if (stack.getItem() == Items.blaze_rod || stack.getItem() == Items.blaze_powder) {
+            return 2600.0;
+        }
+        if (stack.getItem() == Items.coal) {
+            if (stack.getItemDamage() == 1) {
+                return 1950.0;
+            }
+            return 2010.0;
+        }
+        return 1950.0;
+    }
+
+    public static String getFuelHeatLabel(ItemStack stack) {
+        if (stack == null || stack.getItem() == null) return "Ordinary Heat";
+        if (stack.getItem() == Items.blaze_rod || stack.getItem() == Items.blaze_powder) {
+            return "Blaze Fuel \u2014 Extreme Heat";
+        }
+        if (stack.getItem() == Items.coal) {
+            if (stack.getItemDamage() == 1) {
+                return "Charcoal \u2014 Ordinary Heat";
+            }
+            return "Coal \u2014 Strong Heat";
+        }
+        return "Solid Fuel \u2014 Ordinary Heat";
+    }
+
+    public static String getFeedRejectionDiagnostic(ItemStack stack) {
+        if (stack == null) return null;
+        return naturalexceptions.core.material.VanillaResourceClassification.getRejectionReason(stack);
     }
 
     // --- Persistence & Networking ---
@@ -440,6 +1028,12 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
         super.writeToNBT(compound);
         VesselStateNbtCodec.writeToNbt(vesselState, compound);
         compound.setBoolean("StructureValid", structureValid);
+        compound.setInteger("ForcedDraftTicks", forcedDraftTicks);
+        if (hearthWorkpiece != null) {
+            NBTTagCompound hwTag = new NBTTagCompound();
+            hearthWorkpiece.writeToNBT(hwTag);
+            compound.setTag("HearthWorkpiece", hwTag);
+        }
 
         NBTTagList itemsList = new NBTTagList();
         for (int i = 0; i < inventory.length; i++) {
@@ -456,9 +1050,18 @@ public final class TileEntityStarterSmelter extends TileEntity implements IInven
     @Override
     public void readFromNBT(NBTTagCompound compound) {
         super.readFromNBT(compound);
-        this.vesselState = VesselStateNbtCodec.readFromNbt(compound, new MaterialPropertyResolver());
+        vesselGeometry = null;
+        this.vesselState = VesselStateNbtCodec.readFromNbt(compound, new MaterialPropertyResolver(), CAPACITY);
         if (compound.hasKey("StructureValid")) {
             this.structureValid = compound.getBoolean("StructureValid");
+        }
+        if (compound.hasKey("ForcedDraftTicks")) {
+            this.forcedDraftTicks = Math.max(0, Math.min(100, compound.getInteger("ForcedDraftTicks")));
+        }
+        if (compound.hasKey("HearthWorkpiece", 10)) {
+            this.hearthWorkpiece = ItemStack.loadItemStackFromNBT(compound.getCompoundTag("HearthWorkpiece"));
+        } else {
+            this.hearthWorkpiece = null;
         }
 
         NBTTagList itemsList = compound.getTagList("Items", 10);

@@ -6,8 +6,6 @@ import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.item.Item;
 
-import naturalexceptions.minecraft.registry.NEItems;
-
 public final class BlockCopperOre extends Block {
 
     public BlockCopperOre() {
@@ -22,7 +20,7 @@ public final class BlockCopperOre extends Block {
 
     @Override
     public Item getItemDropped(int metadata, Random random, int fortune) {
-        return NEItems.copperOreChunk;
+        return Item.getItemFromBlock(this);
     }
 
     @Override

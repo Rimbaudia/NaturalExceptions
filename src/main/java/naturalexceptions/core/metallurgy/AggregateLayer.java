@@ -78,7 +78,15 @@ public final class AggregateLayer {
 
     public double density() {
         MaterialProperties props = thermalState.properties();
-        return props != null ? props.density() : 5.0;
+        return props != null ? props.density(physicalPhase()) : 5.0;
+    }
+
+    /** Occupied vessel volume in litres (mass kg / density kg per litre). */
+    public double occupiedVolumeLitres() {
+        double resolvedDensity = density();
+        if (!Double.isFinite(resolvedDensity) || resolvedDensity <= 0.0) resolvedDensity = 5.0;
+        double litres = mass.toKilograms() / resolvedDensity;
+        return Double.isFinite(litres) && litres >= 0.0 ? litres : 0.0;
     }
 
     /**

@@ -8,6 +8,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 import naturalexceptions.content.BuiltinEvents;
+import naturalexceptions.core.event.EventInstanceFactory;
+import naturalexceptions.core.event.EventRecord;
+import naturalexceptions.core.event.StarRainImpact;
+import naturalexceptions.core.event.WorldEventSchedule;
 import naturalexceptions.core.id.DeterministicId;
 import naturalexceptions.core.persistence.WorldMetadata;
 import naturalexceptions.core.profile.SubsystemMetrics;
@@ -117,5 +121,102 @@ final class NEWorldTickHandlerTest {
 
         SubsystemMetrics metrics = profiler.snapshot(NEWorldTickHandler.SUBSYSTEM_SCHEDULER);
         assertEquals(12L, metrics.counter("events_processed"));
+    }
+
+    @Test
+    void forcedDueImpactUsesOrdinaryBoundedResolverAndUnloadedSiteWaitsForChunkMaterialization() {
+        EventRecord rain = EventInstanceFactory.protectedFirstStarRain(201L, 2, 10L, 0L, 0L, 100L);
+        WorldEventSchedule schedule = new WorldEventSchedule();
+        schedule.ensureProtectedFirstStarRain(rain);
+        NEWorldSavedData data = new NEWorldSavedData();
+        data.setMetadata(WorldMetadata.createNew("p11-forced-due", "N0.01.0-dev"));
+        data.p11()
+            .synchronize(schedule.snapshot(), 16, 16);
+        StarRainImpact first = data.p11()
+            .snapshot()
+            .get(0);
+        long now = first.dueTick() - 1L;
+        long mass = first.stellarMass()
+            .milligrams();
+
+        assertTrue(
+            data.p11()
+                .expedite(first.id(), now));
+        NEWorldTickHandler handler = new NEWorldTickHandler(new SubsystemProfiler(), 10);
+        handler.tickWorld(data, now);
+
+        assertTrue(first.isResolved());
+        assertTrue(!first.isMaterialized());
+        assertEquals(
+            mass,
+            first.stellarMass()
+                .milligrams());
+        assertEquals(
+            0L,
+            data.fluids()
+                .totalMass()
+                .milligrams());
+        assertEquals(
+            1,
+            data.p11()
+                .awaitingMaterializationInChunk(first.x() >> 4, first.z() >> 4)
+                .size());
+        handler.tickWorld(data, now + 1L);
+        assertEquals(
+            1L,
+            handler.profiler()
+                .snapshot(NEWorldTickHandler.SUBSYSTEM_STAR_RAIN)
+                .counter("impacts_resolved"));
+        assertEquals(
+            0L,
+            data.fluids()
+                .totalMass()
+                .milligrams());
+    }
+
+    @Test
+    void severalForcedImpactsStillResolveAtMostTwoPerWorldTick() {
+        EventRecord rain = EventInstanceFactory.protectedFirstStarRain(202L, 2, 10L, 0L, 0L, 100L);
+        WorldEventSchedule schedule = new WorldEventSchedule();
+        schedule.ensureProtectedFirstStarRain(rain);
+        NEWorldSavedData data = new NEWorldSavedData();
+        data.setMetadata(WorldMetadata.createNew("p11-forced-budget", "N0.01.0-dev"));
+        data.p11()
+            .synchronize(schedule.snapshot(), 16, 16);
+        long now = data.p11()
+            .nextDueTick() - 2L;
+        for (int i = 0; i < 3; i++) {
+            assertTrue(
+                data.p11()
+                    .expedite(
+                        data.p11()
+                            .snapshot()
+                            .get(i)
+                            .id(),
+                        now));
+        }
+        NEWorldTickHandler handler = new NEWorldTickHandler(new SubsystemProfiler(), 10);
+
+        handler.tickWorld(data, now);
+        assertEquals(
+            2L,
+            handler.profiler()
+                .snapshot(NEWorldTickHandler.SUBSYSTEM_STAR_RAIN)
+                .counter("impacts_resolved"));
+        assertEquals(
+            2,
+            data.p11()
+                .awaitingMaterializationCount());
+
+        handler.tickWorld(data, now + 1L);
+        assertEquals(
+            3L,
+            handler.profiler()
+                .snapshot(NEWorldTickHandler.SUBSYSTEM_STAR_RAIN)
+                .counter("impacts_resolved"));
+        assertEquals(
+            3,
+            data.p11()
+                .awaitingMaterializationCount());
     }
 }

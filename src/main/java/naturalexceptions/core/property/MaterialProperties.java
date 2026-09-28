@@ -28,6 +28,7 @@ import naturalexceptions.core.material.MaterialPhase;
 public final class MaterialProperties {
 
     public static final String KEY_DENSITY = "density";
+    public static final String KEY_DENSITY_LIQUID = "density_liquid";
     public static final String KEY_HARDNESS = "hardness";
     public static final String KEY_CONDUCTIVITY = "conductivity";
     public static final String KEY_THERMAL_CONDUCTIVITY = "thermal_conductivity";
@@ -36,6 +37,8 @@ public final class MaterialProperties {
     public static final String KEY_MELTING_POINT = "melting_point";
     public static final String KEY_LATENT_HEAT_FUSION = "latent_heat_fusion";
     public static final String KEY_ELECTRICAL_RESISTIVITY = "electrical_resistivity";
+    public static final String KEY_RECRYSTALLIZATION_TEMPERATURE = "recrystallization_temperature";
+    public static final String KEY_BIOLOGICAL_HAZARD = "biological_hazard";
 
     private final Map<String, Double> values;
     private final Set<String> biologicalTraits;
@@ -71,6 +74,13 @@ public final class MaterialProperties {
 
     public double density() {
         return get(KEY_DENSITY, 5.0);
+    }
+
+    /** Density in g/cm3; 1 g/cm3 is numerically equal to 1 kg/L. */
+    public double density(MaterialPhase phase) {
+        double fallback = density();
+        double resolved = phase == MaterialPhase.LIQUID ? get(KEY_DENSITY_LIQUID, fallback) : fallback;
+        return Double.isFinite(resolved) && resolved > 0.0 ? resolved : fallback;
     }
 
     public double densityKgPerM3() {
@@ -116,8 +126,35 @@ public final class MaterialProperties {
         return get(KEY_ELECTRICAL_RESISTIVITY, 1.0e-6);
     }
 
+    /**
+     * Homologous recrystallization threshold temperature derived from material hardness and melting point,
+     * or explicit recrystallization temperature property if authored.
+     */
+    public double recrystallizationTemperatureKelvin() {
+        if (values.containsKey(KEY_RECRYSTALLIZATION_TEMPERATURE)) {
+            return values.get(KEY_RECRYSTALLIZATION_TEMPERATURE);
+        }
+        double meltK = meltingPointKelvin();
+        double ratio = 0.35 + (Math.min(10.0, hardness()) / 10.0) * 0.15;
+        return meltK * ratio;
+    }
+
     public Set<String> biologicalTraits() {
         return biologicalTraits;
+    }
+
+    public boolean hasTrait(String trait) {
+        return biologicalTraits != null && biologicalTraits.contains(trait);
+    }
+
+    /** Bounded relative potency used to convert material contact into biological dose. */
+    public double biologicalHazard() {
+        double value = get(KEY_BIOLOGICAL_HAZARD, 0.0);
+        if (Double.isFinite(value) && value > 0.0) return Math.min(1000.0, value);
+        if (hasTrait("toxic")) return 1.0;
+        if (hasTrait("corrosive")) return 0.75;
+        if (hasTrait("irritant") || hasTrait("respiratory_hazard")) return 0.25;
+        return 0.0;
     }
 
     public Map<String, Double> asMap() {
@@ -213,6 +250,8 @@ public final class MaterialProperties {
         public Builder electricalResistivity(double val) {
             return set(KEY_ELECTRICAL_RESISTIVITY, val);
         }
+
+        public Builder biologicalHazard(double val) { return set(KEY_BIOLOGICAL_HAZARD, val); }
 
         public Builder addTrait(String trait) {
             if (trait != null && !trait.isEmpty()) {

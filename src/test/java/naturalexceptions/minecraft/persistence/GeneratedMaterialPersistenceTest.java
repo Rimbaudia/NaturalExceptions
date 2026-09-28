@@ -1,6 +1,7 @@
 package naturalexceptions.minecraft.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -242,10 +243,13 @@ final class GeneratedMaterialPersistenceTest {
         // 1. Authored carrier
         MaterialRef authoredRef = MaterialRef.authored(CU);
         ItemStack authoredStack = ItemMaterialSample.createStack(authoredRef);
-        assertEquals("Material Sample (Copper)", item.getItemStackDisplayName(authoredStack));
+        assertEquals("Material Sample", item.getItemStackDisplayName(authoredStack));
         List<String> tooltip = new ArrayList<>();
         item.addInformation(authoredStack, null, (List) tooltip, false);
-        assertTrue(tooltip.contains("\u00a78mat:authored:naturalexceptions:copper"));
+        assertTrue(tooltip.contains("  \u00a77Material: \u00a7fReddish material"));
+        List<String> advTooltip = new ArrayList<>();
+        item.addInformation(authoredStack, null, (List) advTooltip, true);
+        assertTrue(advTooltip.contains("  \u00a78ID: " + authoredRef.asString()));
 
         // 2. Generated carrier with state key
         CanonicalComposition comp = CanonicalComposition.builder()
@@ -256,16 +260,23 @@ final class GeneratedMaterialPersistenceTest {
             .of(comp, MaterialPhase.SOLID, Microstructure.ANNEALED, ConditioningHistory.COLD_WORKED);
         MaterialRef genRef = MaterialRef.generatedFrom(stateKey);
         ItemStack genStack = ItemMaterialSample.createStack(genRef, stateKey);
-        assertTrue(
-            item.getItemStackDisplayName(genStack)
-                .startsWith("Material Sample (Generated "));
+        assertEquals("Material Sample", item.getItemStackDisplayName(genStack));
         List<String> genTooltip = new ArrayList<>();
         item.addInformation(genStack, null, (List) genTooltip, false);
-        assertTrue(genTooltip.contains("\u00a78" + genRef.asString()));
-        assertTrue(genTooltip.contains("\u00a77Phase: solid"));
-        assertTrue(genTooltip.contains("\u00a77Microstructure: annealed"));
-        assertTrue(genTooltip.contains("\u00a77Conditioning: cold_worked"));
-        assertTrue(genTooltip.contains("\u00a77Composition:"));
+        assertTrue(genTooltip.contains("  \u00a77Material: \u00a7fReddish material"));
+        boolean hasComp = false;
+        for (String line : genTooltip) {
+            if (line.contains("Composition:")) hasComp = true;
+        }
+        assertFalse(hasComp, "Normal tooltip must not reveal unmeasured canonical composition");
+
+        List<String> genAdvTooltip = new ArrayList<>();
+        item.addInformation(genStack, null, (List) genAdvTooltip, true);
+        assertTrue(genAdvTooltip.contains("  \u00a78ID: " + genRef.asString()));
+        assertFalse(genAdvTooltip.contains("  \u00a78Microstructure: annealed"),
+                "Player tooltips must not disclose exact microstructure without evidence");
+        assertFalse(genAdvTooltip.contains("  \u00a78Conditioning: cold_worked"),
+                "Player tooltips must not disclose exact conditioning without evidence");
 
         // 3. Empty carrier
         ItemStack emptyStack = new ItemStack(item);
@@ -283,16 +294,14 @@ final class GeneratedMaterialPersistenceTest {
         assertEquals("\u00a7cMaterial Sample (Corrupted)", item.getItemStackDisplayName(corruptStack));
         assertNull(ItemMaterialSample.getMaterialRef(corruptStack));
 
-        // 5. Unresolved authored carrier fails safely and visibly
+        // 5. Unresolved authored carrier fails safely without exposing its content key
         MaterialRef unresolvedRef = MaterialRef.authored(ResourceId.of("naturalexceptions", "mythic_alloy_999"));
         ItemStack unresolvedStack = ItemMaterialSample.createStack(unresolvedRef);
-        assertEquals(
-            "\u00a7cMaterial Sample (Unresolved Authored: mythic_alloy_999)",
-            item.getItemStackDisplayName(unresolvedStack));
+        assertEquals("Material Sample (Unresolved)", item.getItemStackDisplayName(unresolvedStack));
         List<String> unresolvedTooltip = new ArrayList<>();
         item.addInformation(unresolvedStack, null, (List) unresolvedTooltip, false);
-        assertTrue(
-            unresolvedTooltip.contains("\u00a7cUnresolved authored material: naturalexceptions:mythic_alloy_999"));
+        assertTrue(unresolvedTooltip.contains("\u00a77Material definition is missing in this installation."));
+        assertFalse(unresolvedTooltip.toString().contains("mythic_alloy_999"));
     }
 
     @Test

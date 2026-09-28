@@ -43,6 +43,10 @@ public final class AssemblyGraph {
             throw new IllegalArgumentException(
                 "Incompatible handle geometry for tool assembly: " + handle.geometryId());
         }
+        if (head.geometryId() == GeometryId.HANDLE || head.geometryId() == GeometryId.ROD
+            || head.geometryId() == GeometryId.BLANK) {
+            throw new IllegalArgumentException("Incompatible head geometry for tool assembly: " + head.geometryId());
+        }
     }
 
     public ComponentInstance head() {
@@ -72,8 +76,12 @@ public final class AssemblyGraph {
     public boolean isBroken() {
         return head.damage()
             .isFractured()
+            || head.damage()
+                .wear() >= 1.0
             || handle.damage()
-                .isFractured();
+                .isFractured()
+            || handle.damage()
+                .wear() >= 1.0;
     }
 
     public void replaceHead(ComponentInstance newHead) {

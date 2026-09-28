@@ -23,6 +23,18 @@ final class WorldMetadataTest {
     }
 
     @Test
+    void freshMetadataUsesCurrentP6EpochWithoutChangingSaveSchema() {
+        WorldMetadata metadata = WorldMetadata.createNew("fresh-p6-world", "N0.01.0-dev");
+
+        assertEquals(WorldgenEpoch.CURRENT, metadata.worldgenEpoch());
+        assertEquals(SaveSchemaVersion.CURRENT, metadata.schemaVersion());
+        assertEquals(
+            2,
+            metadata.worldgenEpoch()
+                .value());
+    }
+
+    @Test
     void distinguishesSchemaVersionAndWorldgenEpoch() {
         SaveSchemaVersion schema = SaveSchemaVersion.of(2);
         WorldgenEpoch epoch = WorldgenEpoch.of(2);

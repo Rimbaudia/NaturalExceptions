@@ -158,12 +158,9 @@ final class MaterialPropertyResolverTest {
         assertTrue(
             result.trace()
                 .layerApplied("supernatural:stellar_override"));
-        // Stellar override sets supernatural hardness
-        assertEquals(
-            99.0,
-            result.properties()
-                .hardness(),
-            0.01);
+        // Stellar matter remains a modest constituent while imparting a measurable heat-transfer change.
+        assertTrue(result.properties().hardness() < 10.0);
+        assertTrue(result.properties().thermalConductivity() > 150.0);
     }
 
     @Test

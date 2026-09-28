@@ -29,6 +29,10 @@ public final class TargetMaterialProfile {
         return new TargetMaterialProfile("wood", 1.0, 1.5);
     }
 
+    public static TargetMaterialProfile dirt() {
+        return new TargetMaterialProfile("dirt", 0.6, 0.5);
+    }
+
     public String name() {
         return name;
     }

@@ -33,6 +33,10 @@ public final class ComponentGeometry {
         return of(GeometryId.BLANK, 25.0); // 25 cm³ standard blank
     }
 
+    public static ComponentGeometry ingot() {
+        return of(GeometryId.INGOT, 25.0);
+    }
+
     public static ComponentGeometry pickHead() {
         return of(GeometryId.PICK_HEAD, 30.0); // 30 cm³ pick head
     }
@@ -53,11 +57,29 @@ public final class ComponentGeometry {
         return of(GeometryId.BLADE, 25.0); // 25 cm³ blade
     }
 
+    public static ComponentGeometry axeHead() {
+        return of(GeometryId.AXE_HEAD, 30.0); // 30 cm³ axe head
+    }
+
+    public static ComponentGeometry shovelHead() {
+        return of(GeometryId.SHOVEL_HEAD, 15.0); // 15 cm³ shovel head
+    }
+
+    public static ComponentGeometry hoeHead() {
+        return of(GeometryId.HOE_HEAD, 20.0); // 20 cm³ hoe head
+    }
+
     public static ComponentGeometry forId(GeometryId id) {
         if (id == null) return blank();
         switch (id) {
             case PICK_HEAD:
                 return pickHead();
+            case AXE_HEAD:
+                return axeHead();
+            case SHOVEL_HEAD:
+                return shovelHead();
+            case HOE_HEAD:
+                return hoeHead();
             case HANDLE:
                 return handle();
             case PLATE:
@@ -66,6 +88,8 @@ public final class ComponentGeometry {
                 return rod();
             case BLADE:
                 return blade();
+            case INGOT:
+                return ingot();
             case BLANK:
             default:
                 return blank();

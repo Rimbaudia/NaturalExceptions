@@ -3,6 +3,7 @@ package naturalexceptions.core.metallurgy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -30,6 +31,34 @@ final class SmelterPhysicalMetallurgyTest {
     private static final ResourceId CU = ResourceId.of("naturalexceptions", "copper");
     private static final ResourceId SN = ResourceId.of("naturalexceptions", "tin");
     private static final ResourceId PB = ResourceId.of("naturalexceptions", "lead");
+
+    @Test
+    void occupiedVolumeUsesPhaseAppropriateDensityInLitres() {
+        MaterialProperties properties = MaterialProperties.builder()
+            .density(8.0)
+            .set(MaterialProperties.KEY_DENSITY_LIQUID, 4.0)
+            .build();
+        MaterialQuantity mass = MaterialQuantity.ofKilograms(8.0);
+        ActiveThermalState liquidThermal = ActiveThermalState.atTemperature(1400.0, 1.0, 8.0, properties);
+        AggregateLayer liquid = new AggregateLayer(
+            MaterialRef.authored(CU),
+            CanonicalMaterialKey.of(CanonicalComposition.of(CU))
+                .asMolten(),
+            CanonicalComposition.of(CU),
+            mass,
+            liquidThermal,
+            AggregatePhaseType.MOLTEN_METAL);
+        assertEquals(2.0, liquid.occupiedVolumeLitres(), 1.0e-8);
+        assertEquals(4.0, liquid.density(), 1.0e-8);
+        AggregateLayer solid = new AggregateLayer(
+            MaterialRef.authored(CU),
+            CanonicalMaterialKey.of(CanonicalComposition.of(CU)),
+            CanonicalComposition.of(CU),
+            mass,
+            ActiveThermalState.ambient(8.0, properties),
+            AggregatePhaseType.SOLID_CHARGE);
+        assertEquals(1.0, solid.occupiedVolumeLitres(), 1.0e-8);
+    }
 
     @Test
     void batchMassCannotBecomeNegative() {
@@ -88,6 +117,8 @@ final class SmelterPhysicalMetallurgyTest {
                 .size());
         AggregateLayer alloy = vessel.layers()
             .get(0);
+        assertTrue(Double.isFinite(alloy.occupiedVolumeLitres()));
+        assertTrue(alloy.occupiedVolumeLitres() > 0.0);
         assertEquals(MaterialQuantity.ofKilograms(4.0), alloy.mass());
 
         // 75% Cu (7500 bp), 25% Sn (2500 bp)
@@ -163,7 +194,7 @@ final class SmelterPhysicalMetallurgyTest {
     @Test
     void thermalEnergyControlsMeltingNotProgressTimer() {
         VesselState vessel = new VesselState();
-        vessel.addOreChunk(OreFeedstockDefinition.copperOreChunk());
+        vessel.addRawOre(OreFeedstockDefinition.copperOre());
 
         // Run 5,000 ticks with 0 fuel (ambient)
         for (int i = 0; i < 5000; i++) {
@@ -208,14 +239,41 @@ final class SmelterPhysicalMetallurgyTest {
     @Test
     void coldSmelterSleeps() {
         VesselState vessel = new VesselState();
-        vessel.addOreChunk(OreFeedstockDefinition.copperOreChunk());
+        vessel.addRawOre(OreFeedstockDefinition.copperOre());
         assertTrue(vessel.isDormant(293.15));
+    }
+
+    @Test
+    void dormancyUsesTheLayerMeltingPoint() {
+        MaterialProperties highMeltProperties = MaterialProperties.builder()
+            .density(8.0)
+            .hardness(4.0)
+            .conductivity(20.0)
+            .thermalConductivity(80.0)
+            .specificHeatSolid(400.0)
+            .specificHeatLiquid(450.0)
+            .meltingPointKelvin(1800.0)
+            .latentHeatOfFusion(100000.0)
+            .electricalResistivity(1.0e-6)
+            .build();
+        ResourceId materialId = ResourceId.of("naturalexceptions", "high_melt_test_material");
+        MaterialQuantity mass = MaterialQuantity.ofGrams(100.0);
+        VesselState vessel = new VesselState();
+        vessel.addLayer(
+            new AggregateLayer(
+                MaterialRef.authored(materialId),
+                CanonicalMaterialKey.of(CanonicalComposition.of(materialId)),
+                CanonicalComposition.of(materialId),
+                mass,
+                ActiveThermalState.atTemperature(1400.0, 0.0, mass.toKilograms(), highMeltProperties),
+                AggregatePhaseType.SOLID_CHARGE));
+        assertTrue(vessel.isDormant(1400.0));
     }
 
     @Test
     void activeSmelterUsesBoundedScheduledWork() {
         VesselState vessel = new VesselState();
-        vessel.addOreChunk(OreFeedstockDefinition.copperOreChunk());
+        vessel.addRawOre(OreFeedstockDefinition.copperOre());
         vessel.addFuel(100);
         assertFalse(vessel.isDormant(293.15), "Burning vessel is not dormant");
     }
@@ -223,11 +281,11 @@ final class SmelterPhysicalMetallurgyTest {
     @Test
     void copperFeedProducesAccountedUsefulAndWasteMatter() {
         VesselState vessel = new VesselState();
-        OreFeedstockDefinition oreDef = OreFeedstockDefinition.copperOreChunk();
-        vessel.addOreChunk(oreDef);
+        OreFeedstockDefinition oreDef = OreFeedstockDefinition.copperOre();
+        vessel.addRawOre(oreDef);
 
         MaterialQuantity initialMass = vessel.totalMass();
-        assertEquals(100_000L, initialMass.milligrams()); // 100g
+        assertEquals(1_000_000L, initialMass.milligrams()); // 1000g
 
         // Inject thermal energy to melt
         vessel.addFuel(1000);
@@ -251,18 +309,18 @@ final class SmelterPhysicalMetallurgyTest {
         assertNotNull(slag);
 
         assertEquals(
-            60_000L,
+            600_000L,
             metal.mass()
-                .milligrams()); // 60g Cu
+                .milligrams()); // 600g Cu
         assertEquals(
-            35_000L,
+            350_000L,
             slag.mass()
-                .milligrams()); // 35g slag
+                .milligrams()); // 350g slag
         assertEquals(
-            5_000L,
+            50_000L,
             vessel.exhaustSink()
                 .totalVentedMass()
-                .milligrams()); // 5g gas
+                .milligrams()); // 50g gas
 
         // Exact conservation
         MaterialQuantity totalFinal = metal.mass()
@@ -274,16 +332,66 @@ final class SmelterPhysicalMetallurgyTest {
     }
 
     @Test
+    void registeredNonCopperFeedstocksReduceToTheirOwnMetal() {
+        assertRawOreReduction(OreFeedstockDefinition.tinOreChunk(), BuiltinMaterials.TIN.ref());
+        assertRawOreReduction(OreFeedstockDefinition.leadOreChunk(), BuiltinMaterials.LEAD.ref());
+    }
+
+    private static void assertRawOreReduction(OreFeedstockDefinition oreDef, MaterialRef expectedMetalRef) {
+        VesselState vessel = new VesselState();
+        vessel.addRawOre(oreDef);
+        vessel.addFuel(1000);
+        for (int i = 0; i < 400; i++) {
+            vessel.step(1, 293.15);
+        }
+
+        AggregateLayer metal = vessel.layers()
+            .stream()
+            .filter(l -> l.phaseType() == AggregatePhaseType.MOLTEN_METAL)
+            .findFirst()
+            .orElse(null);
+        AggregateLayer slag = vessel.layers()
+            .stream()
+            .filter(l -> l.phaseType() == AggregatePhaseType.SLAG)
+            .findFirst()
+            .orElse(null);
+
+        assertNotNull(metal);
+        assertEquals(expectedMetalRef, metal.materialRef());
+        assertEquals(
+            60_000L,
+            metal.mass()
+                .milligrams());
+        assertNotNull(slag);
+        assertEquals(
+            35_000L,
+            slag.mass()
+                .milligrams());
+        assertEquals(
+            5_000L,
+            vessel.exhaustSink()
+                .totalVentedMass()
+                .milligrams());
+        assertEquals(
+            MaterialQuantity.ofGrams(100.0),
+            metal.mass()
+                .add(slag.mass())
+                .add(
+                    vessel.exhaustSink()
+                        .totalVentedMass()));
+    }
+
+    @Test
     void declaredExhaustSinkAccountsForDeferredGasProducts() {
         VesselState vessel = new VesselState();
-        vessel.addOreChunk(OreFeedstockDefinition.copperOreChunk());
+        vessel.addRawOre(OreFeedstockDefinition.copperOre());
         vessel.addFuel(1000);
         for (int i = 0; i < 400; i++) {
             vessel.step(1, 293.15);
         }
 
         assertEquals(
-            5_000L,
+            50_000L,
             vessel.exhaustSink()
                 .getVented(ExhaustSink.EXHAUST_GAS)
                 .milligrams());
@@ -334,7 +442,7 @@ final class SmelterPhysicalMetallurgyTest {
     @Test
     void slagRemainsSeparateFromMetal() {
         VesselState vessel = new VesselState();
-        vessel.addOreChunk(OreFeedstockDefinition.copperOreChunk());
+        vessel.addRawOre(OreFeedstockDefinition.copperOre());
         vessel.addFuel(1000);
         for (int i = 0; i < 400; i++) {
             vessel.step(1, 293.15);
@@ -358,7 +466,7 @@ final class SmelterPhysicalMetallurgyTest {
     @Test
     void layerOrderingIsDeterministic() {
         VesselState vessel = new VesselState();
-        vessel.addOreChunk(OreFeedstockDefinition.copperOreChunk());
+        vessel.addRawOre(OreFeedstockDefinition.copperOre());
         vessel.addFuel(1000);
         for (int i = 0; i < 400; i++) {
             vessel.step(1, 293.15);
@@ -380,7 +488,7 @@ final class SmelterPhysicalMetallurgyTest {
     @Test
     void skimmingRemovesActualTopLayerMass() {
         VesselState vessel = new VesselState();
-        vessel.addOreChunk(OreFeedstockDefinition.copperOreChunk());
+        vessel.addRawOre(OreFeedstockDefinition.copperOre());
         vessel.addFuel(1000);
         for (int i = 0; i < 400; i++) {
             vessel.step(1, 293.15);
@@ -403,7 +511,7 @@ final class SmelterPhysicalMetallurgyTest {
     @Test
     void pouringRemovesActualAccessibleLiquidMass() {
         VesselState vessel = new VesselState();
-        vessel.addOreChunk(OreFeedstockDefinition.copperOreChunk());
+        vessel.addRawOre(OreFeedstockDefinition.copperOre());
         vessel.addFuel(1000);
         for (int i = 0; i < 400; i++) {
             vessel.step(1, 293.15);
@@ -434,7 +542,7 @@ final class SmelterPhysicalMetallurgyTest {
             MaterialRef.authored(BuiltinMaterials.COPPER_RESOURCE_ID),
             BuiltinMaterials.COPPER_PROPERTIES);
 
-        vessel.addOreChunk(oreDef);
+        vessel.addRawOre(oreDef);
         vessel.addFuel(500);
         for (int i = 0; i < 400; i++) {
             vessel.step(1, 293.15);
@@ -484,7 +592,7 @@ final class SmelterPhysicalMetallurgyTest {
     @Test
     void extractedMaterialCanBeRemelted() {
         VesselState vessel = new VesselState();
-        vessel.addOreChunk(OreFeedstockDefinition.copperOreChunk());
+        vessel.addRawOre(OreFeedstockDefinition.copperOre());
         vessel.addFuel(1000);
         for (int i = 0; i < 400; i++) {
             vessel.step(1, 293.15);
@@ -519,7 +627,7 @@ final class SmelterPhysicalMetallurgyTest {
             vessel.step(1, 293.15);
         }
 
-        // Metal layer merged back to 60g Cu
+        // Metal layer merged back to 600g Cu
         AggregateLayer metal = vessel.layers()
             .stream()
             .filter(l -> l.phaseType() == AggregatePhaseType.MOLTEN_METAL)
@@ -527,7 +635,7 @@ final class SmelterPhysicalMetallurgyTest {
             .orElse(null);
         assertNotNull(metal);
         assertEquals(
-            60_000L,
+            600_000L,
             metal.mass()
                 .milligrams());
     }
@@ -535,7 +643,7 @@ final class SmelterPhysicalMetallurgyTest {
     @Test
     void smelterStateSurvivesSaveReload() {
         VesselState vessel = new VesselState();
-        vessel.addOreChunk(OreFeedstockDefinition.copperOreChunk());
+        vessel.addRawOre(OreFeedstockDefinition.copperOre());
         vessel.addFuel(500);
 
         NBTTagCompound nbt = new NBTTagCompound();
@@ -627,8 +735,8 @@ final class SmelterPhysicalMetallurgyTest {
     @Test
     void completeCopperProcessConservesTrackedMatter() {
         VesselState vessel = new VesselState();
-        OreFeedstockDefinition ore = OreFeedstockDefinition.copperOreChunk();
-        vessel.addOreChunk(ore); // 100g
+        OreFeedstockDefinition ore = OreFeedstockDefinition.copperOre();
+        vessel.addRawOre(ore); // 1000g
 
         MaterialQuantity initialMass = vessel.totalMass();
 
@@ -656,7 +764,89 @@ final class SmelterPhysicalMetallurgyTest {
                     .totalVentedMass());
 
         assertEquals(initialMass, finalTotalAccounted);
-        assertEquals(100_000L, finalTotalAccounted.milligrams());
+        assertEquals(1_000_000L, finalTotalAccounted.milligrams());
+    }
+
+    @Test
+    void fractionalLiquidLayerPouringConservesMassAndProportionalEnergy() {
+        VesselState vessel = new VesselState();
+        MaterialQuantity totalMass = MaterialQuantity.ofGrams(500.0);
+        ActiveThermalState thermal = ActiveThermalState
+            .atTemperature(1400.0, 1.0, totalMass.toKilograms(), BuiltinMaterials.COPPER_PROPERTIES);
+        double initialJoules = thermal.energyJoules();
+
+        AggregateLayer layer = new AggregateLayer(
+            BuiltinMaterials.COPPER.ref(),
+            CanonicalMaterialKey.of(BuiltinMaterials.COPPER_COMPOSITION)
+                .asMolten(),
+            BuiltinMaterials.COPPER_COMPOSITION,
+            totalMass,
+            thermal,
+            AggregatePhaseType.MOLTEN_METAL);
+        vessel.addLayer(layer);
+
+        // Pour 200g of copper
+        MaterialQuantity pour1Mass = MaterialQuantity.ofGrams(200.0);
+        AggregateLayer poured1 = vessel.pourLiquidMetal(pour1Mass);
+        assertNotNull(poured1);
+        assertEquals(pour1Mass, poured1.mass());
+        assertEquals(MaterialQuantity.ofGrams(300.0), vessel.totalMass());
+
+        // Check conservation
+        double remainingJoules1 = vessel.layers()
+            .get(0)
+            .thermalState()
+            .energyJoules();
+        double pouredJoules1 = poured1.thermalState()
+            .energyJoules();
+        assertEquals(initialJoules, remainingJoules1 + pouredJoules1, 1e-4);
+        assertEquals(initialJoules * 0.40, pouredJoules1, 1e-4);
+        assertEquals(initialJoules * 0.60, remainingJoules1, 1e-4);
+
+        // Second pour of 300g (exhausts the remaining layer)
+        MaterialQuantity pour2Mass = MaterialQuantity.ofGrams(300.0);
+        AggregateLayer poured2 = vessel.pourLiquidMetal(pour2Mass);
+        assertNotNull(poured2);
+        assertEquals(pour2Mass, poured2.mass());
+        assertEquals(MaterialQuantity.ZERO, vessel.totalMass());
+        assertEquals(
+            0,
+            vessel.layers()
+                .size(),
+            "Exhausted layer must be removed from vessel");
+
+        double pouredJoules2 = poured2.thermalState()
+            .energyJoules();
+        assertEquals(remainingJoules1, pouredJoules2, 1e-4);
+        assertEquals(initialJoules, pouredJoules1 + pouredJoules2, 1e-4);
+    }
+
+    @Test
+    void fractionalPouringFiltersByMaterialRefAndCapsToAvailableMass() {
+        VesselState vessel = new VesselState();
+        MaterialQuantity cuMass = MaterialQuantity.ofGrams(300.0);
+        ActiveThermalState cuThermal = ActiveThermalState
+            .atTemperature(1400.0, 1.0, cuMass.toKilograms(), BuiltinMaterials.COPPER_PROPERTIES);
+        vessel.addLayer(
+            new AggregateLayer(
+                BuiltinMaterials.COPPER.ref(),
+                CanonicalMaterialKey.of(BuiltinMaterials.COPPER_COMPOSITION)
+                    .asMolten(),
+                BuiltinMaterials.COPPER_COMPOSITION,
+                cuMass,
+                cuThermal,
+                AggregatePhaseType.MOLTEN_METAL));
+
+        // Requesting tin must return null because no tin is in vessel
+        AggregateLayer tinPour = vessel.pourLiquidMetal(BuiltinMaterials.TIN.ref(), MaterialQuantity.ofGrams(100.0));
+        assertNull(tinPour);
+        assertEquals(cuMass, vessel.totalMass());
+
+        // Requesting 500g of copper when only 300g is available transfers available 300g
+        AggregateLayer cuPour = vessel.pourLiquidMetal(BuiltinMaterials.COPPER.ref(), MaterialQuantity.ofGrams(500.0));
+        assertNotNull(cuPour);
+        assertEquals(MaterialQuantity.ofGrams(300.0), cuPour.mass());
+        assertEquals(MaterialQuantity.ZERO, vessel.totalMass());
     }
 
     @Test
@@ -664,7 +854,7 @@ final class SmelterPhysicalMetallurgyTest {
         List<VesselState> smelters = new ArrayList<>();
         for (int i = 0; i < 500; i++) {
             VesselState v = new VesselState();
-            v.addOreChunk(OreFeedstockDefinition.copperOreChunk());
+            v.addRawOre(OreFeedstockDefinition.copperOre());
             smelters.add(v);
         }
 
