@@ -26,6 +26,8 @@ public final class NEItems {
     public static naturalexceptions.minecraft.weapon.ItemShardcaster shardcaster;
     public static naturalexceptions.minecraft.item.ItemWindbloomTea windbloomTea;
     public static naturalexceptions.minecraft.item.ItemSkyKey skyKey;
+    public static net.minecraft.item.Item galeCore;
+    public static net.minecraft.item.Item galeMaul;
     /** Sky-cache treasures, one item per {@link naturalexceptions.minecraft.gear.Treasure}. */
     public static final java.util.Map<naturalexceptions.minecraft.gear.Treasure, naturalexceptions.minecraft.item.ItemTreasureGear> TREASURES = new java.util.EnumMap<>(
         naturalexceptions.minecraft.gear.Treasure.class);
@@ -174,6 +176,10 @@ public final class NEItems {
         shardcaster.setCreativeTab(NECreativeTab.INSTANCE);
         windbloomTea = new naturalexceptions.minecraft.item.ItemWindbloomTea();
         windbloomTea.setCreativeTab(NECreativeTab.INSTANCE);
+        galeCore = new naturalexceptions.minecraft.item.ItemGaleCore();
+        galeCore.setCreativeTab(NECreativeTab.INSTANCE);
+        galeMaul = new naturalexceptions.minecraft.weapon.ItemGaleMaul();
+        galeMaul.setCreativeTab(NECreativeTab.INSTANCE);
         skyKey = new naturalexceptions.minecraft.item.ItemSkyKey();
         skyKey.setCreativeTab(NECreativeTab.INSTANCE);
         for (naturalexceptions.minecraft.gear.Treasure treasure : naturalexceptions.minecraft.gear.Treasure.values()) {
@@ -203,6 +209,8 @@ public final class NEItems {
             GameRegistry.registerItem(shardcaster, "shardcaster");
             GameRegistry.registerItem(windbloomTea, "windbloom_tea");
             GameRegistry.registerItem(skyKey, "sky_key");
+            GameRegistry.registerItem(galeCore, "gale_core");
+            GameRegistry.registerItem(galeMaul, "gale_maul");
             for (java.util.Map.Entry<naturalexceptions.minecraft.gear.Treasure, naturalexceptions.minecraft.item.ItemTreasureGear> entry : TREASURES
                 .entrySet())
                 GameRegistry.registerItem(

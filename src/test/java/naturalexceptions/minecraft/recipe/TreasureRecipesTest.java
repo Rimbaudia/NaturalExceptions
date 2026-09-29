@@ -40,12 +40,13 @@ final class TreasureRecipesTest {
     @Test
     void everyNewItemHasARecipe() {
         List<Item> items = new ArrayList<>();
-        for (Treasure treasure : Treasure.values()) items.add(NEItems.TREASURES.get(treasure));
+        for (Treasure treasure : Treasure.values()) if (!treasure.relic()) items.add(NEItems.TREASURES.get(treasure));
         items.add(NEItems.skyfall);
         items.add(NEItems.shardcaster);
         items.add(Item.getItemFromBlock(NEBlocks.lumeniteLamp));
         items.add(NEItems.windbloomTea);
         items.add(Item.getItemFromBlock(NEBlocks.skystoneBricks));
+        items.add(Item.getItemFromBlock(NEBlocks.galeVent));
         for (Item item : items) assertTrue(craftable(item), item.getUnlocalizedName() + " has a crafting recipe");
     }
 
@@ -60,6 +61,29 @@ final class TreasureRecipesTest {
             "ordinary stone brick still breaks");
         assertTrue(usedIn(NEItems.TREASURES.get(Treasure.CLOUD_FLASK), Item.getItemFromBlock(NEBlocks.cloud)));
         assertTrue(usedIn(NEItems.TREASURES.get(Treasure.GLIDER_CLOAK), Item.getItemFromBlock(NEBlocks.windbloom)));
+    }
+
+    @Test
+    void wardenRelicsCannotBeCraftedButTheGaleCoreCraftsSkyGear() {
+        for (Treasure treasure : Treasure.values())
+            if (treasure.relic()) assertTrue(!craftable(NEItems.TREASURES.get(treasure)), treasure + " is Warden-only");
+        assertTrue(!craftable(NEItems.galeMaul), "the Gale Maul is Warden-only");
+        assertTrue(usedIn(Item.getItemFromBlock(NEBlocks.galeVent), NEItems.galeCore));
+        assertTrue(usedInShapeless(NEItems.TREASURES.get(Treasure.CLOUD_FLASK), NEItems.galeCore));
+        assertTrue(usedInShapeless(NEItems.TREASURES.get(Treasure.GLIDER_CLOAK), NEItems.galeCore));
+    }
+
+    private static boolean usedInShapeless(Item output, Item ingredient) {
+        for (Object entry : CraftingManager.getInstance()
+            .getRecipeList()) {
+            if (!(entry instanceof net.minecraft.item.crafting.ShapelessRecipes)) continue;
+            net.minecraft.item.crafting.ShapelessRecipes recipe = (net.minecraft.item.crafting.ShapelessRecipes) entry;
+            if (recipe.getRecipeOutput() == null || recipe.getRecipeOutput()
+                .getItem() != output) continue;
+            for (Object stack : recipe.recipeItems) if (stack instanceof net.minecraft.item.ItemStack
+                && ((net.minecraft.item.ItemStack) stack).getItem() == ingredient) return true;
+        }
+        return false;
     }
 
     private static boolean usedIn(Item output, Item ingredient) {

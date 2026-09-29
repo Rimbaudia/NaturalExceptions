@@ -48,6 +48,29 @@ public final class TreasureRecipes {
         add(Treasure.HORSESHOE_PENDANT, "S S", "I I", "III", 'S', Items.string, 'I', Items.iron_ingot);
         add(Treasure.CLIMBING_CLAWS, "I I", "ILI", "LLL", 'I', Items.iron_ingot, 'L', Items.leather);
         add(Treasure.BAND_OF_MENDING, " G ", "GMG", " G ", 'G', Items.gold_ingot, 'M', Items.speckled_melon);
+        // A Warden's Gale Core: two Gale Vents; or the wind for a Cloud Flask or a Glider Cloak without the search.
+        Item core = NEItems.galeCore;
+        if (core != null && NEBlocks.galeVent != null && NEBlocks.skystoneBricks != null && NEBlocks.windbloom != null)
+            GameRegistry.addRecipe(
+                new ItemStack(NEBlocks.galeVent, 2),
+                " W ",
+                "IGI",
+                "SSS",
+                'W',
+                NEBlocks.windbloom,
+                'I',
+                Items.iron_ingot,
+                'G',
+                core,
+                'S',
+                new ItemStack(NEBlocks.skystoneBricks, 1, OreDictionary.WILDCARD_VALUE));
+        if (core != null) {
+            Item flask = NEItems.TREASURES.get(Treasure.CLOUD_FLASK),
+                cloak = NEItems.TREASURES.get(Treasure.GLIDER_CLOAK);
+            if (flask != null) GameRegistry.addShapelessRecipe(new ItemStack(flask), core, Items.glass_bottle);
+            if (cloak != null)
+                GameRegistry.addShapelessRecipe(new ItemStack(cloak), core, Items.leather, anyWool, anyWool);
+        }
         // Skyfall is forged from a fallen star, not from Lumenite.
         if (NEItems.skyfall != null && NEItems.materialSample != null) GameRegistry.addRecipe(new RecipeSkyfall());
         if (NEItems.shardcaster != null)

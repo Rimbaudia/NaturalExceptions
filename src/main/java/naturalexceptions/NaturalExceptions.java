@@ -107,6 +107,14 @@ public final class NaturalExceptions {
             96,
             1,
             true);
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.entity.EntitySkyWarden.class,
+            "sky_warden",
+            3,
+            this,
+            80,
+            3,
+            true);
         MinecraftForge.EVENT_BUS.register(new NEChunkGenerationHistory());
         cpw.mods.fml.common.network.NetworkRegistry.INSTANCE
             .registerGuiHandler(this, new naturalexceptions.minecraft.gui.NEGuiHandler());
@@ -139,6 +147,7 @@ public final class NaturalExceptions {
             naturalexceptions.minecraft.gear.client.InventoryTabs.register();
             naturalexceptions.minecraft.gear.client.GearRenderer.register();
             naturalexceptions.minecraft.gear.client.GearClientEffects.register();
+            naturalexceptions.minecraft.gear.client.VisorSight.register();
         }
     }
 
@@ -154,6 +163,9 @@ public final class NaturalExceptions {
             naturalexceptions.minecraft.weapon.EntityLumeniteBolt.class,
             new net.minecraft.client.renderer.entity.RenderSnowball(
                 naturalexceptions.minecraft.registry.NEItems.lumeniteShard));
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.entity.EntitySkyWarden.class,
+            new naturalexceptions.minecraft.entity.client.RenderSkyWarden());
         cpw.mods.fml.client.registry.RenderingRegistry
             .registerBlockHandler(new naturalexceptions.minecraft.client.model.PartModelRenderer());
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(

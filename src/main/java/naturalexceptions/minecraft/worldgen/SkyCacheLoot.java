@@ -90,10 +90,11 @@ public final class SkyCacheLoot {
         }
     }
 
-    /** The treasure pool: each wearable and each weapon equally likely. */
+    /** The treasure pool: each wearable (not the Warden Relics) and each weapon equally likely. */
     public static List<Item> treasures() {
         List<Item> pool = new ArrayList<>();
         for (Treasure treasure : Treasure.values()) {
+            if (treasure.relic()) continue; // Warden Relics are never in a chest
             Item item = NEItems.TREASURES.get(treasure);
             if (item != null) pool.add(item);
         }

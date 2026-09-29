@@ -24,12 +24,23 @@ public final class GearMovement {
 
     private static final Map<EntityPlayer, Long> LAST_ASSIST = new WeakHashMap<>();
     private static final Map<EntityPlayer, Long> LAST_SOUND = new WeakHashMap<>();
+    private static final Map<EntityPlayer, Long> LAST_DASH = new WeakHashMap<>();
+    private static final Map<EntityPlayer, Long> LAST_AEGIS = new WeakHashMap<>();
 
     public static void onAction(EntityPlayerMP player, PacketGearAction.Action action) {
         Treasure needed = action == PacketGearAction.Action.DOUBLE_JUMP ? Treasure.CLOUD_FLASK
-            : action == PacketGearAction.Action.GLIDE ? Treasure.GLIDER_CLOAK : Treasure.CLIMBING_CLAWS;
+            : action == PacketGearAction.Action.GLIDE ? Treasure.GLIDER_CLOAK
+                : action == PacketGearAction.Action.DASH ? Treasure.GALEHEART_BELT : Treasure.CLIMBING_CLAWS;
         if (ItemTreasureGear.worn(player, needed) == 0) return;
         long now = player.worldObj.getTotalWorldTime();
+        if (action == PacketGearAction.Action.DASH) {
+            synchronized (LAST_DASH) {
+                Long last = LAST_DASH.get(player);
+                // The client keeps the same cooldown; a little slack for lag, none for spam.
+                if (last != null && now - last < RelicRules.DASH_COOLDOWN_TICKS - 10) return;
+                LAST_DASH.put(player, now);
+            }
+        }
         player.fallDistance = 0.0F;
         synchronized (LAST_ASSIST) {
             LAST_ASSIST.put(player, now);
@@ -46,6 +57,10 @@ public final class GearMovement {
                     0.4F,
                     0.9F + player.getRNG()
                         .nextFloat() * 0.2F);
+                break;
+            case DASH:
+                burst(player, "cloud", 24, 0.5, 0.08);
+                player.worldObj.playSoundAtEntity(player, "naturalexceptions:gear.dash", 0.9F, 1.0F);
                 break;
             case CLIMB:
             default:
@@ -112,5 +127,62 @@ public final class GearMovement {
             last = LAST_ASSIST.get(player);
         }
         if (last != null && player.worldObj.getTotalWorldTime() - last <= ASSIST_GRACE_TICKS) event.setCanceled(true);
+    }
+
+    /** Aegis Sigil: a blow on its wearer answers with a gale that throws nearby foes back and staggers them. */
+    @SubscribeEvent
+    public void onHurt(net.minecraftforge.event.entity.living.LivingHurtEvent event) {
+        if (event == null || !(event.entityLiving instanceof EntityPlayer) || event.entityLiving.worldObj.isRemote)
+            return;
+        EntityPlayer player = (EntityPlayer) event.entityLiving;
+        if (event.source.getEntity() == null || ItemTreasureGear.worn(player, Treasure.AEGIS_SIGIL) == 0) return;
+        long now = player.worldObj.getTotalWorldTime();
+        synchronized (LAST_AEGIS) {
+            Long last = LAST_AEGIS.get(player);
+            if (!RelicRules.ready(last == null ? Long.MIN_VALUE : last, now, RelicRules.AEGIS_COOLDOWN_TICKS)) return;
+            LAST_AEGIS.put(player, now);
+        }
+        double r = RelicRules.AEGIS_RADIUS;
+        @SuppressWarnings("unchecked")
+        java.util.List<net.minecraft.entity.EntityLivingBase> near = player.worldObj
+            .getEntitiesWithinAABB(net.minecraft.entity.EntityLivingBase.class, player.boundingBox.expand(r, 2.0, r));
+        for (net.minecraft.entity.EntityLivingBase foe : near) {
+            if (foe == player || !(foe instanceof net.minecraft.entity.monster.IMob || foe == event.source.getEntity()))
+                continue;
+            double dx = foe.posX - player.posX, dz = foe.posZ - player.posZ;
+            double d = Math.max(0.5, Math.sqrt(dx * dx + dz * dz));
+            if (d > r) continue;
+            foe.motionX = dx / d * RelicRules.AEGIS_PUSH;
+            foe.motionZ = dz / d * RelicRules.AEGIS_PUSH;
+            foe.motionY = 0.45;
+            foe.velocityChanged = true;
+            // Staggered: slowed almost to a stop and made to find its way back (old-style mobs also skip a swing).
+            foe.attackTime = RelicRules.AEGIS_STAGGER_TICKS;
+            foe.addPotionEffect(
+                new net.minecraft.potion.PotionEffect(
+                    net.minecraft.potion.Potion.moveSlowdown.id,
+                    RelicRules.AEGIS_STAGGER_TICKS,
+                    3));
+            if (foe instanceof net.minecraft.entity.EntityLiving)
+                ((net.minecraft.entity.EntityLiving) foe).getNavigator()
+                    .clearPathEntity();
+        }
+        if (player.worldObj instanceof WorldServer) {
+            WorldServer server = (WorldServer) player.worldObj;
+            for (int i = 0; i < 24; i++) {
+                double a = i * Math.PI * 2.0 / 24.0;
+                server.func_147487_a(
+                    "cloud",
+                    player.posX + Math.cos(a) * 0.6,
+                    player.posY - 0.6,
+                    player.posZ + Math.sin(a) * 0.6,
+                    0,
+                    Math.cos(a),
+                    0.1,
+                    Math.sin(a),
+                    0.45);
+            }
+        }
+        player.worldObj.playSoundAtEntity(player, "naturalexceptions:gear.aegis", 1.0F, 1.0F);
     }
 }

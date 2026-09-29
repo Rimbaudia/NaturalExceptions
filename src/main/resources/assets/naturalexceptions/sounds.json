@@ -1,4 +1,10 @@
 {
+  "gear.aegis": {
+    "category": "player",
+    "sounds": [
+      "gear/aegis"
+    ]
+  },
   "gear.claw_scrape": {
     "category": "player",
     "sounds": [
@@ -11,10 +17,64 @@
       "gear/cloud_jump"
     ]
   },
+  "gear.dash": {
+    "category": "player",
+    "sounds": [
+      "gear/dash"
+    ]
+  },
   "gear.glide": {
     "category": "player",
     "sounds": [
       "gear/glide"
+    ]
+  },
+  "trap.crumble": {
+    "category": "block",
+    "sounds": [
+      "trap/crumble"
+    ]
+  },
+  "trap.gale": {
+    "category": "block",
+    "sounds": [
+      "trap/gale"
+    ]
+  },
+  "warden.charge": {
+    "category": "hostile",
+    "sounds": [
+      "warden/charge"
+    ]
+  },
+  "warden.phase": {
+    "category": "hostile",
+    "sounds": [
+      "warden/phase"
+    ]
+  },
+  "warden.roar": {
+    "category": "hostile",
+    "sounds": [
+      "warden/roar"
+    ]
+  },
+  "warden.slam": {
+    "category": "hostile",
+    "sounds": [
+      "warden/slam"
+    ]
+  },
+  "weapon.maul_charge": {
+    "category": "player",
+    "sounds": [
+      "weapon/maul_charge"
+    ]
+  },
+  "weapon.maul_slam": {
+    "category": "player",
+    "sounds": [
+      "weapon/maul_slam"
     ]
   },
   "weapon.shard_fire": {

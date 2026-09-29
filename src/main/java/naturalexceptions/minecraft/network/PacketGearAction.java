@@ -17,7 +17,8 @@ public final class PacketGearAction implements IMessage {
     public enum Action {
         DOUBLE_JUMP,
         GLIDE,
-        CLIMB
+        CLIMB,
+        DASH
     }
 
     private Action action = Action.GLIDE;

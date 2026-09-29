@@ -36,7 +36,17 @@ public final class ItemTreasureGear extends Item implements IWearable {
 
     @Override
     public EnumRarity getRarity(ItemStack stack) {
-        return EnumRarity.rare;
+        return treasure.relic() ? EnumRarity.epic : EnumRarity.rare;
+    }
+
+    /** The Warden's Visor lends a soft Lumenite sight: night vision kept topped up while worn. */
+    @Override
+    public void onWornTick(EntityPlayer player, ItemStack stack) {
+        if (treasure != Treasure.WARDENS_VISOR) return;
+        net.minecraft.potion.PotionEffect current = player
+            .getActivePotionEffect(net.minecraft.potion.Potion.nightVision);
+        if (current == null || current.getDuration() < 240) player.addPotionEffect(
+            new net.minecraft.potion.PotionEffect(net.minecraft.potion.Potion.nightVision.id, 260, 0, true));
     }
 
     /** How many of this treasure the player is wearing (two for a pair of claws, up to ten bands). */
@@ -69,9 +79,10 @@ public final class ItemTreasureGear extends Item implements IWearable {
     @Override
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public void addInformation(ItemStack stack, EntityPlayer player, List lines, boolean advanced) {
-        lines.add("§7" + treasure.effect());
+        if (treasure.relic()) lines.add("\u00a75Warden Relic");
+        lines.add("\u00a77" + treasure.effect());
         lines.add(
-            "§8Worn: " + treasure.kind()
+            "\u00a78Worn: " + treasure.kind()
                 .label() + " (Gear tab)");
     }
 }

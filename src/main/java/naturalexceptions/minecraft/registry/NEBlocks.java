@@ -36,6 +36,11 @@ public final class NEBlocks {
     public static Block windbloom;
     public static Block wardedSkystone;
     public static Block vaultGate;
+    public static Block triggerStone;
+    public static Block crumblingSkystone;
+    public static Block galeVent;
+    public static Block sealedAlcove;
+    public static Block wardenSeal;
 
     private NEBlocks() {}
 
@@ -82,6 +87,13 @@ public final class NEBlocks {
         windbloom = new naturalexceptions.minecraft.block.BlockWindbloom().setCreativeTab(NECreativeTab.INSTANCE);
         wardedSkystone = new naturalexceptions.minecraft.block.BlockWardedSkystone();
         vaultGate = new naturalexceptions.minecraft.block.BlockVaultGate();
+        // Dungeon devices: in the creative tab so they can be built with and tried out.
+        triggerStone = new naturalexceptions.minecraft.block.BlockTriggerStone().setCreativeTab(NECreativeTab.INSTANCE);
+        crumblingSkystone = new naturalexceptions.minecraft.block.BlockCrumblingSkystone()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        galeVent = new naturalexceptions.minecraft.block.BlockGaleVent().setCreativeTab(NECreativeTab.INSTANCE);
+        sealedAlcove = new naturalexceptions.minecraft.block.BlockSealedAlcove().setCreativeTab(NECreativeTab.INSTANCE);
+        wardenSeal = new naturalexceptions.minecraft.block.BlockWardenSeal().setCreativeTab(NECreativeTab.INSTANCE);
 
         try {
             net.minecraft.tileentity.TileEntity.addMapping(TileEntityStarterSmelter.class, "starter_smelter");
@@ -137,6 +149,11 @@ public final class NEBlocks {
                 "skystone_bricks");
             GameRegistry.registerBlock(wardedSkystone, "warded_skystone");
             GameRegistry.registerBlock(vaultGate, "vault_gate");
+            GameRegistry.registerBlock(triggerStone, "trigger_stone");
+            GameRegistry.registerBlock(crumblingSkystone, "crumbling_skystone");
+            GameRegistry.registerBlock(galeVent, "gale_vent");
+            GameRegistry.registerBlock(sealedAlcove, "sealed_alcove");
+            GameRegistry.registerBlock(wardenSeal, "warden_seal");
             GameRegistry.registerBlock(windbloom, "windbloom");
         } catch (Throwable t) {
             System.out.println("DEBUG registerBlock caught: " + t);
@@ -145,6 +162,14 @@ public final class NEBlocks {
 
         try {
             GameRegistry.registerTileEntity(TileEntityStarterSmelter.class, "starter_smelter");
+        } catch (Throwable ignored) {}
+        try {
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.block.TileEntityGaleVent.class,
+                "naturalexceptions_gale_vent");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.block.TileEntityWardenSeal.class,
+                "naturalexceptions_warden_seal");
         } catch (Throwable ignored) {}
         try {
             GameRegistry.registerTileEntity(naturalexceptions.minecraft.fluid.TileEntityFluidCell.class, "fluid_cell");

@@ -17,11 +17,14 @@ import cpw.mods.fml.relauncher.SideOnly;
 
 /**
  * The pale carved stone of the sky dungeons, whole, cracked (meta 1) or mossy (meta 2). It does not break under a
- * Fallen Star's impact or any explosion, so it is what you build with where stars fall.
+ * Fallen Star's impact or any explosion, so it is what you build with where stars fall. Meta 3 is a loose patch
+ * walling off a dungeon's secret room: it looks nearly cracked, gives way to a few pickaxe (or fist) blows, and
+ * drops as cracked bricks.
  */
 public final class BlockSkystoneBricks extends Block {
 
     public static final String[] VARIANTS = { "skystone_bricks", "skystone_bricks_cracked", "skystone_bricks_mossy" };
+    public static final int LOOSE = 3;
 
     @SideOnly(Side.CLIENT)
     private IIcon[] icons;
@@ -39,10 +42,11 @@ public final class BlockSkystoneBricks extends Block {
     @Override
     @SideOnly(Side.CLIENT)
     public void registerBlockIcons(IIconRegister register) {
-        icons = new IIcon[VARIANTS.length];
+        icons = new IIcon[VARIANTS.length + 1];
         icons[0] = register.registerIcon("naturalexceptions:skystone_bricks");
         icons[1] = register.registerIcon("naturalexceptions:skystone_bricks_cracked");
         icons[2] = register.registerIcon("naturalexceptions:skystone_bricks_mossy");
+        icons[LOOSE] = register.registerIcon("naturalexceptions:skystone_bricks_loose");
     }
 
     @Override
@@ -53,7 +57,12 @@ public final class BlockSkystoneBricks extends Block {
 
     @Override
     public int damageDropped(int meta) {
-        return Math.max(0, Math.min(VARIANTS.length - 1, meta));
+        return meta == LOOSE ? 1 : Math.max(0, Math.min(VARIANTS.length - 1, meta));
+    }
+
+    @Override
+    public float getBlockHardness(World world, int x, int y, int z) {
+        return world.getBlockMetadata(x, y, z) == LOOSE ? 0.6F : super.getBlockHardness(world, x, y, z);
     }
 
     @Override
