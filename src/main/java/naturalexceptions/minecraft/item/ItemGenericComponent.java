@@ -40,6 +40,8 @@ public final class ItemGenericComponent extends Item {
     @SideOnly(Side.CLIENT)
     private IIcon iconHandle;
     @SideOnly(Side.CLIENT)
+    private IIcon iconHandleWood;
+    @SideOnly(Side.CLIENT)
     private IIcon iconPickHead;
     @SideOnly(Side.CLIENT)
     private IIcon iconAxeHead;
@@ -386,6 +388,8 @@ public final class ItemGenericComponent extends Item {
         this.iconPlate = reg.registerIcon("naturalexceptions:hammered_copper_plate");
         this.iconRod = reg.registerIcon("naturalexceptions:copper_rod");
         this.iconHandle = reg.registerIcon("naturalexceptions:component_handle");
+        // Wood is drawn in its own stick colours, like a finished tool's handle, rather than tinted grey.
+        this.iconHandleWood = reg.registerIcon("naturalexceptions:tool_handle_pickaxe_wood");
         this.iconPickHead = reg.registerIcon("naturalexceptions:component_pick_head");
         this.iconAxeHead = reg.registerIcon("naturalexceptions:component_axe_head");
         this.iconShovelHead = reg.registerIcon("naturalexceptions:component_shovel_head");
@@ -413,6 +417,7 @@ public final class ItemGenericComponent extends Item {
                 case ROD:
                     return iconRod != null ? iconRod : itemIcon;
                 case HANDLE:
+                    if (isWooden(comp) && iconHandleWood != null) return iconHandleWood;
                     return iconHandle != null ? iconHandle : itemIcon;
                 case BLADE:
                     return iconBlade != null ? iconBlade : itemIcon;
@@ -437,6 +442,7 @@ public final class ItemGenericComponent extends Item {
     public int getColorFromItemStack(ItemStack stack, int pass) {
         ComponentInstance comp = getComponent(stack);
         if (comp != null) {
+            if (comp.geometryId() == GeometryId.HANDLE && isWooden(comp)) return 0xFFFFFF;
             MaterialRef ref = comp.materialRef();
             if (comp.geometryId() != GeometryId.HANDLE && ref != null
                 && ("iron".equalsIgnoreCase(
@@ -451,6 +457,11 @@ public final class ItemGenericComponent extends Item {
                 .getSolidColor(comp.materialRef(), comp.stateKey());
         }
         return 0xFFFFFF;
+    }
+
+    private static boolean isWooden(ComponentInstance comp) {
+        return comp != null && BuiltinMaterials.WOOD.ref()
+            .equals(comp.materialRef());
     }
 
     @Override

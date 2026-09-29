@@ -413,7 +413,10 @@ public class BasicToolCompletionTest {
         // 5. Standalone components dynamic tinting
         ItemGenericComponent compItem = (ItemGenericComponent) NEItems.genericComponent;
         ItemStack handleStack = ItemGenericComponent.createWoodenHandle();
-        assertEquals(0x8B5A2B, compItem.getColorFromItemStack(handleStack, 0), "Wood Handle item must tint Wood brown");
+        assertEquals(
+            0xFFFFFF,
+            compItem.getColorFromItemStack(handleStack, 0),
+            "Wood Handle is drawn in its own stick colours, untinted");
 
         ItemStack cuHeadStack = ItemGenericComponent.createStack(cuHead);
         assertEquals(0xD36C4C, compItem.getColorFromItemStack(cuHeadStack, 0), "Copper head item must tint Copper");
@@ -535,7 +538,7 @@ public class BasicToolCompletionTest {
         ItemStack handleStack = ItemGenericComponent.createWoodenHandle();
         IIcon handleIcon = compItem.getIconIndex(handleStack);
         assertNotNull(handleIcon);
-        assertEquals("naturalexceptions:component_handle", handleIcon.getIconName());
+        assertEquals("naturalexceptions:tool_handle_pickaxe_wood", handleIcon.getIconName());
     }
 
     @Test

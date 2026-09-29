@@ -10,15 +10,16 @@ import naturalexceptions.minecraft.registry.NEBlocks;
 
 /**
  * The one modelled airborne hazard: smoke from a Starter Smelter fire that is actually burning. The amount
- * scales with the fire's heat output, falls off with distance, and is diluted in open air. Nothing else (a lit
+ * scales with the fire's heat output and falls off with distance. Under open sky the smoke rises away and is not
+ * inhaled, and a smelter whose shell is incomplete has a stalled fire that makes none. Nothing else (a lit
  * vanilla furnace, a torch) is treated as a smoke source; atmosphere simulation is out of scope.
  */
 public final class SmelterSmoke {
 
     /** Smoke-laden air inhaled per second, per watt of fire output, next to an enclosed fire. */
     static final double GRAMS_PER_SECOND_PER_WATT = 1.0e-5;
-    /** Open sky carries most of the smoke away. */
-    static final double OPEN_AIR_FACTOR = 0.25;
+    /** Open sky carries the smoke away. */
+    static final double OPEN_AIR_FACTOR = 0.0;
     static final int SEARCH_RADIUS = 4;
 
     private SmelterSmoke() {}
@@ -37,6 +38,7 @@ public final class SmelterSmoke {
         int py = MathHelper.floor_double(player.posY + player.getEyeHeight());
         int pz = MathHelper.floor_double(player.posZ);
         boolean openAir = world.canBlockSeeTheSky(px, py, pz);
+        if (openAir && OPEN_AIR_FACTOR <= 0.0) return 0.0;
         double total = 0.0;
         for (int x = px - SEARCH_RADIUS; x <= px + SEARCH_RADIUS; x++) {
             for (int y = py - 2; y <= py + 2; y++) {
@@ -45,7 +47,8 @@ public final class SmelterSmoke {
                     TileEntity tile = world.getTileEntity(x, y, z);
                     if (!(tile instanceof TileEntityStarterSmelter)) continue;
                     TileEntityStarterSmelter smelter = (TileEntityStarterSmelter) tile;
-                    if (!smelter.vesselState()
+                    // An incomplete shell pauses the smelter; its buffered fire is stalled, not burning.
+                    if (!smelter.isStructureValid() || !smelter.vesselState()
                         .fuelState()
                         .isBurning()) continue;
                     double dx = x + 0.5 - player.posX;

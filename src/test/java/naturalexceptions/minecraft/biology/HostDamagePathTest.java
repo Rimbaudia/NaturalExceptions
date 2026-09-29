@@ -60,7 +60,7 @@ final class HostDamagePathTest {
         double far = SmelterSmoke.gramsPerSecond(200_000.0, 4.0, false);
         double open = SmelterSmoke.gramsPerSecond(200_000.0, 1.0, true);
         assertTrue(near > far && far > 0.0);
-        assertTrue(open < near);
+        assertEquals(0.0, open, 0.0, "open sky carries the smoke away");
         assertEquals(0.0, SmelterSmoke.gramsPerSecond(0.0, 1.0, false), 0.0, "no fire, no smoke");
         assertEquals(0.0, SmelterSmoke.gramsPerSecond(200_000.0, 20.0, false), 0.0);
     }
