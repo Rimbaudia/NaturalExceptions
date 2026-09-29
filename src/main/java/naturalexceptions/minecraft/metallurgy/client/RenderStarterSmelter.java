@@ -161,37 +161,37 @@ public final class RenderStarterSmelter extends TileEntitySpecialRenderer {
         }
     }
 
+    /**
+     * Draws the vessel's layers as stacked boxes filling the cavity, bottom up. Coordinates are relative to this
+     * controller block, so everything is drawn after translating to the renderer's (x, y, z).
+     */
     private void renderVesselContents(TileEntityStarterSmelter smelter, double x, double y, double z) {
         naturalexceptions.minecraft.multiblock.SmelterVesselGeometry geometry = smelter.vesselGeometry();
         if (geometry == null || smelter.vesselCapacityLitres() <= 0.0) return;
         java.util.List<AggregateLayer> layers = smelter.vesselState()
             .layers();
-        if (layers.isEmpty()) return;
-        if (geometry.cavityCellCount() == 0) return;
-        int half = (geometry.interiorWidth() + 2) / 2;
-        int minLocalX = -half + 1, maxLocalX = half - 1;
-        int minLocalZ = 1, maxLocalZ = geometry.interiorDepth();
-        int[] p00 = geometry.world(minLocalX, 0, minLocalZ);
-        int[] pX = geometry.world(maxLocalX, 0, minLocalZ);
-        int[] pZ = geometry.world(minLocalX, 0, maxLocalZ);
-        int[] pXZ = geometry.world(maxLocalX, 0, maxLocalZ);
-        int[] basisX = geometry.world(minLocalX + 1, 0, minLocalZ);
-        int[] basisZ = geometry.world(minLocalX, 0, minLocalZ + 1);
-        double[] q00 = localCorner(p00, smelter);
-        double[] q10 = localCorner(pX, smelter, basisX[0] - p00[0], basisX[2] - p00[2]);
-        double[] q01 = localCorner(pZ, smelter, basisZ[0] - p00[0], basisZ[2] - p00[2]);
-        double[] q11 = localCorner(
-            pXZ,
-            smelter,
-            basisX[0] - p00[0] + basisZ[0] - p00[0],
-            basisX[2] - p00[2] + basisZ[2] - p00[2]);
-        double baseY = 0.04D;
-        double yCursor = baseY;
-        int[] top0 = geometry.world(0, geometry.interiorHeight(), 1);
+        if (layers.isEmpty() || geometry.cavityCellCount() == 0) return;
+        double[] box = TileEntityStarterSmelter
+            .cavityBoxRelative(smelter.xCoord, smelter.yCoord, smelter.zCoord, geometry.cavityCells());
+        // Just inside the cavity walls, so the faces never fight with the bricks around them.
+        double inset = 0.002D;
+        double minX = box[0] + inset, maxX = box[3] - inset;
+        double minZ = box[2] + inset, maxZ = box[5] - inset;
+        double floor = box[1] + inset;
+        double ceiling = box[4] - 0.06D;
+        int[] above = { (int) Math.floor(smelter.xCoord + (box[0] + box[3]) / 2.0), smelter.yCoord + (int) box[4],
+            (int) Math.floor(smelter.zCoord + (box[2] + box[5]) / 2.0) };
         int roomLight = smelter.getWorldObj() != null ? smelter.getWorldObj()
-            .getLightBrightnessForSkyBlocks(top0[0], top0[1], top0[2], 0) : 0xF000F0;
-        // The cavity may be up to three blocks tall; contents stop just under its top.
-        double ceiling = geometry.interiorHeight() - 0.06D;
+            .getLightBrightnessForSkyBlocks(above[0], above[1], above[2], 0) : 0xF000F0;
+
+        GL11.glPushMatrix();
+        GL11.glTranslated(x, y, z);
+        GL11.glDisable(GL11.GL_CULL_FACE);
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
+        GL11.glDisable(GL11.GL_LIGHTING);
+        GL11.glEnable(GL11.GL_BLEND);
+        OpenGlHelper.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1, 0);
+        double yCursor = floor;
         for (AggregateLayer layer : layers) {
             boolean molten = layer.phaseType() == AggregatePhaseType.MOLTEN_METAL
                 || layer.phaseType() == AggregatePhaseType.SLAG;
@@ -204,51 +204,48 @@ public final class RenderStarterSmelter extends TileEntitySpecialRenderer {
             int color = molten
                 ? MaterialAppearance.getMoltenColor(layer.materialRef(), layer.stateKey(), layer.temperatureKelvin())
                 : darken(MaterialAppearance.getSolidColor(layer.materialRef(), layer.stateKey()), 0.55F);
-            // Molten metal and slag glow; unmelted charge is lit like the room around it.
+            // Molten metal and slag glow; unmelted charge is lit like the air above it.
             int light = molten ? 0xF000F0 : roomLight;
             OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, light % 65536, light / 65536);
-            float red = (color >> 16 & 255) / 255.0F;
-            float green = (color >> 8 & 255) / 255.0F;
-            float blue = (color & 255) / 255.0F;
-            GL11.glPushMatrix();
-            GL11.glDisable(GL11.GL_TEXTURE_2D);
-            GL11.glDisable(GL11.GL_CULL_FACE);
-            GL11.glEnable(GL11.GL_BLEND);
-            OpenGlHelper.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1, 0);
-            GL11.glColor4f(red, green, blue, 0.96F);
-            Tessellator t = Tessellator.instance;
+            GL11.glColor4f((color >> 16 & 255) / 255.0F, (color >> 8 & 255) / 255.0F, (color & 255) / 255.0F, 1.0F);
             double bottom = yCursor;
             double top = Math.min(ceiling, bottom + layerHeight);
-            t.startDrawingQuads();
-            // The local-to-world transformed corners preserve the true rectangle for all rotations.
-            t.addVertex(q00[0], top, q00[1]);
-            t.addVertex(q01[0], top, q01[1]);
-            t.addVertex(q11[0], top, q11[1]);
-            t.addVertex(q10[0], top, q10[1]);
-            t.addVertex(q00[0], bottom, q00[1]);
-            t.addVertex(q10[0], bottom, q10[1]);
-            t.addVertex(q10[0], top, q10[1]);
-            t.addVertex(q00[0], top, q00[1]);
-            t.addVertex(q11[0], bottom, q11[1]);
-            t.addVertex(q01[0], bottom, q01[1]);
-            t.addVertex(q01[0], top, q01[1]);
-            t.addVertex(q11[0], top, q11[1]);
-            t.addVertex(q01[0], bottom, q01[1]);
-            t.addVertex(q00[0], bottom, q00[1]);
-            t.addVertex(q00[0], top, q00[1]);
-            t.addVertex(q01[0], top, q01[1]);
-            t.addVertex(q10[0], bottom, q10[1]);
-            t.addVertex(q11[0], bottom, q11[1]);
-            t.addVertex(q11[0], top, q11[1]);
-            t.addVertex(q10[0], top, q10[1]);
-            t.draw();
-            GL11.glDisable(GL11.GL_BLEND);
-            GL11.glEnable(GL11.GL_CULL_FACE);
-            GL11.glEnable(GL11.GL_TEXTURE_2D);
-            GL11.glColor4f(1F, 1F, 1F, 1F);
-            GL11.glPopMatrix();
+            drawBox(minX, bottom, minZ, maxX, top, maxZ);
             yCursor = top;
         }
+        GL11.glDisable(GL11.GL_BLEND);
+        GL11.glEnable(GL11.GL_CULL_FACE);
+        GL11.glEnable(GL11.GL_LIGHTING);
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glColor4f(1F, 1F, 1F, 1F);
+        GL11.glPopMatrix();
+    }
+
+    /** An axis-aligned box: top and four sides (the bottom rests on the cavity floor). */
+    private static void drawBox(double x0, double y0, double z0, double x1, double y1, double z1) {
+        Tessellator t = Tessellator.instance;
+        t.startDrawingQuads();
+        t.addVertex(x0, y1, z0);
+        t.addVertex(x0, y1, z1);
+        t.addVertex(x1, y1, z1);
+        t.addVertex(x1, y1, z0);
+        t.addVertex(x0, y0, z0);
+        t.addVertex(x0, y1, z0);
+        t.addVertex(x1, y1, z0);
+        t.addVertex(x1, y0, z0);
+        t.addVertex(x1, y0, z1);
+        t.addVertex(x1, y1, z1);
+        t.addVertex(x0, y1, z1);
+        t.addVertex(x0, y0, z1);
+        t.addVertex(x0, y0, z1);
+        t.addVertex(x0, y1, z1);
+        t.addVertex(x0, y1, z0);
+        t.addVertex(x0, y0, z0);
+        t.addVertex(x1, y0, z0);
+        t.addVertex(x1, y1, z0);
+        t.addVertex(x1, y1, z1);
+        t.addVertex(x1, y0, z1);
+        t.draw();
     }
 
     /** Thinnest layer drawn, in blocks: one texel. */
@@ -259,14 +256,6 @@ public final class RenderStarterSmelter extends TileEntitySpecialRenderer {
         int g = Math.round(((rgb >> 8) & 0xFF) * factor);
         int b = Math.round((rgb & 0xFF) * factor);
         return (r << 16) | (g << 8) | b;
-    }
-
-    private static double[] localCorner(int[] block, TileEntityStarterSmelter smelter) {
-        return new double[] { block[0] - smelter.xCoord, block[2] - smelter.zCoord };
-    }
-
-    private static double[] localCorner(int[] block, TileEntityStarterSmelter smelter, int dx, int dz) {
-        return new double[] { block[0] - smelter.xCoord + dx, block[2] - smelter.zCoord + dz };
     }
 
     private void renderHearthLabel(ItemStack workpiece, ActiveThermalState thermal, double x, double y, double z) {

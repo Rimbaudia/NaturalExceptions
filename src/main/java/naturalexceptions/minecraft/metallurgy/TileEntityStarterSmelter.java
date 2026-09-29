@@ -176,6 +176,25 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
         return net.minecraft.util.AxisAlignedBB.getBoundingBox(box[0], box[1], box[2], box[3], box[4], box[5]);
     }
 
+    /**
+     * The cavity's box relative to the controller at (x, y, z): {minX, minY, minZ, maxX, maxY, maxZ}, where max is
+     * one past the last cell. The cavity is always an axis-aligned block of cells, whatever way the smelter faces.
+     */
+    public static double[] cavityBoxRelative(int x, int y, int z, java.util.List<int[]> worldCells) {
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+        for (int[] w : worldCells) {
+            minX = Math.min(minX, w[0]);
+            minY = Math.min(minY, w[1]);
+            minZ = Math.min(minZ, w[2]);
+            maxX = Math.max(maxX, w[0] + 1);
+            maxY = Math.max(maxY, w[1] + 1);
+            maxZ = Math.max(maxZ, w[2] + 1);
+        }
+        if (minX == Integer.MAX_VALUE) return new double[] { 0, 0, 0, 0, 0, 0 };
+        return new double[] { minX - x, minY - y, minZ - z, maxX - x, maxY - y, maxZ - z };
+    }
+
     /** {minX, minY, minZ, maxX, maxY, maxZ} covering the controller and every cavity cell, one block of margin. */
     static int[] renderBounds(int x, int y, int z, java.util.List<int[]> worldCells) {
         int[] box = { x, y, z, x + 1, y + 1, z + 1 };
