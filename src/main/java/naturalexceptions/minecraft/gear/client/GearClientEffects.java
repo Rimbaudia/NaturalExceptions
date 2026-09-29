@@ -55,7 +55,11 @@ public final class GearClientEffects {
             PlayerGear.get(player)
                 .applySync(pending);
         }
-        if (mc.isGamePaused() || player.capabilities.isFlying || player.isRiding()) return;
+        // Keys typed into chat or any other screen are text, not movement: space in chat is not a jump.
+        if (mc.isGamePaused() || mc.currentScreen != null || player.capabilities.isFlying || player.isRiding()) {
+            jumpWasDown = false;
+            return;
+        }
 
         boolean jumpDown = mc.gameSettings.keyBindJump.getIsKeyPressed();
         boolean jumpPressed = jumpDown && !jumpWasDown;

@@ -74,6 +74,11 @@ public final class NEKnowledgeKeyHandler {
         }
     }
 
+    /** Only item screens take the K/R/U hotkeys; every other screen (chat above all) takes letters as text. */
+    static boolean acceptsHotkeys(net.minecraft.client.gui.GuiScreen screen) {
+        return screen instanceof net.minecraft.client.gui.inventory.GuiContainer;
+    }
+
     /**
      * Records the hovered ItemStack and displays subtle keybind hints.
      */
@@ -112,6 +117,15 @@ public final class NEKnowledgeKeyHandler {
         boolean freshR = rDown && !wasRecipeKeyDown;
         boolean freshU = uDown && !wasUsageKeyDown;
         boolean freshK = kDown && !wasOpenKeyDown;
+
+        // Hotkeys belong to item screens only. Chat, signs, books, menus and every other screen take letters as
+        // text: typing "k" in chat must never open the browser.
+        if (!acceptsHotkeys(mc.currentScreen)) {
+            wasRecipeKeyDown = rDown;
+            wasUsageKeyDown = uDown;
+            wasOpenKeyDown = kDown;
+            return;
+        }
 
         if (mc.currentScreen instanceof net.minecraft.client.gui.inventory.GuiContainer
             && !InventoryBrowserOverlay.mayRunGlobalKeybinds()) {
