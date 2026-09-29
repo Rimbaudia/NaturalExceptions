@@ -188,6 +188,7 @@ public final class InventoryBrowserOverlay {
         InventoryBrowserOverlay overlay = INSTANCE;
         if (gui == null || gui != overlay.lastContainer || overlay.lastLayout == null) return false;
         if (!overlay.lastLayout.isPanelVisible() || !overlay.userEnabled) {
+            if (tabbed(gui)) return false;
             int toggleY = toggleY(gui, overlay.lastLayout);
             if (x >= overlay.lastLayout.toggleX() && x < overlay.lastLayout.toggleX() + overlay.lastLayout.toggleWidth()
                 && y >= toggleY
@@ -339,6 +340,7 @@ public final class InventoryBrowserOverlay {
         if (gui == null || gui != overlay.lastContainer || overlay.lastLayout == null) return false;
         if (overlay.lastLayout.isPanelVisible() && overlay.userEnabled && overlay.panelContains(mouseX, mouseY))
             return true;
+        if (tabbed(gui)) return false;
         int toggleY = toggleY(gui, overlay.lastLayout);
         return mouseX >= overlay.lastLayout.toggleX()
             && mouseX < overlay.lastLayout.toggleX() + overlay.lastLayout.toggleWidth()
@@ -677,8 +679,22 @@ public final class InventoryBrowserOverlay {
         } catch (ReflectiveOperationException ignored) {}
     }
 
+    /** Whether the item panel is switched on (the Items tab or the toggle hint flips it). */
+    public static boolean isEnabled() {
+        return INSTANCE.userEnabled;
+    }
+
+    public static void toggleEnabled() {
+        INSTANCE.userEnabled = !INSTANCE.userEnabled;
+    }
+
+    /** Screens with inventory tabs switch the panel from their Items tab instead of the toggle hint. */
+    private static boolean tabbed(GuiScreen gui) {
+        return naturalexceptions.minecraft.gear.client.InventoryTabs.showsTabs(gui);
+    }
+
     private void drawToggleHint(GuiScreen gui, InventoryOverlayLayout.Layout layout) {
-        if (layout == null || (layout.isPanelVisible() && userEnabled)) return;
+        if (layout == null || (layout.isPanelVisible() && userEnabled) || tabbed(gui)) return;
         int y = toggleY(lastContainer, layout);
         drawBeveledButton(gui, layout.toggleX(), y, layout.toggleWidth(), 12, true);
         gui.drawCenteredString(

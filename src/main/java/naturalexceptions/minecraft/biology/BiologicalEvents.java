@@ -194,12 +194,10 @@ public final class BiologicalEvents {
         long now = player.worldObj.getTotalWorldTime();
         state.advanceTo(Math.max(state.lastResolvedTick(), now));
         state.clearExposureProtection();
-        for (net.minecraft.item.ItemStack stack : player.inventory.mainInventory) {
-            if (stack != null && stack.getItem() instanceof naturalexceptions.minecraft.item.ItemExposureMask
-                && naturalexceptions.minecraft.item.ItemExposureMask.isWorn(stack))
-                state.addExposureProtection(
-                    new naturalexceptions.core.biology.ExposureProtection(ExposureRoute.INHALATION, 0.75));
-        }
+        if (naturalexceptions.minecraft.item.ItemExposureMask.isWornBy(player)) state.addExposureProtection(
+            new naturalexceptions.core.biology.ExposureProtection(
+                ExposureRoute.INHALATION,
+                naturalexceptions.minecraft.item.ItemExposureMask.INHALATION_ATTENUATION));
         double smokeGrams = SmelterSmoke.gramsPerSecondAt(player);
         boolean smoke = smokeGrams > 0.0;
         if (smoke) {

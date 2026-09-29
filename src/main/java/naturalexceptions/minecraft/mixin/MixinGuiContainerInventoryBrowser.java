@@ -22,6 +22,11 @@ public abstract class MixinGuiContainerInventoryBrowser {
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void naturalexceptions$handleInventoryBrowserClick(int mouseX, int mouseY, int mouseButton,
         CallbackInfo ci) {
+        if (naturalexceptions.minecraft.gear.client.InventoryTabs
+            .handleClick((GuiContainer) (Object) this, mouseX, mouseY, mouseButton)) {
+            ci.cancel();
+            return;
+        }
         if (InventoryBrowserOverlay
             .handleContainerMouseClick((GuiContainer) (Object) this, mouseX, mouseY, mouseButton)) {
             ci.cancel();

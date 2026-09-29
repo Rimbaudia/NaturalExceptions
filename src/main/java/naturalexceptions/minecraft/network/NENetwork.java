@@ -33,6 +33,8 @@ public final class NENetwork {
         registerClientboundSnapshotHandler(clientHandler);
         CHANNEL.registerMessage(PacketP8Status.Handler.class, PacketP8Status.class, 2, Side.CLIENT);
         CHANNEL.registerMessage(PacketBodyStatus.Handler.class, PacketBodyStatus.class, 3, Side.CLIENT);
+        CHANNEL.registerMessage(PacketGearAppearance.Handler.class, PacketGearAppearance.class, 4, Side.CLIENT);
+        CHANNEL.registerMessage(PacketOpenGear.Handler.class, PacketOpenGear.class, 5, Side.SERVER);
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })

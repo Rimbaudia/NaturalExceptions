@@ -43,6 +43,8 @@ public final class NaturalExceptions {
         if (event.getSide()
             .isClient()) {
             registerResourcePacks();
+            // Before the first texture stitch, so empty gear slots have their silhouettes.
+            naturalexceptions.minecraft.gear.client.GearIcons.register();
         }
     }
 
@@ -71,6 +73,7 @@ public final class NaturalExceptions {
         naturalexceptions.minecraft.network.NENetwork.init();
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.knowledge.PlayerKnowledgeEvents());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.biology.BiologicalEvents());
+        MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.gear.GearEvents());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.event.StarRainWorldMaterializer());
         FMLCommonHandler.instance()
             .bus()
@@ -116,6 +119,8 @@ public final class NaturalExceptions {
                 .register(cues);
             naturalexceptions.minecraft.knowledge.client.NEKnowledgeKeyHandler.register();
             naturalexceptions.minecraft.biology.client.BodyStatusPanel.register();
+            naturalexceptions.minecraft.gear.client.InventoryTabs.register();
+            naturalexceptions.minecraft.gear.client.GearRenderer.register();
         }
     }
 

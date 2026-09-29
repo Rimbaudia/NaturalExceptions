@@ -5,13 +5,10 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.inventory.GuiContainer;
-import net.minecraft.client.gui.inventory.GuiInventory;
 import net.minecraft.util.StatCollector;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
@@ -33,7 +30,6 @@ import naturalexceptions.minecraft.network.PacketBodyStatus;
 @SideOnly(Side.CLIENT)
 public final class BodyStatusPanel {
 
-    private static final int BUTTON_ID = 0x4E45B0;
     private static final int PANEL_BACKGROUND = 0xFFC6C6C6;
     private static final int PANEL_BORDER = 0xFF373737;
     private static final int GUI_TEXT = 0xFF404040;
@@ -50,8 +46,6 @@ public final class BodyStatusPanel {
     /** Open/closed survives closing and reopening the inventory for the rest of the session. */
     private boolean open;
     private int scroll;
-    /** The tab on the current inventory screen. */
-    private BodyTab tab;
 
     private BodyStatusPanel() {}
 
@@ -59,72 +53,41 @@ public final class BodyStatusPanel {
         MinecraftForge.EVENT_BUS.register(INSTANCE);
     }
 
-    /** The tab above the inventory that opens and closes the panel. */
-    private final class BodyTab extends GuiButton {
-
-        BodyTab(int x, int y) {
-            super(BUTTON_ID, x, y, BodyStatusLayout.TAB_WIDTH, BodyStatusLayout.TAB_HEIGHT, "Body");
-        }
-
-        @Override
-        public void drawButton(Minecraft mc, int mouseX, int mouseY) {
-            if (!visible) return;
-            boolean hover = mouseX >= xPosition && mouseY >= yPosition
-                && mouseX < xPosition + width
-                && mouseY < yPosition + height;
-            drawBevel(xPosition, yPosition, width, height, !open);
-            if (hover)
-                Gui.drawRect(xPosition + 1, yPosition + 1, xPosition + width - 1, yPosition + height - 1, 0x30FFFFFF);
-            String text = open ? "Body \u00ab" : "Body";
-            mc.fontRenderer.drawString(
-                text,
-                xPosition + (width - mc.fontRenderer.getStringWidth(text)) / 2,
-                yPosition + 2,
-                GUI_TEXT);
-            BodyStatusSnapshot body = PacketBodyStatus.clientLatest;
-            if (!open && body != null && needsAttention(body)) {
-                Gui.drawRect(xPosition + width - 5, yPosition + 2, xPosition + width - 2, yPosition + 5, 0xFFC0302A);
-            }
-        }
+    public static boolean isOpen() {
+        return INSTANCE.open;
     }
 
-    @SubscribeEvent
-    public void onInitGui(GuiScreenEvent.InitGuiEvent.Post event) {
-        if (!(event.gui instanceof GuiInventory)) return;
-        GuiContainer gui = (GuiContainer) event.gui;
-        BodyStatusLayout layout = layoutFor(gui);
-        tab = new BodyTab(layout.tabX(), layout.tabY());
-        event.buttonList.add(tab);
-        Mouse.getDWheel(); // drop wheel movement made before the screen opened
+    public static void toggle() {
+        INSTANCE.open = !INSTANCE.open;
+        INSTANCE.scroll = 0;
+        Mouse.getDWheel(); // drop wheel movement made while the panel was closed
     }
 
-    @SubscribeEvent
-    public void onAction(GuiScreenEvent.ActionPerformedEvent.Pre event) {
-        if (!(event.button instanceof BodyTab)) return;
-        open = !open;
-        scroll = 0;
-        event.setCanceled(true);
+    /** True when the body has something worth looking at (an open injury or harmful exposure). */
+    public static boolean needsAttention() {
+        BodyStatusSnapshot body = PacketBodyStatus.clientLatest;
+        return body != null && needsAttention(body);
+    }
+
+    /** The screens the panel appears beside. */
+    static boolean hosts(GuiScreen gui) {
+        return naturalexceptions.minecraft.gear.client.InventoryTabs.showsTabs(gui);
     }
 
     @SubscribeEvent
     public void onDrawPre(GuiScreenEvent.DrawScreenEvent.Pre event) {
-        if (!(event.gui instanceof GuiInventory)) {
+        if (!hosts(event.gui)) {
             InventoryOverlayLayout.reserveLeft(0);
             return;
         }
         GuiContainer gui = (GuiContainer) event.gui;
         BodyStatusLayout layout = layoutFor(gui);
         InventoryOverlayLayout.reserveLeft(open ? layout.reservedLeftWidth(get(GUI_LEFT, gui, 0)) : 0);
-        // Potion effects move the inventory after it is laid out; keep the tab on its corner.
-        if (tab != null) {
-            tab.xPosition = layout.tabX();
-            tab.yPosition = layout.tabY();
-        }
     }
 
     @SubscribeEvent
     public void onDrawPost(GuiScreenEvent.DrawScreenEvent.Post event) {
-        if (!open || !(event.gui instanceof GuiInventory)) return;
+        if (!open || !hosts(event.gui)) return;
         GuiContainer gui = (GuiContainer) event.gui;
         BodyStatusLayout layout = layoutFor(gui);
         GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_CURRENT_BIT);

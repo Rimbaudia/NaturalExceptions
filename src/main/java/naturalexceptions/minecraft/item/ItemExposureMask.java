@@ -1,16 +1,21 @@
 package naturalexceptions.minecraft.item;
 
+import java.util.List;
+
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.ChatComponentText;
 import net.minecraft.world.World;
 
-/** Simple reusable inhalation barrier; its finite attenuation is applied from its worn state. */
-public final class ItemExposureMask extends Item {
+import naturalexceptions.minecraft.gear.GearKind;
+import naturalexceptions.minecraft.gear.IWearable;
+import naturalexceptions.minecraft.gear.PlayerGear;
 
-    private static final String KEY_WORN = "Worn";
+/** A cloth filter mask worn on the face. While worn it takes most, not all, of the smoke out of each breath. */
+public final class ItemExposureMask extends Item implements IWearable {
+
+    /** Share of inhaled smoke the mask stops. */
+    public static final double INHALATION_ATTENUATION = 0.75;
 
     public ItemExposureMask() {
         setMaxStackSize(1);
@@ -18,24 +23,36 @@ public final class ItemExposureMask extends Item {
         setTextureName("naturalexceptions:filter_mask");
     }
 
-    public static boolean isWorn(ItemStack stack) {
-        return stack != null && stack.hasTagCompound()
-            && stack.getTagCompound()
-                .getBoolean(KEY_WORN);
+    @Override
+    public GearKind gearKind(ItemStack stack) {
+        return GearKind.FACE;
+    }
+
+    /** True while {@code player} has a filter mask in their Face slot. */
+    public static boolean isWornBy(EntityPlayer player) {
+        ItemStack face = player == null ? null
+            : PlayerGear.get(player)
+                .worn(GearKind.FACE);
+        return face != null && face.getItem() instanceof ItemExposureMask;
+    }
+
+    /** Right-click puts the mask on, like armour, when the Face slot is free. */
+    @Override
+    public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
+        if (player == null || PlayerGear.get(player)
+            .worn(GearKind.FACE) != null) return stack;
+        if (world.isRemote) return stack;
+        if (!PlayerGear.get(player)
+            .wear(stack)) return stack;
+        world.playSoundAtEntity(player, "step.cloth", 0.8F, 1.1F);
+        stack.stackSize--;
+        return stack.stackSize <= 0 ? null : stack;
     }
 
     @Override
-    public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
-        if (world.isRemote || player == null) return stack;
-        if (stack.getTagCompound() == null) stack.setTagCompound(new NBTTagCompound());
-        boolean worn = !stack.getTagCompound()
-            .getBoolean(KEY_WORN);
-        stack.getTagCompound()
-            .setBoolean(KEY_WORN, worn);
-        player.addChatMessage(
-            new ChatComponentText(
-                worn ? "You tie on the filter mask. Breathing smoke is easier, not safe."
-                    : "You remove the filter mask."));
-        return stack;
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public void addInformation(ItemStack stack, EntityPlayer player, List lines, boolean advanced) {
+        lines.add("§7Worn on the face (Gear tab). Eases smoke,");
+        lines.add("§7but does not make it safe.");
     }
 }

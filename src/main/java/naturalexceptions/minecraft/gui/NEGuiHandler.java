@@ -15,10 +15,12 @@ public final class NEGuiHandler implements IGuiHandler {
     public static final int GUI_ASSEMBLY_TABLE = 1;
     public static final int GUI_MATERIAL_NAMING = 2;
     public static final int GUI_MOLD_ASSEMBLY = 3;
+    public static final int GUI_GEAR = 4;
     public static final int GUI_ALLOY_NAMING = GUI_MATERIAL_NAMING;
 
     @Override
     public Object getServerGuiElement(int ID, EntityPlayer player, World world, int x, int y, int z) {
+        if (ID == GUI_GEAR) return new naturalexceptions.minecraft.gear.ContainerGear(player);
         if (ID == GUI_STARTER_SMELTER) {
             TileEntity te = world.getTileEntity(x, y, z);
             if (te instanceof TileEntityStarterSmelter) {
@@ -48,6 +50,7 @@ public final class NEGuiHandler implements IGuiHandler {
 
     @Override
     public Object getClientGuiElement(int ID, EntityPlayer player, World world, int x, int y, int z) {
+        if (ID == GUI_GEAR) return new naturalexceptions.minecraft.gear.client.GuiGear(player);
         if (ID == GUI_STARTER_SMELTER) {
             TileEntity te = world.getTileEntity(x, y, z);
             if (te instanceof TileEntityStarterSmelter) {
