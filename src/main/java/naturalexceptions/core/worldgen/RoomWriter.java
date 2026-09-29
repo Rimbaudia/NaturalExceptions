@@ -26,9 +26,18 @@ final class RoomWriter {
      * floor at {@code floor}. The vault's shell is warded all round, floor and ceiling included.
      */
     void write(RoomTemplate template, int rotation, int minX, int minZ, int floor, RoomTemplate.Role role) {
+        write(template, rotation, minX, minZ, floor, role, true);
+    }
+
+    /**
+     * As {@link #write}, but with {@code walls} false only the template's own blocks are written: for a room set
+     * inside a larger building (a floor of a keep) whose walls are already there.
+     */
+    void write(RoomTemplate template, int rotation, int minX, int minZ, int floor, RoomTemplate.Role role,
+        boolean walls) {
         int w = template.width(rotation), dp = template.depth(rotation), h = template.height;
         boolean warded = role == RoomTemplate.Role.VAULT;
-        d.shell(minX - 1, floor, minZ - 1, minX + w, floor + h + 1, minZ + dp, warded);
+        if (walls) d.shell(minX - 1, floor, minZ - 1, minX + w, floor + h + 1, minZ + dp, warded);
         if (warded) {
             for (int x = minX - 1; x <= minX + w; x++) for (int z = minZ - 1; z <= minZ + dp; z++) {
                 d.put(x, floor - 1, z, Block.WARDED);

@@ -422,6 +422,33 @@ final class SkyDungeonTest {
     }
 
     @Test
+    void citadelsAreGuardedByAWardenAndNoTwoAreAlike() {
+        Set<String> looks = new HashSet<>();
+        int citadels = 0;
+        for (Sample s : samples()) {
+            if (s.dungeon.kind() != SkyDungeon.Kind.CITADEL) continue;
+            citadels++;
+            int seals = 0, logs = 0, quartz = 0, furnaces = 0, windbloom = 0, walls = 0;
+            for (Piece p : s.dungeon.pieces()) {
+                if (p.block == Block.SEAL) seals++;
+                if (p.block == Block.LOG) logs++;
+                if (p.block == Block.QUARTZ) quartz++;
+                if (p.block == Block.FURNACE) furnaces++;
+                if (p.block == Block.WINDBLOOM) windbloom++;
+                if (p.block == Block.SKYSTONE && p.y == s.island.centreY() + 2) walls++;
+            }
+            assertEquals(1, seals, s.name() + ": one Warden");
+            Connection vault = null;
+            for (Connection c : s.dungeon.connections()) if (c.style == Style.VAULT) vault = c;
+            assertNotNull(vault, s.name() + ": the vault has its door");
+            assertTrue(vault.a.role == Role.WARDEN || vault.b.role == Role.WARDEN, "only through the Warden's hall");
+            looks.add(walls + "/" + logs + "/" + quartz + "/" + furnaces + "/" + windbloom);
+        }
+        assertTrue(citadels >= 3, "enough citadels to judge: " + citadels);
+        assertEquals(citadels, looks.size(), "every citadel is put together differently: " + looks);
+    }
+
+    @Test
     void pitsWithoutLavaHaveALadderOut() {
         for (Sample s : sanctums()) {
             for (Room room : s.dungeon.rooms()) {

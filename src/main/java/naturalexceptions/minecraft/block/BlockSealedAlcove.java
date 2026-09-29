@@ -62,7 +62,15 @@ public final class BlockSealedAlcove extends Block {
             mob.setCurrentItemOrArmor(3, new ItemStack(Items.iron_chestplate));
             if (mob instanceof EntityZombie) mob.setCurrentItemOrArmor(0, new ItemStack(Items.iron_sword));
         }
-        mob.setLocationAndAngles(x + 0.5, y, z + 0.5, world.rand.nextFloat() * 360.0F, 0.0F);
+        // It steps out of its niche into the open (a niche is only one block high).
+        int[] spot = { x, z };
+        for (int[] s : new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+            if (world.isAirBlock(x + s[0], y, z + s[1]) && world.isAirBlock(x + s[0], y + 1, z + s[1])) {
+                spot = new int[] { x + s[0], z + s[1] };
+                break;
+            }
+        }
+        mob.setLocationAndAngles(spot[0] + 0.5, y, spot[1] + 0.5, world.rand.nextFloat() * 360.0F, 0.0F);
         mob.func_110163_bv(); // stays: it lives in the dungeon
         world.spawnEntityInWorld(mob);
         return mob;
