@@ -73,5 +73,28 @@ public final class NECreativeTab extends CreativeTabs {
         if (NEItems.foundryNotes != null) list.add(new net.minecraft.item.ItemStack(NEItems.foundryNotes));
         if (NEItems.fieldAssay != null) list.add(new net.minecraft.item.ItemStack(NEItems.fieldAssay));
         if (NEItems.knowledgeRecord != null) list.add(new net.minecraft.item.ItemStack(NEItems.knowledgeRecord));
+
+        // 7. Everything else this mod puts in the tab (the deep and the sky: Lumenite, magma, treasures, weapons),
+        // so a newly added item or block never goes missing from the tab.
+        addRemaining(list);
+    }
+
+    @SideOnly(Side.CLIENT)
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private void addRemaining(java.util.List list) {
+        java.util.Set<Item> listed = new java.util.HashSet<>();
+        for (Object entry : list) {
+            if (entry instanceof net.minecraft.item.ItemStack)
+                listed.add(((net.minecraft.item.ItemStack) entry).getItem());
+        }
+        for (Object entry : Item.itemRegistry) {
+            if (!(entry instanceof Item)) continue;
+            Item item = (Item) entry;
+            if (listed.contains(item) || item.getCreativeTab() != this) continue;
+            Object name = Item.itemRegistry.getNameForObject(item);
+            if (name == null || !name.toString()
+                .startsWith("naturalexceptions:")) continue;
+            item.getSubItems(item, this, list);
+        }
     }
 }

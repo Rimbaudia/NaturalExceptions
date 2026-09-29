@@ -27,14 +27,14 @@ final class SkyIslandsTest {
     @Test
     void rareButThereAndHighInTheSky() {
         SkyIslands field = new SkyIslands(SEED);
-        List<SkyIslands.Island> islands = islandsIn(field, 11); // about 4200 x 4200 blocks
-        assertTrue(islands.size() >= 20 && islands.size() <= 65, "about a third of cells: " + islands.size());
+        List<SkyIslands.Island> islands = islandsIn(field, 11); // about 2800 x 2800 blocks
+        assertTrue(islands.size() >= 35 && islands.size() <= 75, "a little under half the cells: " + islands.size());
         for (SkyIslands.Island island : islands) {
             assertTrue(island.centreY() >= SkyIslands.MIN_CENTRE_Y && island.centreY() <= SkyIslands.MAX_CENTRE_Y);
             assertTrue(island.radius() >= SkyIslands.MIN_RADIUS && island.radius() <= SkyIslands.MAX_RADIUS);
             int[] middle = field.column(island, island.centreX(), island.centreZ());
             assertNotNull(middle, "solid in the middle");
-            assertTrue(middle[0] >= 110, "never reaches down to the land: " + middle[0]);
+            assertTrue(middle[0] >= 100, "never reaches down into the hills: " + middle[0]);
             assertTrue(middle[1] - middle[0] >= 5, "a real thickness");
         }
     }

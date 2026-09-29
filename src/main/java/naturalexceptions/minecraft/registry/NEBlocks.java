@@ -163,6 +163,7 @@ public final class NEBlocks {
 
         try {
             GameRegistry.addRecipe(new net.minecraft.item.ItemStack(smelterOutlet), "B B", " B ", 'B', refractoryBrick);
+            naturalexceptions.minecraft.recipe.TreasureRecipes.register();
             if (NEItems.lumeniteShard != null && NEItems.copperIngot != null) GameRegistry.addRecipe(
                 new net.minecraft.item.ItemStack(lumeniteLamp),
                 " S ",

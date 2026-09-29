@@ -183,6 +183,7 @@ public final class NaturalExceptions {
             event.registerServerCommand(new naturalexceptions.minecraft.tick.CommandP9());
             event.registerServerCommand(new naturalexceptions.minecraft.tick.CommandP11());
             event.registerServerCommand(new naturalexceptions.minecraft.biology.CommandBiology());
+            event.registerServerCommand(new naturalexceptions.minecraft.worldgen.CommandLandmarks());
         }
     }
 

@@ -4,21 +4,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Floating islands high above the land. One candidate per {@link #CELL}-block cell, about a third of them real,
- * so an island shows every few hundred blocks. Each island is a pure shape: a gently domed top over a noisy cone
+ * Floating islands high above the land. One candidate per {@link #CELL}-block cell, a little under half of them
+ * real, so an island is usually in sight within a couple of hundred blocks. Each island is a pure shape: a gently domed
+ * top over a noisy cone
  * that tapers to a ragged underside.
  */
 public final class SkyIslands {
 
-    public static final int CELL = 384;
-    static final double PRESENCE = 0.34;
-    public static final int MIN_CENTRE_Y = 150;
-    public static final int MAX_CENTRE_Y = 200;
-    public static final double MIN_RADIUS = 10.0;
+    public static final int CELL = 256;
+    static final double PRESENCE = 0.45;
+    public static final int MIN_CENTRE_Y = 135;
+    public static final int MAX_CENTRE_Y = 175;
+    public static final double MIN_RADIUS = 12.0;
     public static final double MAX_RADIUS = 30.0;
     /** Islands this large carry a sky cache. */
     public static final double CACHE_RADIUS = 18.0;
-    private static final int MARGIN = 40;
+    private static final int MARGIN = 36;
+    /** Deepest an island's underside reaches below its top, so none dips into the hills. */
+    static final double MAX_THICKNESS = 30.0;
 
     public static final class Island {
 
@@ -98,7 +101,7 @@ public final class SkyIslands {
         int z = (int) (cellZ * CELL + MARGIN + noise.unit(cellX, cellZ, 3) * (CELL - 2 * MARGIN));
         int y = MIN_CENTRE_Y + (int) (noise.unit(cellX, cellZ, 4) * (MAX_CENTRE_Y - MIN_CENTRE_Y + 1));
         double radius = MIN_RADIUS + noise.unit(cellX, cellZ, 5) * (MAX_RADIUS - MIN_RADIUS);
-        double thickness = radius * (0.7 + 0.5 * noise.unit(cellX, cellZ, 6));
+        double thickness = Math.min(MAX_THICKNESS, radius * (0.7 + 0.5 * noise.unit(cellX, cellZ, 6)));
         boolean pond = radius >= 14.0 && noise.unit(cellX, cellZ, 7) < 0.5;
         boolean tree = noise.unit(cellX, cellZ, 8) < 0.7;
         return new Island(cellX, cellZ, x, y, z, radius, thickness, pond, tree);

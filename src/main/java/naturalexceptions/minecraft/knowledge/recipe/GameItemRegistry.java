@@ -138,7 +138,19 @@ public final class GameItemRegistry {
                 }
             }
         } catch (Throwable ignored) {}
+        // This mod's own things first, so they are on the browser's first pages rather than after all of vanilla.
+        List<IndexedItem> ours = new ArrayList<>();
+        List<IndexedItem> others = new ArrayList<>();
+        for (IndexedItem indexed : indexedItems) {
+            if (OWN_MOD.equalsIgnoreCase(indexed.modId())) ours.add(indexed);
+            else others.add(indexed);
+        }
+        indexedItems.clear();
+        indexedItems.addAll(ours);
+        indexedItems.addAll(others);
     }
+
+    private static final String OWN_MOD = "naturalexceptions";
 
     public List<IndexedItem> getAllIndexedItems() {
         init();
