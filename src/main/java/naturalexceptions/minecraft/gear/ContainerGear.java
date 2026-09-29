@@ -110,7 +110,7 @@ public final class ContainerGear extends Container {
         @Override
         @SideOnly(Side.CLIENT)
         public IIcon getBackgroundIconIndex() {
-            return naturalexceptions.minecraft.gear.client.GearIcons.slotIcon(gearSlot.kind());
+            return naturalexceptions.minecraft.gear.client.GearIcons.slotIcon(gearSlot);
         }
     }
 }

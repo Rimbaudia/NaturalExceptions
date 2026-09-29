@@ -41,6 +41,17 @@ public enum GearSlot {
         return label;
     }
 
+    /** True for the left-hand and left-foot slots, whose empty-slot silhouette is mirrored. */
+    public boolean isLeft() {
+        return name().contains("LEFT");
+    }
+
+    /** Icon of the grey silhouette in this slot while empty (left-side slots use a mirrored image). */
+    public String slotIcon() {
+        boolean handed = kind == GearKind.GLOVE || kind == GearKind.SHOE || kind == GearKind.RING;
+        return kind.slotIcon() + (handed && isLeft() ? "_left" : "");
+    }
+
     public static GearSlot byIndex(int index) {
         GearSlot[] all = values();
         return index >= 0 && index < all.length ? all[index] : null;

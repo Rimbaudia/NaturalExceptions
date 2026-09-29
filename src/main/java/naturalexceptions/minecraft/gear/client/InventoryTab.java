@@ -1,15 +1,15 @@
 package naturalexceptions.minecraft.gear.client;
 
 /**
- * The tabs along the top of the inventory and Gear screens. Inventory and Gear switch screens and sit on the left;
- * Items and Body switch side panels on and off and sit on the right. Geometry follows vanilla's creative tabs.
+ * The tabs along the top of the inventory and Gear screens, side by side from the left edge: Inventory and Gear
+ * switch screens; Body and Items switch side panels on and off. Geometry follows vanilla's creative tabs.
  */
 public enum InventoryTab {
 
     INVENTORY("Inventory", 0, false),
     GEAR("Gear", 1, false),
-    BODY("Body", 4, true),
-    ITEMS("Items", 5, true);
+    BODY("Body", 2, true),
+    ITEMS("Items", 3, true);
 
     public static final int WIDTH = 28;
     public static final int HEIGHT = 32;

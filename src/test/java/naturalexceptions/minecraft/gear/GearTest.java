@@ -109,6 +109,15 @@ final class GearTest {
             int[] at = GearLayout.slot(slot);
             assertTrue(at[0] >= 4 && at[0] + 17 <= GearLayout.WIDTH - 4, slot + " inside horizontally");
             assertTrue(at[1] >= 4 && at[1] + 17 <= GearLayout.PLAYER_INVENTORY_Y - 2, slot + " above the inventory");
+            assertTrue(
+                slot.slotIcon()
+                    .startsWith("naturalexceptions:gear_slot_"),
+                slot + " icon");
+            assertTrue(
+                new File(
+                    "src/main/resources/assets/naturalexceptions/textures/items/" + slot.slotIcon()
+                        .substring("naturalexceptions:".length()) + ".png").isFile(),
+                slot + " silhouette exists");
             assertTrue(cells.add(((long) at[0] << 32) | at[1]), slot + " has its own place");
             int[] figure = GearLayout.FIGURE;
             boolean clear = at[0] + 17 <= figure[0] || at[0] - 1 >= figure[0] + figure[2]

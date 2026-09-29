@@ -9,12 +9,12 @@ import org.junit.jupiter.api.Test;
 final class InventoryTabTest {
 
     @Test
-    void screenTabsLeftTogglesRightNoOverlap() {
+    void tabsSitSideBySideWithoutOverlap() {
         int left = 339;
         int top = 157;
         int width = 176;
         assertEquals(left, InventoryTab.INVENTORY.x(left, width));
-        assertEquals(left + width - InventoryTab.WIDTH, InventoryTab.ITEMS.x(left, width));
+        assertEquals(left + 3 * (InventoryTab.WIDTH + 1), InventoryTab.ITEMS.x(left, width), "no gap between tabs");
         InventoryTab[] tabs = InventoryTab.values();
         for (int i = 0; i < tabs.length; i++) {
             int a = tabs[i].x(left, width);
@@ -26,7 +26,7 @@ final class InventoryTabTest {
             assertEquals(tabs[i], InventoryTab.at(a + 14, top - 10, left, top, width));
         }
         assertTrue(!InventoryTab.GEAR.isToggle() && InventoryTab.BODY.isToggle());
-        assertNull(InventoryTab.at(left + 90, top - 10, left, top, width), "gap between the groups");
+        assertNull(InventoryTab.at(left + 140, top - 10, left, top, width), "nothing right of the last tab");
         assertNull(InventoryTab.at(left + 14, top + 2, left, top, width), "the screen itself is not a tab");
     }
 }
