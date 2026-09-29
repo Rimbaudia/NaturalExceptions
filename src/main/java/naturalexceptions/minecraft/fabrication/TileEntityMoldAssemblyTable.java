@@ -1,6 +1,5 @@
 package naturalexceptions.minecraft.fabrication;
 
-import java.util.Arrays;
 import java.util.List;
 
 import net.minecraft.entity.player.EntityPlayer;
@@ -17,8 +16,7 @@ import naturalexceptions.minecraft.item.ItemCastingMold;
 public final class TileEntityMoldAssemblyTable extends TileEntity implements IInventory {
 
     private final ItemStack[] slots = new ItemStack[2];
-    private static final List<GeometryId> SELECTABLE = Arrays
-        .asList(GeometryId.INGOT, GeometryId.PICK_HEAD, GeometryId.PLATE, GeometryId.ROD, GeometryId.BLADE);
+    private static final List<GeometryId> SELECTABLE = ItemCastingMold.shapes();
 
     public static List<GeometryId> selectableGeometries() {
         return SELECTABLE;

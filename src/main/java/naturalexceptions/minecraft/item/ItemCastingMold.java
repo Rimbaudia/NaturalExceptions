@@ -59,35 +59,21 @@ public final class ItemCastingMold extends Item {
     public static final String KEY_MELT_POINT = "MeltPoint";
     public static final String KEY_LATENT_HEAT = "LatentHeat";
 
+    /** Every shape a mold can have: the mold's own sprite and the white cavity mask tinted by the metal in it. */
+    private static final GeometryId[] SHAPES = { GeometryId.INGOT, GeometryId.PICK_HEAD, GeometryId.AXE_HEAD,
+        GeometryId.SHOVEL_HEAD, GeometryId.HOE_HEAD, GeometryId.BLADE, GeometryId.PLATE, GeometryId.ROD,
+        GeometryId.HANDLE };
+
     @SideOnly(Side.CLIENT)
     private IIcon iconBlank;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconPickHead;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconPlate;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconRod;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconBlade;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconHandle;
-
     @SideOnly(Side.CLIENT)
     private IIcon iconEmptyMask;
     @SideOnly(Side.CLIENT)
     private IIcon iconIngotFill;
     @SideOnly(Side.CLIENT)
-    private IIcon iconBlankFill;
+    private java.util.Map<GeometryId, IIcon> moldIcons;
     @SideOnly(Side.CLIENT)
-    private IIcon iconPickHeadFill;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconPlateFill;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconRodFill;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconBladeFill;
-    @SideOnly(Side.CLIENT)
-    private IIcon iconHandleFill;
+    private java.util.Map<GeometryId, IIcon> fillIcons;
 
     public ItemCastingMold() {
         setUnlocalizedName("castingMold");
@@ -743,21 +729,20 @@ public final class ItemCastingMold extends Item {
     public void registerIcons(IIconRegister reg) {
         this.itemIcon = reg.registerIcon("naturalexceptions:ingot_casting_mold");
         this.iconBlank = reg.registerIcon("naturalexceptions:casting_mold");
-        this.iconPickHead = reg.registerIcon("naturalexceptions:mold_pick_head");
-        this.iconPlate = reg.registerIcon("naturalexceptions:mold_plate");
-        this.iconRod = reg.registerIcon("naturalexceptions:mold_rod");
-        this.iconBlade = reg.registerIcon("naturalexceptions:mold_blade");
-        this.iconHandle = reg.registerIcon("naturalexceptions:mold_handle");
-
         this.iconEmptyMask = reg.registerIcon("naturalexceptions:empty_mask");
         this.iconIngotFill = reg.registerIcon("naturalexceptions:mold_ingot_fill");
-        this.iconBlankFill = this.iconIngotFill;
-        this.iconPickHeadFill = reg.registerIcon("naturalexceptions:mold_pick_head_fill");
-        this.iconPlateFill = reg.registerIcon("naturalexceptions:mold_plate_fill");
-        this.iconRodFill = reg.registerIcon("naturalexceptions:mold_rod_fill");
-        this.iconBladeFill = reg.registerIcon("naturalexceptions:mold_blade_fill");
-        this.iconHandleFill = reg.registerIcon("naturalexceptions:mold_handle_fill");
-
+        this.moldIcons = new java.util.EnumMap<>(GeometryId.class);
+        this.fillIcons = new java.util.EnumMap<>(GeometryId.class);
+        for (GeometryId shape : SHAPES) {
+            if (shape == GeometryId.INGOT) {
+                moldIcons.put(shape, itemIcon);
+                fillIcons.put(shape, iconIngotFill);
+                continue;
+            }
+            String[] names = spriteNames(shape);
+            moldIcons.put(shape, reg.registerIcon(names[0]));
+            fillIcons.put(shape, reg.registerIcon(names[1]));
+        }
     }
 
     @Override
@@ -807,50 +792,16 @@ public final class ItemCastingMold extends Item {
 
     @SideOnly(Side.CLIENT)
     public IIcon getBaseMoldIcon(GeometryId geom) {
-        if (geom == null) {
-            return iconBlank != null ? iconBlank : itemIcon;
-        }
-        switch (geom) {
-            case INGOT:
-                return itemIcon;
-            case PICK_HEAD:
-                return iconPickHead != null ? iconPickHead : itemIcon;
-            case PLATE:
-                return iconPlate != null ? iconPlate : itemIcon;
-            case ROD:
-                return iconRod != null ? iconRod : itemIcon;
-            case BLADE:
-                return iconBlade != null ? iconBlade : itemIcon;
-            case HANDLE:
-                return iconHandle != null ? iconHandle : itemIcon;
-            case BLANK:
-            default:
-                return iconBlank != null ? iconBlank : itemIcon;
-        }
+        IIcon icon = geom == null || moldIcons == null ? null : moldIcons.get(geom);
+        if (icon != null) return icon;
+        return iconBlank != null ? iconBlank : itemIcon;
     }
 
     @SideOnly(Side.CLIENT)
     public IIcon getCavityFillIcon(GeometryId geom) {
-        if (geom == null) {
-            return iconIngotFill != null ? iconIngotFill : iconBlank;
-        }
-        switch (geom) {
-            case INGOT:
-                return iconIngotFill != null ? iconIngotFill : itemIcon;
-            case PICK_HEAD:
-                return iconPickHeadFill != null ? iconPickHeadFill : iconPickHead;
-            case PLATE:
-                return iconPlateFill != null ? iconPlateFill : iconPlate;
-            case ROD:
-                return iconRodFill != null ? iconRodFill : iconRod;
-            case BLADE:
-                return iconBladeFill != null ? iconBladeFill : iconBlade;
-            case HANDLE:
-                return iconHandleFill != null ? iconHandleFill : iconHandle;
-            case BLANK:
-            default:
-                return iconIngotFill != null ? iconIngotFill : itemIcon;
-        }
+        IIcon icon = geom == null || fillIcons == null ? null : fillIcons.get(geom);
+        if (icon != null) return icon;
+        return iconIngotFill != null ? iconIngotFill : itemIcon;
     }
 
     @SideOnly(Side.CLIENT)
@@ -872,40 +823,42 @@ public final class ItemCastingMold extends Item {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public void getSubItems(Item item, CreativeTabs tab, List list) {
         list.add(createStack(null));
-        list.add(createStack(GeometryId.INGOT));
-        list.add(createStack(GeometryId.PICK_HEAD));
-        list.add(createStack(GeometryId.BLADE));
-        list.add(createStack(GeometryId.PLATE));
-        list.add(createStack(GeometryId.ROD));
+        for (GeometryId shape : SHAPES) list.add(createStack(shape));
     }
 
     private static double getVolume(GeometryId geom) {
-        if (geom == null) return ComponentGeometry.blank()
+        return ComponentGeometry.forId(geom)
             .volumeCm3();
-        switch (geom) {
-            case INGOT:
-                return ComponentGeometry.ingot()
-                    .volumeCm3();
+    }
+
+    /** The mold sprite and its cavity-fill mask for a shape (ingot uses the item's own icon). */
+    static String[] spriteNames(GeometryId shape) {
+        switch (shape) {
             case PICK_HEAD:
-                return ComponentGeometry.pickHead()
-                    .volumeCm3();
-            case PLATE:
-                return ComponentGeometry.plate()
-                    .volumeCm3();
-            case ROD:
-                return ComponentGeometry.rod()
-                    .volumeCm3();
+                return new String[] { "naturalexceptions:mold_pick_head", "naturalexceptions:mold_pick_head_fill" };
+            case AXE_HEAD:
+                return new String[] { "naturalexceptions:mold_axe_head", "naturalexceptions:mold_axe_head_fill" };
+            case SHOVEL_HEAD:
+                return new String[] { "naturalexceptions:mold_shovel_head", "naturalexceptions:mold_shovel_head_fill" };
+            case HOE_HEAD:
+                return new String[] { "naturalexceptions:mold_hoe_head", "naturalexceptions:mold_hoe_head_fill" };
             case BLADE:
-                return ComponentGeometry.blade()
-                    .volumeCm3();
+                return new String[] { "naturalexceptions:mold_blade", "naturalexceptions:mold_blade_fill" };
+            case PLATE:
+                return new String[] { "naturalexceptions:mold_plate", "naturalexceptions:mold_plate_fill" };
+            case ROD:
+                return new String[] { "naturalexceptions:mold_rod", "naturalexceptions:mold_rod_fill" };
             case HANDLE:
-                return ComponentGeometry.handle()
-                    .volumeCm3();
-            case BLANK:
+                return new String[] { "naturalexceptions:mold_handle", "naturalexceptions:mold_handle_fill" };
+            case INGOT:
             default:
-                return ComponentGeometry.blank()
-                    .volumeCm3();
+                return new String[] { "naturalexceptions:ingot_casting_mold", "naturalexceptions:mold_ingot_fill" };
         }
+    }
+
+    /** Every shape a mold can be made in, in picker order. */
+    public static java.util.List<GeometryId> shapes() {
+        return java.util.Collections.unmodifiableList(java.util.Arrays.asList(SHAPES));
     }
 
     public static String formatMaterialName(MaterialRef ref) {
@@ -926,6 +879,12 @@ public final class ItemCastingMold extends Item {
                 return "Ingot";
             case PICK_HEAD:
                 return "Pick Head";
+            case AXE_HEAD:
+                return "Axe Head";
+            case SHOVEL_HEAD:
+                return "Shovel Head";
+            case HOE_HEAD:
+                return "Hoe Head";
             case HANDLE:
                 return "Handle";
             case BLADE:

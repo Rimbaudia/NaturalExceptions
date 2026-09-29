@@ -56,9 +56,9 @@ final class MoldAssemblyTableTest {
     }
 
     @Test
-    void allSixAuthoredGeometryIdsAreSelectableAndPersist() {
+    void everyPartShapeIsSelectableAndPersists() {
         assertEquals(
-            5,
+            9,
             TileEntityMoldAssemblyTable.selectableGeometries()
                 .size());
         assertEquals(
@@ -67,7 +67,10 @@ final class MoldAssemblyTableTest {
                 .get(0));
         TileEntityMoldAssemblyTable table = new TileEntityMoldAssemblyTable();
         table.setInventorySlotContents(0, ItemCastingMold.createStack(null));
-        assertTrue(table.shape(4));
+        assertTrue(
+            table.shape(
+                TileEntityMoldAssemblyTable.selectableGeometries()
+                    .indexOf(GeometryId.BLADE)));
         NBTTagCompound nbt = new NBTTagCompound();
         table.writeToNBT(nbt);
         TileEntityMoldAssemblyTable loaded = new TileEntityMoldAssemblyTable();

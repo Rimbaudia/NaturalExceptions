@@ -31,11 +31,11 @@ public final class GuiMoldAssemblyTable extends GuiContainer {
         "textures/gui/mold_assembly_table.png");
     /** Sprite cells in the texture, right of the 176-wide screen art. */
     private static final int[] TILE_NORMAL = { 176, 0 };
-    private static final int[] TILE_HOVER = { 198, 0 };
-    private static final int[] TILE_CURRENT = { 220, 0 };
-    private static final int[] TILE_UNAVAILABLE = { 176, 22 };
-    private static final int[] ARROW_FULL = { 176, 44, 22, 15 };
-    private static final int[] GHOST_BLANK = { 198, 44 };
+    private static final int[] TILE_HOVER = { 194, 0 };
+    private static final int[] TILE_CURRENT = { 212, 0 };
+    private static final int[] TILE_UNAVAILABLE = { 230, 0 };
+    private static final int[] ARROW_FULL = { 176, 20, 22, 15 };
+    private static final int[] GHOST_BLANK = { 200, 20 };
 
     private final TileEntityMoldAssemblyTable table;
 
@@ -179,8 +179,8 @@ public final class GuiMoldAssemblyTable extends GuiContainer {
         List<GeometryId> shapes = TileEntityMoldAssemblyTable.selectableGeometries();
         for (int i = 0; i < shapes.size(); i++) {
             int[] at = MoldAssemblyLayout.tile(i);
-            int x = at[0] + 3;
-            int y = at[1] + 3;
+            int x = at[0] + 1;
+            int y = at[1] + 1;
             ItemStack icon = ItemCastingMold.createStack(shapes.get(i));
             GL11.glEnable(GL11.GL_DEPTH_TEST);
             RenderHelper.enableGUIStandardItemLighting();

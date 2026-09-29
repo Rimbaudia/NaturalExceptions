@@ -10,14 +10,14 @@ public final class MoldAssemblyLayout {
     public static final int MACHINE_Y = 31;
     public static final int PLAYER_Y = 104;
     public static final int HOTBAR_Y = 162;
-    /** Shape tiles: one row, drawn from the texture's sprite column (x >= 176). */
-    public static final int TILE_X = 25;
+    /** Shape tiles: one row of nine slot-sized tiles, drawn from the texture's sprites (x >= 176). */
+    public static final int TILE_X = 7;
     public static final int TILE_Y = 56;
-    public static final int TILE_SIZE = 22;
-    public static final int TILE_STEP = 26;
+    public static final int TILE_SIZE = 18;
+    public static final int TILE_STEP = 18;
     public static final int ARROW_X = 77;
     public static final int ARROW_Y = 32;
-    public static final int INSTRUCTION_Y = 83;
+    public static final int INSTRUCTION_Y = 79;
 
     /** Screen-relative {x, y} of shape tile {@code index}. */
     public static int[] tile(int index) {

@@ -52,4 +52,23 @@ final class WorkbenchScreenArtTest {
             "instruction under the tiles");
         assertTrue(MoldAssemblyLayout.INSTRUCTION_Y + 9 <= MoldAssemblyLayout.PLAYER_Y - 11, "above the label");
     }
+
+    @Test
+    void everyMoldShapeHasItsSpritesAndItsOwnVolume() throws Exception {
+        java.util.Set<Double> volumes = new java.util.HashSet<>();
+        for (naturalexceptions.core.fabrication.GeometryId shape : naturalexceptions.minecraft.item.ItemCastingMold
+            .shapes()) {
+            for (String name : naturalexceptions.minecraft.item.ItemCastingMoldAccess.spriteNames(shape)) {
+                File file = new File(
+                    "src/main/resources/assets/naturalexceptions/textures/items/"
+                        + name.substring("naturalexceptions:".length())
+                        + ".png");
+                assertTrue(file.isFile(), shape + ": " + name);
+            }
+            volumes.add(
+                naturalexceptions.core.fabrication.ComponentGeometry.forId(shape)
+                    .volumeCm3());
+        }
+        assertTrue(volumes.size() >= 5, "shapes hold different amounts of metal");
+    }
 }
