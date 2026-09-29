@@ -51,6 +51,27 @@ public final class VesselState {
     private final ExhaustSink exhaustSink;
     private final List<AggregateLayer> layers = new ArrayList<>();
     private final MaterialPropertyResolver propertyResolver;
+    /** Ore melts still to be fluxed (Lumenite): each recovers part of its slag's share as metal. */
+    private int fluxCharges;
+
+    /** Share of an ore's slag that a fluxed melt recovers as metal instead. */
+    public static final double FLUX_RECOVERY = 0.25;
+    /** Ore melts one Lumenite shard fluxes. */
+    public static final int FLUX_PER_SHARD = 4;
+    public static final int MAX_FLUX_CHARGES = 64;
+
+    public int fluxCharges() {
+        return fluxCharges;
+    }
+
+    public void addFlux(int charges) {
+        if (charges <= 0) return;
+        fluxCharges = Math.min(MAX_FLUX_CHARGES, fluxCharges + charges);
+    }
+
+    public void restoreFlux(int charges) {
+        fluxCharges = Math.max(0, Math.min(MAX_FLUX_CHARGES, charges));
+    }
 
     public VesselState() {
         this(
@@ -337,6 +358,13 @@ public final class VesselState {
                         MaterialQuantity[] portions = oreDef.partition(layer.mass());
                         MaterialQuantity metalMass = portions[0];
                         MaterialQuantity slagMass = portions[1];
+                        if (fluxCharges > 0 && !metalMass.isZero() && !slagMass.isZero()) {
+                            // Flux frees metal that would otherwise stay locked in the slag; mass is conserved.
+                            MaterialQuantity recovered = slagMass.portion(FLUX_RECOVERY);
+                            metalMass = metalMass.add(recovered);
+                            slagMass = slagMass.subtract(recovered);
+                            fluxCharges--;
+                        }
                         MaterialQuantity gasMass = portions[2];
                         double metalJoules = share(chargeJoules, metalMass, chargeMg);
                         double slagJoules = share(chargeJoules, slagMass, chargeMg);

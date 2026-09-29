@@ -61,6 +61,11 @@ public final class BuiltinContent {
                 .resourceId(),
             "material",
             1L)
+        .add(
+            BuiltinMaterials.LUMENITE.id()
+                .resourceId(),
+            "material",
+            1L)
         .build();
 
     private static boolean registered;
@@ -79,6 +84,7 @@ public final class BuiltinContent {
         MATERIALS.register(BuiltinMaterials.GOLD);
         MATERIALS.register(BuiltinMaterials.STELLAR_MATTER);
         MATERIALS.register(BuiltinMaterials.IMPACT_CRUST);
+        MATERIALS.register(BuiltinMaterials.LUMENITE);
         registered = true;
     }
 

@@ -9,6 +9,7 @@ import net.minecraft.tileentity.TileEntityChest;
 import net.minecraft.world.World;
 import net.minecraft.world.gen.feature.WorldGenTrees;
 
+import naturalexceptions.core.worldgen.DeepLayers;
 import naturalexceptions.core.worldgen.Landmarks;
 import naturalexceptions.core.worldgen.SkyIslands;
 import naturalexceptions.minecraft.registry.NEBlocks;
@@ -210,6 +211,54 @@ final class LandmarkMaterializer {
             changed++;
         }
         return changed;
+    }
+
+    // --- Deep layers ----------------------------------------------------------------------------------------
+
+    static int deepLayers(World world, int chunkX, int chunkZ, DeepLayers field) {
+        int x0 = chunkX * 16;
+        int z0 = chunkZ * 16;
+        int changed = 0;
+        for (DeepLayers.Pocket pocket : field.near(x0, z0, x0 + 15, z0 + 15)) {
+            int reachX = (int) Math.ceil(pocket.rx() * 1.6) + 1;
+            int reachZ = (int) Math.ceil(pocket.rz() * 1.6) + 1;
+            for (int x = Math.max(x0, pocket.x() - reachX); x <= Math.min(x0 + 15, pocket.x() + reachX); x++) {
+                for (int z = Math.max(z0, pocket.z() - reachZ); z <= Math.min(z0 + 15, pocket.z() + reachZ); z++) {
+                    for (int y = pocket.minY(); y <= pocket.maxY(); y++) {
+                        Block block = deepBlock(world, field.partAt(pocket, x, y, z), x, y, z);
+                        if (block == null) continue;
+                        world.setBlock(x, y, z, block, 0, 2);
+                        changed++;
+                    }
+                }
+            }
+        }
+        return changed;
+    }
+
+    /** The block a pocket part becomes here, or null to leave the world as it is. Bedrock is never touched. */
+    private static Block deepBlock(World world, DeepLayers.Part part, int x, int y, int z) {
+        if (part == DeepLayers.Part.NONE) return null;
+        Block existing = world.getBlock(x, y, z);
+        if (existing == Blocks.bedrock) return null;
+        boolean rock = existing == Blocks.stone || existing == Blocks.dirt
+            || existing == Blocks.gravel
+            || existing == Blocks.coal_ore
+            || existing == Blocks.iron_ore;
+        switch (part) {
+            case OPEN:
+                return Blocks.air;
+            case LAVA:
+                return Blocks.lava;
+            case CLUSTER:
+                return NEBlocks.lumeniteCluster != null ? NEBlocks.lumeniteCluster : Blocks.air;
+            case ORE:
+                return rock && NEBlocks.lumeniteOre != null ? NEBlocks.lumeniteOre : null;
+            case MAGMA_ROCK:
+                return rock && NEBlocks.magmaRock != null ? NEBlocks.magmaRock : null;
+            default:
+                return null;
+        }
     }
 
     private static double fieldRoll(int x, int y, int z) {

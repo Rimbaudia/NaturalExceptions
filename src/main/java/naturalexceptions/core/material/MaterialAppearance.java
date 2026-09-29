@@ -35,6 +35,7 @@ public final class MaterialAppearance {
     public static final ResourceId ID_SLAG_ALT = ResourceId.of("naturalexceptions", "slag");
     public static final ResourceId ID_STELLAR = ResourceId.of("naturalexceptions", "stellar_matter");
     public static final ResourceId ID_IMPACT_CRUST = ResourceId.of("naturalexceptions", "impact_crust");
+    public static final ResourceId ID_LUMENITE = ResourceId.of("naturalexceptions", "lumenite");
     public static final ResourceId ID_AVEL = ResourceId.of("naturalexceptions", "avel");
     public static final ResourceId ID_RHEL = ResourceId.of("naturalexceptions", "rhel");
     public static final ResourceId ID_THREN = ResourceId.of("naturalexceptions", "thren");
@@ -54,6 +55,7 @@ public final class MaterialAppearance {
         ELEMENT_COLORS.put(ID_SLAG_ALT, 0x3D352E);
         ELEMENT_COLORS.put(ID_STELLAR, 0x66CCFF); // Celestial blue star matter
         ELEMENT_COLORS.put(ID_IMPACT_CRUST, 0x3A3F44); // Dark fused glassy rock
+        ELEMENT_COLORS.put(ID_LUMENITE, 0x9FD8F0); // Pale self-lit blue
         ELEMENT_COLORS.put(ID_AVEL, 0x38D6E8); // Fracture crystal cyan
         ELEMENT_COLORS.put(ID_RHEL, 0x9E2B52); // Biocrust crimson
         ELEMENT_COLORS.put(ID_THREN, 0x44A044); // Verdant amber-green

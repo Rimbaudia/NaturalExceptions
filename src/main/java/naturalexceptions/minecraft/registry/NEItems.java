@@ -21,6 +21,7 @@ public final class NEItems {
     public static naturalexceptions.minecraft.item.ItemAlmanac almanac;
     public static naturalexceptions.minecraft.item.ItemBandage bandage;
     public static naturalexceptions.minecraft.item.ItemExposureMask exposureMask;
+    public static naturalexceptions.minecraft.item.ItemLumeniteShard lumeniteShard;
     public static Item copperIngot;
     public static Item slagLump;
     public static Item refractoryMix;
@@ -158,6 +159,8 @@ public final class NEItems {
         bandage = new naturalexceptions.minecraft.item.ItemBandage();
         bandage.setCreativeTab(NECreativeTab.INSTANCE);
         exposureMask = new naturalexceptions.minecraft.item.ItemExposureMask();
+        lumeniteShard = new naturalexceptions.minecraft.item.ItemLumeniteShard();
+        lumeniteShard.setCreativeTab(NECreativeTab.INSTANCE);
         exposureMask.setCreativeTab(NECreativeTab.INSTANCE);
 
         try {
@@ -174,6 +177,7 @@ public final class NEItems {
                     net.minecraftforge.oredict.OreDictionary.WILDCARD_VALUE));
             GameRegistry.registerItem(bandage, "bandage");
             GameRegistry.registerItem(exposureMask, "exposure_mask");
+            GameRegistry.registerItem(lumeniteShard, "lumenite_shard");
             GameRegistry.registerItem(copperIngot, "copper_ingot");
             GameRegistry.registerItem(slagLump, "slag_lump");
             GameRegistry.registerItem(refractoryMix, "refractory_mix");

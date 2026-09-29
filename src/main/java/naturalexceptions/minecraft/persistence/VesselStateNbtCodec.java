@@ -31,6 +31,7 @@ public final class VesselStateNbtCodec {
     public static final String KEY_FUEL_POWER = "FuelPower";
     public static final String KEY_FUEL_FLAME_TEMP = "FuelFlameTemp";
     public static final String KEY_FUEL_LABEL = "FuelLabel";
+    public static final String KEY_FLUX_CHARGES = "FluxCharges";
     public static final String KEY_EXHAUST_TOTAL_MG = "ExhaustTotalMg";
     public static final String KEY_EXHAUST_CONSTITUENTS = "ExhaustConstituents";
     public static final String KEY_EXHAUST_ENERGY = "ExhaustEnergy";
@@ -81,6 +82,7 @@ public final class VesselStateNbtCodec {
             KEY_FUEL_LABEL,
             state.fuelState()
                 .fuelLabel());
+        nbt.setInteger(KEY_FLUX_CHARGES, state.fluxCharges());
 
         nbt.setLong(
             KEY_EXHAUST_TOTAL_MG,
@@ -190,6 +192,7 @@ public final class VesselStateNbtCodec {
             if (Double.isFinite(vented) && vented > 0.0) exhaustSink.ventEnergy(vented);
         }
         VesselState vessel = new VesselState(capacity, lining, fuelState, exhaustSink, resolver);
+        vessel.restoreFlux(nbt.getInteger(KEY_FLUX_CHARGES));
 
         if (nbt.hasKey(KEY_LAYERS, 9)) {
             NBTTagList layersList = nbt.getTagList(KEY_LAYERS, 10);

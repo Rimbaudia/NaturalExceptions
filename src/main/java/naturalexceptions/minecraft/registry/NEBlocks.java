@@ -27,6 +27,10 @@ public final class NEBlocks {
     public static Block fluidCell;
     public static Block fallenStarCell;
     public static Block impactCrust;
+    public static Block lumeniteOre;
+    public static Block lumeniteCluster;
+    public static Block lumeniteLamp;
+    public static Block magmaRock;
 
     private NEBlocks() {}
 
@@ -62,6 +66,11 @@ public final class NEBlocks {
         // A Fallen Star host without its canonical parcel would be fake matter; sites come only from impacts.
         fallenStarCell = new naturalexceptions.minecraft.fluid.BlockFallenStar();
         impactCrust = new naturalexceptions.minecraft.fluid.BlockImpactCrust();
+        lumeniteOre = new naturalexceptions.minecraft.block.BlockLumeniteOre().setCreativeTab(NECreativeTab.INSTANCE);
+        lumeniteCluster = new naturalexceptions.minecraft.block.BlockLumeniteCluster()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        lumeniteLamp = new naturalexceptions.minecraft.block.BlockLumeniteLamp().setCreativeTab(NECreativeTab.INSTANCE);
+        magmaRock = new naturalexceptions.minecraft.block.BlockMagmaRock().setCreativeTab(NECreativeTab.INSTANCE);
 
         try {
             net.minecraft.tileentity.TileEntity.addMapping(TileEntityStarterSmelter.class, "starter_smelter");
@@ -106,6 +115,10 @@ public final class NEBlocks {
             GameRegistry.registerBlock(fluidCell, "fluid_cell");
             GameRegistry.registerBlock(fallenStarCell, "fallen_star_site");
             GameRegistry.registerBlock(impactCrust, "impact_crust");
+            GameRegistry.registerBlock(lumeniteOre, "lumenite_ore");
+            GameRegistry.registerBlock(lumeniteCluster, "lumenite_cluster");
+            GameRegistry.registerBlock(lumeniteLamp, "lumenite_lamp");
+            GameRegistry.registerBlock(magmaRock, "magma_rock");
         } catch (Throwable t) {
             System.out.println("DEBUG registerBlock caught: " + t);
             t.printStackTrace();
@@ -150,6 +163,15 @@ public final class NEBlocks {
 
         try {
             GameRegistry.addRecipe(new net.minecraft.item.ItemStack(smelterOutlet), "B B", " B ", 'B', refractoryBrick);
+            if (NEItems.lumeniteShard != null && NEItems.copperIngot != null) GameRegistry.addRecipe(
+                new net.minecraft.item.ItemStack(lumeniteLamp),
+                " S ",
+                "SCS",
+                " S ",
+                'S',
+                NEItems.lumeniteShard,
+                'C',
+                NEItems.copperIngot);
             GameRegistry
                 .addRecipe(new net.minecraft.item.ItemStack(starterSmelter), "BBB", "B B", "BBB", 'B', refractoryBrick);
             GameRegistry.addRecipe(new net.minecraft.item.ItemStack(castingTable), "BBB", "B B", 'B', refractoryBrick);

@@ -79,6 +79,8 @@ public final class NEOverworldGenerator implements IWorldGenerator {
             .skyIslands(world, chunkX, chunkZ, new naturalexceptions.core.worldgen.SkyIslands(landmarkSeed));
         int landmarkBlocks = LandmarkMaterializer
             .landmarks(world, chunkX, chunkZ, new naturalexceptions.core.worldgen.Landmarks(landmarkSeed));
+        int deepBlocks = LandmarkMaterializer
+            .deepLayers(world, chunkX, chunkZ, new naturalexceptions.core.worldgen.DeepLayers(landmarkSeed));
         history.mark(WorldgenStage.STRUCTURES);
         generateInitialAnomalies(world, chunkX, chunkZ, sites);
         history.mark(WorldgenStage.INITIAL_ANOMALIES);
@@ -91,6 +93,7 @@ public final class NEOverworldGenerator implements IWorldGenerator {
         PROFILER.incrementCounter(SUBSYSTEM, "copper_blocks_placed", copperBlocks);
         PROFILER.incrementCounter(SUBSYSTEM, "sky_island_blocks_placed", islandBlocks);
         PROFILER.incrementCounter(SUBSYSTEM, "landmark_blocks_changed", landmarkBlocks);
+        PROFILER.incrementCounter(SUBSYSTEM, "deep_layer_blocks_changed", deepBlocks);
         PROFILER.recordElapsedNanos(SUBSYSTEM, "chunk_materialization", System.nanoTime() - startNanos);
     }
 

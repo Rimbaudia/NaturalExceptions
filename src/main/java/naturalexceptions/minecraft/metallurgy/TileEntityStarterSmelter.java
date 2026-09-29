@@ -461,6 +461,15 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
 
     public boolean insertFeed(ItemStack stack) {
         if (stack == null || stack.stackSize <= 0) return false;
+        // Lumenite is a flux, not a charge: it readies the next few ore melts to give up more metal.
+        if (stack.getItem() instanceof naturalexceptions.minecraft.item.ItemLumeniteShard) {
+            if (vesselState.fluxCharges() + VesselState.FLUX_PER_SHARD > VesselState.MAX_FLUX_CHARGES) return false;
+            vesselState.addFlux(VesselState.FLUX_PER_SHARD);
+            stack.stackSize--;
+            markDirty();
+            if (worldObj != null) worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+            return true;
+        }
         if (!naturalexceptions.core.material.VanillaResourceClassification.isMeltable(stack)
             && naturalexceptions.core.material.VanillaResourceClassification.getRejectionReason(stack) != null) {
             return false;
@@ -1010,6 +1019,7 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
 
     public static boolean isSmeltableFeed(ItemStack stack) {
         if (stack == null) return false;
+        if (stack.getItem() instanceof naturalexceptions.minecraft.item.ItemLumeniteShard) return true;
         if (!naturalexceptions.core.material.VanillaResourceClassification.isMeltable(stack)
             && naturalexceptions.core.material.VanillaResourceClassification.getRejectionReason(stack) != null) {
             return false;

@@ -241,5 +241,30 @@ public final class BuiltinMaterials {
         IMPACT_CRUST_COMPOSITION,
         IMPACT_CRUST_PROPERTIES);
 
+    /**
+     * A pale-blue, faintly self-lit mineral that grows in deep grottos. Hard and glassy; as a flux it frees metal
+     * trapped in smelter slag.
+     */
+    public static final ResourceId LUMENITE_RESOURCE_ID = ResourceId.of("naturalexceptions", "lumenite");
+    public static final MaterialId LUMENITE_MATERIAL_ID = MaterialId.of("naturalexceptions", "lumenite");
+    public static final CanonicalComposition LUMENITE_COMPOSITION = CanonicalComposition.of(LUMENITE_RESOURCE_ID);
+    public static final MaterialProperties LUMENITE_PROPERTIES = MaterialProperties.builder()
+        .density(2.9)
+        .hardness(6.5)
+        .thermalConductivity(2.4)
+        .specificHeatSolid(780.0)
+        .specificHeatLiquid(980.0)
+        .meltingPointKelvin(1880.0)
+        .latentHeatOfFusion(380000.0)
+        .electricalResistivity(1.0e9)
+        .addTrait("luminous")
+        .addTrait("flux")
+        .build();
+    public static final MaterialDefinition LUMENITE = new MaterialDefinition(
+        LUMENITE_MATERIAL_ID,
+        "material.naturalexceptions.lumenite",
+        LUMENITE_COMPOSITION,
+        LUMENITE_PROPERTIES);
+
     private BuiltinMaterials() {}
 }
