@@ -91,6 +91,22 @@ public final class NaturalExceptions {
             256,
             1,
             true);
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.weapon.EntitySkyfallStar.class,
+            "skyfall_star",
+            1,
+            this,
+            128,
+            1,
+            true);
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.weapon.EntityLumeniteBolt.class,
+            "lumenite_bolt",
+            2,
+            this,
+            96,
+            1,
+            true);
         MinecraftForge.EVENT_BUS.register(new NEChunkGenerationHistory());
         cpw.mods.fml.common.network.NetworkRegistry.INSTANCE
             .registerGuiHandler(this, new naturalexceptions.minecraft.gui.NEGuiHandler());
@@ -131,6 +147,13 @@ public final class NaturalExceptions {
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
             naturalexceptions.minecraft.event.EntityFallingStar.class,
             new naturalexceptions.minecraft.event.client.RenderFallingStar());
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.weapon.EntitySkyfallStar.class,
+            new naturalexceptions.minecraft.event.client.RenderFallingStar());
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.weapon.EntityLumeniteBolt.class,
+            new net.minecraft.client.renderer.entity.RenderSnowball(
+                naturalexceptions.minecraft.registry.NEItems.lumeniteShard));
         cpw.mods.fml.client.registry.RenderingRegistry
             .registerBlockHandler(new naturalexceptions.minecraft.client.model.PartModelRenderer());
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(

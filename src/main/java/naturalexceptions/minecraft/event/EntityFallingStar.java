@@ -17,7 +17,7 @@ import naturalexceptions.minecraft.persistence.NEWorldSavedData;
  * then hands over to {@link StarRainWorldMaterializer}. It is presentation and trigger only. It is never saved; if it
  * is lost, the impact stays resolved-but-awaiting and the ordinary retry path still makes its crater.
  */
-public final class EntityFallingStar extends Entity {
+public final class EntityFallingStar extends Entity implements GlowingStar {
 
     /** Flight time from first sight to impact. */
     public static final int FLIGHT_TICKS = 80;
@@ -76,6 +76,11 @@ public final class EntityFallingStar extends Entity {
     static double progress(int age) {
         double t = Math.max(0.0, Math.min(1.0, age / (double) FLIGHT_TICKS));
         return Math.pow(t, 1.6);
+    }
+
+    @Override
+    public float starSize() {
+        return 0.9F + 0.6F * severity();
     }
 
     public int severity() {

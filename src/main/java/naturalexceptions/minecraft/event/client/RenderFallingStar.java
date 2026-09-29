@@ -12,11 +12,12 @@ import org.lwjgl.opengl.GL11;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
-import naturalexceptions.minecraft.event.EntityFallingStar;
+import naturalexceptions.minecraft.event.GlowingStar;
 import naturalexceptions.minecraft.registry.NEBlocks;
 
 /**
- * A falling star as the eye sees it: a white-hot tumbling body of stellar glass wrapped in a cyan halo, with a
+ * A falling star (or a sword-called one) as the eye sees it: a white-hot tumbling body of stellar glass wrapped in a
+ * cyan halo, with a
  * fading tail along its path. Drawn full-bright; no lighting or fog is applied so it reads against a night sky.
  */
 @SideOnly(Side.CLIENT)
@@ -24,9 +25,8 @@ public final class RenderFallingStar extends Render {
 
     @Override
     public void doRender(Entity entity, double x, double y, double z, float yaw, float partialTicks) {
-        EntityFallingStar star = (EntityFallingStar) entity;
-        float size = 0.9F + 0.6F * star.severity();
-        float spin = (star.ticksExisted + partialTicks) * 9.0F;
+        float size = entity instanceof GlowingStar ? ((GlowingStar) entity).starSize() : 1.0F;
+        float spin = (entity.ticksExisted + partialTicks) * 9.0F;
 
         GL11.glPushMatrix();
         GL11.glTranslated(x, y, z);
@@ -55,7 +55,7 @@ public final class RenderFallingStar extends Render {
         drawHalo(size * 1.6F, 0.55F, 0.95F, 1.0F, 0.45F);
         drawHalo(size * 3.2F, 0.35F, 0.80F, 1.0F, 0.18F);
         GL11.glPopMatrix();
-        drawTail(star, size);
+        drawTail(entity, size);
         GL11.glDepthMask(true);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GL11.glDisable(GL11.GL_BLEND);
@@ -115,7 +115,7 @@ public final class RenderFallingStar extends Render {
     }
 
     /** A fading streak back along the direction of travel. */
-    private static void drawTail(EntityFallingStar star, float size) {
+    private static void drawTail(Entity star, float size) {
         double mx = star.motionX, my = star.motionY, mz = star.motionZ;
         double speed = Math.sqrt(mx * mx + my * my + mz * mz);
         if (speed < 1.0e-3) {
