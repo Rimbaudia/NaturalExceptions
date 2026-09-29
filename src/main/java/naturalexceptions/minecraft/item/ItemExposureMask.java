@@ -46,7 +46,9 @@ public final class ItemExposureMask extends Item implements IWearable {
             .wear(stack)) return stack;
         world.playSoundAtEntity(player, "step.cloth", 0.8F, 1.1F);
         stack.stackSize--;
-        return stack.stackSize <= 0 ? null : stack;
+        // Never return null here: vanilla's creative path writes the old count back into the returned stack.
+        // An emptied stack is removed from the slot by vanilla in survival.
+        return stack;
     }
 
     @Override
