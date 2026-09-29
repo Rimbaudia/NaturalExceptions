@@ -635,9 +635,16 @@ public final class ItemGenericAssembly extends Item {
             GeometryId blank = BlankGeometry.get(stack);
             return blank == null ? "Tool Assembly" : "Blank " + formatGeometryName(blank);
         }
-        return naturalexceptions.core.material.MaterialNameResolver.formatToolGeometry(
+        String geometry = naturalexceptions.core.material.MaterialNameResolver.formatToolGeometry(
             assembly.head()
                 .geometryId());
+        String material = naturalexceptions.minecraft.knowledge.KnowledgePresentation.materialPrefix(
+            naturalexceptions.minecraft.knowledge.KnowledgePresentation.viewer(),
+            assembly.head()
+                .materialRef(),
+            assembly.head()
+                .stateKey());
+        return (assembly.isBroken() ? "Broken " : "") + material + " " + geometry;
     }
 
     @Override

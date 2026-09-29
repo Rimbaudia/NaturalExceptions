@@ -89,7 +89,7 @@ public class BasicToolCompletionTest {
         assertNotNull(comp, "Handle item must contain component metadata");
         assertEquals(GeometryId.HANDLE, comp.geometryId());
         assertEquals(BuiltinMaterials.WOOD.ref(), comp.materialRef());
-        assertEquals("Handle", result.getDisplayName());
+        assertEquals("Wood Handle", result.getDisplayName(), "wood is common knowledge");
     }
 
     @Test
@@ -110,7 +110,10 @@ public class BasicToolCompletionTest {
 
         ItemStack pickResult = table.getStackInSlot(TileEntityAssemblyTable.SLOT_RESULT);
         assertNotNull(pickResult);
-        assertEquals("Pickaxe", pickResult.getDisplayName());
+        assertTrue(
+            pickResult.getDisplayName()
+                .endsWith("Pickaxe"),
+            "material, then the shape: " + pickResult.getDisplayName());
 
         // 2. Axe
         ComponentInstance axeHead = new ComponentInstance(
@@ -124,7 +127,10 @@ public class BasicToolCompletionTest {
 
         ItemStack axeResult = table.getStackInSlot(TileEntityAssemblyTable.SLOT_RESULT);
         assertNotNull(axeResult);
-        assertEquals("Axe", axeResult.getDisplayName());
+        assertTrue(
+            axeResult.getDisplayName()
+                .endsWith("Axe"),
+            "material, then the shape: " + axeResult.getDisplayName());
 
         // 3. Shovel
         ComponentInstance shovelHead = new ComponentInstance(
@@ -138,7 +144,10 @@ public class BasicToolCompletionTest {
 
         ItemStack shovelResult = table.getStackInSlot(TileEntityAssemblyTable.SLOT_RESULT);
         assertNotNull(shovelResult);
-        assertEquals("Shovel", shovelResult.getDisplayName());
+        assertTrue(
+            shovelResult.getDisplayName()
+                .endsWith("Shovel"),
+            "material, then the shape: " + shovelResult.getDisplayName());
 
         // 4. Hoe
         ComponentInstance hoeHead = new ComponentInstance(
@@ -152,13 +161,19 @@ public class BasicToolCompletionTest {
 
         ItemStack hoeResult = table.getStackInSlot(TileEntityAssemblyTable.SLOT_RESULT);
         assertNotNull(hoeResult);
-        assertEquals("Hoe", hoeResult.getDisplayName());
+        assertTrue(
+            hoeResult.getDisplayName()
+                .endsWith("Hoe"),
+            "material, then the shape: " + hoeResult.getDisplayName());
 
         // 5. Vanilla stick fallback compatibility
         table.setInventorySlotContents(TileEntityAssemblyTable.SLOT_HANDLE, new ItemStack(Items.stick));
         ItemStack stickHoeResult = table.getStackInSlot(TileEntityAssemblyTable.SLOT_RESULT);
         assertNotNull(stickHoeResult);
-        assertEquals("Hoe", stickHoeResult.getDisplayName());
+        assertTrue(
+            stickHoeResult.getDisplayName()
+                .endsWith("Hoe"),
+            "material, then the shape: " + stickHoeResult.getDisplayName());
     }
 
     @Test
@@ -331,7 +346,10 @@ public class BasicToolCompletionTest {
             cuHead.damage()
                 .isFractured(),
             "Component must be fractured at 1.0 wear");
-        assertEquals("Pickaxe", toolStack.getDisplayName());
+        assertTrue(
+            toolStack.getDisplayName()
+                .endsWith("Pickaxe"),
+            "material, then the shape: " + toolStack.getDisplayName());
         assertFalse(assemblyItem.canHarvestBlock(NEBlocks.copperOre, toolStack));
         assertEquals(1.0F, assemblyItem.getDigSpeed(toolStack, NEBlocks.copperOre, 0), 0.01F);
         assertEquals(-1, assemblyItem.getHarvestLevel(toolStack, "pickaxe"));

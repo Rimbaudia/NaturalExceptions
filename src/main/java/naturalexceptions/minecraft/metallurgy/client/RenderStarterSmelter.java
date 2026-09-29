@@ -184,10 +184,17 @@ public final class RenderStarterSmelter extends TileEntitySpecialRenderer {
         int roomLight = smelter.getWorldObj() != null ? smelter.getWorldObj()
             .getLightBrightnessForSkyBlocks(above[0], above[1], above[2], 0) : 0xF000F0;
 
+        net.minecraft.block.Block cell = naturalexceptions.minecraft.registry.NEBlocks.fluidCell;
+        if (cell == null) return;
+        // The same textures the world's fluid blocks use: an animated liquid and a set solid, tinted per material.
+        net.minecraft.util.IIcon liquidIcon = cell.getIcon(1, 0);
+        net.minecraft.util.IIcon solidIcon = cell
+            .getIcon(1, naturalexceptions.minecraft.fluid.BlockFluidCell.KIND_SOLID << 2);
+        bindTexture(TextureMap.locationBlocksTexture);
+
         GL11.glPushMatrix();
         GL11.glTranslated(x, y, z);
         GL11.glDisable(GL11.GL_CULL_FACE);
-        GL11.glDisable(GL11.GL_TEXTURE_2D);
         GL11.glDisable(GL11.GL_LIGHTING);
         GL11.glEnable(GL11.GL_BLEND);
         OpenGlHelper.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1, 0);
@@ -210,42 +217,59 @@ public final class RenderStarterSmelter extends TileEntitySpecialRenderer {
             GL11.glColor4f((color >> 16 & 255) / 255.0F, (color >> 8 & 255) / 255.0F, (color & 255) / 255.0F, 1.0F);
             double bottom = yCursor;
             double top = Math.min(ceiling, bottom + layerHeight);
-            drawBox(minX, bottom, minZ, maxX, top, maxZ);
+            drawBox(molten ? liquidIcon : solidIcon, minX, bottom, minZ, maxX, top, maxZ);
             yCursor = top;
         }
         GL11.glDisable(GL11.GL_BLEND);
         GL11.glEnable(GL11.GL_CULL_FACE);
         GL11.glEnable(GL11.GL_LIGHTING);
-        GL11.glEnable(GL11.GL_TEXTURE_2D);
         GL11.glColor4f(1F, 1F, 1F, 1F);
         GL11.glPopMatrix();
     }
 
-    /** An axis-aligned box: top and four sides (the bottom rests on the cavity floor). */
-    private static void drawBox(double x0, double y0, double z0, double x1, double y1, double z1) {
+    /**
+     * An axis-aligned box, top and four sides, textured one icon per block so a wide cavity does not stretch it.
+     * Side faces show only as much of the icon as the layer is tall.
+     */
+    private static void drawBox(net.minecraft.util.IIcon icon, double x0, double y0, double z0, double x1, double y1,
+        double z1) {
+        if (icon == null) return;
         Tessellator t = Tessellator.instance;
         t.startDrawingQuads();
-        t.addVertex(x0, y1, z0);
-        t.addVertex(x0, y1, z1);
-        t.addVertex(x1, y1, z1);
-        t.addVertex(x1, y1, z0);
-        t.addVertex(x0, y0, z0);
-        t.addVertex(x0, y1, z0);
-        t.addVertex(x1, y1, z0);
-        t.addVertex(x1, y0, z0);
-        t.addVertex(x1, y0, z1);
-        t.addVertex(x1, y1, z1);
-        t.addVertex(x0, y1, z1);
-        t.addVertex(x0, y0, z1);
-        t.addVertex(x0, y0, z1);
-        t.addVertex(x0, y1, z1);
-        t.addVertex(x0, y1, z0);
-        t.addVertex(x0, y0, z0);
-        t.addVertex(x1, y0, z0);
-        t.addVertex(x1, y1, z0);
-        t.addVertex(x1, y1, z1);
-        t.addVertex(x1, y0, z1);
+        for (double bx = Math.floor(x0); bx < x1; bx += 1.0D) {
+            for (double bz = Math.floor(z0); bz < z1; bz += 1.0D) {
+                double ax = Math.max(x0, bx), cx = Math.min(x1, bx + 1.0D);
+                double az = Math.max(z0, bz), cz = Math.min(z1, bz + 1.0D);
+                double u0 = icon.getInterpolatedU((ax - bx) * 16.0D), u1 = icon.getInterpolatedU((cx - bx) * 16.0D);
+                double v0 = icon.getInterpolatedV((az - bz) * 16.0D), v1 = icon.getInterpolatedV((cz - bz) * 16.0D);
+                t.addVertexWithUV(ax, y1, az, u0, v0);
+                t.addVertexWithUV(ax, y1, cz, u0, v1);
+                t.addVertexWithUV(cx, y1, cz, u1, v1);
+                t.addVertexWithUV(cx, y1, az, u1, v0);
+            }
+        }
+        side(t, icon, x0, z0, x1, z0, y0, y1);
+        side(t, icon, x1, z1, x0, z1, y0, y1);
+        side(t, icon, x0, z1, x0, z0, y0, y1);
+        side(t, icon, x1, z0, x1, z1, y0, y1);
         t.draw();
+    }
+
+    /** One vertical face from (xa, za) to (xb, zb), tiled per block along its length. */
+    private static void side(Tessellator t, net.minecraft.util.IIcon icon, double xa, double za, double xb, double zb,
+        double y0, double y1) {
+        double length = Math.abs(xb - xa) + Math.abs(zb - za);
+        double dx = (xb - xa) / length, dz = (zb - za) / length;
+        double vTop = icon.getInterpolatedV(0.0D);
+        double vBottom = icon.getInterpolatedV(Math.min(16.0D, (y1 - y0) * 16.0D));
+        for (double s = 0.0D; s < length; s += 1.0D) {
+            double e = Math.min(length, s + 1.0D);
+            double u0 = icon.getInterpolatedU(0.0D), u1 = icon.getInterpolatedU((e - s) * 16.0D);
+            t.addVertexWithUV(xa + dx * s, y0, za + dz * s, u0, vBottom);
+            t.addVertexWithUV(xa + dx * s, y1, za + dz * s, u0, vTop);
+            t.addVertexWithUV(xa + dx * e, y1, za + dz * e, u1, vTop);
+            t.addVertexWithUV(xa + dx * e, y0, za + dz * e, u1, vBottom);
+        }
     }
 
     /** Thinnest layer drawn, in blocks: one texel. */

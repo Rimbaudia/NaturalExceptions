@@ -319,7 +319,10 @@ final class SmelterLiveIntegrationTest {
         // Extract component
         ItemStack component = ItemCastingMold.extractComponent(mold);
         assertNotNull(component, "Extracting from solidified mold must yield component");
-        assertEquals("Pick Head", component.getDisplayName());
+        assertTrue(
+            component.getDisplayName()
+                .endsWith("Pick Head"),
+            "material, then the shape: " + component.getDisplayName());
 
         ComponentInstance instance = ItemGenericComponent.getComponent(component);
         assertNotNull(instance);
@@ -353,8 +356,14 @@ final class SmelterLiveIntegrationTest {
 
         // Display names must differ
         assertNotEquals(blankStack.getDisplayName(), pickHeadStack.getDisplayName());
-        assertEquals("Blank", blankStack.getDisplayName());
-        assertEquals("Pick Head", pickHeadStack.getDisplayName());
+        assertTrue(
+            blankStack.getDisplayName()
+                .endsWith("Blank"),
+            "material, then the shape: " + blankStack.getDisplayName());
+        assertTrue(
+            pickHeadStack.getDisplayName()
+                .endsWith("Pick Head"),
+            "material, then the shape: " + pickHeadStack.getDisplayName());
 
         // Geometries must differ
         assertNotEquals(

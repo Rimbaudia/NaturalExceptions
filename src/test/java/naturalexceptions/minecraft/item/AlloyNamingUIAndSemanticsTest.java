@@ -174,7 +174,7 @@ public final class AlloyNamingUIAndSemanticsTest {
                 .requiredMass(BuiltinMaterials.IRON_PROPERTIES),
             ManufacturingState.AS_CAST);
         ItemStack compStack = ItemGenericComponent.createStack(comp);
-        assertEquals("Pick Head", compStack.getDisplayName());
+        assertTrue(compStack.getDisplayName().endsWith("Pick Head"), "material, then the shape: " + compStack.getDisplayName());
 
         // Assembly name
         ComponentInstance handle = new ComponentInstance(
@@ -186,7 +186,7 @@ public final class AlloyNamingUIAndSemanticsTest {
             ManufacturingState.FINISHED);
         AssemblyGraph graph = AssemblyGraph.ofTool(comp, handle);
         ItemStack toolStack = ItemGenericAssembly.createStack(graph);
-        assertEquals("Pickaxe", toolStack.getDisplayName());
+        assertTrue(toolStack.getDisplayName().endsWith("Pickaxe"), "material, then the shape: " + toolStack.getDisplayName());
 
         // Material Sample stack
         ItemStack sampleStack = ItemMaterialSample.createStack(ref, key);
@@ -240,7 +240,7 @@ public final class AlloyNamingUIAndSemanticsTest {
             ManufacturingState.FINISHED);
         ItemStack pickaxe = ItemGenericAssembly.createStack(AssemblyGraph.ofTool(copperHead, ironHandle));
 
-        assertEquals("Pickaxe", pickaxe.getDisplayName());
+        assertTrue(pickaxe.getDisplayName().endsWith("Pickaxe"), "material, then the shape: " + pickaxe.getDisplayName());
 
         List<String> tooltip = new ArrayList<>();
         ((ItemGenericAssembly) NEItems.genericAssembly).addInformation(pickaxe, null, tooltip, false);

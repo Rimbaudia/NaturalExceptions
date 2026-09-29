@@ -281,7 +281,10 @@ final class ResourceBindingLocalizationTest {
             MaterialQuantity.ofGrams(268.8),
             ManufacturingState.FINISHED);
         ItemStack headStack = ItemGenericComponent.createStack(cuHead);
-        assertEquals("Pick Head", headStack.getDisplayName());
+        assertTrue(
+            headStack.getDisplayName()
+                .endsWith("Pick Head"),
+            "material, then the shape: " + headStack.getDisplayName());
 
         // Component: Wood handle
         ComponentInstance woodHandle = new ComponentInstance(
@@ -291,7 +294,7 @@ final class ResourceBindingLocalizationTest {
             MaterialQuantity.ofGrams(100.0),
             ManufacturingState.FINISHED);
         ItemStack handleStack = ItemGenericComponent.createStack(woodHandle);
-        assertEquals("Handle", handleStack.getDisplayName());
+        assertEquals("Wood Handle", handleStack.getDisplayName(), "wood is common knowledge");
 
         // Casting mold: Pick Head
         ItemStack pickMold = ItemCastingMold.createStack(GeometryId.PICK_HEAD);
@@ -300,7 +303,10 @@ final class ResourceBindingLocalizationTest {
         // Assembly: Copper + Wood Pick
         AssemblyGraph tool = AssemblyGraph.ofTool(cuHead, woodHandle);
         ItemStack toolStack = ItemGenericAssembly.createStack(tool);
-        assertEquals("Pickaxe", toolStack.getDisplayName());
+        assertTrue(
+            toolStack.getDisplayName()
+                .endsWith("Pickaxe"),
+            "material, then the shape: " + toolStack.getDisplayName());
         assertFalse(
             toolStack.getDisplayName()
                 .contains("itemAssembly"),
@@ -310,7 +316,10 @@ final class ResourceBindingLocalizationTest {
         cuHead.damage()
             .fracture();
         ItemStack brokenTool = ItemGenericAssembly.createStack(tool);
-        assertEquals("Pickaxe", brokenTool.getDisplayName());
+        assertTrue(
+            brokenTool.getDisplayName()
+                .endsWith("Pickaxe"),
+            "material, then the shape: " + brokenTool.getDisplayName());
     }
 
     @Test

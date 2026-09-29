@@ -275,7 +275,11 @@ public final class ItemGenericComponent extends Item {
         }
         String prefix = comp.manufacturingState() == ManufacturingState.COLD_WORKED ? "Cold-Worked "
             : comp.manufacturingState() == ManufacturingState.ANNEALED ? "Annealed " : "";
-        return prefix + formatGeometryName(comp.geometryId());
+        String material = naturalexceptions.minecraft.knowledge.KnowledgePresentation.materialPrefix(
+            naturalexceptions.minecraft.knowledge.KnowledgePresentation.viewer(),
+            comp.materialRef(),
+            comp.stateKey());
+        return prefix + material + " " + formatGeometryName(comp.geometryId());
     }
 
     @Override

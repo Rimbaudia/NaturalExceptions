@@ -179,7 +179,14 @@ final class MetallurgyBaselineAssemblyTest {
         ItemStack toolResult = table.computeResult();
         assertNotNull(toolResult, "Assembly Table must assemble head + stick into tool");
         assertTrue(toolResult.getItem() instanceof ItemGenericAssembly);
-        assertEquals("Pickaxe", toolResult.getDisplayName(), "Uninspected material stays out of the shared stack name");
+        assertTrue(
+            toolResult.getDisplayName()
+                .endsWith("Pickaxe"),
+            "material, then the shape: " + toolResult.getDisplayName());
+        assertFalse(
+            toolResult.getDisplayName()
+                .contains("Copper"),
+            "Uninspected material is named by appearance only");
 
         // Step 5: Extract tool from Assembly Table
         ItemStack assembledPick = table.decrStackSize(TileEntityAssemblyTable.SLOT_RESULT, 1);
@@ -326,7 +333,10 @@ final class MetallurgyBaselineAssemblyTest {
 
         ItemStack axeResult = table.computeResult();
         assertNotNull(axeResult);
-        assertEquals("Axe", axeResult.getDisplayName());
+        assertTrue(
+            axeResult.getDisplayName()
+                .endsWith("Axe"),
+            "material, then the shape: " + axeResult.getDisplayName());
 
         ItemGenericAssembly assemblyItem = (ItemGenericAssembly) axeResult.getItem();
         assertTrue(
@@ -350,7 +360,10 @@ final class MetallurgyBaselineAssemblyTest {
         table.setInventorySlotContents(TileEntityAssemblyTable.SLOT_HEAD, shovelHeadStack);
         ItemStack shovelResult = table.computeResult();
         assertNotNull(shovelResult);
-        assertEquals("Shovel", shovelResult.getDisplayName());
+        assertTrue(
+            shovelResult.getDisplayName()
+                .endsWith("Shovel"),
+            "material, then the shape: " + shovelResult.getDisplayName());
         assertTrue(
             assemblyItem.getToolClasses(shovelResult)
                 .contains("shovel"));
@@ -372,7 +385,10 @@ final class MetallurgyBaselineAssemblyTest {
         table.setInventorySlotContents(TileEntityAssemblyTable.SLOT_HEAD, bladeStack);
         ItemStack swordResult = table.computeResult();
         assertNotNull(swordResult);
-        assertEquals("Sword", swordResult.getDisplayName());
+        assertTrue(
+            swordResult.getDisplayName()
+                .endsWith("Sword"),
+            "material, then the shape: " + swordResult.getDisplayName());
 
         com.google.common.collect.Multimap attrs = swordResult.getAttributeModifiers();
         assertTrue(attrs.containsKey(SharedMonsterAttributes.attackDamage.getAttributeUnlocalizedName()));
@@ -518,6 +534,9 @@ final class MetallurgyBaselineAssemblyTest {
 
         ItemStack forgedPick = table.computeResult();
         assertNotNull(forgedPick, "Forged head must assemble smoothly on Assembly Table");
-        assertEquals("Pickaxe", forgedPick.getDisplayName());
+        assertTrue(
+            forgedPick.getDisplayName()
+                .endsWith("Pickaxe"),
+            "material, then the shape: " + forgedPick.getDisplayName());
     }
 }

@@ -75,7 +75,10 @@ public final class MaterialNamingHierarchyTest {
             MaterialQuantity.ofGrams(268.8),
             ManufacturingState.FINISHED);
         ItemStack headStack = ItemGenericComponent.createStack(copperHead);
-        assertEquals("Pick Head", headStack.getDisplayName());
+        assertTrue(
+            headStack.getDisplayName()
+                .endsWith("Pick Head"),
+            "material, then the shape: " + headStack.getDisplayName());
         assertFalse(
             headStack.getDisplayName()
                 .contains("Generated"));
@@ -89,7 +92,10 @@ public final class MaterialNamingHierarchyTest {
             ManufacturingState.FINISHED);
         AssemblyGraph assembly = AssemblyGraph.ofTool(copperHead, woodHandle);
         ItemStack toolStack = ItemGenericAssembly.createStack(assembly);
-        assertEquals("Pickaxe", toolStack.getDisplayName());
+        assertTrue(
+            toolStack.getDisplayName()
+                .endsWith("Pickaxe"),
+            "material, then the shape: " + toolStack.getDisplayName());
         assertFalse(
             toolStack.getDisplayName()
                 .contains("Generated"));
@@ -273,7 +279,10 @@ public final class MaterialNamingHierarchyTest {
             MaterialQuantity.ofGrams(268.8),
             ManufacturingState.FINISHED);
         ItemStack headStack = ItemGenericComponent.createStack(head);
-        assertEquals("Pick Head", headStack.getDisplayName());
+        assertTrue(
+            headStack.getDisplayName()
+                .endsWith("Pick Head"),
+            "material, then the shape: " + headStack.getDisplayName());
 
         // 3. Dynamic Tool derives custom name
         ComponentInstance woodHandle = new ComponentInstance(
@@ -284,7 +293,10 @@ public final class MaterialNamingHierarchyTest {
             ManufacturingState.FINISHED);
         AssemblyGraph assembly = AssemblyGraph.ofTool(head, woodHandle);
         ItemStack toolStack = ItemGenericAssembly.createStack(assembly);
-        assertEquals("Pickaxe", toolStack.getDisplayName());
+        assertTrue(
+            toolStack.getDisplayName()
+                .endsWith("Pickaxe"),
+            "material, then the shape: " + toolStack.getDisplayName());
 
         // 4. Material Sample derives custom name
         ItemStack sample = ItemMaterialSample.createStack(alloyRef, feCuAlloy);
@@ -333,7 +345,9 @@ public final class MaterialNamingHierarchyTest {
         loadedData.readFromNBT(nbt);
 
         assertNull(MaterialNameRegistry.get(alloy));
-        assertEquals("Fe60Au40 Alloy", MaterialNameResolver.resolveDisplayName(MaterialRef.generatedFrom(alloy), alloy));
+        assertEquals(
+            "Fe60Au40 Alloy",
+            MaterialNameResolver.resolveDisplayName(MaterialRef.generatedFrom(alloy), alloy));
     }
 
     @Test
