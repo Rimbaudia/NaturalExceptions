@@ -312,7 +312,31 @@ final class LandmarkMaterializer {
                 set(world, x, y, z, Blocks.fence, 0);
                 break;
             case QUARTZ:
-                set(world, x, y, z, Blocks.quartz_block, 2);
+                set(world, x, y, z, Blocks.quartz_block, meta == 1 ? 1 : meta == 2 ? 0 : 2);
+                break;
+            case STAIRS:
+                set(world, x, y, z, Blocks.spruce_stairs, meta);
+                break;
+            case SLAB:
+                set(world, x, y, z, Blocks.wooden_slab, 1 | (meta & 8));
+                break;
+            case DOOR: {
+                // Both halves at once (same column, same chunk); the layout keeps the block above clear for it.
+                set(world, x, y, z, Blocks.wooden_door, meta & 3);
+                set(world, x, y + 1, z, Blocks.wooden_door, 8);
+                break;
+            }
+            case PLANKS:
+                set(world, x, y, z, Blocks.planks, meta);
+                break;
+            case WOOL:
+                set(world, x, y, z, Blocks.wool, meta);
+                break;
+            case HAY:
+                set(world, x, y, z, Blocks.hay_block, 0);
+                break;
+            case GLASS:
+                set(world, x, y, z, Blocks.glass, 0);
                 break;
             case LOG:
                 set(world, x, y, z, Blocks.log, 0);

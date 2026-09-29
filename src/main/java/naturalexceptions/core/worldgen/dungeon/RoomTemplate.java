@@ -21,6 +21,8 @@ import java.util.Set;
  * mobs: Skeleton Witch    ; for spawners (s, S) and alcoves (a); "Zombie+" is armoured
  * pit: lava               ; what fills the pits under ',' and '%': lava, water or empty
  * trapped: true           ; holds trap devices (counts against the dungeon's trap budget)
+ * type: building          ; a building on a citadel's surface: the file draws its own walls and roof
+ * footprint: 9x11         ; a building's size in blocks, walls included (x by z); its front (door) is south
  * ---
  * floor:                  ; then one row per z (north first), one character per x (west first)
  * layer 1-3:              ; the open layers, from 1 (standing on the floor) up to height
@@ -32,7 +34,7 @@ import java.util.Set;
 public final class RoomTemplate {
 
     /** What each character in a template means. */
-    public static final String LEGEND = ".#LB~=xRIGtfwcCsS^vF%,ghaTW?HKONA|oMQY*";
+    public static final String LEGEND = ".#LB~=xRIGtfwcCsS^vF%,ghaTW?HKONA|oMQY*12345678_-DpPuZeE";
 
     public enum Role {
         ENTRANCE,
@@ -61,11 +63,14 @@ public final class RoomTemplate {
     public final List<String> mobs;
     public final String pit;
     public final boolean trapped;
+    /** A surface building: the file holds its walls and roof, its layers start at the ground floor. */
+    public final boolean building;
     /** [y][z][x]: y 0 is the floor, 1..height the open layers, height + 1 the ceiling. */
     private final char[][][] grid;
 
     private RoomTemplate(String name, int cellsX, int cellsZ, boolean small, int height, Set<Role> roles,
-        Set<Kind> kinds, int weight, List<String> mobs, String pit, boolean trapped, char[][][] grid) {
+        Set<Kind> kinds, int weight, List<String> mobs, String pit, boolean trapped, boolean building,
+        char[][][] grid) {
         this.name = name;
         this.cellsX = cellsX;
         this.cellsZ = cellsZ;
@@ -77,6 +82,7 @@ public final class RoomTemplate {
         this.mobs = mobs;
         this.pit = pit;
         this.trapped = trapped;
+        this.building = building;
         this.grid = grid;
     }
 
@@ -143,7 +149,8 @@ public final class RoomTemplate {
     public static RoomTemplate parse(String source, List<String> lines) {
         String name = source;
         int cellsX = 1, cellsZ = 1, height = 5, weight = 1;
-        boolean small = false, trapped = false;
+        boolean small = false, trapped = false, building = false;
+        int footprintX = 0, footprintZ = 0;
         Set<Role> roles = EnumSet.noneOf(Role.class);
         Set<Kind> kinds = EnumSet.allOf(Kind.class);
         List<String> mobs = new ArrayList<>();
@@ -197,14 +204,24 @@ public final class RoomTemplate {
                 case "trapped":
                     trapped = Boolean.parseBoolean(value);
                     break;
+                case "type":
+                    building = value.equals("building");
+                    break;
+                case "footprint": {
+                    String[] parts = value.split("x");
+                    footprintX = Integer.parseInt(parts[0].trim());
+                    footprintZ = Integer.parseInt(parts[1].trim());
+                    break;
+                }
                 default:
                     throw error(source, i, "unknown key " + key);
             }
         }
-        int w = insideSize(cellsX, small), d = insideSize(cellsZ, small);
+        int w = footprintX > 0 ? footprintX : insideSize(cellsX, small);
+        int d = footprintZ > 0 ? footprintZ : insideSize(cellsZ, small);
         char[][][] grid = new char[height + 2][d][w];
         for (int y = 0; y < grid.length; y++)
-            for (char[] row : grid[y]) java.util.Arrays.fill(row, y == 0 || y == height + 1 ? '#' : '.');
+            for (char[] row : grid[y]) java.util.Arrays.fill(row, y == 0 || y == height + 1 && !building ? '#' : '.');
         while (i < lines.size()) {
             String header = strip(lines.get(i));
             if (header.isEmpty()) {
@@ -250,6 +267,7 @@ public final class RoomTemplate {
             Collections.unmodifiableList(mobs),
             pit,
             trapped,
+            building,
             grid);
     }
 

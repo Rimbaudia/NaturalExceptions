@@ -50,7 +50,9 @@ final class RoomWriter {
                 char c = template.at(tx, y, tz, rotation);
                 int x = minX + tx, z = minZ + tz, wy = floor + y;
                 boolean shellLayer = y == 0 || y == h + 1;
-                place(c, x, wy, z, tx, tz, w, dp, shellLayer, warded, template, role);
+                if (c == 'D') door(template, rotation, tx, y, tz, x, wy, z);
+                else if (c >= '1' && c <= '8') d.put(x, wy, z, Block.STAIRS, stairs(c, rotation));
+                else place(c, x, wy, z, tx, tz, w, dp, shellLayer && !template.building, warded, template, role);
                 if (y == 0 && (c == ',' || c == '%')) pits.add(new int[] { x, z });
             }
         }
@@ -180,6 +182,30 @@ final class RoomWriter {
             case 'Y':
                 d.put(x, y, z, Block.LOG);
                 break;
+            case 'e':
+                d.put(x, y, z, Block.QUARTZ, 1);
+                break;
+            case '_':
+                d.put(x, y, z, Block.SLAB, 0);
+                break;
+            case '-':
+                d.put(x, y, z, Block.SLAB, 8);
+                break;
+            case 'p':
+                d.put(x, y, z, Block.PLANKS, 0);
+                break;
+            case 'P':
+                d.put(x, y, z, Block.PLANKS, 1);
+                break;
+            case 'u':
+                d.put(x, y, z, Block.WOOL, 11);
+                break;
+            case 'Z':
+                d.put(x, y, z, Block.HAY);
+                break;
+            case 'E':
+                d.put(x, y, z, Block.GLASS);
+                break;
             case '*':
                 d.put(x, y, z, Block.LEAVES);
                 break;
@@ -187,6 +213,38 @@ final class RoomWriter {
                 d.stone(x, y, z);
                 break;
         }
+    }
+
+    /**
+     * Vanilla stairs meta for a template's '1'..'4' (rising to the north, east, south, west; '5'..'8' the same
+     * upside down), once the room is turned {@code rotation} quarter turns clockwise.
+     */
+    static int stairs(char c, int rotation) {
+        int n = c - '1';
+        boolean upsideDown = n >= 4;
+        int dir = ((n & 3) + rotation) & 3; // 0 north, 1 east, 2 south, 3 west
+        int[] meta = { 3, 0, 2, 1 };
+        return meta[dir] | (upsideDown ? 4 : 0);
+    }
+
+    /**
+     * A door: the lower half where the layer below is not also a door (the upper half is written with it). It sits
+     * in the plane of its wall: facing along z when the wall runs along x, along x otherwise.
+     */
+    private void door(RoomTemplate t, int rotation, int tx, int y, int tz, int x, int wy, int z) {
+        if (y > 0 && t.at(tx, y - 1, tz, rotation) == 'D') return;
+        int w = t.width(rotation), dp = t.depth(rotation);
+        boolean wallAlongX = tx > 0 && tx < w - 1
+            && solid(t.at(tx - 1, y, tz, rotation))
+            && solid(t.at(tx + 1, y, tz, rotation));
+        int facing;
+        if (wallAlongX) facing = tz >= dp / 2 ? 1 : 3;
+        else facing = tx >= w / 2 ? 0 : 2;
+        d.put(x, wy, z, Block.DOOR, facing); // its upper half is placed with it, so nothing is written above
+    }
+
+    private static boolean solid(char c) {
+        return c != '.' && c != 'D' && c != 't' && c != 'f' && c != 'w' && c != ',';
     }
 
     /** 'c' is the room's chest (whose loot the role decides); 'C' the second one, if the role has one. */

@@ -1,0 +1,11 @@
+house_small
+house_tall
+barracks
+smithy
+chapel
+stables
+cistern_house
+library_tower
+cloister
+granary
+grand_keep

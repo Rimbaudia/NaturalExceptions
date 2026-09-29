@@ -74,9 +74,22 @@ public final class SkyDungeon {
         CRAFTING_TABLE,
         ANVIL,
         FENCE,
+        /** Quartz; meta 0 pillar, 1 chiseled, 2 plain. */
         QUARTZ,
         LOG,
-        LEAVES
+        LEAVES,
+        /** Spruce stairs; meta: vanilla stairs meta (0 up to the east, 1 west, 2 south, 3 north; +4 upside down). */
+        STAIRS,
+        /** Spruce slab; meta 0 bottom half, 8 top half. */
+        SLAB,
+        /** A wooden door's lower half; meta: vanilla door facing (0..3). The upper half is written with it. */
+        DOOR,
+        /** Planks; meta 0 oak, 1 spruce. */
+        PLANKS,
+        /** Wool; meta: vanilla colour. */
+        WOOL,
+        HAY,
+        GLASS
     }
 
     /** Dispenser meta flag: loaded with fire charges. */
