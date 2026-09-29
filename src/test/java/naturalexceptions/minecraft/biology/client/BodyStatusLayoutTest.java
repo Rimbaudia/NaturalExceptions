@@ -14,31 +14,37 @@ final class BodyStatusLayoutTest {
     @Test
     void sitsLeftOfTheInventoryWithoutCoveringIt() {
         // 854x480 scaled screen, vanilla 176x166 inventory centred.
-        BodyStatusLayout layout = BodyStatusLayout.calculate(854, 480, 339, 157);
+        BodyStatusLayout layout = BodyStatusLayout.calculate(854, 480, 339, 157, 166);
         assertEquals(BodyStatusLayout.PANEL_WIDTH, layout.panelWidth());
         assertTrue(layout.panelX() + layout.panelWidth() <= 339, "ends before the inventory");
         assertTrue(layout.panelX() >= 0);
         assertFalse(layout.overlaysScreenEdge());
-        assertEquals(339, layout.tabX(), "tab on the inventory's top-left corner");
-        assertTrue(layout.tabY() < 157);
-        assertTrue(layout.listTop() < layout.listBottom());
+        assertEquals(157, layout.panelY(), "top edge lines up with the inventory");
+        assertEquals(166, layout.panelHeight(), "as tall as the inventory");
+        assertTrue(layout.listBottom() - layout.listTop() >= 4 * 11, "room for a few list lines");
+        int[] lastVital = layout.vitalRow(BodyStatusLayout.VITAL_ROWS - 1);
+        assertTrue(lastVital[1] + 9 <= layout.listTop(), "vitals sit beside the figure, above the list");
+        assertTrue(lastVital[0] + lastVital[2] <= layout.panelX() + layout.panelWidth() - 4, "vitals inside");
+
+        BodyStatusLayout gear = BodyStatusLayout.calculate(854, 480, 339, 124, 232);
+        assertEquals(232, gear.panelHeight(), "matches the taller Gear screen");
     }
 
     @Test
     void shrinksThenOverlaysOnNarrowScreens() {
-        BodyStatusLayout snug = BodyStatusLayout.calculate(430, 256, 127, 45);
+        BodyStatusLayout snug = BodyStatusLayout.calculate(430, 256, 127, 45, 166);
         assertTrue(snug.panelWidth() < BodyStatusLayout.PANEL_WIDTH);
         assertTrue(snug.panelX() + snug.panelWidth() <= 127);
         assertFalse(snug.overlaysScreenEdge());
 
-        BodyStatusLayout tight = BodyStatusLayout.calculate(260, 240, 42, 37);
+        BodyStatusLayout tight = BodyStatusLayout.calculate(260, 240, 42, 37, 166);
         assertTrue(tight.overlaysScreenEdge());
         assertEquals(0, tight.reservedLeftWidth(42), "nothing to reserve when it overlays anyway");
     }
 
     @Test
     void figureHitTestsEachRegion() {
-        BodyStatusLayout layout = BodyStatusLayout.calculate(854, 480, 339, 157);
+        BodyStatusLayout layout = BodyStatusLayout.calculate(854, 480, 339, 157, 166);
         for (String region : BodyStatusLayout.dollRegions()) {
             int[] r = layout.regionRect(region);
             assertEquals(region, layout.regionAt(r[0] + r[2] / 2, r[1] + r[3] / 2));
@@ -47,6 +53,10 @@ final class BodyStatusLayoutTest {
         int[] head = layout.regionRect("head");
         int[] torso = layout.regionRect("torso");
         assertEquals(head[1] + head[3], torso[1], "head sits on the torso");
+        int cell = 0;
+        for (String region : BodyStatusLayout.dollRegions())
+            assertEquals(cell++, BodyStatusLayout.pieceIndex(region), region + " sprite cell");
+        assertEquals(-1, BodyStatusLayout.pieceIndex("tail"));
     }
 
     @Test
@@ -63,7 +73,7 @@ final class BodyStatusLayoutTest {
         // Right side too narrow, left side wide: the browser would take the left, unless the Body panel holds it.
         InventoryOverlayLayout.Layout free = InventoryOverlayLayout.calculate(560, 300, 300, 60, 176, 166, 0);
         assertEquals(InventoryOverlayLayout.Side.LEFT, free.side());
-        BodyStatusLayout body = BodyStatusLayout.calculate(560, 300, 300, 60);
+        BodyStatusLayout body = BodyStatusLayout.calculate(560, 300, 300, 60, 166);
         InventoryOverlayLayout.Layout shared = InventoryOverlayLayout
             .calculate(560, 300, 300, 60, 176, 166, body.reservedLeftWidth(300));
         assertTrue(

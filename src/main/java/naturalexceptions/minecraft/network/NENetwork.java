@@ -35,6 +35,7 @@ public final class NENetwork {
         CHANNEL.registerMessage(PacketBodyStatus.Handler.class, PacketBodyStatus.class, 3, Side.CLIENT);
         CHANNEL.registerMessage(PacketGearAppearance.Handler.class, PacketGearAppearance.class, 4, Side.CLIENT);
         CHANNEL.registerMessage(PacketOpenGear.Handler.class, PacketOpenGear.class, 5, Side.SERVER);
+        CHANNEL.registerMessage(PacketTreatRegion.Handler.class, PacketTreatRegion.class, 6, Side.SERVER);
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })

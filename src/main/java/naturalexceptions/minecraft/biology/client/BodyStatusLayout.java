@@ -4,22 +4,22 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Screen placement for the Body panel beside the player inventory, and the paper-doll figure inside it. Pure
- * geometry so it can be tested without a client.
+ * Screen placement for the Body panel beside the inventory or Gear screen, and the figure inside it. Pure geometry
+ * so it can be tested without a client. The figure's pieces are drawn from {@code gui/body_panel.png}.
  */
 public final class BodyStatusLayout {
 
     public static final int PANEL_WIDTH = 140;
     static final int MIN_PANEL_WIDTH = 112;
     static final int MARGIN = 5;
-    public static final int TAB_WIDTH = 40;
-    public static final int TAB_HEIGHT = 12;
+    /** Shortest panel: header, figure and a few list lines. */
+    static final int MIN_PANEL_HEIGHT = 150;
     /** Figure is drawn on a 16 x 32 unit grid (a Minecraft skin's proportions), {@link #DOLL_SCALE} px per unit. */
     public static final int DOLL_SCALE = 2;
     public static final int DOLL_WIDTH = 16 * DOLL_SCALE;
     public static final int DOLL_HEIGHT = 32 * DOLL_SCALE;
-    /** Height of the header (title, condition bar) above the figure. */
-    public static final int HEADER_HEIGHT = 26;
+    /** Height of the header (status word, condition bar) above the figure. */
+    public static final int HEADER_HEIGHT = 24;
 
     /** Region path to {x, y, w, h} in doll units. Seen from the front, so the right arm is on the viewer's left. */
     private static final Map<String, int[]> DOLL = new LinkedHashMap<>();
@@ -33,26 +33,27 @@ public final class BodyStatusLayout {
         DOLL.put("left_leg", new int[] { 8, 20, 4, 12 });
     }
 
+    /** Vitals rows beside the figure: blood, energy, water, moving, hands. */
+    public static final int VITAL_ROWS = 5;
+    public static final int VITAL_ROW_HEIGHT = 13;
+
     private final int panelX;
     private final int panelY;
     private final int panelWidth;
     private final int panelHeight;
-    private final int tabX;
-    private final int tabY;
     private final boolean overlaysScreenEdge;
 
-    private BodyStatusLayout(int panelX, int panelY, int panelWidth, int panelHeight, int tabX, int tabY,
-        boolean overlaysScreenEdge) {
+    private BodyStatusLayout(int panelX, int panelY, int panelWidth, int panelHeight, boolean overlaysScreenEdge) {
         this.panelX = panelX;
         this.panelY = panelY;
         this.panelWidth = panelWidth;
         this.panelHeight = panelHeight;
-        this.tabX = tabX;
-        this.tabY = tabY;
         this.overlaysScreenEdge = overlaysScreenEdge;
     }
 
-    public static BodyStatusLayout calculate(int screenWidth, int screenHeight, int guiLeft, int guiTop) {
+    /** Beside the screen at {@code guiLeft, guiTop}, as tall as the screen ({@code guiHeight}). */
+    public static BodyStatusLayout calculate(int screenWidth, int screenHeight, int guiLeft, int guiTop,
+        int guiHeight) {
         int room = guiLeft - MARGIN - 2;
         int width;
         int x;
@@ -68,10 +69,9 @@ public final class BodyStatusLayout {
             x = 2;
             overlay = true;
         }
-        int y = 4;
-        int height = Math.max(HEADER_HEIGHT + DOLL_HEIGHT + 20, screenHeight - 8);
-        int tabY = Math.max(2, Math.min(24, guiTop - 14));
-        return new BodyStatusLayout(x, y, width, height, guiLeft, tabY, overlay);
+        int height = Math.max(MIN_PANEL_HEIGHT, guiHeight);
+        int y = Math.max(2, Math.min(guiTop, screenHeight - height - 2));
+        return new BodyStatusLayout(x, y, width, height, overlay);
     }
 
     public int panelX() {
@@ -88,14 +88,6 @@ public final class BodyStatusLayout {
 
     public int panelHeight() {
         return panelHeight;
-    }
-
-    public int tabX() {
-        return tabX;
-    }
-
-    public int tabY() {
-        return tabY;
     }
 
     /** True when there was no room beside the inventory and the panel covers part of it. */
@@ -116,9 +108,15 @@ public final class BodyStatusLayout {
         return panelY + HEADER_HEIGHT;
     }
 
-    /** Top of the scrolling injury/exposure list. */
+    /** {x, y, width} of a vitals row (icon, then bar) beside the figure. */
+    public int[] vitalRow(int index) {
+        int x = dollX() + DOLL_WIDTH + 8;
+        return new int[] { x, dollY() + index * VITAL_ROW_HEIGHT, panelX + panelWidth - 8 - x };
+    }
+
+    /** Top of the injury/exposure list. */
     public int listTop() {
-        return dollY() + DOLL_HEIGHT + 8;
+        return dollY() + DOLL_HEIGHT + 7;
     }
 
     public int listBottom() {
@@ -129,13 +127,19 @@ public final class BodyStatusLayout {
         return x >= panelX && x < panelX + panelWidth && y >= panelY && y < panelY + panelHeight;
     }
 
-    public boolean tabContains(int x, int y) {
-        return x >= tabX && x < tabX + TAB_WIDTH && y >= tabY && y < tabY + TAB_HEIGHT;
-    }
-
     /** Region paths the figure draws, in drawing order. */
     public static Iterable<String> dollRegions() {
         return DOLL.keySet();
+    }
+
+    /** Cell of a region's piece in {@code gui/body_panel.png} (32 px wide cells along the top), or -1. */
+    public static int pieceIndex(String regionPath) {
+        int i = 0;
+        for (String region : DOLL.keySet()) {
+            if (region.equals(regionPath)) return i;
+            i++;
+        }
+        return -1;
     }
 
     /** Screen rectangle {x, y, w, h} of a region's block in the figure, or null if the figure has no such part. */

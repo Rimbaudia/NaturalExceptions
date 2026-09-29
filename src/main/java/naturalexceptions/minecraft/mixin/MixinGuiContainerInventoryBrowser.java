@@ -27,6 +27,11 @@ public abstract class MixinGuiContainerInventoryBrowser {
             ci.cancel();
             return;
         }
+        if (naturalexceptions.minecraft.biology.client.BodyStatusPanel
+            .handleClick((GuiContainer) (Object) this, mouseX, mouseY, mouseButton)) {
+            ci.cancel();
+            return;
+        }
         if (InventoryBrowserOverlay
             .handleContainerMouseClick((GuiContainer) (Object) this, mouseX, mouseY, mouseButton)) {
             ci.cancel();
@@ -35,6 +40,11 @@ public abstract class MixinGuiContainerInventoryBrowser {
 
     @Inject(method = "mouseMovedOrUp", at = @At("HEAD"), cancellable = true)
     private void naturalexceptions$handleInventoryBrowserRelease(int mouseX, int mouseY, int state, CallbackInfo ci) {
+        if (naturalexceptions.minecraft.biology.client.BodyStatusPanel
+            .consumes((GuiContainer) (Object) this, mouseX, mouseY)) {
+            ci.cancel();
+            return;
+        }
         if (InventoryBrowserOverlay.shouldConsumeContainerMouse((GuiContainer) (Object) this, mouseX, mouseY)) {
             ci.cancel();
         }

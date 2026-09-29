@@ -1,7 +1,5 @@
 package naturalexceptions.minecraft.biology.client;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,6 +7,8 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
@@ -19,33 +19,56 @@ import org.lwjgl.opengl.GL11;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import naturalexceptions.core.biology.BiologicalInjury;
 import naturalexceptions.minecraft.biology.BodyStatusSnapshot;
+import naturalexceptions.minecraft.biology.BodyTreatment;
+import naturalexceptions.minecraft.biology.BodyWords;
+import naturalexceptions.minecraft.client.GuiGeometry;
+import naturalexceptions.minecraft.client.GuiTooltips;
+import naturalexceptions.minecraft.item.ItemBandage;
 import naturalexceptions.minecraft.knowledge.client.InventoryOverlayLayout;
+import naturalexceptions.minecraft.network.NENetwork;
 import naturalexceptions.minecraft.network.PacketBodyStatus;
+import naturalexceptions.minecraft.network.PacketTreatRegion;
 
 /**
- * The Body panel: a "Body" tab above the player inventory opens a panel on its left showing each body region on a
- * figure, open injuries, poisoning and other exposure, reserves and how well the body moves and handles things.
+ * The Body panel beside the inventory and Gear screens (Body tab): a figure whose parts are coloured by how hurt they
+ * are, how your blood, energy, water, legs and hands are holding up, and a short list of what is wrong in plain
+ * words. Drop a field bandage on a wounded part to dress or splint it.
  */
 @SideOnly(Side.CLIENT)
 public final class BodyStatusPanel {
 
+    private static final ResourceLocation SPRITES = new ResourceLocation(
+        "naturalexceptions",
+        "textures/gui/body_panel.png");
     private static final int PANEL_BACKGROUND = 0xFFC6C6C6;
     private static final int PANEL_BORDER = 0xFF373737;
     private static final int GUI_TEXT = 0xFF404040;
-    private static final int MUTED_TEXT = 0xFF6A6A6A;
+    private static final int MUTED_TEXT = 0xFF707070;
     private static final int WARN_TEXT = 0xFF9A2A1E;
     private static final int BAR_BACK = 0xFF8B8B8B;
-    private static final int LINE_HEIGHT = 10;
+    private static final int LINE_HEIGHT = 11;
+    private static final int ICON = 9;
+
+    /** Icon cells along v = 64 in the sprite sheet (see tools/textures/generate_interface_art.py). */
+    private static final int ICON_BLOOD = 0;
+    private static final int ICON_BURN = 1;
+    private static final int ICON_BONE = 2;
+    private static final int ICON_LUNGS = 3;
+    private static final int ICON_DRESSING = 4;
+    private static final int ICON_ENERGY = 5;
+    private static final int ICON_WATER = 6;
+    private static final int ICON_MOVING = 7;
+    private static final int ICON_HANDS = 8;
 
     private static final BodyStatusPanel INSTANCE = new BodyStatusPanel();
-    private static final Field GUI_LEFT = field("guiLeft", "field_147003_i");
-    private static final Field GUI_TOP = field("guiTop", "field_147009_r");
-    private static final Method DRAW_TOOLTIP = tooltipMethod();
 
     /** Open/closed survives closing and reopening the inventory for the rest of the session. */
     private boolean open;
     private int scroll;
+    private BodyStatusLayout lastLayout;
+    private GuiContainer lastGui;
 
     private BodyStatusPanel() {}
 
@@ -69,10 +92,22 @@ public final class BodyStatusPanel {
         return body != null && needsAttention(body);
     }
 
+    static boolean needsAttention(BodyStatusSnapshot body) {
+        return !body.injuries()
+            .isEmpty() || body.exposurePenalty() >= 0.05;
+    }
+
     /** The screens the panel appears beside. */
     static boolean hosts(GuiScreen gui) {
         return naturalexceptions.minecraft.gear.client.InventoryTabs.showsTabs(gui);
     }
+
+    private static BodyStatusLayout layoutFor(GuiContainer gui) {
+        return BodyStatusLayout
+            .calculate(gui.width, gui.height, GuiGeometry.left(gui), GuiGeometry.top(gui), GuiGeometry.height(gui));
+    }
+
+    // --- Events ----------------------------------------------------------------------------------------------
 
     @SubscribeEvent
     public void onDrawPre(GuiScreenEvent.DrawScreenEvent.Pre event) {
@@ -81,212 +116,298 @@ public final class BodyStatusPanel {
             return;
         }
         GuiContainer gui = (GuiContainer) event.gui;
-        BodyStatusLayout layout = layoutFor(gui);
-        InventoryOverlayLayout.reserveLeft(open ? layout.reservedLeftWidth(get(GUI_LEFT, gui, 0)) : 0);
+        InventoryOverlayLayout.reserveLeft(open ? layoutFor(gui).reservedLeftWidth(GuiGeometry.left(gui)) : 0);
     }
 
     @SubscribeEvent
     public void onDrawPost(GuiScreenEvent.DrawScreenEvent.Post event) {
-        if (!open || !hosts(event.gui)) return;
+        if (!open || !hosts(event.gui)) {
+            lastLayout = null;
+            return;
+        }
         GuiContainer gui = (GuiContainer) event.gui;
         BodyStatusLayout layout = layoutFor(gui);
+        lastLayout = layout;
+        lastGui = gui;
         GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_CURRENT_BIT);
         try {
             GL11.glDisable(GL11.GL_LIGHTING);
             GL11.glDisable(GL11.GL_DEPTH_TEST);
+            GL11.glEnable(GL11.GL_BLEND);
             GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
             List<String> tooltip = draw(gui, layout, event.mouseX, event.mouseY);
-            if (tooltip != null && !tooltip.isEmpty()) drawTooltip(gui, tooltip, event.mouseX, event.mouseY);
+            if (tooltip != null && !tooltip.isEmpty()) GuiTooltips.draw(gui, tooltip, event.mouseX, event.mouseY);
         } finally {
             GL11.glPopAttrib();
         }
     }
 
-    private List<String> draw(GuiScreen gui, BodyStatusLayout layout, int mouseX, int mouseY) {
+    /**
+     * Called from the container click hook. A click on the open panel never reaches the screen underneath (so a held
+     * item is not thrown into the world); with a bandage held, a click on a wounded part treats it.
+     */
+    public static boolean handleClick(GuiContainer gui, int mouseX, int mouseY, int button) {
+        if (!consumes(gui, mouseX, mouseY)) return false;
+        ItemStack held = gui.mc.thePlayer.inventory.getItemStack();
+        BodyStatusSnapshot body = PacketBodyStatus.clientLatest;
+        String path = INSTANCE.lastLayout.regionAt(mouseX, mouseY);
+        if (button == 0 && held != null && held.getItem() instanceof ItemBandage && body != null && path != null) {
+            String id = regionId(body, path);
+            if (id != null && BodyTreatment.treatable(body, id))
+                NENetwork.CHANNEL.sendToServer(new PacketTreatRegion(id));
+        }
+        return true;
+    }
+
+    /** Mouse presses and releases over the open panel belong to it. */
+    public static boolean consumes(GuiContainer gui, int mouseX, int mouseY) {
+        BodyStatusLayout layout = INSTANCE.lastLayout;
+        return INSTANCE.open && layout != null && INSTANCE.lastGui == gui && layout.panelContains(mouseX, mouseY);
+    }
+
+    // --- Drawing ---------------------------------------------------------------------------------------------
+
+    private List<String> draw(GuiContainer gui, BodyStatusLayout layout, int mouseX, int mouseY) {
         FontRenderer font = gui.mc.fontRenderer;
         int x = layout.panelX();
         int y = layout.panelY();
         int w = layout.panelWidth();
-        int h = layout.panelHeight();
-        drawBevel(x, y, w, h, true);
-        Gui.drawRect(x + 1, y + 1, x + w - 1, y + h - 1, PANEL_BACKGROUND);
-        font.drawString("Body", x + 6, y + 6, GUI_TEXT);
+        drawPanelFrame(x, y, w, layout.panelHeight());
 
         BodyStatusSnapshot body = PacketBodyStatus.clientLatest;
         if (body == null) {
-            font.drawString("Checking your body\u2026", x + 6, y + 22, MUTED_TEXT);
+            font.drawString("Body", x + 7, y + 7, GUI_TEXT);
+            font.drawString("Checking\u2026", x + 7, y + 20, MUTED_TEXT);
             return null;
         }
 
-        String condition = "Condition " + BodyStatusSnapshot.percent(body.condition());
-        font.drawString(
-            condition,
-            x + w - 6 - font.getStringWidth(condition),
-            y + 6,
-            conditionColour(body.condition()));
-        drawBar(x + 6, y + 17, w - 12, 3, body.condition(), BodyStatusLayout.harmColour(1.0F - body.condition()));
+        String status = BodyWords.status(body);
+        font.drawString(status, x + 7, y + 7, statusColour(status));
+        drawBar(x + 7, y + 17, w - 14, 2, body.condition(), BodyStatusLayout.harmColour(1.0F - body.condition()));
 
-        List<String> tooltip = drawFigure(font, layout, body, mouseX, mouseY);
-        drawVitals(font, layout, body);
-        drawList(font, layout, body, mouseX, mouseY);
-        return tooltip;
+        ItemStack held = gui.mc.thePlayer.inventory.getItemStack();
+        boolean bandage = held != null && held.getItem() instanceof ItemBandage;
+        List<String> figureTip = drawFigure(gui, layout, body, bandage, mouseX, mouseY);
+        List<String> vitalsTip = drawVitals(gui, layout, body, mouseX, mouseY);
+        drawList(gui, layout, body, bandage, mouseX, mouseY);
+        return figureTip != null ? figureTip : vitalsTip;
     }
 
-    private List<String> drawFigure(FontRenderer font, BodyStatusLayout layout, BodyStatusSnapshot body, int mouseX,
-        int mouseY) {
+    private static List<String> drawFigure(GuiContainer gui, BodyStatusLayout layout, BodyStatusSnapshot body,
+        boolean bandage, int mouseX, int mouseY) {
         String hovered = layout.panelContains(mouseX, mouseY) ? layout.regionAt(mouseX, mouseY) : null;
         List<String> tooltip = null;
+        float pulse = (float) (0.5 + 0.5 * Math.sin(System.currentTimeMillis() / 180.0));
         for (String path : BodyStatusLayout.dollRegions()) {
             int[] r = layout.regionRect(path);
             String id = regionId(body, path);
             BodyStatusSnapshot.Region region = id == null ? null : body.region(id);
-            float harm = id == null ? 0.0F : body.regionHarm(id);
-            int fill = region == null ? 0xFF9A9A9A : BodyStatusLayout.harmColour(harm);
-            boolean broken = region != null && region.fractured();
-            Gui.drawRect(r[0], r[1], r[0] + r[2], r[1] + r[3], broken ? 0xFF1E1E1E : 0xFF4A4A4A);
-            Gui.drawRect(r[0] + 1, r[1] + 1, r[0] + r[2] - 1, r[1] + r[3] - 1, fill);
-            if (broken) {
-                // A jagged crack across a broken part.
-                int cx = r[0] + r[2] / 2;
-                for (int i = 2; i < r[3] - 2; i += 2) {
-                    int dx = (i / 2) % 2 == 0 ? -1 : 1;
-                    Gui.drawRect(cx + dx, r[1] + i, cx + dx + 1, r[1] + i + 2, 0xFF1E1E1E);
-                }
-            }
+            int tint = region == null ? 0xFF9A9A9A : BodyStatusLayout.harmColour(body.regionHarm(id));
+            drawPiece(gui, layout, path, tint);
+            if (region != null && region.fractured()) drawCrack(r);
             if (id != null && body.regionBleeding(id))
-                Gui.drawRect(r[0] + r[2] - 4, r[1] + 1, r[0] + r[2] - 1, r[1] + 4, 0xFF9C0A0A);
-            if (id != null && body.regionBurned(id))
-                Gui.drawRect(r[0] + 1, r[1] + r[3] - 4, r[0] + 4, r[1] + r[3] - 1, 0xFFFF8C1A);
+                Gui.drawRect(r[0] + r[2] - 4, r[1] + 2, r[0] + r[2] - 2, r[1] + 5, 0xFF9C0A0A);
+            boolean treatable = bandage && id != null && BodyTreatment.treatable(body, id);
+            if (treatable) outline(r, (Math.round(pulse * 200) + 55) << 24 | 0xFFFFFF);
             if (path.equals(hovered)) {
-                Gui.drawRect(r[0], r[1], r[0] + r[2], r[1] + 1, 0xFFFFFFFF);
-                Gui.drawRect(r[0], r[1] + r[3] - 1, r[0] + r[2], r[1] + r[3], 0xFFFFFFFF);
-                Gui.drawRect(r[0], r[1], r[0] + 1, r[1] + r[3], 0xFFFFFFFF);
-                Gui.drawRect(r[0] + r[2] - 1, r[1], r[0] + r[2], r[1] + r[3], 0xFFFFFFFF);
-                tooltip = regionTooltip(body, id != null ? id : path);
+                outline(r, 0xFFFFFFFF);
+                tooltip = regionTooltip(body, id != null ? id : path, bandage, treatable);
             }
         }
         return tooltip;
     }
 
-    private static List<String> regionTooltip(BodyStatusSnapshot body, String id) {
+    private static void drawPiece(GuiContainer gui, BodyStatusLayout layout, String path, int tint) {
+        int cell = BodyStatusLayout.pieceIndex(path);
+        if (cell < 0) return;
+        gui.mc.getTextureManager()
+            .bindTexture(SPRITES);
+        enableSpriteBlending();
+        GL11.glColor4f(((tint >> 16) & 0xFF) / 255.0F, ((tint >> 8) & 0xFF) / 255.0F, (tint & 0xFF) / 255.0F, 1.0F);
+        gui.drawTexturedModalRect(
+            layout.dollX(),
+            layout.dollY(),
+            cell * 32,
+            0,
+            BodyStatusLayout.DOLL_WIDTH,
+            BodyStatusLayout.DOLL_HEIGHT);
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+    }
+
+    private static void drawCrack(int[] r) {
+        int cx = r[0] + r[2] / 2;
+        for (int i = 3; i < r[3] - 3; i += 2) {
+            int dx = (i / 2) % 2 == 0 ? -1 : 0;
+            Gui.drawRect(cx + dx, r[1] + i, cx + dx + 1, r[1] + i + 2, 0xFF1E1E1E);
+        }
+    }
+
+    private static List<String> regionTooltip(BodyStatusSnapshot body, String id, boolean bandage, boolean treatable) {
         List<String> lines = new ArrayList<>();
         lines.add(BodyStatusSnapshot.label(id));
-        BodyStatusSnapshot.Region region = body.region(id);
-        if (region != null) {
-            lines.add(
-                "\u00a77Structure " + BodyStatusSnapshot.percent(region.integrity())
-                    + (region.fractured() ? " \u00a7c(broken)" : ""));
-        }
         List<BodyStatusSnapshot.Injury> injuries = body.injuriesIn(id);
-        for (BodyStatusSnapshot.Injury injury : injuries) lines.add("\u00a7e" + BodyStatusSnapshot.injuryLine(injury));
-        if (injuries.isEmpty() && (region == null || region.integrity() > 0.98F)) lines.add("\u00a7aUnhurt");
+        for (BodyStatusSnapshot.Injury injury : injuries) lines.add("\u00a77" + BodyWords.injury(body, injury));
+        BodyStatusSnapshot.Region region = body.region(id);
+        if (injuries.isEmpty())
+            lines.add(region != null && region.integrity() < 0.98F ? "\u00a77Sore, healing" : "\u00a7aUnhurt");
+        if (bandage) lines.add(treatable ? "\u00a7eClick to use the bandage here" : "\u00a78Nothing here to dress");
         return lines;
     }
 
-    private void drawVitals(FontRenderer font, BodyStatusLayout layout, BodyStatusSnapshot body) {
-        int x = layout.dollX() + BodyStatusLayout.DOLL_WIDTH + 8;
-        int right = layout.panelX() + layout.panelWidth() - 6;
-        int width = Math.max(20, right - x);
-        int y = layout.dollY() - 1;
-        y = vital(font, x, y, width, "Moving", body.movement());
-        y = vital(font, x, y, width, "Hands", body.handling());
-        if (body.canBleed()) y = vital(font, x, y, width, "Blood", ratio(body.blood(), body.bloodCapacity()));
-        y = vital(font, x, y, width, "Energy", ratio(body.energy(), body.energyCapacity()));
-        vital(font, x, y, width, "Water", ratio(body.hydration(), body.hydrationCapacity()));
+    private static List<String> drawVitals(GuiContainer gui, BodyStatusLayout layout, BodyStatusSnapshot body,
+        int mouseX, int mouseY) {
+        List<Vital> vitals = new ArrayList<>();
+        if (body.canBleed()) vitals.add(new Vital("Blood", ICON_BLOOD, ratio(body.blood(), body.bloodCapacity())));
+        vitals.add(new Vital("Energy", ICON_ENERGY, ratio(body.energy(), body.energyCapacity())));
+        vitals.add(new Vital("Water", ICON_WATER, ratio(body.hydration(), body.hydrationCapacity())));
+        vitals.add(new Vital("Moving", ICON_MOVING, body.movement()));
+        vitals.add(new Vital("Hands", ICON_HANDS, body.handling()));
+        List<String> tooltip = null;
+        for (int i = 0; i < vitals.size(); i++) {
+            Vital vital = vitals.get(i);
+            int[] at = layout.vitalRow(i);
+            drawIcon(gui, vital.icon, at[0], at[1]);
+            drawBar(
+                at[0] + ICON + 3,
+                at[1] + 3,
+                at[2] - ICON - 3,
+                3,
+                vital.value,
+                BodyStatusLayout.harmColour(1.0F - vital.value));
+            if (mouseX >= at[0] && mouseX < at[0] + at[2]
+                && mouseY >= at[1]
+                && mouseY < at[1] + BodyStatusLayout.VITAL_ROW_HEIGHT) {
+                tooltip = new ArrayList<>();
+                tooltip.add(vital.name + " " + BodyStatusSnapshot.percent(vital.value));
+            }
+        }
+        return tooltip;
     }
 
-    private static int vital(FontRenderer font, int x, int y, int width, String label, float fraction) {
-        String value = BodyStatusSnapshot.percent(fraction);
-        font.drawString(label, x, y, GUI_TEXT);
-        font.drawString(value, x + width - font.getStringWidth(value), y, fraction < 0.35F ? WARN_TEXT : MUTED_TEXT);
-        drawBar(x, y + 9, width, 2, fraction, BodyStatusLayout.harmColour(1.0F - fraction));
-        return y + 13;
+    private static final class Vital {
+
+        final String name;
+        final int icon;
+        final float value;
+
+        Vital(String name, int icon, float value) {
+            this.name = name;
+            this.icon = icon;
+            this.value = value;
+        }
     }
 
-    private void drawList(FontRenderer font, BodyStatusLayout layout, BodyStatusSnapshot body, int mouseX, int mouseY) {
-        int x = layout.panelX() + 6;
-        int width = layout.panelWidth() - 12;
+    private void drawList(GuiContainer gui, BodyStatusLayout layout, BodyStatusSnapshot body, boolean bandage,
+        int mouseX, int mouseY) {
+        FontRenderer font = gui.mc.fontRenderer;
+        int x = layout.panelX() + 7;
+        int textX = x + ICON + 3;
+        int right = layout.panelX() + layout.panelWidth() - 7;
+        int width = right - 2 - textX;
         int top = layout.listTop();
         int bottom = layout.listBottom();
-        List<Integer> colours = new ArrayList<>();
-        List<String> lines = new ArrayList<>();
+        List<Line> lines = new ArrayList<>();
 
-        addHeading(lines, colours, "Injuries");
-        if (body.injuries()
-            .isEmpty()) addWrapped(font, lines, colours, "No injuries.", width, MUTED_TEXT);
         for (BodyStatusSnapshot.Injury injury : body.injuries()) {
+            boolean urgent = injury.severity() >= 0.5F && injury.treatment() <= 0.0F;
             addWrapped(
                 font,
                 lines,
-                colours,
-                BodyStatusSnapshot.label(injury.regionId()) + ": " + BodyStatusSnapshot.injuryLine(injury),
+                iconFor(injury),
+                BodyWords.injury(body, injury),
                 width,
-                injury.severity() >= 0.5F ? WARN_TEXT : GUI_TEXT);
+                urgent ? WARN_TEXT : GUI_TEXT);
         }
-        lines.add("");
-        colours.add(GUI_TEXT);
-
-        addHeading(lines, colours, "Poisoning & exposure");
-        if (body.exposures()
-            .isEmpty()) addWrapped(font, lines, colours, "No exposure.", width, MUTED_TEXT);
         for (BodyStatusSnapshot.Exposure exposure : body.exposures()) {
-            addWrapped(font, lines, colours, materialName(exposure.material()), width, GUI_TEXT);
-            addWrapped(
-                font,
-                lines,
-                colours,
-                "  " + BodyStatusSnapshot.exposureDetail(exposure),
-                width,
-                exposure.conditionPenalty() >= 0.05 ? WARN_TEXT : MUTED_TEXT);
+            String level = BodyWords.level(exposure);
+            boolean urgent = "severe".equals(level) || "moderate".equals(level);
+            String text = BodyWords.exposure(exposure, materialName(exposure.material())) + " \u2014 " + level;
+            addWrapped(font, lines, ICON_LUNGS, text, width, urgent ? WARN_TEXT : GUI_TEXT);
         }
-        if (body.inhalationProtection() > 0.0F) {
-            addWrapped(
-                font,
-                lines,
-                colours,
-                "Filter mask worn: breathing " + BodyStatusSnapshot.percent(body.inhalationProtection())
-                    + " protected.",
-                width,
-                MUTED_TEXT);
-        }
+        if (body.inhalationProtection() > 0.0F) addWrapped(font, lines, -1, "Mask on", width, MUTED_TEXT);
+        if (lines.isEmpty()) addWrapped(font, lines, -1, "Nothing wrong.", width, MUTED_TEXT);
 
+        if (bandage) bottom -= LINE_HEIGHT + 2;
         int visible = Math.max(1, (bottom - top) / LINE_HEIGHT);
         int maxScroll = Math.max(0, lines.size() - visible);
-        if (mouseX >= layout.panelX() && mouseX < layout.panelX() + layout.panelWidth()
-            && mouseY >= top
-            && mouseY < bottom) {
+        if (layout.panelContains(mouseX, mouseY) && mouseY >= top && mouseY < bottom) {
             int wheel = Mouse.getDWheel();
             if (wheel != 0) scroll += wheel < 0 ? 1 : -1;
         }
         scroll = Math.max(0, Math.min(maxScroll, scroll));
 
-        Gui.drawRect(x - 2, top - 4, x + width + 2, top - 3, 0xFF8B8B8B);
+        Gui.drawRect(x - 1, top - 4, right, top - 3, 0xFF9A9A9A);
         for (int i = 0; i < visible && scroll + i < lines.size(); i++) {
-            String line = lines.get(scroll + i);
-            font.drawString(line, x, top + i * LINE_HEIGHT, colours.get(scroll + i));
+            Line line = lines.get(scroll + i);
+            int ly = top + i * LINE_HEIGHT;
+            drawIcon(gui, line.icon, x, ly - 1);
+            font.drawString(line.text, textX, ly, line.colour);
         }
         if (maxScroll > 0) {
-            // Thin scrollbar on the right edge when the list is longer than the panel.
-            int trackX = layout.panelX() + layout.panelWidth() - 4;
+            int trackX = right - 1;
             int track = bottom - top;
             int thumb = Math.max(6, track * visible / lines.size());
             int thumbY = top + (track - thumb) * scroll / maxScroll;
             Gui.drawRect(trackX, top, trackX + 2, bottom, 0xFFAAAAAA);
             Gui.drawRect(trackX, thumbY, trackX + 2, thumbY + thumb, 0xFF555555);
         }
-    }
-
-    private static void addHeading(List<String> lines, List<Integer> colours, String text) {
-        lines.add("\u00a7l" + text);
-        colours.add(GUI_TEXT);
-    }
-
-    private static void addWrapped(FontRenderer font, List<String> lines, List<Integer> colours, String text, int width,
-        int colour) {
-        for (Object part : font.listFormattedStringToWidth(text, width)) {
-            lines.add(String.valueOf(part));
-            colours.add(colour);
+        if (bandage) {
+            int hintY = layout.listBottom() - LINE_HEIGHT + 2;
+            Gui.drawRect(x - 1, hintY - 3, right, hintY - 2, 0xFF9A9A9A);
+            drawIcon(gui, ICON_DRESSING, x, hintY - 1);
+            boolean any = false;
+            for (BodyStatusSnapshot.Injury injury : body.injuries()) any |= injury.treatment() <= 0.0F;
+            font.drawString(
+                font.trimStringToWidth(any ? "Drop it on a wound" : "No wounds to dress", width),
+                textX,
+                hintY,
+                any ? GUI_TEXT : MUTED_TEXT);
         }
+    }
+
+    private static int iconFor(BodyStatusSnapshot.Injury injury) {
+        if (injury.treatment() > 0.0F) return ICON_DRESSING;
+        if (injury.kind() == BiologicalInjury.Kind.BURN) return ICON_BURN;
+        if (injury.kind() == BiologicalInjury.Kind.STRUCTURAL) return ICON_BONE;
+        return ICON_BLOOD;
+    }
+
+    /** One list line: an optional icon (only on an entry's first line) and text. */
+    private static final class Line {
+
+        final int icon;
+        final String text;
+        final int colour;
+
+        Line(int icon, String text, int colour) {
+            this.icon = icon;
+            this.text = text;
+            this.colour = colour;
+        }
+    }
+
+    private static void addWrapped(FontRenderer font, List<Line> lines, int icon, String text, int width, int colour) {
+        boolean first = true;
+        for (Object part : font.listFormattedStringToWidth(text, width)) {
+            lines.add(new Line(first ? icon : -1, String.valueOf(part), colour));
+            first = false;
+        }
+    }
+
+    private static void drawIcon(GuiContainer gui, int index, int x, int y) {
+        if (gui == null || index < 0) return;
+        gui.mc.getTextureManager()
+            .bindTexture(SPRITES);
+        enableSpriteBlending();
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+        gui.drawTexturedModalRect(x, y, index * ICON, 64, ICON, ICON);
+    }
+
+    /** {@code Gui.drawRect} leaves blending off; sprites need it for their transparent edges. */
+    private static void enableSpriteBlending() {
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
     }
 
     private static String materialName(String materialId) {
@@ -305,13 +426,17 @@ public final class BodyStatusPanel {
         return null;
     }
 
-    static boolean needsAttention(BodyStatusSnapshot body) {
-        return !body.injuries()
-            .isEmpty() || body.exposurePenalty() >= 0.05;
-    }
-
-    private static int conditionColour(float condition) {
-        return condition < 0.35F ? WARN_TEXT : GUI_TEXT;
+    private static int statusColour(String status) {
+        switch (status) {
+            case "Healthy":
+                return 0xFF3C6E2E;
+            case "Hurt":
+                return 0xFF8A6418;
+            case "Badly hurt":
+                return 0xFFA8461C;
+            default:
+                return 0xFFA0201A;
+        }
     }
 
     private static float ratio(float value, float capacity) {
@@ -324,58 +449,21 @@ public final class BodyStatusPanel {
         if (filled > 0) Gui.drawRect(x, y, x + filled, y + height, colour);
     }
 
-    private static void drawBevel(int x, int y, int width, int height, boolean raised) {
-        Gui.drawRect(x, y, x + width, y + height, PANEL_BORDER);
-        Gui.drawRect(x + 1, y + 1, x + width - 1, y + height - 1, raised ? PANEL_BACKGROUND : 0xFFAAAAAA);
-        int light = raised ? 0xFFFFFFFF : 0xFF555555;
-        int dark = raised ? 0xFF555555 : 0xFFFFFFFF;
-        Gui.drawRect(x + 1, y + 1, x + width - 1, y + 2, light);
-        Gui.drawRect(x + 1, y + 1, x + 2, y + height - 1, light);
-        Gui.drawRect(x + 1, y + height - 2, x + width - 1, y + height - 1, dark);
-        Gui.drawRect(x + width - 2, y + 1, x + width - 1, y + height - 1, dark);
+    private static void outline(int[] r, int colour) {
+        Gui.drawRect(r[0], r[1], r[0] + r[2], r[1] + 1, colour);
+        Gui.drawRect(r[0], r[1] + r[3] - 1, r[0] + r[2], r[1] + r[3], colour);
+        Gui.drawRect(r[0], r[1] + 1, r[0] + 1, r[1] + r[3] - 1, colour);
+        Gui.drawRect(r[0] + r[2] - 1, r[1] + 1, r[0] + r[2], r[1] + r[3] - 1, colour);
     }
 
-    private static BodyStatusLayout layoutFor(GuiContainer gui) {
-        int left = get(GUI_LEFT, gui, Math.max(0, (gui.width - 176) / 2));
-        int top = get(GUI_TOP, gui, Math.max(0, (gui.height - 166) / 2));
-        return BodyStatusLayout.calculate(gui.width, gui.height, left, top);
-    }
-
-    private static void drawTooltip(GuiScreen gui, List<String> lines, int mouseX, int mouseY) {
-        if (DRAW_TOOLTIP == null) return;
-        try {
-            DRAW_TOOLTIP.invoke(gui, lines, mouseX, mouseY, gui.mc.fontRenderer);
-        } catch (ReflectiveOperationException ignored) {}
-    }
-
-    private static Method tooltipMethod() {
-        try {
-            Method method = GuiScreen.class
-                .getDeclaredMethod("drawHoveringText", List.class, int.class, int.class, FontRenderer.class);
-            method.setAccessible(true);
-            return method;
-        } catch (ReflectiveOperationException | SecurityException ignored) {
-            return null;
-        }
-    }
-
-    private static Field field(String deobf, String srg) {
-        for (String name : new String[] { deobf, srg }) {
-            try {
-                Field f = GuiContainer.class.getDeclaredField(name);
-                f.setAccessible(true);
-                return f;
-            } catch (ReflectiveOperationException | SecurityException ignored) {}
-        }
-        return null;
-    }
-
-    private static int get(Field field, GuiContainer gui, int fallback) {
-        if (field == null) return fallback;
-        try {
-            return field.getInt(gui);
-        } catch (IllegalAccessException ignored) {
-            return fallback;
-        }
+    /** Vanilla container frame: black outline, white top-left and dark bottom-right bevel. */
+    private static void drawPanelFrame(int x, int y, int width, int height) {
+        Gui.drawRect(x + 1, y, x + width - 1, y + height, PANEL_BORDER);
+        Gui.drawRect(x, y + 1, x + width, y + height - 1, PANEL_BORDER);
+        Gui.drawRect(x + 1, y + 1, x + width - 1, y + height - 1, PANEL_BACKGROUND);
+        Gui.drawRect(x + 1, y + 1, x + width - 2, y + 3, 0xFFFFFFFF);
+        Gui.drawRect(x + 1, y + 1, x + 3, y + height - 2, 0xFFFFFFFF);
+        Gui.drawRect(x + 3, y + height - 3, x + width - 1, y + height - 1, 0xFF555555);
+        Gui.drawRect(x + width - 3, y + 3, x + width - 1, y + height - 1, 0xFF555555);
     }
 }

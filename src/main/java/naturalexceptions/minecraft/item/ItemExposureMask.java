@@ -52,7 +52,7 @@ public final class ItemExposureMask extends Item implements IWearable {
     @Override
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public void addInformation(ItemStack stack, EntityPlayer player, List lines, boolean advanced) {
-        lines.add("§7Worn on the face (Gear tab). Eases smoke,");
-        lines.add("§7but does not make it safe.");
+        lines.add("\u00a77Worn on the face (Gear tab). Eases smoke,");
+        lines.add("\u00a77but does not make it safe.");
     }
 }

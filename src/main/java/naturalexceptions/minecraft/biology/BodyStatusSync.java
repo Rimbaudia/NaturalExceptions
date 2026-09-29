@@ -43,6 +43,14 @@ final class BodyStatusSync {
         NENetwork.CHANNEL.sendTo(new PacketBodyStatus(snapshot), player);
     }
 
+    /** Sends now, whatever was sent before (after a treatment, so the panel answers at once). */
+    static void sendNow(EntityPlayerMP player, BiologicalState state, long now) {
+        synchronized (SENT) {
+            SENT.remove(player);
+        }
+        maybeSend(player, state, now);
+    }
+
     static boolean shouldSend(long lastFingerprint, long lastTick, long fingerprint, long now) {
         return fingerprint != lastFingerprint || now - lastTick >= REFRESH_TICKS || now < lastTick;
     }
