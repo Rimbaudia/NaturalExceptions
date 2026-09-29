@@ -44,6 +44,34 @@ final class TreasureRecipesTest {
         items.add(NEItems.skyfall);
         items.add(NEItems.shardcaster);
         items.add(Item.getItemFromBlock(NEBlocks.lumeniteLamp));
+        items.add(NEItems.windbloomTea);
+        items.add(Item.getItemFromBlock(NEBlocks.skystoneBricks));
         for (Item item : items) assertTrue(craftable(item), item.getUnlocalizedName() + " has a crafting recipe");
+    }
+
+    @Test
+    void skystoneSurvivesAStarImpactAndCloudsAndWindbloomFeedTheSkyGear() {
+        assertTrue(
+            !naturalexceptions.minecraft.event.StarRainWorldMaterializer.carvable(NEBlocks.skystoneBricks, false, 3.0F),
+            "a Fallen Star's crater does not carve Skystone");
+        assertTrue(
+            naturalexceptions.minecraft.event.StarRainWorldMaterializer
+                .carvable(net.minecraft.init.Blocks.stonebrick, false, 1.5F),
+            "ordinary stone brick still breaks");
+        assertTrue(usedIn(NEItems.TREASURES.get(Treasure.CLOUD_FLASK), Item.getItemFromBlock(NEBlocks.cloud)));
+        assertTrue(usedIn(NEItems.TREASURES.get(Treasure.GLIDER_CLOAK), Item.getItemFromBlock(NEBlocks.windbloom)));
+    }
+
+    private static boolean usedIn(Item output, Item ingredient) {
+        for (Object entry : CraftingManager.getInstance()
+            .getRecipeList()) {
+            if (!(entry instanceof net.minecraft.item.crafting.ShapedRecipes)) continue;
+            net.minecraft.item.crafting.ShapedRecipes recipe = (net.minecraft.item.crafting.ShapedRecipes) entry;
+            if (recipe.getRecipeOutput() == null || recipe.getRecipeOutput()
+                .getItem() != output) continue;
+            for (net.minecraft.item.ItemStack stack : recipe.recipeItems)
+                if (stack != null && stack.getItem() == ingredient) return true;
+        }
+        return false;
     }
 }

@@ -73,17 +73,36 @@ public final class GearMovement {
             .func_147487_a(particle, player.posX, player.posY - 0.2, player.posZ, count, spread, 0.05, spread, speed);
     }
 
+    /** Landing on Cloud, or with Windbloom Tea still working. */
+    static boolean softLanding(net.minecraft.entity.EntityLivingBase living) {
+        if (naturalexceptions.minecraft.item.ItemWindbloomTea.active(living, living.worldObj.getTotalWorldTime()))
+            return true;
+        int x = net.minecraft.util.MathHelper.floor_double(living.posX);
+        int y = net.minecraft.util.MathHelper.floor_double(living.boundingBox.minY - 0.2);
+        int z = net.minecraft.util.MathHelper.floor_double(living.posZ);
+        return naturalexceptions.minecraft.registry.NEBlocks.cloud != null
+            && living.worldObj.getBlock(x, y, z) == naturalexceptions.minecraft.registry.NEBlocks.cloud;
+    }
+
     /** Healing multiplier from Bands of Mending: half again per band, up to two. */
     public static double mendingMultiplier(int bands) {
         return 1.0 + 0.5 * Math.max(0, Math.min(2, bands));
     }
 
-    /** The Horseshoe Pendant cancels every fall; other gear forgives a landing right after it was used. */
+    /**
+     * Soft landings: Cloud underfoot or Windbloom Tea take the whole fall for anyone; for players the Horseshoe
+     * Pendant cancels every fall and other gear forgives a landing right after it was used.
+     */
     @SubscribeEvent
     public void onFall(LivingFallEvent event) {
-        if (event == null || !(event.entityLiving instanceof EntityPlayer) || event.entityLiving.worldObj.isRemote)
+        if (event == null || event.entityLiving == null || event.entityLiving.worldObj.isRemote) return;
+        net.minecraft.entity.EntityLivingBase living = event.entityLiving;
+        if (softLanding(living)) {
+            event.setCanceled(true);
             return;
-        EntityPlayer player = (EntityPlayer) event.entityLiving;
+        }
+        if (!(living instanceof EntityPlayer)) return;
+        EntityPlayer player = (EntityPlayer) living;
         if (ItemTreasureGear.worn(player, Treasure.HORSESHOE_PENDANT) > 0) {
             event.setCanceled(true);
             return;

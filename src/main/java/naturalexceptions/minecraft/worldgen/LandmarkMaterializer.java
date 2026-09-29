@@ -34,26 +34,80 @@ final class LandmarkMaterializer {
         int z0 = chunkZ * 16;
         int placed = 0;
         for (SkyIslands.Island island : field.near(x0, z0, x0 + 15, z0 + 15)) {
+            // 1. Rock, soil and the kind's surface; the pond and the waterfall's channel.
             for (int x = x0; x < x0 + 16; x++) {
                 for (int z = z0; z < z0 + 16; z++) {
                     int[] column = field.column(island, x, z);
                     if (column == null) continue;
-                    boolean pond = field.pondAt(island, x, z);
+                    boolean water = field.pondAt(island, x, z) || field.waterfallAt(island, x, z);
+                    SkyIslands.Surface surface = field.surface(island, x, z);
                     for (int y = column[0]; y <= column[1]; y++) {
-                        world.setBlock(x, y, z, islandBlock(field, x, y, z, column, pond), 0, 2);
+                        world.setBlock(x, y, z, islandBlock(field, x, y, z, column, water, surface), 0, 2);
                         placed++;
                     }
                 }
             }
-            if (island.hasTree()) plantTree(world, field, island, x0, z0);
-            if (island.hasCache()) placeCache(world, field, island, x0, z0);
+            // 2. The cloud rim and puffs under the island.
+            for (int x = x0; x < x0 + 16; x++) {
+                for (int z = z0; z < z0 + 16; z++) {
+                    int[] cloud = field.cloud(island, x, z);
+                    if (cloud == null || NEBlocks.cloud == null
+                        || field.pondAt(island, x, z)
+                        || field.waterfallAt(island, x, z)) continue;
+                    for (int y = cloud[0]; y <= cloud[1]; y++) {
+                        world.setBlock(x, y, z, NEBlocks.cloud, 0, 2);
+                        placed++;
+                    }
+                }
+            }
+            // 3. The waterfall: its lip is a source that starts flowing over the edge once the chunk is live.
+            int[] lip = field.waterfallLip(island);
+            if (lip != null && insideChunk(lip[0], lip[1], x0, z0, 0)) {
+                int[] column = field.column(island, lip[0], lip[1]);
+                if (column != null) world.scheduleBlockUpdate(lip[0], column[1], lip[1], Blocks.water, 5);
+            }
+            // 4. What grows and lies on top.
+            for (int x = x0; x < x0 + 16; x++) {
+                for (int z = z0; z < z0 + 16; z++) {
+                    SkyIslands.Decor decor = field.decor(island, x, z);
+                    if (decor == SkyIslands.Decor.NONE) continue;
+                    int[] column = field.column(island, x, z);
+                    if (column == null || world.getBlock(x, column[1], z) == NEBlocks.cloud) continue;
+                    placed += placeDecor(world, field, decor, x, column[1] + 1, z);
+                }
+            }
+            // 5. Trees, each only when it fits wholly inside this chunk.
+            for (int[] spot : field.treeSpots(island)) plantTree(world, field, island, spot, x0, z0);
+            // 6. The shrine, built piece by piece where it falls in this chunk; its chest is the sky cache.
+            placed += buildShrine(world, field, island, x0, z0);
         }
         return placed;
     }
 
-    private static Block islandBlock(SkyIslands field, int x, int y, int z, int[] column, boolean pond) {
-        if (y == column[1]) return pond ? Blocks.water : Blocks.grass;
-        if (y >= column[1] - 3) return Blocks.dirt;
+    private static Block islandBlock(SkyIslands field, int x, int y, int z, int[] column, boolean water,
+        SkyIslands.Surface surface) {
+        boolean rocky = surface != SkyIslands.Surface.GRASS;
+        if (y == column[1]) {
+            if (water) return Blocks.water;
+            switch (surface) {
+                case STONE:
+                    return Blocks.stone;
+                case GRAVEL:
+                    return Blocks.gravel;
+                case COBBLE:
+                    return Blocks.cobblestone;
+                case COAL_ORE:
+                    return Blocks.coal_ore;
+                case IRON_ORE:
+                    return Blocks.iron_ore;
+                case COPPER_ORE:
+                    return NEBlocks.copperOre != null ? NEBlocks.copperOre : Blocks.stone;
+                case GRASS:
+                default:
+                    return Blocks.grass;
+            }
+        }
+        if (y >= column[1] - 3 && !rocky) return Blocks.dirt;
         double roll = field.blockRoll(x, y, z, 11);
         if (roll < COAL) return Blocks.coal_ore;
         if (roll < COAL + IRON) return Blocks.iron_ore;
@@ -61,29 +115,102 @@ final class LandmarkMaterializer {
         return Blocks.stone;
     }
 
+    private static int placeDecor(World world, SkyIslands field, SkyIslands.Decor decor, int x, int y, int z) {
+        switch (decor) {
+            case TALL_GRASS:
+                world.setBlock(x, y, z, Blocks.tallgrass, 1, 2);
+                return 1;
+            case FERN:
+                world.setBlock(x, y, z, Blocks.tallgrass, 2, 2);
+                return 1;
+            case RED_FLOWER:
+                world.setBlock(x, y, z, Blocks.red_flower, (int) (field.blockRoll(x, y, z, 12) * 9), 2);
+                return 1;
+            case YELLOW_FLOWER:
+                world.setBlock(x, y, z, Blocks.yellow_flower, 0, 2);
+                return 1;
+            case WINDBLOOM:
+                if (NEBlocks.windbloom == null) return 0;
+                world.setBlock(x, y, z, NEBlocks.windbloom, 0, 2);
+                return 1;
+            case BUSH:
+                world.setBlock(x, y, z, Blocks.leaves, 4, 2); // oak leaves that never decay
+                return 1;
+            case DEAD_BUSH:
+                world.setBlock(x, y, z, Blocks.deadbush, 0, 2);
+                return 1;
+            case TALL_BOULDER:
+                world.setBlock(x, y, z, Blocks.mossy_cobblestone, 0, 2);
+                world.setBlock(x, y + 1, z, Blocks.cobblestone, 0, 2);
+                return 2;
+            case BOULDER:
+                world.setBlock(
+                    x,
+                    y,
+                    z,
+                    field.blockRoll(x, y, z, 13) < 0.5 ? Blocks.mossy_cobblestone : Blocks.cobblestone,
+                    0,
+                    2);
+                return 1;
+            case NONE:
+            default:
+                return 0;
+        }
+    }
+
     private static boolean insideChunk(int x, int z, int x0, int z0, int inset) {
         return x >= x0 + inset && x < x0 + 16 - inset && z >= z0 + inset && z < z0 + 16 - inset;
     }
 
-    private static void plantTree(World world, SkyIslands field, SkyIslands.Island island, int x0, int z0) {
-        int[] spot = field.treeSpot(island);
+    private static void plantTree(World world, SkyIslands field, SkyIslands.Island island, int[] spot, int x0, int z0) {
         if (!insideChunk(spot[0], spot[1], x0, z0, INSET)) return;
         int[] column = field.column(island, spot[0], spot[1]);
-        if (column == null || field.pondAt(island, spot[0], spot[1])) return;
-        Random random = new Random(island.cellX() * 341873128712L ^ island.cellZ() * 132897987541L);
-        new WorldGenTrees(false).generate(world, random, spot[0], column[1] + 1, spot[1]);
+        if (column == null) return;
+        world.setBlock(spot[0], column[1] + 1, spot[1], Blocks.air, 0, 2); // clear any grass where the trunk goes
+        world.setBlock(spot[0], column[1], spot[1], Blocks.grass, 0, 2);
+        Random random = new Random(spot[0] * 341873128712L ^ spot[1] * 132897987541L);
+        if (field.birch(island, spot)) new net.minecraft.world.gen.feature.WorldGenForest(false, false)
+            .generate(world, random, spot[0], column[1] + 1, spot[1]);
+        else new WorldGenTrees(false).generate(world, random, spot[0], column[1] + 1, spot[1]);
     }
 
-    private static void placeCache(World world, SkyIslands field, SkyIslands.Island island, int x0, int z0) {
-        int[] spot = field.cacheSpot(island);
-        if (!insideChunk(spot[0], spot[1], x0, z0, 0)) return;
-        int[] column = field.column(island, spot[0], spot[1]);
-        if (column == null || field.pondAt(island, spot[0], spot[1])) return;
-        int y = column[1] + 1;
-        world.setBlock(spot[0], y, spot[1], Blocks.chest, 0, 2);
-        TileEntity tile = world.getTileEntity(spot[0], y, spot[1]);
-        if (tile instanceof TileEntityChest)
-            SkyCacheLoot.fill((TileEntityChest) tile, island.cellX() * 0x9E3779B97F4A7C15L ^ island.cellZ());
+    private static int buildShrine(World world, SkyIslands field, SkyIslands.Island island, int x0, int z0) {
+        int[] origin = field.shrineOrigin(island);
+        if (origin == null) return 0;
+        int placed = 0;
+        for (SkyIslands.Piece piece : field.shrinePieces(island)) {
+            int x = origin[0] + piece.dx, y = origin[1] + piece.dy, z = origin[2] + piece.dz;
+            if (!insideChunk(x, z, x0, z0, 0)) continue;
+            switch (piece.block) {
+                case SKYSTONE:
+                    world.setBlock(
+                        x,
+                        y,
+                        z,
+                        NEBlocks.skystoneBricks != null ? NEBlocks.skystoneBricks : Blocks.stonebrick,
+                        0,
+                        2);
+                    break;
+                case GLASS_PANE:
+                    world.setBlock(x, y, z, Blocks.glass_pane, 0, 2);
+                    break;
+                case LADDER_NORTH:
+                    world.setBlock(x, y, z, Blocks.ladder, 2, 2); // on the wall to its south
+                    break;
+                case CHEST:
+                    world.setBlock(x, y, z, Blocks.chest, 0, 2);
+                    TileEntity tile = world.getTileEntity(x, y, z);
+                    if (tile instanceof TileEntityChest) SkyCacheLoot
+                        .fill((TileEntityChest) tile, island.cellX() * 0x9E3779B97F4A7C15L ^ island.cellZ());
+                    break;
+                case AIR:
+                default:
+                    world.setBlock(x, y, z, Blocks.air, 0, 2);
+                    break;
+            }
+            placed++;
+        }
+        return placed;
     }
 
     // --- Giant terrain features ------------------------------------------------------------------------------

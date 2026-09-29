@@ -8,6 +8,7 @@ import net.minecraftforge.oredict.OreDictionary;
 
 import cpw.mods.fml.common.registry.GameRegistry;
 import naturalexceptions.minecraft.gear.Treasure;
+import naturalexceptions.minecraft.registry.NEBlocks;
 import naturalexceptions.minecraft.registry.NEItems;
 
 /**
@@ -25,8 +26,25 @@ public final class TreasureRecipes {
         if (shard == null || copper == null) return;
         ItemStack anyWool = new ItemStack(Blocks.wool, 1, OreDictionary.WILDCARD_VALUE);
 
-        add(Treasure.CLOUD_FLASK, " F ", "FBF", " L ", 'F', Items.feather, 'B', Items.glass_bottle, 'L', shard);
-        add(Treasure.GLIDER_CLOAK, "WLW", "WWW", "W W", 'W', anyWool, 'L', Items.leather);
+        // A bottled cloud; a cloak that catches the wind on Windbloom petals.
+        if (NEBlocks.cloud != null)
+            add(Treasure.CLOUD_FLASK, " C ", "CBC", " L ", 'C', NEBlocks.cloud, 'B', Items.glass_bottle, 'L', shard);
+        if (NEBlocks.windbloom != null)
+            add(Treasure.GLIDER_CLOAK, "WLW", "FWF", "W W", 'W', anyWool, 'L', Items.leather, 'F', NEBlocks.windbloom);
+        if (NEItems.windbloomTea != null && NEBlocks.windbloom != null) GameRegistry.addShapelessRecipe(
+            new ItemStack(NEItems.windbloomTea),
+            Items.potionitem,
+            NEBlocks.windbloom,
+            NEBlocks.windbloom);
+        if (NEBlocks.skystoneBricks != null && NEBlocks.cloud != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.skystoneBricks, 4),
+            " S ",
+            "SCS",
+            " S ",
+            'S',
+            Blocks.stonebrick,
+            'C',
+            NEBlocks.cloud);
         add(Treasure.HORSESHOE_PENDANT, "S S", "I I", "III", 'S', Items.string, 'I', Items.iron_ingot);
         add(Treasure.CLIMBING_CLAWS, "I I", "ILI", "LLL", 'I', Items.iron_ingot, 'L', Items.leather);
         add(Treasure.BAND_OF_MENDING, " G ", "GMG", " G ", 'G', Items.gold_ingot, 'M', Items.speckled_melon);

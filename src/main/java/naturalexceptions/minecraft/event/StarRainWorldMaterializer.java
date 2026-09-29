@@ -66,7 +66,8 @@ public final class StarRainWorldMaterializer {
     /** True if the host may carve or replace this block: never tile entities, bedrock, parcel hosts or unbreakables. */
     public static boolean carvable(Block block, boolean hasTileEntity, float hardness) {
         if (block == null || hasTileEntity || hardness < 0.0F) return false;
-        return block != Blocks.bedrock && !(block instanceof BlockFluidCell);
+        return block != Blocks.bedrock && !(block instanceof BlockFluidCell)
+            && !(block instanceof naturalexceptions.minecraft.block.BlockSkystoneBricks); // built to survive stars
     }
 
     private static boolean carvable(World world, int x, int y, int z) {

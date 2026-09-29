@@ -24,6 +24,7 @@ public final class NEItems {
     public static naturalexceptions.minecraft.item.ItemLumeniteShard lumeniteShard;
     public static naturalexceptions.minecraft.weapon.ItemSkyfall skyfall;
     public static naturalexceptions.minecraft.weapon.ItemShardcaster shardcaster;
+    public static naturalexceptions.minecraft.item.ItemWindbloomTea windbloomTea;
     /** Sky-cache treasures, one item per {@link naturalexceptions.minecraft.gear.Treasure}. */
     public static final java.util.Map<naturalexceptions.minecraft.gear.Treasure, naturalexceptions.minecraft.item.ItemTreasureGear> TREASURES = new java.util.EnumMap<>(
         naturalexceptions.minecraft.gear.Treasure.class);
@@ -170,6 +171,8 @@ public final class NEItems {
         skyfall.setCreativeTab(NECreativeTab.INSTANCE);
         shardcaster = new naturalexceptions.minecraft.weapon.ItemShardcaster();
         shardcaster.setCreativeTab(NECreativeTab.INSTANCE);
+        windbloomTea = new naturalexceptions.minecraft.item.ItemWindbloomTea();
+        windbloomTea.setCreativeTab(NECreativeTab.INSTANCE);
         for (naturalexceptions.minecraft.gear.Treasure treasure : naturalexceptions.minecraft.gear.Treasure.values()) {
             naturalexceptions.minecraft.item.ItemTreasureGear item = new naturalexceptions.minecraft.item.ItemTreasureGear(
                 treasure);
@@ -195,6 +198,7 @@ public final class NEItems {
             GameRegistry.registerItem(lumeniteShard, "lumenite_shard");
             GameRegistry.registerItem(skyfall, "skyfall");
             GameRegistry.registerItem(shardcaster, "shardcaster");
+            GameRegistry.registerItem(windbloomTea, "windbloom_tea");
             for (java.util.Map.Entry<naturalexceptions.minecraft.gear.Treasure, naturalexceptions.minecraft.item.ItemTreasureGear> entry : TREASURES
                 .entrySet())
                 GameRegistry.registerItem(

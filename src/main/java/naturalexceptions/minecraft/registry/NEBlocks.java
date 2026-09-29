@@ -31,6 +31,9 @@ public final class NEBlocks {
     public static Block lumeniteCluster;
     public static Block lumeniteLamp;
     public static Block magmaRock;
+    public static Block cloud;
+    public static Block skystoneBricks;
+    public static Block windbloom;
 
     private NEBlocks() {}
 
@@ -71,6 +74,10 @@ public final class NEBlocks {
             .setCreativeTab(NECreativeTab.INSTANCE);
         lumeniteLamp = new naturalexceptions.minecraft.block.BlockLumeniteLamp().setCreativeTab(NECreativeTab.INSTANCE);
         magmaRock = new naturalexceptions.minecraft.block.BlockMagmaRock().setCreativeTab(NECreativeTab.INSTANCE);
+        cloud = new naturalexceptions.minecraft.block.BlockCloud().setCreativeTab(NECreativeTab.INSTANCE);
+        skystoneBricks = new naturalexceptions.minecraft.block.BlockSkystoneBricks()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        windbloom = new naturalexceptions.minecraft.block.BlockWindbloom().setCreativeTab(NECreativeTab.INSTANCE);
 
         try {
             net.minecraft.tileentity.TileEntity.addMapping(TileEntityStarterSmelter.class, "starter_smelter");
@@ -119,6 +126,9 @@ public final class NEBlocks {
             GameRegistry.registerBlock(lumeniteCluster, "lumenite_cluster");
             GameRegistry.registerBlock(lumeniteLamp, "lumenite_lamp");
             GameRegistry.registerBlock(magmaRock, "magma_rock");
+            GameRegistry.registerBlock(cloud, "cloud");
+            GameRegistry.registerBlock(skystoneBricks, "skystone_bricks");
+            GameRegistry.registerBlock(windbloom, "windbloom");
         } catch (Throwable t) {
             System.out.println("DEBUG registerBlock caught: " + t);
             t.printStackTrace();

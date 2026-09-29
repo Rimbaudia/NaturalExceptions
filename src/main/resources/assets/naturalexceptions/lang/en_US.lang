@@ -78,3 +78,7 @@ entity.naturalexceptions.skyfall_star.name=Falling Star
 entity.naturalexceptions.lumenite_bolt.name=Lumenite Bolt
 death.attack.naturalexceptions.skyfall=%1$s was struck by a star %2$s called down
 death.attack.naturalexceptions.shard=%1$s was pierced by %2$s's Lumenite bolt
+tile.cloud.name=Cloud
+tile.skystoneBricks.name=Skystone Bricks
+tile.windbloom.name=Windbloom
+item.windbloomTea.name=Windbloom Tea
