@@ -29,7 +29,6 @@ import naturalexceptions.minecraft.client.GuiTooltips;
 import naturalexceptions.minecraft.knowledge.client.InventoryBrowserOverlay;
 import naturalexceptions.minecraft.network.NENetwork;
 import naturalexceptions.minecraft.network.PacketOpenGear;
-import naturalexceptions.minecraft.registry.NEItems;
 
 /** Draws and handles the Inventory / Gear / Body / Items tabs on the survival inventory and the Gear screen. */
 @SideOnly(Side.CLIENT)
@@ -92,7 +91,17 @@ public final class InventoryTabs {
                     .bindTexture(TABS);
                 // A raised tab opens into the screen; a lowered one stops at its edge, as if tucked behind.
                 gui.drawTexturedModalRect(x, y, spriteU(tab, on), 0, InventoryTab.WIDTH, on ? 32 : 28);
-                drawIcon(mc, iconFor(tab), x + 6, y + (on ? 9 : 10));
+                int iconY = y + (on ? 9 : 10);
+                int sprite = spriteIcon(tab);
+                if (sprite >= 0) {
+                    // Gear and Body have their own drawn icons; the others show a familiar item.
+                    GL11.glEnable(GL11.GL_BLEND);
+                    GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+                    GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+                    gui.drawTexturedModalRect(x + 6, iconY, sprite, ICON_V, 16, 16);
+                } else {
+                    drawIcon(mc, iconFor(tab), x + 6, iconY);
+                }
                 if (tab == InventoryTab.BODY && !on && BodyStatusPanel.needsAttention())
                     Gui.drawRect(x + 20, y + 5, x + 23, y + 8, 0xFFC0302A);
             }
@@ -136,6 +145,15 @@ public final class InventoryTabs {
         return true;
     }
 
+    /** Row of the tab icons in the tabs texture, and each drawn icon's u (or -1 for an item icon). */
+    private static final int ICON_V = 64;
+
+    private static int spriteIcon(InventoryTab tab) {
+        if (tab == InventoryTab.GEAR) return 0;
+        if (tab == InventoryTab.BODY) return 16;
+        return -1;
+    }
+
     private static int spriteU(InventoryTab tab, boolean raised) {
         if (!raised) return U_LOWERED;
         if (tab.column() == 0) return U_RAISED_LEFT;
@@ -147,11 +165,6 @@ public final class InventoryTabs {
         switch (tab) {
             case INVENTORY:
                 return new ItemStack(Blocks.chest);
-            case GEAR:
-                return NEItems.exposureMask != null ? new ItemStack(NEItems.exposureMask)
-                    : new ItemStack(Items.leather_helmet);
-            case BODY:
-                return NEItems.bandage != null ? new ItemStack(NEItems.bandage) : new ItemStack(Items.apple);
             case ITEMS:
             default:
                 return new ItemStack(Items.book);
