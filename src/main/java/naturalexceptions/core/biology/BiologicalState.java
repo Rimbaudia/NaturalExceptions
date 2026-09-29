@@ -29,6 +29,20 @@ public final class BiologicalState {
     private double bloodReserveMillilitres;
     private long lastResolvedTick;
 
+    /**
+     * Multiplier on healing and blood recovery from worn aids (e.g. a Band of Mending); set each second by the host
+     * like exposure protection, never saved.
+     */
+    private double recoveryMultiplier = 1.0;
+
+    public void setRecoveryMultiplier(double multiplier) {
+        recoveryMultiplier = Double.isFinite(multiplier) ? Math.max(0.0, Math.min(4.0, multiplier)) : 1.0;
+    }
+
+    public double recoveryMultiplier() {
+        return recoveryMultiplier;
+    }
+
     /** Time to regain a full blood reserve from empty, well fed and watered. */
     public static final double BLOOD_RECOVERY_SECONDS = 4800.0;
 
@@ -39,7 +53,7 @@ public final class BiologicalState {
             : physiology.woundHealingPerSecond();
         double reserves = Math.min(energyReserveJoules / Math.max(1.0, physiology.energyCapacityJoules()),
             hydrationReserveMillilitres / Math.max(1.0, physiology.hydrationCapacityMillilitres()));
-        double effective = rate * (0.25 + 0.75 * injury.treatment()) * (0.15 + 0.85 * reserves);
+        double effective = rate * (0.25 + 0.75 * injury.treatment()) * (0.15 + 0.85 * reserves) * recoveryMultiplier;
         return effective <= 0.0 ? Double.POSITIVE_INFINITY : Math.max(0.0, injury.severity() - 0.001) / effective;
     }
 
@@ -209,7 +223,8 @@ public final class BiologicalState {
             double oldSeverity = injury.severity();
             double reserves = Math.min(energyReserveJoules / Math.max(1.0, physiology.energyCapacityJoules()),
                 hydrationReserveMillilitres / Math.max(1.0, physiology.hydrationCapacityMillilitres()));
-            double bloodLost = injury.resolveTo(worldTick, physiology, bloodReserveMillilitres, 0.15 + 0.85 * reserves);
+            double bloodLost = injury
+                .resolveTo(worldTick, physiology, bloodReserveMillilitres, (0.15 + 0.85 * reserves) * recoveryMultiplier);
             bloodReserveMillilitres = Math.max(0.0, bloodReserveMillilitres - bloodLost);
             if (injury.kind() == BiologicalInjury.Kind.STRUCTURAL)
                 region(injury.regionId()).restoreStructure(Math.min(1.0, oldSeverity - injury.severity()));
@@ -223,7 +238,7 @@ public final class BiologicalState {
             double reserves = Math.min(energyReserveJoules / Math.max(1.0, physiology.energyCapacityJoules()),
                 hydrationReserveMillilitres / Math.max(1.0, physiology.hydrationCapacityMillilitres()));
             double regained = physiology.bloodCapacityMillilitres() / BLOOD_RECOVERY_SECONDS * elapsedSeconds
-                * (0.15 + 0.85 * reserves);
+                * (0.15 + 0.85 * reserves) * recoveryMultiplier;
             bloodReserveMillilitres = Math.min(physiology.bloodCapacityMillilitres(), bloodReserveMillilitres + regained);
         }
         lastResolvedTick = worldTick;

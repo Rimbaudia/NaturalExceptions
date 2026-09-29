@@ -23,6 +23,8 @@ public final class PlayerGear implements IExtendedEntityProperties, IInventory {
     private EntityPlayer owner;
     /** Set when the Face slot changed and trackers have not been told yet. */
     private boolean appearanceDirty = true;
+    /** Set when anything changed and the owner's client has not been told yet (it needs its gear for movement). */
+    private boolean ownerDirty = true;
 
     public static PlayerGear get(EntityPlayer player) {
         if (player == null) return null;
@@ -69,7 +71,25 @@ public final class PlayerGear implements IExtendedEntityProperties, IInventory {
             stacks[i] = null;
         }
         appearanceDirty = true;
+        ownerDirty = true;
         return result;
+    }
+
+    public boolean consumeOwnerDirty() {
+        boolean dirty = ownerDirty;
+        ownerDirty = false;
+        return dirty;
+    }
+
+    /** Client side: replace what this player wears with what the server says they wear. */
+    public void applySync(ItemStack[] synced) {
+        for (int i = 0; i < stacks.length; i++) stacks[i] = synced != null && i < synced.length ? synced[i] : null;
+    }
+
+    public ItemStack[] snapshot() {
+        ItemStack[] copy = new ItemStack[stacks.length];
+        for (int i = 0; i < stacks.length; i++) copy[i] = stacks[i] == null ? null : stacks[i].copy();
+        return copy;
     }
 
     public boolean consumeAppearanceDirty() {
@@ -118,6 +138,7 @@ public final class PlayerGear implements IExtendedEntityProperties, IInventory {
             stacks[slot.ordinal()] = ItemStack.loadItemStackFromNBT(entry);
         }
         appearanceDirty = true;
+        ownerDirty = true;
     }
 
     @Override
@@ -166,6 +187,7 @@ public final class PlayerGear implements IExtendedEntityProperties, IInventory {
     }
 
     private void markDirty(int index) {
+        ownerDirty = true;
         if (GearSlot.byIndex(index) == GearSlot.FACE) appearanceDirty = true;
     }
 

@@ -63,7 +63,7 @@ public final class BiologicalInjury {
         double healingRate = kind == Kind.STRUCTURAL ? physiology.structuralHealingPerSecond()
             : physiology.woundHealingPerSecond();
         severity = Math.max(0.0, severity - healingRate * seconds * (0.25 + 0.75 * treatment)
-            * Math.max(0.0, Math.min(1.0, recoveryFactor)));
+            * Math.max(0.0, Math.min(4.0, recoveryFactor)));
         return bloodLost;
     }
     public boolean resolved() { return severity <= 0.001; }

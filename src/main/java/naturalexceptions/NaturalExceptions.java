@@ -74,6 +74,7 @@ public final class NaturalExceptions {
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.knowledge.PlayerKnowledgeEvents());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.biology.BiologicalEvents());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.gear.GearEvents());
+        MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.gear.GearMovement());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.event.StarRainWorldMaterializer());
         FMLCommonHandler.instance()
             .bus()
@@ -121,6 +122,7 @@ public final class NaturalExceptions {
             naturalexceptions.minecraft.biology.client.BodyStatusPanel.register();
             naturalexceptions.minecraft.gear.client.InventoryTabs.register();
             naturalexceptions.minecraft.gear.client.GearRenderer.register();
+            naturalexceptions.minecraft.gear.client.GearClientEffects.register();
         }
     }
 

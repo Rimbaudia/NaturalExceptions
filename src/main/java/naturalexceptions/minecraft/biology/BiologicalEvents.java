@@ -241,6 +241,10 @@ public final class BiologicalEvents {
         BiologicalState state = BiologicalProperties.get(player)
             .state();
         long now = player.worldObj.getTotalWorldTime();
+        state.setRecoveryMultiplier(
+            naturalexceptions.minecraft.gear.GearMovement.mendingMultiplier(
+                naturalexceptions.minecraft.item.ItemTreasureGear
+                    .worn(player, naturalexceptions.minecraft.gear.Treasure.BAND_OF_MENDING)));
         state.advanceTo(Math.max(state.lastResolvedTick(), now));
         state.clearExposureProtection();
         if (naturalexceptions.minecraft.item.ItemExposureMask.isWornBy(player)) state.addExposureProtection(

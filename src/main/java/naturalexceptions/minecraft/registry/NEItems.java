@@ -22,6 +22,9 @@ public final class NEItems {
     public static naturalexceptions.minecraft.item.ItemBandage bandage;
     public static naturalexceptions.minecraft.item.ItemExposureMask exposureMask;
     public static naturalexceptions.minecraft.item.ItemLumeniteShard lumeniteShard;
+    /** Sky-cache treasures, one item per {@link naturalexceptions.minecraft.gear.Treasure}. */
+    public static final java.util.Map<naturalexceptions.minecraft.gear.Treasure, naturalexceptions.minecraft.item.ItemTreasureGear> TREASURES = new java.util.EnumMap<>(
+        naturalexceptions.minecraft.gear.Treasure.class);
     public static Item copperIngot;
     public static Item slagLump;
     public static Item refractoryMix;
@@ -161,6 +164,12 @@ public final class NEItems {
         exposureMask = new naturalexceptions.minecraft.item.ItemExposureMask();
         lumeniteShard = new naturalexceptions.minecraft.item.ItemLumeniteShard();
         lumeniteShard.setCreativeTab(NECreativeTab.INSTANCE);
+        for (naturalexceptions.minecraft.gear.Treasure treasure : naturalexceptions.minecraft.gear.Treasure.values()) {
+            naturalexceptions.minecraft.item.ItemTreasureGear item = new naturalexceptions.minecraft.item.ItemTreasureGear(
+                treasure);
+            item.setCreativeTab(NECreativeTab.INSTANCE);
+            TREASURES.put(treasure, item);
+        }
         exposureMask.setCreativeTab(NECreativeTab.INSTANCE);
 
         try {
@@ -178,6 +187,12 @@ public final class NEItems {
             GameRegistry.registerItem(bandage, "bandage");
             GameRegistry.registerItem(exposureMask, "exposure_mask");
             GameRegistry.registerItem(lumeniteShard, "lumenite_shard");
+            for (java.util.Map.Entry<naturalexceptions.minecraft.gear.Treasure, naturalexceptions.minecraft.item.ItemTreasureGear> entry : TREASURES
+                .entrySet())
+                GameRegistry.registerItem(
+                    entry.getValue(),
+                    entry.getKey()
+                        .registryName());
             GameRegistry.registerItem(copperIngot, "copper_ingot");
             GameRegistry.registerItem(slagLump, "slag_lump");
             GameRegistry.registerItem(refractoryMix, "refractory_mix");

@@ -1,0 +1,44 @@
+{
+  "gear.claw_scrape": {
+    "category": "player",
+    "sounds": [
+      "gear/claw_scrape"
+    ]
+  },
+  "gear.cloud_jump": {
+    "category": "player",
+    "sounds": [
+      "gear/cloud_jump"
+    ]
+  },
+  "gear.glide": {
+    "category": "player",
+    "sounds": [
+      "gear/glide"
+    ]
+  },
+  "weapon.shard_fire": {
+    "category": "player",
+    "sounds": [
+      "weapon/shard_fire"
+    ]
+  },
+  "weapon.shard_hit": {
+    "category": "player",
+    "sounds": [
+      "weapon/shard_hit"
+    ]
+  },
+  "weapon.skyfall_call": {
+    "category": "player",
+    "sounds": [
+      "weapon/skyfall_call"
+    ]
+  },
+  "weapon.star_impact": {
+    "category": "player",
+    "sounds": [
+      "weapon/star_impact"
+    ]
+  }
+}

@@ -13,6 +13,7 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import naturalexceptions.minecraft.network.NENetwork;
 import naturalexceptions.minecraft.network.PacketGearAppearance;
+import naturalexceptions.minecraft.network.PacketGearSync;
 
 /** Gear lifecycle: attach to players, keep through respawn when the world keeps inventories, drop on death. */
 public final class GearEvents {
@@ -56,6 +57,7 @@ public final class GearEvents {
                 ((IWearable) stack.getItem()).onWornTick(player, stack);
         }
         if (gear.consumeAppearanceDirty()) broadcastAppearance(player, gear);
+        if (gear.consumeOwnerDirty()) NENetwork.CHANNEL.sendTo(new PacketGearSync(gear.snapshot()), player);
     }
 
     @SubscribeEvent
