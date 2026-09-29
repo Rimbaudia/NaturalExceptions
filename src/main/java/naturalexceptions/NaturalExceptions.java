@@ -115,6 +115,7 @@ public final class NaturalExceptions {
                 .bus()
                 .register(cues);
             naturalexceptions.minecraft.knowledge.client.NEKnowledgeKeyHandler.register();
+            naturalexceptions.minecraft.biology.client.BodyStatusPanel.register();
         }
     }
 

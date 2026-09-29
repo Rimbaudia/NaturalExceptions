@@ -230,6 +230,8 @@ public final class BiologicalEvents {
         player.getFoodStats()
             .setFoodLevel(Math.max(0, Math.min(20, derivedFood)));
         applyMovement(player, state);
+        if (player instanceof net.minecraft.entity.player.EntityPlayerMP)
+            BodyStatusSync.maybeSend((net.minecraft.entity.player.EntityPlayerMP) player, state, now);
     }
 
     @SubscribeEvent

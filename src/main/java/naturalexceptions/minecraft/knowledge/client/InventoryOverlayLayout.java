@@ -88,12 +88,24 @@ public final class InventoryOverlayLayout {
     private static final int TITLE_HEIGHT = 40;
     private static final int CELL_SIZE = 18;
 
+    /** Width another panel (the Body panel) currently occupies left of the GUI; the browser stays out of it. */
+    private static volatile int reservedLeftWidth;
+
     private InventoryOverlayLayout() {}
+
+    public static void reserveLeft(int width) {
+        reservedLeftWidth = Math.max(0, width);
+    }
 
     public static Layout calculate(int screenWidth, int screenHeight, int guiLeft, int guiTop, int guiWidth,
         int guiHeight) {
+        return calculate(screenWidth, screenHeight, guiLeft, guiTop, guiWidth, guiHeight, reservedLeftWidth);
+    }
+
+    public static Layout calculate(int screenWidth, int screenHeight, int guiLeft, int guiTop, int guiWidth,
+        int guiHeight, int reservedLeft) {
         int rightSpace = Math.max(0, screenWidth - (guiLeft + guiWidth) - MARGIN);
-        int leftSpace = Math.max(0, guiLeft - MARGIN);
+        int leftSpace = Math.max(0, guiLeft - MARGIN - Math.max(0, reservedLeft));
 
         Side side = Side.COMPACT;
         int available = 0;
@@ -112,7 +124,7 @@ public final class InventoryOverlayLayout {
         }
 
         int width = available;
-        int x = side == Side.RIGHT ? guiLeft + guiWidth + MARGIN : guiLeft - MARGIN - width;
+        int x = side == Side.RIGHT ? guiLeft + guiWidth + MARGIN : guiLeft - MARGIN - Math.max(0, reservedLeft) - width;
         int panelHeight = screenHeight;
         int y = 0;
         int columns = Math.min(MAXIMUM_COLUMNS, Math.max(3, (width - 10) / CELL_SIZE));

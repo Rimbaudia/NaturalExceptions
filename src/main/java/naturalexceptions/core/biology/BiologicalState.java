@@ -62,6 +62,7 @@ public final class BiologicalState {
     public List<BiologicalInjury> injuries() { return Collections.unmodifiableList(injuries); }
     public List<ExposureBurden> exposures() { return Collections.unmodifiableList(exposures); }
     public List<ArmorLayer> armor() { return Collections.unmodifiableList(armor); }
+    public List<ExposureProtection> protection() { return Collections.unmodifiableList(protection); }
     public void clearArmor() { armor.clear(); }
     public void addInjury(BiologicalInjury injury) {
         Objects.requireNonNull(injury, "injury");
