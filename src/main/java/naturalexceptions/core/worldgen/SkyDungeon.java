@@ -56,6 +56,7 @@ public final class SkyDungeon {
         TNT,
         WATER,
         LAVA,
+        /** Sealed Vault Gate; meta {@link SkyDungeon#KEY_GATE} or {@link SkyDungeon#WARDEN_BOUND}. */
         GATE,
         BOOKSHELF,
         COBWEB,
@@ -82,6 +83,10 @@ public final class SkyDungeon {
     public static final int FIRE = 8;
     /** Skystone meta of a loose secret wall. */
     public static final int LOOSE = 3;
+    /** Gate meta: opened by a Sky Key. */
+    public static final int KEY_GATE = 0;
+    /** Gate meta: bound to the Sky Warden, opened only when it falls. */
+    public static final int WARDEN_BOUND = 1;
 
     public enum Loot {
         STORE,
@@ -100,8 +105,10 @@ public final class SkyDungeon {
         COLLAPSED,
         /** Behind a loose wall, to a secret closet. */
         SECRET,
-        /** Between the Warden's hall and the vault, sealed by the gate. */
+        /** Between the Warden's hall and the vault, sealed by a gate that opens when the Warden falls. */
         VAULT,
+        /** The one way into the Warden's hall, sealed by a gate the Sky Key opens. */
+        GATED,
         /** A ladder shaft (half the time with a gale lift) between levels. */
         SHAFT
     }
@@ -196,13 +203,22 @@ public final class SkyDungeon {
     final SkyIslands field;
     final SkyIslands.Island island;
     final LandmarkNoise noise;
-    private final Map<Long, Piece> pieces = new LinkedHashMap<>();
+    /**
+     * The blocks, packed: a dungeon holds a couple of hundred thousand, and several may be cached while chunks
+     * generate, so each is a position (long) and its data (int) in parallel arrays, found through an open hash.
+     */
+    private long[] positions = new long[1 << 12];
+    private int[] data = new int[1 << 12];
+    private int count;
+    private long[] table = new long[1 << 13];
+    private int[] tableIndex = new int[1 << 13];
+    private final List<String> mobNames = new ArrayList<>();
     final List<Room> rooms = new ArrayList<>();
     final List<Connection> connections = new ArrayList<>();
     int[] entrance;
     /** {minX, minZ, maxX, maxZ} of what stands on the island's surface. */
     int[] surface;
-    private volatile Map<Long, List<Piece>> byChunk;
+    private volatile Map<Long, int[]> byChunk;
 
     private SkyDungeon(SkyIslands field, SkyIslands.Island island, Kind kind) {
         this.field = field;
@@ -213,7 +229,7 @@ public final class SkyDungeon {
 
     // --- Cache ------------------------------------------------------------------------------------------------
 
-    private static final int CACHE_SIZE = 4;
+    private static final int CACHE_SIZE = 3;
     private static final Map<String, SkyDungeon> CACHE = new LinkedHashMap<String, SkyDungeon>(16, 0.75F, true) {
 
         @Override
@@ -245,26 +261,62 @@ public final class SkyDungeon {
     }
 
     public Collection<Piece> pieces() {
-        return Collections.unmodifiableCollection(pieces.values());
+        return new java.util.AbstractList<Piece>() {
+
+            @Override
+            public Piece get(int i) {
+                return piece(i);
+            }
+
+            @Override
+            public int size() {
+                return count;
+            }
+        };
     }
 
     /** The pieces inside one chunk. */
     public List<Piece> piecesInChunk(int chunkX, int chunkZ) {
-        Map<Long, List<Piece>> index = byChunk;
+        Map<Long, int[]> index = byChunk;
         if (index == null) {
             synchronized (this) {
                 if (byChunk == null) {
-                    Map<Long, List<Piece>> built = new HashMap<>();
-                    for (Piece piece : pieces.values())
-                        built.computeIfAbsent(chunkKey(piece.x >> 4, piece.z >> 4), k -> new ArrayList<>())
-                            .add(piece);
+                    Map<Long, int[]> sizes = new HashMap<>();
+                    for (int i = 0; i < count; i++) {
+                        long k = chunkKey(unpackX(positions[i]) >> 4, unpackZ(positions[i]) >> 4);
+                        int[] c = sizes.get(k);
+                        if (c == null) sizes.put(k, c = new int[1]);
+                        c[0]++;
+                    }
+                    Map<Long, int[]> built = new HashMap<>();
+                    Map<Long, int[]> fill = new HashMap<>();
+                    for (Map.Entry<Long, int[]> e : sizes.entrySet()) {
+                        built.put(e.getKey(), new int[e.getValue()[0]]);
+                        fill.put(e.getKey(), new int[1]);
+                    }
+                    for (int i = 0; i < count; i++) {
+                        long k = chunkKey(unpackX(positions[i]) >> 4, unpackZ(positions[i]) >> 4);
+                        built.get(k)[fill.get(k)[0]++] = i;
+                    }
                     byChunk = built;
                 }
                 index = byChunk;
             }
         }
-        List<Piece> found = index.get(chunkKey(chunkX, chunkZ));
-        return found == null ? Collections.<Piece>emptyList() : found;
+        final int[] found = index.get(chunkKey(chunkX, chunkZ));
+        if (found == null) return Collections.<Piece>emptyList();
+        return new java.util.AbstractList<Piece>() {
+
+            @Override
+            public Piece get(int i) {
+                return piece(found[i]);
+            }
+
+            @Override
+            public int size() {
+                return found.length;
+            }
+        };
     }
 
     private static long chunkKey(int cx, int cz) {
@@ -290,19 +342,105 @@ public final class SkyDungeon {
     }
 
     public Piece at(int x, int y, int z) {
-        return pieces.get(key(x, y, z));
+        int i = find(key(x, y, z));
+        return i < 0 ? null : piece(i);
+    }
+
+    private Piece piece(int i) {
+        long k = positions[i];
+        int v = data[i];
+        int loot = (v >>> 16) & 0x7, mob = v >>> 19;
+        return new Piece(
+            unpackX(k),
+            unpackY(k),
+            unpackZ(k),
+            BLOCKS[v & 0xFF],
+            (v >>> 8) & 0xFF,
+            loot == 0 ? null : LOOTS[loot - 1],
+            mob == 0 ? null : mobNames.get(mob - 1));
+    }
+
+    private static final Block[] BLOCKS = Block.values();
+    private static final Loot[] LOOTS = Loot.values();
+
+    private static int unpackX(long k) {
+        return (int) (k >> 38);
+    }
+
+    private static int unpackY(long k) {
+        return (int) ((k >>> 26) & 0xFFF);
+    }
+
+    private static int unpackZ(long k) {
+        return (int) (k << 38 >> 38);
+    }
+
+    /** Index of the piece at a packed position, or -1. */
+    private int find(long k) {
+        int mask = table.length - 1;
+        for (int h = mix(k) & mask;; h = (h + 1) & mask) {
+            int i = tableIndex[h];
+            if (i == 0) return -1;
+            if (table[h] == k) return i - 1;
+        }
+    }
+
+    private static int mix(long k) {
+        long h = k * 0x9E3779B97F4A7C15L;
+        return (int) (h ^ (h >>> 32));
+    }
+
+    private void grow() {
+        long[] oldTable = table;
+        int[] oldIndex = tableIndex;
+        table = new long[oldTable.length * 2];
+        tableIndex = new int[oldIndex.length * 2];
+        int mask = table.length - 1;
+        for (int h = 0; h < oldTable.length; h++) {
+            if (oldIndex[h] == 0) continue;
+            int n = mix(oldTable[h]) & mask;
+            while (tableIndex[n] != 0) n = (n + 1) & mask;
+            table[n] = oldTable[h];
+            tableIndex[n] = oldIndex[h];
+        }
     }
 
     // --- Writing blocks (used by the layouts) ---------------------------------------------------------------
 
+    /** x in the top 26 bits (signed), y in the next 12, z in the low 26 (signed). */
     private static long key(int x, int y, int z) {
-        return ((long) (x & 0x3FFFFFF) << 38) | ((long) (y & 0xFFF) << 26) | (z & 0x3FFFFFF);
+        return ((long) x << 38) | ((long) (y & 0xFFF) << 26) | (z & 0x3FFFFFFL);
     }
 
     void put(int x, int y, int z, Block block, int meta, Loot loot, String mob) {
         long k = key(x, y, z);
-        pieces.remove(k); // keep insertion order meaningful: the latest write is the one that stands
-        pieces.put(k, new Piece(x, y, z, block, meta, loot, mob));
+        int mobIndex = 0;
+        if (mob != null) {
+            mobIndex = mobNames.indexOf(mob) + 1;
+            if (mobIndex == 0) {
+                mobNames.add(mob);
+                mobIndex = mobNames.size();
+            }
+        }
+        int v = block.ordinal() | (meta & 0xFF) << 8 | (loot == null ? 0 : loot.ordinal() + 1) << 16 | mobIndex << 19;
+        int i = find(k);
+        if (i >= 0) { // the latest write is the one that stands
+            data[i] = v;
+            return;
+        }
+        if (count == positions.length) {
+            positions = java.util.Arrays.copyOf(positions, count * 2);
+            data = java.util.Arrays.copyOf(data, count * 2);
+        }
+        positions[count] = k;
+        data[count] = v;
+        count++;
+        if (count * 2 > table.length) grow();
+        int mask = table.length - 1;
+        int h = mix(k) & mask;
+        while (tableIndex[h] != 0) h = (h + 1) & mask;
+        table[h] = k;
+        tableIndex[h] = count;
     }
 
     void put(int x, int y, int z, Block block) {

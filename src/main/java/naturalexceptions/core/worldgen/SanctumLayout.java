@@ -19,14 +19,17 @@ import naturalexceptions.core.worldgen.dungeon.RoomTemplate.Role;
 import naturalexceptions.core.worldgen.dungeon.TemplateLibrary;
 
 /**
- * Lays out a sanctum: up to three levels of rooms on a 19-block grid carved into a grand island.
+ * Lays out a sanctum (or the catacomb under a citadel): up to four levels of rooms on a 19-block grid carved into
+ * a grand island.
  * <ol>
- * <li>Each level's cells that sit wholly in rock are found; each level is entered by a shaft from the one above
- * (from the surface for the first).</li>
- * <li>The deepest level holds the Sky Warden's hall (two by two, ten high, if it fits) with the vault beside it.</li>
+ * <li>Each level's cells that sit wholly in rock are found; each level is entered by one or two shafts from the one
+ * above (from the surface, or from a citadel's keep, for the first).</li>
+ * <li>The deepest level holds the Sky Warden's hall (two by two, ten high, if it fits) with the vault beside it. The
+ * hall has one way in, sealed by a gate the Sky Key opens; the vault's gate opens only when the Warden falls.</li>
  * <li>The other cells become rooms of one, two or four cells, joined by a random spanning tree plus about a third
  * of the remaining neighbours, so there are loops and more than one way round. Some dead ends are left as rock.</li>
- * <li>Closets beside rooms are hidden behind loose walls. The key room is the one furthest from the Warden.</li>
+ * <li>Closets beside rooms are hidden behind loose walls. The key room is on another level from the Warden (two
+ * up if it can be), as far from it as the layout allows.</li>
  * <li>Rooms get authored templates for their roles (never the same one twice if it can be helped), corridors get
  * a style, and a few corridors (about one in five, never two in a row on the way to the key and the Warden, never
  * into the entrance, the key room or the Warden's hall) get a trap.</li>
@@ -35,9 +38,10 @@ import naturalexceptions.core.worldgen.dungeon.TemplateLibrary;
 final class SanctumLayout {
 
     static final int CELL = RoomTemplate.CELL;
-    static final int GRID = 2;
     static final int LEVEL_SPACING = 12;
-    static final int MAX_LEVELS = 3;
+    static final int MAX_LEVELS = 4;
+    /** Share of ordinary rooms that are guard rooms (with a spawner). */
+    static final double GUARD_SHARE = 0.15;
     static final int NORMAL_HEIGHT = 5;
     static final int TALL_HEIGHT = 10;
     static final double EXTRA_EDGES = 0.33;
@@ -47,6 +51,10 @@ final class SanctumLayout {
     private final SkyDungeon d;
     private final SkyIslands.Island island;
     private final Random random;
+    /** How many cells out from the middle the grid reaches. */
+    private final int grid;
+    /** Under a citadel: entered from its keep (whose ground floor is at this height), not a surface gateway. */
+    private final int keepFloor;
 
     /** A room's place: its cells, what it is, and the template chosen for it. */
     private final class Slot {
@@ -126,9 +134,20 @@ final class SanctumLayout {
     private final Map<RoomTemplate, Integer> used = new HashMap<>();
 
     SanctumLayout(SkyDungeon dungeon) {
+        this(dungeon, Integer.MIN_VALUE);
+    }
+
+    /** A catacomb entered by a shaft up into a citadel keep's ground floor, at {@code keepFloor}. */
+    SanctumLayout(SkyDungeon dungeon, int keepFloor) {
         this.d = dungeon;
         this.island = dungeon.island;
         this.random = new Random(dungeon.field.seed() * 31 + island.cellX() * 1_000_003L + island.cellZ());
+        this.grid = 2; // five by five cells a level: with four levels, forty to sixty rooms
+        this.keepFloor = keepFloor;
+    }
+
+    private boolean underKeep() {
+        return keepFloor != Integer.MIN_VALUE;
     }
 
     int cellX(int i) {
@@ -192,15 +211,21 @@ final class SanctumLayout {
             if (best == null) break;
             Set<Long> below = component(level, best[0], best[1]);
             if (below.size() < 3) break;
-            Slot top = add(level - 1, best[0], best[1], 1, 1, false);
-            Slot bottom = add(level, best[0], best[1], 1, 1, false);
-            top.link = true;
-            bottom.link = true;
-            Edge shaft = new Edge(top, bottom, best[0], best[1], best[0], best[1]);
-            shaft.style = Style.SHAFT;
-            connect(shaft);
+            Slot bottom = link(level, best[0], best[1]);
             reachable.add(below);
             arrivals.add(bottom);
+            // A second way down, well apart from the first, so the levels loop into one another.
+            List<int[]> seconds = new ArrayList<>();
+            for (long key : above) {
+                int i = cellI(key), j = cellJ(key);
+                if (Math.abs(i - best[0]) + Math.abs(j - best[1]) < 3 || slotAt(level - 1, i, j) != null) continue;
+                if (!below.contains(cellKey(level, i, j)) || slotAt(level, i, j) != null) continue;
+                seconds.add(new int[] { i, j });
+            }
+            if (!seconds.isEmpty() && random.nextDouble() < 0.75) {
+                int[] second = seconds.get(random.nextInt(seconds.size()));
+                link(level, second[0], second[1]);
+            }
         }
         int deepest = reachable.size() - 1;
         placeWarden(reachable, arrivals, deepest);
@@ -212,6 +237,18 @@ final class SanctumLayout {
         templates();
         styles();
         write();
+    }
+
+    /** A shaft from a room on the level above down to a room on {@code level}, at one cell; returns the lower room. */
+    private Slot link(int level, int i, int j) {
+        Slot top = add(level - 1, i, j, 1, 1, false);
+        Slot bottom = add(level, i, j, 1, 1, false);
+        top.link = true;
+        bottom.link = true;
+        Edge shaft = new Edge(top, bottom, i, j, i, j);
+        shaft.style = Style.SHAFT;
+        connect(shaft);
+        return bottom;
     }
 
     private static int cellI(long key) {
@@ -233,7 +270,7 @@ final class SanctumLayout {
             int[] c = queue.poll();
             for (int[] s : steps) {
                 int ni = c[0] + s[0], nj = c[1] + s[1];
-                if (Math.abs(ni) > GRID || Math.abs(nj) > GRID) continue;
+                if (Math.abs(ni) > grid || Math.abs(nj) > grid) continue;
                 long key = cellKey(level, ni, nj);
                 if (seen.contains(key) || !fits(level, ni, nj, NORMAL_HEIGHT, false)) continue;
                 seen.add(key);
@@ -263,8 +300,8 @@ final class SanctumLayout {
     }
 
     private Slot placeEntrance() {
-        int[] best = null;
-        for (int ring = 0; ring <= GRID && best == null; ring++) {
+        int[] best = underKeep() ? new int[] { 0, 0 } : null;
+        for (int ring = 0; ring <= grid && best == null; ring++) {
             for (int i = -ring; i <= ring && best == null; i++) for (int j = -ring; j <= ring && best == null; j++) {
                 if (Math.max(Math.abs(i), Math.abs(j)) == ring && fits(0, i, j, NORMAL_HEIGHT, false))
                     best = new int[] { i, j };
@@ -278,7 +315,9 @@ final class SanctumLayout {
 
     /** The Warden's hall (2 x 2 and tall if it fits, else 1 x 1 tall) on the deepest level it fits, vault beside. */
     private void placeWarden(List<Set<Long>> reachable, List<Slot> arrivals, int deepest) {
+        // Only the deepest level, or failing that the one above it if that is still at least the third.
         for (int level = deepest; level >= 0; level--) {
+            if (level < deepest && level < 2) break;
             Set<Long> cells = reachable.get(level);
             Slot arrival = arrivals.get(level);
             // Best a great two-by-two hall, ten high; else a tall one-cell hall; else a plain chamber.
@@ -294,6 +333,7 @@ final class SanctumLayout {
                     options.add(new int[] { i, j, vault[0], vault[1], distance });
                 }
                 if (options.isEmpty()) continue;
+                // Among the placements, the furthest from where the level is entered.
                 Collections.shuffle(options, random);
                 options.sort((x, y) -> y[4] - x[4]);
                 int[] pick = options.get(0);
@@ -321,22 +361,32 @@ final class SanctumLayout {
         }
     }
 
-    /** Whether the hall can still be reached from the arrival once the vault's cell is taken out of the level. */
+    /**
+     * Whether, with the hall and the vault taken out of the level, every other cell can still be reached from the
+     * arrival (the hall must not cut the level in two) and the hall has a neighbour to be entered from.
+     */
     private boolean stillJoined(int level, Set<Long> cells, Slot arrival, int i, int j, int size, int[] vault) {
+        Set<Long> out = new HashSet<>();
+        out.add(cellKey(level, vault[0], vault[1]));
+        for (int a = 0; a < size; a++) for (int b = 0; b < size; b++) out.add(cellKey(level, i + a, j + b));
         Set<Long> seen = new HashSet<>();
         Deque<int[]> queue = new ArrayDeque<>();
-        long vaultKey = cellKey(level, vault[0], vault[1]);
         queue.add(new int[] { arrival.i0, arrival.j0 });
         seen.add(cellKey(level, arrival.i0, arrival.j0));
         while (!queue.isEmpty()) {
             int[] c = queue.poll();
             for (int[] s : new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
                 long key = cellKey(level, c[0] + s[0], c[1] + s[1]);
-                if (key == vaultKey || !cells.contains(key) || !seen.add(key)) continue;
+                if (out.contains(key) || !cells.contains(key) || !seen.add(key)) continue;
                 queue.add(new int[] { c[0] + s[0], c[1] + s[1] });
             }
         }
-        return seen.contains(cellKey(level, i, j));
+        for (long key : cells) if (!out.contains(key) && !seen.contains(key)) return false;
+        for (int a = -1; a <= size; a++) for (int b = -1; b <= size; b++) {
+            boolean side = (a == -1 || a == size) != (b == -1 || b == size);
+            if (side && seen.contains(cellKey(level, i + a, j + b))) return true;
+        }
+        return false;
     }
 
     /** Cells above a tall hall: their rooms may not dig pits (they would break through its ceiling). */
@@ -361,7 +411,7 @@ final class SanctumLayout {
             boolean side = (a == -1 || a == size) != (b == -1 || b == size);
             if (!side) continue;
             int vi = i + a, vj = j + b;
-            if (Math.abs(vi) > GRID || Math.abs(vj) > GRID || byCell.containsKey(cellKey(level, vi, vj))) continue;
+            if (Math.abs(vi) > grid || Math.abs(vj) > grid || byCell.containsKey(cellKey(level, vi, vj))) continue;
             if (!fits(level, vi, vj, NORMAL_HEIGHT, false)) continue;
             if (level > 0 && slotAt(level - 1, vi, vj) != null && slotAt(level - 1, vi, vj).link) continue;
             int reach = Math.abs(vi) + Math.abs(vj);
@@ -403,12 +453,13 @@ final class SanctumLayout {
     private void join(int level, Slot start) {
         Map<String, List<Edge>> candidates = new HashMap<>();
         for (Slot slot : slots) {
-            if (slot.level != level || slot.role == Role.VAULT) continue;
+            if (slot.level != level || slot.role == Role.VAULT || slot.role == Role.WARDEN) continue;
             for (int a = 0; a < slot.nx; a++) for (int b = 0; b < slot.nz; b++) {
                 int i = slot.i0 + a, j = slot.j0 + b;
                 for (int[] s : new int[][] { { 1, 0 }, { 0, 1 } }) {
                     Slot other = slotAt(level, i + s[0], j + s[1]);
-                    if (other == null || other == slot || other.role == Role.VAULT) continue;
+                    if (other == null || other == slot || other.role == Role.VAULT || other.role == Role.WARDEN)
+                        continue;
                     int p = slots.indexOf(slot), q = slots.indexOf(other);
                     String pair = String.format("%04d:%04d", Math.min(p, q), Math.max(p, q));
                     candidates.computeIfAbsent(pair, k -> new ArrayList<>())
@@ -453,9 +504,27 @@ final class SanctumLayout {
             if (e.tree || !inTree.contains(e.a) || !inTree.contains(e.b)) continue;
             if (random.nextDouble() < EXTRA_EDGES) connect(e);
         }
-        // Rooms the tree never reached (cut off by the hall) are left as rock.
+        // Rooms the tree never reached are left as rock.
         for (Slot slot : new ArrayList<>(slots)) {
-            if (slot.level == level && !inTree.contains(slot) && slot.role != Role.VAULT) remove(slot);
+            if (slot.level == level && !inTree.contains(slot) && slot.role != Role.VAULT && slot.role != Role.WARDEN)
+                remove(slot);
+        }
+        // The Warden's hall: one way in, from a neighbouring room, through a gate the Sky Key opens.
+        for (Slot hall : new ArrayList<>(slots)) {
+            if (hall.level != level || hall.role != Role.WARDEN) continue;
+            List<Edge> ways = new ArrayList<>();
+            for (int a = 0; a < hall.nx; a++) for (int b = 0; b < hall.nz; b++) {
+                int i = hall.i0 + a, j = hall.j0 + b;
+                for (int[] s : new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                    Slot other = slotAt(level, i + s[0], j + s[1]);
+                    if (other == null || other == hall || !inTree.contains(other) || other.role == Role.VAULT) continue;
+                    ways.add(new Edge(other, hall, i + s[0], j + s[1], i, j));
+                }
+            }
+            if (ways.isEmpty()) continue;
+            Edge way = ways.get(random.nextInt(ways.size()));
+            way.style = Style.GATED;
+            connect(way);
         }
     }
 
@@ -470,7 +539,7 @@ final class SanctumLayout {
     private void pruneDeadEnds() {
         for (Slot slot : new ArrayList<>(slots)) {
             if (slot.special() || slot.link || slot.nx * slot.nz != 1 || slot.edges.size() != 1) continue;
-            if (random.nextDouble() < 0.15) remove(slot);
+            if (random.nextDouble() < 0.25) remove(slot);
         }
     }
 
@@ -482,7 +551,7 @@ final class SanctumLayout {
             for (int a = 0; a < slot.nx; a++) for (int b = 0; b < slot.nz; b++) {
                 for (int[] s : new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
                     int i = slot.i0 + a + s[0], j = slot.j0 + b + s[1];
-                    if (Math.abs(i) > GRID + 1 || Math.abs(j) > GRID + 1) continue;
+                    if (Math.abs(i) > grid + 1 || Math.abs(j) > grid + 1) continue;
                     if (byCell.containsKey(cellKey(slot.level, i, j)) || reserved.contains(cellKey(slot.level, i, j)))
                         continue;
                     if (slot.level > 0 && slotAt(slot.level - 1, i, j) != null && slotAt(slot.level - 1, i, j).tall)
@@ -543,7 +612,10 @@ final class SanctumLayout {
         int best = -1;
         for (Slot slot : slots) {
             if (slot.special() || slot.link || slot.nx * slot.nz != 1 || !fromWarden.containsKey(slot)) continue;
-            int distance = fromWarden.get(slot) * 4 + random.nextInt(3);
+            int levelsApart = warden == null ? 0 : Math.abs(warden.level - slot.level);
+            // Another level from the Warden, two up if possible; then as far away along the way as can be.
+            int distance = fromWarden.get(slot) * 4 + random.nextInt(3)
+                + (levelsApart == 0 ? -1000 : levelsApart >= 2 ? 200 : 100);
             if (distance > best) {
                 key = slot;
                 best = distance;
@@ -554,7 +626,7 @@ final class SanctumLayout {
         for (Slot slot : slots) {
             if (slot.special()) continue;
             double roll = random.nextDouble();
-            slot.role = roll < 0.3 ? Role.GUARD : roll < 0.55 ? Role.STORE : Role.HALL;
+            slot.role = roll < GUARD_SHARE ? Role.GUARD : roll < GUARD_SHARE + 0.27 ? Role.STORE : Role.HALL;
         }
         // The way from the entrance to the key, and from the key (or the entrance) to the Warden.
         Slot entrance = entranceSlot();
@@ -683,7 +755,8 @@ final class SanctumLayout {
                 && !e.a.small
                 && !e.b.small
                 && trapsOnLevel[e.a.level] < trapBudget[e.a.level]
-                && !(e.critical && trappedCriticalNeighbour(e));
+                && !(e.critical && trappedCriticalNeighbour(e))
+                && !overTallHall(e);
             if (eligible && random.nextDouble() < 0.4) {
                 e.trap = pickTrap(last);
                 last = e.trap;
@@ -694,8 +767,23 @@ final class SanctumLayout {
                     : roll < 0.48 ? Style.ARCHED
                         : roll < 0.62 ? Style.CRAMPED
                             : roll < 0.72 ? Style.BRIDGE : roll < 0.86 ? Style.FLOODED : Style.COLLAPSED;
+                // Nothing digs down into a tall hall's ceiling from the level above.
+                if (e.style == Style.BRIDGE && overTallHall(e)) e.style = Style.ARCHED;
             }
         }
+    }
+
+    /** Whether a corridor runs over a tall hall on the level below (so it must keep a solid floor). */
+    private boolean overTallHall(Edge e) {
+        int minX = Math.min(e.a.minX(), e.b.minX()), maxX = Math.max(e.a.maxX(), e.b.maxX());
+        int minZ = Math.min(e.a.minZ(), e.b.minZ()), maxZ = Math.max(e.a.maxZ(), e.b.maxZ());
+        for (Slot hall : slots) {
+            if (!hall.tall || hall.level != e.a.level + 1) continue;
+            if (maxX >= hall.minX() - 1 && minX <= hall.maxX() + 1
+                && maxZ >= hall.minZ() - 1
+                && minZ <= hall.maxZ() + 1) return true;
+        }
+        return false;
     }
 
     /** Whether a critical corridor next to this one (through a shared room) already has a trap. */
@@ -779,7 +867,9 @@ final class SanctumLayout {
         for (Slot side : new Slot[] { first, second }) {
             int wall = side == first ? firstWall : secondWall;
             if (e.style == Style.VAULT && side.role == Role.VAULT)
-                corridors.doorway(alongX, centre, wall, floor, Block.GATE, 0, false);
+                corridors.doorway(alongX, centre, wall, floor, Block.GATE, SkyDungeon.WARDEN_BOUND, false);
+            else if (e.style == Style.GATED && side.role == Role.WARDEN)
+                corridors.doorway(alongX, centre, wall, floor, Block.GATE, SkyDungeon.KEY_GATE, false);
             else if (e.style == Style.SECRET && side.role != Role.SECRET)
                 corridors.doorway(alongX, centre, wall, floor, Block.SKYSTONE, SkyDungeon.LOOSE, true);
             else corridors.doorway(alongX, centre, wall, floor, Block.AIR, 0, e.style == Style.SECRET);
@@ -799,6 +889,11 @@ final class SanctumLayout {
     private void entrance(CorridorWriter corridors) {
         Slot hall = entranceSlot();
         int sx = hall.minX(), sz = hall.minZ();
+        if (underKeep()) {
+            // Up into the citadel's keep; the citadel sets the dungeon's entrance and surface itself.
+            corridors.shaft(sx, sz, hall.floor(), hall.floor() + hall.template.height + 1, keepFloor, false);
+            return;
+        }
         int top = island.centreY();
         int gx = sx + 2, gz = sz + 2, gy = top + 1;
         int h = SkyDungeon.GATEWAY_HALF;

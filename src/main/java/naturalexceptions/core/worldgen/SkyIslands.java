@@ -16,8 +16,11 @@ public final class SkyIslands {
         SMALL(128, 0.40, 5.0, 12.0, 14.0, 130, 180, 16, 0.05),
         /** Every few hundred blocks: lakes, groves, meadows and crags; sometimes a hidden cache. */
         MEDIUM(384, 0.40, 14.0, 24.0, 26.0, 135, 175, 36, 0.30),
-        /** A few per few thousand blocks: each holds a sky dungeon. */
-        GRAND(1536, 0.50, 46.0, 56.0, 62.0, 168, 180, 100, 0.0);
+        /**
+         * A few per few thousand blocks: each holds a sky dungeon. A sanctum's island is 60 to 70 blocks across the
+         * radius, a citadel's a huge 90 to 105 (see {@link #GRAND_SANCTUM_RADIUS}).
+         */
+        GRAND(1536, 0.50, 60.0, 105.0, 72.0, 176, 190, 170, 0.0);
 
         final int cell;
         final double presence;
@@ -54,9 +57,12 @@ public final class SkyIslands {
     /** The medium tier's grid (kept for callers that think in one grid). */
     public static final int CELL = 384;
     public static final int MIN_CENTRE_Y = 130;
-    public static final int MAX_CENTRE_Y = 180;
+    public static final int MAX_CENTRE_Y = 190;
     public static final double MIN_RADIUS = 5.0;
-    public static final double MAX_RADIUS = 56.0;
+    public static final double MAX_RADIUS = 105.0;
+    /** Radius ranges of the two kinds of dungeon island. */
+    public static final double[] GRAND_SANCTUM_RADIUS = { 60.0, 70.0 };
+    public static final double[] GRAND_CITADEL_RADIUS = { 90.0, 105.0 };
 
     public static final class Island {
 
@@ -167,7 +173,12 @@ public final class SkyIslands {
         int x = (int) (cellX * tier.cell + tier.margin + noise.unit(cellX, cellZ, t + 2) * span);
         int z = (int) (cellZ * tier.cell + tier.margin + noise.unit(cellX, cellZ, t + 3) * span);
         int y = tier.minY + (int) (noise.unit(cellX, cellZ, t + 4) * (tier.maxY - tier.minY + 1));
-        double radius = tier.minRadius + noise.unit(cellX, cellZ, t + 5) * (tier.maxRadius - tier.minRadius);
+        // Grand islands on their own grid: offset their cell ids to keep hashes apart from the others.
+        long idX = tier == Tier.MEDIUM ? cellX : cellX + (tier.ordinal() + 1) * 0x10000000L;
+        double[] range = { tier.minRadius, tier.maxRadius };
+        if (tier == Tier.GRAND)
+            range = kindOf(idX, cellZ) == SkyDungeon.Kind.CITADEL ? GRAND_CITADEL_RADIUS : GRAND_SANCTUM_RADIUS;
+        double radius = range[0] + noise.unit(cellX, cellZ, t + 5) * (range[1] - range[0]);
         double thickness = tier == Tier.GRAND ? tier.maxThickness * (0.9 + 0.1 * noise.unit(cellX, cellZ, t + 6))
             : Math.min(tier.maxThickness, radius * (0.7 + 0.5 * noise.unit(cellX, cellZ, t + 6)));
         double roll = noise.unit(cellX, cellZ, t + 7);
@@ -175,8 +186,6 @@ public final class SkyIslands {
         if (kind == Kind.LAKE && tier != Tier.MEDIUM) kind = Kind.MEADOW; // lakes need a medium island
         if (tier == Tier.GRAND && kind == Kind.CRAG) kind = Kind.GROVE;
         boolean cache = noise.unit(cellX, cellZ, t + 8) < tier.cacheChance;
-        // Grand islands live on their own grid, so offset their cell ids to keep hashes apart from the others.
-        long idX = tier == Tier.MEDIUM ? cellX : cellX + (tier.ordinal() + 1) * 0x10000000L;
         return new Island(tier, idX, cellZ, x, y, z, radius, thickness, kind, cache);
     }
 
@@ -436,7 +445,11 @@ public final class SkyIslands {
     /** Which dungeon a grand island holds, or null. */
     public SkyDungeon.Kind dungeonKind(Island island) {
         if (!island.hasDungeon()) return null;
-        return noise.unit(island.cellX, island.cellZ, 50) < 0.5 ? SkyDungeon.Kind.SANCTUM : SkyDungeon.Kind.CITADEL;
+        return kindOf(island.cellX, island.cellZ);
+    }
+
+    private SkyDungeon.Kind kindOf(long idX, long cellZ) {
+        return noise.unit(idX, cellZ, 50) < 0.5 ? SkyDungeon.Kind.SANCTUM : SkyDungeon.Kind.CITADEL;
     }
 
     /** Whether a dungeon's surface works (citadel, sanctum gateway) cover this column, so nothing grows there. */

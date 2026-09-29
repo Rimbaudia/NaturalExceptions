@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -95,12 +96,13 @@ final class SkyDungeonTest {
     private static final class Model {
 
         final Sample s;
-        final boolean gateOpen, secretsOpen, crumbled;
+        final boolean keyGateOpen, wardenGateOpen, secretsOpen, crumbled;
         final int minX, maxX, minY, maxY, minZ, maxZ;
 
-        Model(Sample s, boolean gateOpen, boolean secretsOpen, boolean crumbled) {
+        Model(Sample s, boolean keyGateOpen, boolean wardenGateOpen, boolean secretsOpen, boolean crumbled) {
             this.s = s;
-            this.gateOpen = gateOpen;
+            this.keyGateOpen = keyGateOpen;
+            this.wardenGateOpen = wardenGateOpen;
             this.secretsOpen = secretsOpen;
             this.crumbled = crumbled;
             int r = (int) Math.ceil(s.island.radius()) + 4;
@@ -125,7 +127,7 @@ final class SkyDungeonTest {
                     case COBWEB:
                         return true;
                     case GATE:
-                        return gateOpen;
+                        return piece.meta == SkyDungeon.WARDEN_BOUND ? wardenGateOpen : keyGateOpen;
                     case CRUMBLING:
                         return crumbled;
                     case SKYSTONE:
@@ -219,23 +221,35 @@ final class SkyDungeonTest {
     }
 
     @Test
-    void theKeyNeedsNoKeyAndTheVaultOpensOnlyWithIt() {
+    void theKeyOpensTheWardenAndOnlyTheWardenOpensTheVault() {
         for (Sample s : samples()) {
             String name = s.name();
             SkyDungeon dungeon = s.dungeon;
             assertEquals(1, chests(dungeon, SkyDungeon.Loot.KEY).size(), name + ": one key");
             assertEquals(1, chests(dungeon, SkyDungeon.Loot.VAULT_TREASURE).size(), name + ": one treasure");
-            int gates = 0;
-            for (Piece p : dungeon.pieces()) if (p.block == Block.GATE) gates++;
-            assertEquals(9, gates, name + ": a 3 x 3 gate");
-            Reached shut = new Model(s, false, false, false).flood(dungeon.entrance());
-            Reached open = new Model(s, true, false, false).flood(dungeon.entrance());
-            Reached broken = new Model(s, false, true, false).flood(dungeon.entrance());
+            int keyGates = 0, wardenGates = 0;
+            for (Piece p : dungeon.pieces()) if (p.block == Block.GATE) {
+                if (p.meta == SkyDungeon.WARDEN_BOUND) wardenGates++;
+                else keyGates++;
+            }
+            assertEquals(9, keyGates, name + ": a 3 x 3 gate into the Warden's hall");
+            assertEquals(9, wardenGates, name + ": a 3 x 3 Warden-bound gate on the vault");
+            Room hall = null;
+            for (Room room : dungeon.rooms()) if (room.role == Role.WARDEN) hall = room;
+            assertNotNull(hall, name + ": a Warden's hall");
+            Reached shut = new Model(s, false, false, false, false).flood(dungeon.entrance());
+            Reached keyed = new Model(s, true, false, false, false).flood(dungeon.entrance());
+            Reached open = new Model(s, true, true, false, false).flood(dungeon.entrance());
+            Reached broken = new Model(s, false, false, true, false).flood(dungeon.entrance());
             Piece key = chests(dungeon, SkyDungeon.Loot.KEY).get(0);
             Piece treasure = chests(dungeon, SkyDungeon.Loot.VAULT_TREASURE).get(0);
             assertTrue(Model.touches(shut, key.x, key.y, key.z), name + ": the key is reachable without it");
-            assertTrue(!Model.touches(shut, treasure.x, treasure.y, treasure.z), name + ": the vault is sealed");
-            assertTrue(Model.touches(open, treasure.x, treasure.y, treasure.z), name + ": the gate lets you in");
+            assertTrue(!Model.entered(shut, hall), name + ": the Warden's hall is sealed until the key");
+            assertTrue(Model.entered(keyed, hall), name + ": the key lets you into the Warden's hall");
+            assertTrue(
+                !Model.touches(keyed, treasure.x, treasure.y, treasure.z),
+                name + ": the vault waits for the Warden");
+            assertTrue(Model.touches(open, treasure.x, treasure.y, treasure.z), name + ": its fall opens the vault");
             for (Piece p : chests(dungeon, SkyDungeon.Loot.STORE)) assertTrue(
                 Model.touches(broken, p.x, p.y, p.z),
                 name + ": every storeroom chest can be reached (secrets by breaking in), "
@@ -247,12 +261,60 @@ final class SkyDungeonTest {
         }
     }
 
+    /** Rooms between two rooms along the dungeon's passages (not secret ones). */
+    private static int roomsBetween(SkyDungeon dungeon, Room from, Room to) {
+        Map<Room, Integer> distance = new HashMap<>();
+        ArrayDeque<Room> queue = new ArrayDeque<>();
+        distance.put(from, 0);
+        queue.add(from);
+        while (!queue.isEmpty()) {
+            Room here = queue.poll();
+            for (Connection c : dungeon.connections()) {
+                if (c.style == Style.SECRET || c.a != here && c.b != here) continue;
+                Room next = c.a == here ? c.b : c.a;
+                if (distance.containsKey(next)) continue;
+                distance.put(next, distance.get(here) + 1);
+                queue.add(next);
+            }
+        }
+        return distance.getOrDefault(to, -1);
+    }
+
+    @Test
+    void theWardenIsDeepAndTheKeyIsElsewhere() {
+        int rooms = 0, dungeons = 0, guards = 0, ordinary = 0, deep = 0;
+        for (Sample s : samples()) {
+            Room hall = null, key = null, entrance = null;
+            int deepest = 0;
+            for (Room room : s.dungeon.rooms()) {
+                deepest = Math.max(deepest, room.level);
+                if (room.role == Role.WARDEN) hall = room;
+                if (room.role == Role.KEY) key = room;
+                if (room.role == Role.ENTRANCE && room.level >= 0) entrance = room;
+                if (room.level >= 0 && room.role != Role.SECRET) rooms++;
+                if (room.level >= 0 && (room.role == Role.GUARD || room.role == Role.HALL || room.role == Role.STORE)) {
+                    ordinary++;
+                    if (room.role == Role.GUARD) guards++;
+                }
+            }
+            dungeons++;
+            if (deepest >= 2) deep++;
+            assertTrue(hall.level >= Math.min(2, deepest), s.name() + ": the Warden is deep, level " + hall.level);
+            assertTrue(key.level != hall.level, s.name() + ": the key is on another level");
+            int between = roomsBetween(s.dungeon, entrance, hall);
+            assertTrue(between >= 8, s.name() + ": the Warden is far in, " + between + " rooms");
+        }
+        assertTrue(deep * 4 >= dungeons * 3, "most dungeons go three levels down: " + deep + " of " + dungeons);
+        assertTrue(rooms >= 35 * dungeons, "big dungeons: " + rooms / (double) dungeons + " rooms on average");
+        assertTrue(guards <= ordinary * 0.2, "spawners are sparse: " + guards + " guard rooms of " + ordinary);
+    }
+
     @Test
     void everyRoomIsReachableAndSecretsOnlyThroughALooseWall() {
-        for (Sample s : sanctums()) {
-            Reached shut = new Model(s, false, false, false).flood(s.dungeon.entrance());
-            Reached broken = new Model(s, false, true, false).flood(s.dungeon.entrance());
-            Reached fallen = new Model(s, true, false, true).flood(s.dungeon.entrance());
+        for (Sample s : samples()) {
+            Reached shut = new Model(s, false, false, false, false).flood(s.dungeon.entrance());
+            Reached broken = new Model(s, false, false, true, false).flood(s.dungeon.entrance());
+            Reached fallen = new Model(s, true, false, false, true).flood(s.dungeon.entrance());
             int secrets = 0;
             for (Room room : s.dungeon.rooms()) {
                 String what = s.name() + ": "
@@ -265,7 +327,7 @@ final class SkyDungeonTest {
                     + room.floorY
                     + ","
                     + room.z;
-                if (room.role == Role.VAULT) continue;
+                if (room.role == Role.VAULT || room.role == Role.WARDEN) continue;
                 if (room.role == Role.SECRET) {
                     secrets++;
                     assertTrue(!Model.entered(shut, room), what + " is hidden");
@@ -280,11 +342,12 @@ final class SkyDungeonTest {
     }
 
     @Test
-    void sanctumsHaveLoopsAWardenAndAVault() {
+    void catacombsHaveLoopsAWardenAndAVault() {
         int withLoops = 0;
-        for (Sample s : sanctums()) {
+        for (Sample s : samples()) {
             int rooms = 0, passages = 0, seals = 0;
-            for (Room room : s.dungeon.rooms()) if (room.role != Role.SECRET && room.role != Role.VAULT) rooms++;
+            for (Room room : s.dungeon.rooms())
+                if (room.level >= 0 && room.role != Role.SECRET && room.role != Role.VAULT) rooms++;
             for (Connection c : s.dungeon.connections())
                 if (c.style != Style.SECRET && c.style != Style.VAULT) passages++;
             if (passages > rooms - 1) withLoops++;
@@ -296,12 +359,12 @@ final class SkyDungeonTest {
             assertTrue(vault.a.role == Role.WARDEN || vault.b.role == Role.WARDEN, "only through the Warden's hall");
             assertTrue(rooms >= 8, s.name() + ": a real dungeon, not a shed: " + rooms + " rooms");
         }
-        assertTrue(withLoops * 4 >= sanctums().size() * 3, "most sanctums have loops: " + withLoops);
+        assertTrue(withLoops * 4 >= samples().size() * 3, "most dungeons have loops: " + withLoops);
     }
 
     @Test
     void mostWaysInAreSafe() {
-        for (Sample s : sanctums()) {
+        for (Sample s : samples()) {
             Map<Integer, Integer> trapsPerLevel = new HashMap<>();
             Map<Integer, Integer> corridorsPerLevel = new HashMap<>();
             for (Room room : s.dungeon.rooms()) if (room.trapped) trapsPerLevel.merge(room.level, 1, Integer::sum);
@@ -344,7 +407,7 @@ final class SkyDungeonTest {
         Set<String> templates = new HashSet<>();
         Set<Style> styles = EnumSet.noneOf(Style.class);
         Set<Trap> traps = EnumSet.noneOf(Trap.class);
-        for (Sample s : sanctums()) {
+        for (Sample s : samples()) {
             for (Room room : s.dungeon.rooms()) templates.add(room.template);
             for (Connection c : s.dungeon.connections()) {
                 styles.add(c.style);
@@ -450,7 +513,7 @@ final class SkyDungeonTest {
 
     @Test
     void pitsWithoutLavaHaveALadderOut() {
-        for (Sample s : sanctums()) {
+        for (Sample s : samples()) {
             for (Room room : s.dungeon.rooms()) {
                 if (room.template == null) continue;
                 RoomTemplate t = naturalexceptions.core.worldgen.dungeon.TemplateLibrary.named(room.template);

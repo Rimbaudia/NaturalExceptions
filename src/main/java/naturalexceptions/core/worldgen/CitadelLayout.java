@@ -9,8 +9,6 @@ import java.util.Random;
 import naturalexceptions.core.worldgen.SkyDungeon.Block;
 import naturalexceptions.core.worldgen.SkyDungeon.Loot;
 import naturalexceptions.core.worldgen.SkyDungeon.Room;
-import naturalexceptions.core.worldgen.SkyDungeon.Style;
-import naturalexceptions.core.worldgen.SkyDungeon.Trap;
 import naturalexceptions.core.worldgen.dungeon.RoomTemplate;
 import naturalexceptions.core.worldgen.dungeon.RoomTemplate.Role;
 import naturalexceptions.core.worldgen.dungeon.TemplateLibrary;
@@ -22,15 +20,17 @@ import naturalexceptions.core.worldgen.dungeon.TemplateLibrary;
  * <li>a gatehouse on the south side with a portcullis and an ambush in its passage;</li>
  * <li>four to six towers, round or square, of different heights, some joined by rope bridges at the top;</li>
  * <li>courtyard works drawn from a garden, a forge, a barracks hut, a well and a ruin;</li>
- * <li>a keep of two to four floors, each an authored room, the Sky Key on the top floor;</li>
- * <li>under the keep, a guarded antechamber, a trapped corridor, the Sky Warden's hall and the vault.</li>
+ * <li>a keep of two to four floors, each an authored room;</li>
+ * <li>under the keep, a catacomb of up to four levels ({@link SanctumLayout}) with the Sky Warden and the vault at
+ * the bottom.</li>
  * </ul>
  */
 final class CitadelLayout {
 
     static final int KEEP_HALF = 7;
     static final int FLOOR_HEIGHT = 6;
-    static final int BASEMENT_DEPTH = 17;
+    /** The level number of the citadel's own rooms (the catacomb's levels count from 0 downwards). */
+    static final int SURFACE = -1;
     static final int CELL = RoomTemplate.CELL;
 
     private final SkyDungeon d;
@@ -67,7 +67,6 @@ final class CitadelLayout {
         for (int x = cx - half; x <= cx + half; x++) for (int z = cz - half; z <= cz + half; z++) {
             if (!inside(x, z)) continue;
             d.stone(x, b, z);
-            for (int y = b + 1; y <= b + 24; y++) d.put(x, y, z, Block.AIR);
             boolean edge = !inside(x + 1, z) || !inside(x - 1, z) || !inside(x, z + 1) || !inside(x, z - 1);
             if (edge) wall.add(new int[] { x, z });
         }
@@ -92,10 +91,11 @@ final class CitadelLayout {
         }
 
         List<int[]> towers = towers();
-        Room keepTop = keep();
+        keep();
         gatehouse();
         courtyard(towers);
-        basement(keepTop);
+        // Under the keep: the catacomb, levels of it, with the Sky Warden and the vault at the bottom.
+        new SanctumLayout(d, b).build();
 
         d.entrance = new int[] { cx, b + 1, cz + half + 4 };
         int reach = half + 5;
@@ -176,10 +176,10 @@ final class CitadelLayout {
 
     private int kx, kz, keepFloors;
 
-    /** The keep: two to four floors, each an authored room; the Sky Key waits on the top floor. */
-    private Room keep() {
+    /** The keep: two to four floors, each an authored room; its ground floor opens down into the catacomb. */
+    private void keep() {
         kx = cx;
-        kz = cz - 3;
+        kz = cz; // over the catacomb's first room, whose corner shaft comes up into the keep's
         keepFloors = 2 + random.nextInt(3);
         int k = KEEP_HALF, roof = b + keepFloors * FLOOR_HEIGHT;
         d.shell(kx - k, b, kz - k, kx + k, roof, kz + k, false);
@@ -190,11 +190,10 @@ final class CitadelLayout {
             if (ring && (dx + dz) % 2 == 0) d.stone(kx + dx, roof + 1, kz + dz);
         }
         RoomWriter writer = new RoomWriter(d);
-        Room top = null;
         for (int f = 0; f < keepFloors; f++) {
             int floor = b + f * FLOOR_HEIGHT;
             d.clear(kx - k + 1, floor + 1, kz - k + 1, kx + k - 1, floor + FLOOR_HEIGHT - 1, kz + k - 1);
-            Role role = f == keepFloors - 1 ? Role.KEY : f == 0 ? Role.GUARD : Role.STORE;
+            Role role = f == 0 ? Role.GUARD : Role.STORE;
             RoomTemplate t = pick(role, f == 0);
             writer.write(t, random.nextInt(4), kx - 4, kz - 4, floor, role, false);
             for (int[] w : new int[][] { { k, 0 }, { -k, 0 }, { 0, -k }, { k, 3 }, { -k, -3 } })
@@ -206,7 +205,7 @@ final class CitadelLayout {
                 kz,
                 role,
                 t.name,
-                f,
+                SURFACE,
                 kx - k + 1,
                 kx + k - 1,
                 kz - k + 1,
@@ -214,12 +213,10 @@ final class CitadelLayout {
                 5,
                 t.trapped);
             d.rooms.add(room);
-            if (role == Role.KEY) top = room;
         }
         // The stair: a ladder up the north-west corner through every floor to the roof.
         for (int y = b + 1; y <= roof; y++) d.put(kx - k + 1, y, kz - k + 1, Block.LADDER, 3);
         for (int y = b + 1; y <= b + 3; y++) for (int dx = -1; dx <= 1; dx++) d.put(kx + dx, y, kz + k, Block.AIR);
-        return top;
     }
 
     // --- The gatehouse --------------------------------------------------------------------------------------
@@ -242,14 +239,14 @@ final class CitadelLayout {
         for (int dz : new int[] { -2, 2 }) for (int dx : new int[] { -2, 2 })
             d.put(cx + dx, b + 1, gz + dz, Block.ALCOVE, RoomWriter.alcoveMeta(mobs[random.nextInt(mobs.length)]));
         d.put(cx, b + 5, gz, Block.LAMP);
-        Room gate = new Room(cx, b, gz, Role.ENTRANCE, null, 0, cx - 1, cx + 1, gz - 2, gz + 2, 4, true);
+        Room gate = new Room(cx, b, gz, Role.ENTRANCE, null, SURFACE, cx - 1, cx + 1, gz - 2, gz + 2, 4, true);
         d.rooms.add(gate);
     }
 
     // --- The courtyard --------------------------------------------------------------------------------------
 
     private void courtyard(List<int[]> towers) {
-        int[][] spots = { { -9, 10 }, { 9, 10 }, { -11, -7 }, { 11, -7 } };
+        int[][] spots = { { -10, 11 }, { 10, 11 }, { -11, -7 }, { 11, -7 } };
         List<String> works = new ArrayList<>();
         java.util.Collections.addAll(works, "garden", "forge", "barracks", "well", "ruins");
         java.util.Collections.shuffle(works, random);
@@ -352,103 +349,6 @@ final class CitadelLayout {
         if (random.nextDouble() < 0.4) d.put(x, b + 1, z, Block.CHEST, 0, Loot.STORE, null);
     }
 
-    // --- The basement ---------------------------------------------------------------------------------------
-
-    /**
-     * Under the keep: a guarded antechamber at the foot of a ladder, then a trapped corridor to the Sky Warden's
-     * hall, and the vault beyond its gate.
-     */
-    private void basement(Room keepTop) {
-        int floor = b - BASEMENT_DEPTH;
-        RoomWriter writer = new RoomWriter(d);
-        CorridorWriter corridors = new CorridorWriter(d);
-        // Which way the basement runs: the direction with the most rock under it.
-        int[][] dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
-        int[] dir = dirs[0];
-        double best = -1;
-        for (int[] dv : dirs) {
-            int[] far = d.field.column(d.island, kx + dv[0] * CELL * 2, kz + dv[1] * CELL * 2);
-            double depth = far == null ? -1 : floor - far[0];
-            if (depth > best) {
-                best = depth;
-                dir = dv;
-            }
-        }
-        int ax = kx, az = kz;
-        int hx = ax + dir[0] * CELL, hz = az + dir[1] * CELL;
-        int vx = hx + dir[0] * CELL, vz = hz + dir[1] * CELL;
-        int[] hallColumn = d.field.column(d.island, hx, hz);
-        boolean tall = hallColumn != null && hallColumn[1] > floor + 12 && hallColumn[0] < floor - 6;
-
-        RoomTemplate ante = pick(Role.GUARD, true);
-        RoomTemplate hallTemplate = TemplateLibrary.named(tall ? "warden_hall_small" : "warden_chamber");
-        RoomTemplate vault = TemplateLibrary.named("vault");
-        writer.write(ante, random.nextInt(4), ax - 4, az - 4, floor, Role.GUARD);
-        writer.write(hallTemplate, random.nextInt(4), hx - 4, hz - 4, floor, Role.WARDEN);
-        writer.write(vault, random.nextInt(4), vx - 4, vz - 4, floor, Role.VAULT);
-        Room anteRoom = new Room(
-            ax,
-            floor,
-            az,
-            Role.GUARD,
-            ante.name,
-            1,
-            ax - 4,
-            ax + 4,
-            az - 4,
-            az + 4,
-            5,
-            ante.trapped);
-        Room hallRoom = new Room(
-            hx,
-            floor,
-            hz,
-            Role.WARDEN,
-            hallTemplate.name,
-            1,
-            hx - 4,
-            hx + 4,
-            hz - 4,
-            hz + 4,
-            hallTemplate.height,
-            false);
-        Room vaultRoom = new Room(vx, floor, vz, Role.VAULT, vault.name, 1, vx - 4, vx + 4, vz - 4, vz + 4, 5, false);
-        d.rooms.add(anteRoom);
-        d.rooms.add(hallRoom);
-        d.rooms.add(vaultRoom);
-
-        Trap[] kinds = { Trap.VOLLEY, Trap.FIRE_VOLLEY, Trap.CRUMBLE, Trap.GALE, Trap.TNT, Trap.AMBUSH };
-        Trap trap = kinds[random.nextInt(kinds.length)];
-        boolean alongX = dir[1] == 0;
-        passage(corridors, alongX, ax, az, hx, hz, floor, Style.PLAIN, trap, Block.AIR);
-        passage(corridors, alongX, hx, hz, vx, vz, floor, Style.VAULT, Trap.NONE, Block.GATE);
-        d.connections.add(new SkyDungeon.Connection(anteRoom, hallRoom, Style.PLAIN, trap, true));
-        d.connections.add(new SkyDungeon.Connection(hallRoom, vaultRoom, Style.VAULT, Trap.NONE, false));
-        if (keepTop != null)
-            d.connections.add(new SkyDungeon.Connection(keepTop, anteRoom, Style.SHAFT, Trap.NONE, true));
-
-        // Down from the keep's ground floor: a ladder shaft into the antechamber's corner.
-        corridors.shaft(ax - 4, az - 4, floor, floor + ante.height + 1, b, false);
-    }
-
-    /**
-     * A corridor between two one-cell rooms centred at (x0, z0) and (x1, z1), its far doorway filled with {@code far}.
-     */
-    private void passage(CorridorWriter corridors, boolean alongX, int x0, int z0, int x1, int z1, int floor,
-        Style style, Trap trap, Block far) {
-        if (alongX) {
-            int west = Math.min(x0, x1), east = Math.max(x0, x1);
-            corridors.write(true, z0, west + 6, east - 6, floor, style, trap);
-            corridors.doorway(true, z0, x0 < x1 ? west + 5 : east - 5, floor, Block.AIR, 0, false);
-            corridors.doorway(true, z0, x0 < x1 ? east - 5 : west + 5, floor, far, 0, false);
-        } else {
-            int north = Math.min(z0, z1), south = Math.max(z0, z1);
-            corridors.write(false, x0, north + 6, south - 6, floor, style, trap);
-            corridors.doorway(false, x0, z0 < z1 ? north + 5 : south - 5, floor, Block.AIR, 0, false);
-            corridors.doorway(false, x0, z0 < z1 ? south - 5 : north + 5, floor, far, 0, false);
-        }
-    }
-
     /** An authored one-cell room for a role, favouring ones not used yet; no pits (floors stack here). */
     private RoomTemplate pick(Role role, boolean needCorners) {
         List<RoomTemplate> options = new ArrayList<>();
@@ -456,7 +356,7 @@ final class CitadelLayout {
         for (RoomTemplate t : TemplateLibrary.all()) {
             if (!t.roles.contains(role) || !t.kinds.contains(RoomTemplate.Kind.CITADEL)) continue;
             if (t.small || t.cellsX != 1 || t.cellsZ != 1 || t.height != 5) continue;
-            if (t.has(',') || t.has('%') || t.has('T') || t.has('~') || t.has('=')) continue;
+            if (t.trapped || t.has(',') || t.has('%') || t.has('T') || t.has('~') || t.has('=')) continue;
             if (needCorners && !SanctumLayout.cornersOpen(t)) continue;
             options.add(t);
             weights.add(t.weight / (1.0 + 3.0 * used.getOrDefault(t, 0)));

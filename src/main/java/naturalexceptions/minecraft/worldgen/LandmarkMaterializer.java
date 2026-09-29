@@ -263,7 +263,7 @@ final class LandmarkMaterializer {
                 set(world, x, y, z, Blocks.water, 0);
                 break;
             case GATE:
-                set(world, x, y, z, orElse(NEBlocks.vaultGate, Blocks.iron_block), 0);
+                set(world, x, y, z, orElse(NEBlocks.vaultGate, Blocks.iron_block), meta);
                 break;
             case BOOKSHELF:
                 set(world, x, y, z, Blocks.bookshelf, 0);
@@ -332,8 +332,8 @@ final class LandmarkMaterializer {
     }
 
     /**
-     * A spawner for a creature by its vanilla name; "Zombie+" (and the like) spawns it in iron armour with a
-     * weapon, through the spawner's own spawn data.
+     * A spawner for a creature by its vanilla name, set slow and sparse; "Zombie+" (and the like) spawns it in iron
+     * armour with a weapon, through the spawner's own spawn data.
      */
     private static void spawner(World world, int x, int y, int z, String mob) {
         set(world, x, y, z, Blocks.mob_spawner, 0);
@@ -344,9 +344,20 @@ final class LandmarkMaterializer {
         boolean armed = mob.endsWith("+");
         String name = armed ? mob.substring(0, mob.length() - 1) : mob;
         logic.setEntityName(name);
-        if (!armed) return;
         net.minecraft.nbt.NBTTagCompound tag = new net.minecraft.nbt.NBTTagCompound();
         logic.writeToNBT(tag);
+        // Slow and sparse: a pair every 30 to 60 seconds, never more than three about, only for a player close by.
+        tag.setShort("Delay", (short) 200);
+        tag.setShort("MinSpawnDelay", (short) 600);
+        tag.setShort("MaxSpawnDelay", (short) 1200);
+        tag.setShort("SpawnCount", (short) 2);
+        tag.setShort("MaxNearbyEntities", (short) 3);
+        tag.setShort("RequiredPlayerRange", (short) 10);
+        tag.setShort("SpawnRange", (short) 3);
+        if (!armed) {
+            logic.readFromNBT(tag);
+            return;
+        }
         net.minecraft.nbt.NBTTagList equipment = new net.minecraft.nbt.NBTTagList();
         net.minecraft.item.Item[] gear = {
             name.equals("Skeleton") ? net.minecraft.init.Items.bow : net.minecraft.init.Items.iron_sword,

@@ -261,6 +261,28 @@ public final class EntitySkyWarden extends EntityMob implements IBossDisplayData
         return hit;
     }
 
+    /** When the Warden falls, the vault's seal breaks. */
+    @Override
+    public void onDeath(DamageSource cause) {
+        super.onDeath(cause);
+        if (worldObj.isRemote) return;
+        net.minecraft.util.ChunkCoordinates home = getHomePosition();
+        boolean hasHome = hasHome() && home != null;
+        int x = hasHome ? home.posX : MathHelper.floor_double(posX);
+        int y = hasHome ? home.posY : MathHelper.floor_double(posY);
+        int z = hasHome ? home.posZ : MathHelper.floor_double(posZ);
+        int opened = naturalexceptions.minecraft.block.BlockVaultGate.breakWardenSeals(worldObj, x, y, z, SEAL_REACH);
+        if (opened > 0) {
+            @SuppressWarnings("unchecked")
+            List<EntityPlayer> players = worldObj.playerEntities;
+            for (EntityPlayer player : players) if (player.getDistanceSqToEntity(this) < 48.0 * 48.0) player
+                .addChatMessage(new net.minecraft.util.ChatComponentText("\u00a75\u00a7lThe vault's seal breaks."));
+        }
+    }
+
+    /** How far from its hall the Warden's fall reaches to break the vault's seal. */
+    static final int SEAL_REACH = 32;
+
     @Override
     protected void fall(float distance) {}
 
