@@ -4,24 +4,59 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Floating islands high above the land. One candidate per {@link #CELL}-block cell, a little under half of them
- * real, so an island is usually in sight within a couple of hundred blocks. Each island is a pure shape: a gently domed
- * top over a noisy cone
- * that tapers to a ragged underside.
+ * Floating islands high above the land, in three tiers: many small ones, fewer medium ones with lakes and groves,
+ * and rare grand ones that each hold a sky dungeon. Every island is a pure shape: a gently domed top over a noisy
+ * cone that tapers to a ragged underside.
  */
 public final class SkyIslands {
 
-    public static final int CELL = 256;
-    static final double PRESENCE = 0.45;
-    public static final int MIN_CENTRE_Y = 135;
-    public static final int MAX_CENTRE_Y = 175;
-    public static final double MIN_RADIUS = 12.0;
-    public static final double MAX_RADIUS = 30.0;
-    /** Islands this large carry a sky cache. */
-    public static final double CACHE_RADIUS = 18.0;
-    private static final int MARGIN = 36;
-    /** Deepest an island's underside reaches below its top, so none dips into the hills. */
-    static final double MAX_THICKNESS = 30.0;
+    public enum Tier {
+
+        /** Scattered and common: a few blocks of meadow, grove or crag. */
+        SMALL(128, 0.40, 5.0, 12.0, 14.0, 130, 180, 16, 0.05),
+        /** Every few hundred blocks: lakes, groves, meadows and crags; sometimes a hidden cache. */
+        MEDIUM(384, 0.40, 14.0, 24.0, 26.0, 135, 175, 36, 0.30),
+        /** A few per few thousand blocks: each holds a sky dungeon. */
+        GRAND(1536, 0.50, 34.0, 44.0, 44.0, 150, 166, 90, 0.0);
+
+        final int cell;
+        final double presence;
+        final double minRadius;
+        final double maxRadius;
+        final double maxThickness;
+        final int minY;
+        final int maxY;
+        final int margin;
+        final double cacheChance;
+
+        Tier(int cell, double presence, double minRadius, double maxRadius, double maxThickness, int minY, int maxY,
+            int margin, double cacheChance) {
+            this.cell = cell;
+            this.presence = presence;
+            this.minRadius = minRadius;
+            this.maxRadius = maxRadius;
+            this.maxThickness = maxThickness;
+            this.minY = minY;
+            this.maxY = maxY;
+            this.margin = margin;
+            this.cacheChance = cacheChance;
+        }
+
+        public int cell() {
+            return cell;
+        }
+
+        public double maxRadius() {
+            return maxRadius;
+        }
+    }
+
+    /** The medium tier's grid (kept for callers that think in one grid). */
+    public static final int CELL = 384;
+    public static final int MIN_CENTRE_Y = 130;
+    public static final int MAX_CENTRE_Y = 180;
+    public static final double MIN_RADIUS = 5.0;
+    public static final double MAX_RADIUS = 44.0;
 
     public static final class Island {
 
@@ -35,9 +70,13 @@ public final class SkyIslands {
         private final boolean pond;
         private final boolean tree;
         private final Kind kind;
+        private final Tier tier;
+        private final boolean cache;
 
-        Island(long cellX, long cellZ, int centreX, int centreY, int centreZ, double radius, double thickness,
-            Kind kind) {
+        Island(Tier tier, long cellX, long cellZ, int centreX, int centreY, int centreZ, double radius,
+            double thickness, Kind kind, boolean cache) {
+            this.tier = tier;
+            this.cache = cache;
             this.cellX = cellX;
             this.cellZ = cellZ;
             this.centreX = centreX;
@@ -90,8 +129,18 @@ public final class SkyIslands {
             return tree;
         }
 
+        /** Whether a plain cache chest lies hidden in a boulder heap on this island (never on a dungeon island). */
         public boolean hasCache() {
-            return radius >= CACHE_RADIUS;
+            return cache;
+        }
+
+        public Tier tier() {
+            return tier;
+        }
+
+        /** Grand islands hold a sky dungeon. */
+        public boolean hasDungeon() {
+            return tier == Tier.GRAND;
         }
     }
 
@@ -101,30 +150,49 @@ public final class SkyIslands {
         this.noise = new LandmarkNoise(seed ^ 0x534b5949534c414eL);
     }
 
-    public Island atCell(long cellX, long cellZ) {
-        if (noise.unit(cellX, cellZ, 1) >= PRESENCE) return null;
-        int x = (int) (cellX * CELL + MARGIN + noise.unit(cellX, cellZ, 2) * (CELL - 2 * MARGIN));
-        int z = (int) (cellZ * CELL + MARGIN + noise.unit(cellX, cellZ, 3) * (CELL - 2 * MARGIN));
-        int y = MIN_CENTRE_Y + (int) (noise.unit(cellX, cellZ, 4) * (MAX_CENTRE_Y - MIN_CENTRE_Y + 1));
-        double radius = MIN_RADIUS + noise.unit(cellX, cellZ, 5) * (MAX_RADIUS - MIN_RADIUS);
-        double thickness = Math.min(MAX_THICKNESS, radius * (0.7 + 0.5 * noise.unit(cellX, cellZ, 6)));
-        double roll = noise.unit(cellX, cellZ, 7);
-        Kind kind = roll < 0.3 ? Kind.GROVE : roll < 0.6 ? Kind.MEADOW : roll < 0.8 ? Kind.CRAG : Kind.LAKE;
-        if (kind == Kind.LAKE && radius < 14.0) kind = Kind.MEADOW; // too small to hold a lake
-        return new Island(cellX, cellZ, x, y, z, radius, thickness, kind);
+    /** Identifies this world's islands (for caching the dungeons built on them). */
+    public long seed() {
+        return noise.seed();
     }
 
-    /** Islands that may reach any column in the box [minX, maxX] x [minZ, maxZ]. */
+    /** A medium-tier island in its cell, or null. */
+    public Island atCell(long cellX, long cellZ) {
+        return atCell(Tier.MEDIUM, cellX, cellZ);
+    }
+
+    public Island atCell(Tier tier, long cellX, long cellZ) {
+        long t = tier.ordinal() * 1000L;
+        if (noise.unit(cellX, cellZ, t + 1) >= tier.presence) return null;
+        int span = tier.cell - 2 * tier.margin;
+        int x = (int) (cellX * tier.cell + tier.margin + noise.unit(cellX, cellZ, t + 2) * span);
+        int z = (int) (cellZ * tier.cell + tier.margin + noise.unit(cellX, cellZ, t + 3) * span);
+        int y = tier.minY + (int) (noise.unit(cellX, cellZ, t + 4) * (tier.maxY - tier.minY + 1));
+        double radius = tier.minRadius + noise.unit(cellX, cellZ, t + 5) * (tier.maxRadius - tier.minRadius);
+        double thickness = tier == Tier.GRAND ? tier.maxThickness * (0.9 + 0.1 * noise.unit(cellX, cellZ, t + 6))
+            : Math.min(tier.maxThickness, radius * (0.7 + 0.5 * noise.unit(cellX, cellZ, t + 6)));
+        double roll = noise.unit(cellX, cellZ, t + 7);
+        Kind kind = roll < 0.3 ? Kind.GROVE : roll < 0.6 ? Kind.MEADOW : roll < 0.8 ? Kind.CRAG : Kind.LAKE;
+        if (kind == Kind.LAKE && tier != Tier.MEDIUM) kind = Kind.MEADOW; // lakes need a medium island
+        if (tier == Tier.GRAND && kind == Kind.CRAG) kind = Kind.GROVE;
+        boolean cache = noise.unit(cellX, cellZ, t + 8) < tier.cacheChance;
+        // Grand islands live on their own grid, so offset their cell ids to keep hashes apart from the others.
+        long idX = tier == Tier.MEDIUM ? cellX : cellX + (tier.ordinal() + 1) * 0x10000000L;
+        return new Island(tier, idX, cellZ, x, y, z, radius, thickness, kind, cache);
+    }
+
+    /** Islands of every tier that may reach any column in the box [minX, maxX] x [minZ, maxZ]. */
     public List<Island> near(int minX, int minZ, int maxX, int maxZ) {
         List<Island> result = new ArrayList<>();
-        // The ragged edge reaches 1.18 radii and the cloud rim a little beyond that.
-        int reach = (int) Math.ceil(MAX_RADIUS * 1.18 * CLOUD_RIM_OUTER) + 2;
-        long cx0 = Math.floorDiv(minX - reach, CELL), cx1 = Math.floorDiv(maxX + reach, CELL);
-        long cz0 = Math.floorDiv(minZ - reach, CELL), cz1 = Math.floorDiv(maxZ + reach, CELL);
-        for (long cx = cx0; cx <= cx1; cx++) {
-            for (long cz = cz0; cz <= cz1; cz++) {
-                Island island = atCell(cx, cz);
-                if (island != null) result.add(island);
+        for (Tier tier : Tier.values()) {
+            // The ragged edge reaches 1.18 radii and the cloud rim a little beyond that.
+            int reach = (int) Math.ceil(tier.maxRadius * 1.18 * CLOUD_RIM_OUTER) + 2;
+            long cx0 = Math.floorDiv(minX - reach, tier.cell), cx1 = Math.floorDiv(maxX + reach, tier.cell);
+            long cz0 = Math.floorDiv(minZ - reach, tier.cell), cz1 = Math.floorDiv(maxZ + reach, tier.cell);
+            for (long cx = cx0; cx <= cx1; cx++) {
+                for (long cz = cz0; cz <= cz1; cz++) {
+                    Island island = atCell(tier, cx, cz);
+                    if (island != null) result.add(island);
+                }
             }
         }
         return result;
@@ -153,8 +221,7 @@ public final class SkyIslands {
 
     /** Whether this column of the island holds the pond's water at its top. */
     public boolean pondAt(Island island, int x, int z) {
-        // The pond gives way to a shrine on its shore.
-        return island.pond && reach(island, x, z) < POND && !shrineCovers(island, x, z);
+        return island.pond && reach(island, x, z) < POND;
     }
 
     /** The island's tree position {x, z}, on solid ground away from any pond. */
@@ -237,7 +304,7 @@ public final class SkyIslands {
     public Decor decor(Island island, int x, int z) {
         if (column(island, x, z) == null || pondAt(island, x, z)
             || waterfallAt(island, x, z)
-            || shrineCovers(island, x, z)) return Decor.NONE;
+            || dungeonCovers(island, x, z)) return Decor.NONE;
         Decor boulder = boulderAt(island, x, z);
         if (boulder != Decor.NONE) return boulder;
         Surface surface = surface(island, x, z);
@@ -265,8 +332,14 @@ public final class SkyIslands {
         }
     }
 
-    /** Boulders: a few low rock heaps, taller at their middle. */
+    /** Boulders: a few low rock heaps, taller at their middle; a cache chest hides in a ring of them. */
     private Decor boulderAt(Island island, int x, int z) {
+        if (island.cache) {
+            int[] spot = cacheSpot(island);
+            double d = Math.hypot(x - spot[0], z - spot[1]);
+            if (d < 0.5) return Decor.NONE; // the chest itself
+            if (d < 1.9) return noise.unit(x, z, 43) < 0.35 ? Decor.TALL_BOULDER : Decor.BOULDER;
+        }
         int count = island.kind == Kind.CRAG ? 4 : island.kind == Kind.MEADOW ? 3 : island.kind == Kind.GROVE ? 1 : 0;
         for (int i = 0; i < count; i++) {
             double angle = noise.unit(island.cellX + i * 7, island.cellZ, 33) * Math.PI * 2.0;
@@ -295,7 +368,9 @@ public final class SkyIslands {
             }
             if (column(island, spot[0], spot[1]) != null && !pondAt(island, spot[0], spot[1])
                 && !waterfallAt(island, spot[0], spot[1])
-                && !nearShrine(island, spot[0], spot[1], 3)) spots.add(spot);
+                && !dungeonCovers(island, spot[0], spot[1])
+                && !(island.cache && Math.hypot(spot[0] - cacheSpot(island)[0], spot[1] - cacheSpot(island)[1]) < 4))
+                spots.add(spot);
         }
         return spots;
     }
@@ -353,176 +428,21 @@ public final class SkyIslands {
         return last;
     }
 
-    // --- Shrines ----------------------------------------------------------------------------------------------
+    // --- Dungeons -----------------------------------------------------------------------------------------
 
-    public enum ShrineKind {
-        /** A floor of Skystone, four (partly broken) corner pillars and lintels; the chest on a raised step. */
-        OPEN,
-        /** A hollow tower with windows and a ladder; the chest on its roof. */
-        WATCHTOWER,
-        /** A raised platform ringed with pillars; the chest under an arch. */
-        PLATFORM
+    /** Which dungeon a grand island holds, or null. */
+    public SkyDungeon.Kind dungeonKind(Island island) {
+        if (!island.hasDungeon()) return null;
+        return noise.unit(island.cellX, island.cellZ, 50) < 0.5 ? SkyDungeon.Kind.SANCTUM : SkyDungeon.Kind.CITADEL;
     }
 
-    /** One block of a shrine, relative to its origin on the ground (dy = 0 replaces the island's top block). */
-    public static final class Piece {
-
-        public enum Block {
-            SKYSTONE,
-            GLASS_PANE,
-            LADDER_NORTH,
-            AIR,
-            CHEST
-        }
-
-        public final int dx;
-        public final int dy;
-        public final int dz;
-        public final Block block;
-
-        Piece(int dx, int dy, int dz, Block block) {
-            this.dx = dx;
-            this.dy = dy;
-            this.dz = dz;
-            this.block = block;
-        }
-    }
-
-    public ShrineKind shrineKind(Island island) {
-        if (!island.hasCache()) return null;
-        double roll = noise.unit(island.cellX, island.cellZ, 41);
-        return roll < 0.4 ? ShrineKind.OPEN : roll < 0.7 ? ShrineKind.WATCHTOWER : ShrineKind.PLATFORM;
-    }
-
-    /** Half the width of a shrine's footprint. */
-    static int shrineHalf(ShrineKind kind) {
-        return kind == ShrineKind.PLATFORM ? 4 : kind == ShrineKind.OPEN ? 3 : 2;
-    }
-
-    /** The shrine's origin {x, y, z}: the cache spot, on the island's top there. Null if the island has none. */
-    public int[] shrineOrigin(Island island) {
-        if (shrineKind(island) == null) return null;
-        int[] spot = cacheSpot(island);
-        int[] column = column(island, spot[0], spot[1]);
-        return column == null ? null : new int[] { spot[0], column[1], spot[1] };
-    }
-
-    public boolean shrineCovers(Island island, int x, int z) {
-        return nearShrine(island, x, z, 0);
-    }
-
-    private boolean nearShrine(Island island, int x, int z, int margin) {
-        ShrineKind kind = shrineKind(island);
-        int[] origin = kind == null ? null : shrineOrigin(island);
-        if (origin == null) return false;
-        int half = shrineHalf(kind) + margin + (kind == ShrineKind.PLATFORM ? 1 : 0);
-        return Math.abs(x - origin[0]) <= half && Math.abs(z - origin[2]) <= half;
-    }
-
-    /** Every block of the island's shrine, relative to {@link #shrineOrigin}; empty if it has none. */
-    public List<Piece> shrinePieces(Island island) {
-        List<Piece> pieces = new ArrayList<>();
-        ShrineKind kind = shrineKind(island);
-        if (kind == null || shrineOrigin(island) == null) return pieces;
-        int half = shrineHalf(kind);
-        switch (kind) {
-            case OPEN: {
-                clear(pieces, half, 1, 6);
-                floor(pieces, half, 0);
-                for (int dx = -1; dx <= 1; dx++)
-                    for (int dz = -1; dz <= 1; dz++) add(pieces, dx, 1, dz, Piece.Block.SKYSTONE);
-                int[][] corners = { { -half, -half }, { half, -half }, { -half, half }, { half, half } };
-                boolean[] whole = new boolean[4];
-                for (int c = 0; c < 4; c++) {
-                    int broken = (int) (noise.unit(island.cellX + c, island.cellZ, 42) * 3); // 0, 1 or 2 missing
-                    whole[c] = broken == 0;
-                    for (int dy = 1; dy <= 4 - broken; dy++)
-                        add(pieces, corners[c][0], dy, corners[c][1], Piece.Block.SKYSTONE);
-                }
-                // Lintels span only between two whole pillars.
-                if (whole[0] && whole[1])
-                    for (int dx = -half; dx <= half; dx++) add(pieces, dx, 5, -half, Piece.Block.SKYSTONE);
-                if (whole[2] && whole[3])
-                    for (int dx = -half; dx <= half; dx++) add(pieces, dx, 5, half, Piece.Block.SKYSTONE);
-                add(pieces, 0, 2, 0, Piece.Block.CHEST);
-                break;
-            }
-            case WATCHTOWER: {
-                int height = 8;
-                clear(pieces, half, 1, height + 2);
-                floor(pieces, half, 0);
-                for (int dy = 1; dy <= height; dy++) {
-                    for (int dx = -half; dx <= half; dx++) for (int dz = -half; dz <= half; dz++) {
-                        boolean wall = Math.abs(dx) == half || Math.abs(dz) == half;
-                        if (!wall) continue;
-                        boolean door = dz == -half && dx == 0 && dy <= 2;
-                        boolean window = dy == 5 && (dx == 0 || dz == 0);
-                        if (door) continue;
-                        add(pieces, dx, dy, dz, window ? Piece.Block.GLASS_PANE : Piece.Block.SKYSTONE);
-                    }
-                }
-                // Roof with a hatch over the ladder, crenellations around it, the chest on top.
-                for (int dx = -half + 1; dx <= half - 1; dx++) for (int dz = -half + 1; dz <= half - 1; dz++) {
-                    if (dx == 0 && dz == half - 1) continue;
-                    add(pieces, dx, height, dz, Piece.Block.SKYSTONE);
-                }
-                for (int dy = 1; dy <= height; dy++) add(pieces, 0, dy, half - 1, Piece.Block.LADDER_NORTH);
-                for (int dx = -half; dx <= half; dx++) for (int dz = -half; dz <= half; dz++) {
-                    boolean ring = Math.abs(dx) == half || Math.abs(dz) == half;
-                    if (ring && (dx + dz) % 2 == 0) add(pieces, dx, height + 1, dz, Piece.Block.SKYSTONE);
-                }
-                add(pieces, -1, height + 1, -1, Piece.Block.CHEST);
-                break;
-            }
-            case PLATFORM:
-            default: {
-                clear(pieces, half, 1, 6);
-                for (int dx = -half; dx <= half; dx++) for (int dz = -half; dz <= half; dz++) {
-                    add(pieces, dx, 0, dz, Piece.Block.SKYSTONE);
-                    add(pieces, dx, 2, dz, Piece.Block.SKYSTONE);
-                    boolean post = (Math.abs(dx) == half || dx == 0) && (Math.abs(dz) == half || dz == 0);
-                    if (post) add(pieces, dx, 1, dz, Piece.Block.SKYSTONE);
-                    boolean ring = (Math.abs(dx) == half || Math.abs(dz) == half) && (dx + dz) % 2 == 0;
-                    if (ring) for (int dy = 3; dy <= 4; dy++) add(pieces, dx, dy, dz, Piece.Block.SKYSTONE);
-                }
-                // An arch over the chest, and a step up onto the platform.
-                for (int dy = 3; dy <= 4; dy++) {
-                    add(pieces, -1, dy, 0, Piece.Block.SKYSTONE);
-                    add(pieces, 1, dy, 0, Piece.Block.SKYSTONE);
-                }
-                for (int dx = -1; dx <= 1; dx++) add(pieces, dx, 5, 0, Piece.Block.SKYSTONE);
-                add(pieces, 0, 1, -half - 1, Piece.Block.SKYSTONE);
-                add(pieces, 0, 3, 0, Piece.Block.CHEST);
-                break;
-            }
-        }
-        return pieces;
-    }
-
-    /** Absolute position {x, y, z} of the shrine's cache chest, or null. */
-    public int[] shrineChest(Island island) {
-        int[] origin = shrineOrigin(island);
-        if (origin == null) return null;
-        for (Piece piece : shrinePieces(island)) {
-            if (piece.block == Piece.Block.CHEST)
-                return new int[] { origin[0] + piece.dx, origin[1] + piece.dy, origin[2] + piece.dz };
-        }
-        return null;
-    }
-
-    private static void clear(List<Piece> pieces, int half, int fromDy, int toDy) {
-        for (int dy = fromDy; dy <= toDy; dy++) for (int dx = -half; dx <= half; dx++)
-            for (int dz = -half; dz <= half; dz++) pieces.add(new Piece(dx, dy, dz, Piece.Block.AIR));
-    }
-
-    private static void floor(List<Piece> pieces, int half, int dy) {
-        for (int dx = -half; dx <= half; dx++)
-            for (int dz = -half; dz <= half; dz++) add(pieces, dx, dy, dz, Piece.Block.SKYSTONE);
-    }
-
-    /** Later pieces replace earlier ones at the same place (clearing comes first, then the build). */
-    private static void add(List<Piece> pieces, int dx, int dy, int dz, Piece.Block block) {
-        pieces.add(new Piece(dx, dy, dz, block));
+    /** Whether a dungeon's surface works (citadel, sanctum gateway) cover this column, so nothing grows there. */
+    public boolean dungeonCovers(Island island, int x, int z) {
+        SkyDungeon.Kind kind = dungeonKind(island);
+        if (kind == null) return false;
+        int half = kind == SkyDungeon.Kind.CITADEL ? SkyDungeon.CITADEL_HALF + SkyDungeon.TOWER_HALF + 1
+            : SkyDungeon.GATEWAY_HALF + 1;
+        return Math.abs(x - island.centreX) <= half && Math.abs(z - island.centreZ) <= half;
     }
 
     /** A deterministic value in [0, 1) for one block of an island (ore veins, loot). */

@@ -15,12 +15,15 @@ import naturalexceptions.core.worldgen.SkyIslands;
 import naturalexceptions.minecraft.persistence.NEWorldSavedData;
 
 /**
- * {@code /ne_landmarks [tp]}: where the nearest sky islands and giant landmarks are, and optionally a teleport to
- * the nearest island. Only new chunks get landmarks, so a listed one inside explored land may be missing.
+ * {@code /ne_landmarks [tp|tp dungeon]}: where the nearest sky islands, sky dungeons and giant landmarks are, and
+ * optionally a teleport to the nearest island (or dungeon). Only new chunks get landmarks, so a listed one inside
+ * explored land may be missing.
  */
 public final class CommandLandmarks extends CommandBase {
 
     private static final int SEARCH = 1200;
+    /** Dungeon islands are few (about one per 1536-block square, half the time), so look further for them. */
+    private static final int DUNGEON_SEARCH = 4000;
     private static final int SHOWN = 4;
 
     @Override
@@ -30,7 +33,8 @@ public final class CommandLandmarks extends CommandBase {
 
     @Override
     public String getCommandUsage(ICommandSender sender) {
-        return "/ne_landmarks [tp] - nearest sky islands and landmarks; tp goes to the nearest island";
+        return "/ne_landmarks [tp|tp dungeon] - nearest sky islands, dungeons and landmarks; tp goes to the nearest island"
+            + " (or dungeon)";
     }
 
     @Override
@@ -70,7 +74,7 @@ public final class CommandLandmarks extends CommandBase {
                         island.centreZ(),
                         (int) distance(island.centreX(), island.centreZ(), px, pz),
                         direction(island.centreX() - px, island.centreZ() - pz),
-                        island.hasCache() ? ", has a sky cache" : "",
+                        island.hasDungeon() ? ", sky dungeon" : island.hasCache() ? ", has a hidden cache" : "",
                         presence.words)));
         }
         if (target == null) for (SkyIslands.Island island : found) {
@@ -78,6 +82,38 @@ public final class CommandLandmarks extends CommandBase {
                 target = island;
                 break;
             }
+        }
+        List<SkyIslands.Island> dungeons = new ArrayList<>();
+        for (SkyIslands.Island island : islands
+            .near(px - DUNGEON_SEARCH, pz - DUNGEON_SEARCH, px + DUNGEON_SEARCH, pz + DUNGEON_SEARCH)) {
+            if (island.hasDungeon()) dungeons.add(island);
+        }
+        dungeons.sort(
+            (a, b) -> Double
+                .compare(distance(a.centreX(), a.centreZ(), px, pz), distance(b.centreX(), b.centreZ(), px, pz)));
+        sender.addChatMessage(new ChatComponentText("\u00a7eNearest sky dungeons:"));
+        if (dungeons.isEmpty()) sender.addChatMessage(new ChatComponentText("  none within " + DUNGEON_SEARCH));
+        SkyIslands.Island dungeonTarget = null;
+        for (SkyIslands.Island island : dungeons) {
+            Presence presence = presence(world, islands, island);
+            if (dungeonTarget == null && presence != Presence.MISSING) dungeonTarget = island;
+        }
+        for (int i = 0; i < Math.min(SHOWN - 1, dungeons.size()); i++) {
+            SkyIslands.Island island = dungeons.get(i);
+            Presence presence = presence(world, islands, island);
+            naturalexceptions.core.worldgen.SkyDungeon.Kind kind = islands.dungeonKind(island);
+            sender.addChatMessage(
+                new ChatComponentText(
+                    String.format(
+                        "  %s%s at %d, %d, %d  (%d blocks %s) - %s",
+                        presence == Presence.MISSING ? "\u00a78" : "",
+                        kind == naturalexceptions.core.worldgen.SkyDungeon.Kind.CITADEL ? "citadel" : "sanctum",
+                        island.centreX(),
+                        island.centreY(),
+                        island.centreZ(),
+                        (int) distance(island.centreX(), island.centreZ(), px, pz),
+                        direction(island.centreX() - px, island.centreZ() - pz),
+                        presence.words)));
         }
         Landmarks landmarks = new Landmarks(seed);
         List<Landmarks.Landmark> giants = new ArrayList<>(
@@ -101,14 +137,27 @@ public final class CommandLandmarks extends CommandBase {
         sender
             .addChatMessage(new ChatComponentText("\u00a78Islands only form in land generated after they were added."));
         if (args.length > 0 && "tp".equalsIgnoreCase(args[0])) {
+            boolean toDungeon = args.length > 1 && "dungeon".equalsIgnoreCase(args[1]);
+            if (toDungeon) target = dungeonTarget;
             if (target == null) {
                 sender.addChatMessage(new ChatComponentText("No island within reach can still appear here."));
                 return;
             }
             prepare(world, target);
-            int[] top = islands.column(target, target.centreX(), target.centreZ());
-            int y = (top != null ? top[1] : target.centreY()) + 2;
-            player.setPositionAndUpdate(target.centreX() + 0.5, y, target.centreZ() + 0.5);
+            int tx = target.centreX(), tz = target.centreZ();
+            int y;
+            if (toDungeon) {
+                // Beside the entrance (in the sanctum's gateway, or outside the citadel's gate), not on a roof.
+                int[] entrance = naturalexceptions.core.worldgen.SkyDungeon.of(islands, target)
+                    .entrance();
+                tx = entrance[0];
+                tz = entrance[2] + 2;
+                y = entrance[1];
+            } else {
+                int[] top = islands.column(target, tx, tz);
+                y = (top != null ? top[1] : target.centreY()) + 2;
+            }
+            player.setPositionAndUpdate(tx + 0.5, y, tz + 0.5);
             sender.addChatMessage(
                 new ChatComponentText(
                     "Went to the island at " + target.centreX()

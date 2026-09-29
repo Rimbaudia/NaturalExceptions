@@ -78,8 +78,9 @@ final class LandmarkMaterializer {
             }
             // 5. Trees, each only when it fits wholly inside this chunk.
             for (int[] spot : field.treeSpots(island)) plantTree(world, field, island, spot, x0, z0);
-            // 6. The shrine, built piece by piece where it falls in this chunk; its chest is the sky cache.
-            placed += buildShrine(world, field, island, x0, z0);
+            // 6. A hidden cache in its ring of boulders, or the island's sky dungeon (this chunk's share of it).
+            placeCache(world, field, island, x0, z0);
+            placed += buildDungeon(world, field, island, x0, z0);
         }
         return placed;
     }
@@ -174,43 +175,115 @@ final class LandmarkMaterializer {
         else new WorldGenTrees(false).generate(world, random, spot[0], column[1] + 1, spot[1]);
     }
 
-    private static int buildShrine(World world, SkyIslands field, SkyIslands.Island island, int x0, int z0) {
-        int[] origin = field.shrineOrigin(island);
-        if (origin == null) return 0;
+    private static void placeCache(World world, SkyIslands field, SkyIslands.Island island, int x0, int z0) {
+        if (!island.hasCache()) return;
+        int[] spot = field.cacheSpot(island);
+        if (!insideChunk(spot[0], spot[1], x0, z0, 0)) return;
+        int[] column = field.column(island, spot[0], spot[1]);
+        if (column == null || field.pondAt(island, spot[0], spot[1])) return;
+        chest(world, spot[0], column[1] + 1, spot[1], SkyCacheLoot.Tier.ISLAND, island);
+    }
+
+    private static int buildDungeon(World world, SkyIslands field, SkyIslands.Island island, int x0, int z0) {
+        naturalexceptions.core.worldgen.SkyDungeon dungeon = naturalexceptions.core.worldgen.SkyDungeon
+            .of(field, island);
+        if (dungeon == null) return 0;
         int placed = 0;
-        for (SkyIslands.Piece piece : field.shrinePieces(island)) {
-            int x = origin[0] + piece.dx, y = origin[1] + piece.dy, z = origin[2] + piece.dz;
-            if (!insideChunk(x, z, x0, z0, 0)) continue;
-            switch (piece.block) {
-                case SKYSTONE:
-                    world.setBlock(
-                        x,
-                        y,
-                        z,
-                        NEBlocks.skystoneBricks != null ? NEBlocks.skystoneBricks : Blocks.stonebrick,
-                        0,
-                        2);
-                    break;
-                case GLASS_PANE:
-                    world.setBlock(x, y, z, Blocks.glass_pane, 0, 2);
-                    break;
-                case LADDER_NORTH:
-                    world.setBlock(x, y, z, Blocks.ladder, 2, 2); // on the wall to its south
-                    break;
-                case CHEST:
-                    world.setBlock(x, y, z, Blocks.chest, 0, 2);
-                    TileEntity tile = world.getTileEntity(x, y, z);
-                    if (tile instanceof TileEntityChest) SkyCacheLoot
-                        .fill((TileEntityChest) tile, island.cellX() * 0x9E3779B97F4A7C15L ^ island.cellZ());
-                    break;
-                case AIR:
-                default:
-                    world.setBlock(x, y, z, Blocks.air, 0, 2);
-                    break;
-            }
+        for (naturalexceptions.core.worldgen.SkyDungeon.Piece piece : dungeon.pieces()) {
+            if (!insideChunk(piece.x, piece.z, x0, z0, 0) || piece.y < 1 || piece.y > 254) continue;
+            writePiece(world, piece, island);
             placed++;
         }
         return placed;
+    }
+
+    private static void writePiece(World world, naturalexceptions.core.worldgen.SkyDungeon.Piece piece,
+        SkyIslands.Island island) {
+        int x = piece.x, y = piece.y, z = piece.z;
+        switch (piece.block) {
+            case SKYSTONE:
+                world.setBlock(x, y, z, orElse(NEBlocks.skystoneBricks, Blocks.stonebrick), piece.meta, 2);
+                break;
+            case WARDED:
+                world.setBlock(x, y, z, orElse(NEBlocks.wardedSkystone, Blocks.bedrock), 0, 2);
+                break;
+            case LAMP:
+                world.setBlock(x, y, z, orElse(NEBlocks.lumeniteLamp, Blocks.glowstone), 0, 2);
+                break;
+            case LADDER:
+                world.setBlock(x, y, z, Blocks.ladder, piece.meta, 2);
+                break;
+            case GLASS_PANE:
+                world.setBlock(x, y, z, Blocks.glass_pane, 0, 2);
+                break;
+            case CHEST:
+                chest(world, x, y, z, tierOf(piece.loot), island);
+                break;
+            case SPAWNER: {
+                world.setBlock(x, y, z, Blocks.mob_spawner, 0, 2);
+                TileEntity tile = world.getTileEntity(x, y, z);
+                if (tile instanceof net.minecraft.tileentity.TileEntityMobSpawner)
+                    ((net.minecraft.tileentity.TileEntityMobSpawner) tile).func_145881_a()
+                        .setEntityName(piece.mob);
+                break;
+            }
+            case ARROW_TRAP: {
+                world.setBlock(x, y, z, Blocks.dispenser, piece.meta, 2);
+                TileEntity tile = world.getTileEntity(x, y, z);
+                if (tile instanceof net.minecraft.tileentity.TileEntityDispenser) {
+                    net.minecraft.tileentity.TileEntityDispenser dispenser = (net.minecraft.tileentity.TileEntityDispenser) tile;
+                    for (int slot = 0; slot < 3; slot++) dispenser.setInventorySlotContents(
+                        slot,
+                        new net.minecraft.item.ItemStack(net.minecraft.init.Items.arrow, 16));
+                }
+                break;
+            }
+            case PRESSURE_PLATE:
+                world.setBlock(x, y, z, Blocks.stone_pressure_plate, 0, 2);
+                break;
+            case LAVA:
+                world.setBlock(x, y, z, Blocks.lava, 0, 2);
+                break;
+            case WATER:
+                world.setBlock(x, y, z, Blocks.water, 0, 2);
+                break;
+            case GATE:
+                world.setBlock(x, y, z, orElse(NEBlocks.vaultGate, Blocks.iron_block), 0, 2);
+                break;
+            case AIR:
+            default:
+                world.setBlock(x, y, z, Blocks.air, 0, 2);
+                break;
+        }
+    }
+
+    private static Block orElse(Block block, Block fallback) {
+        return block != null ? block : fallback;
+    }
+
+    private static SkyCacheLoot.Tier tierOf(naturalexceptions.core.worldgen.SkyDungeon.Loot loot) {
+        if (loot == null) return SkyCacheLoot.Tier.STORE;
+        switch (loot) {
+            case KEY:
+                return SkyCacheLoot.Tier.KEY;
+            case VAULT_TREASURE:
+                return SkyCacheLoot.Tier.VAULT_TREASURE;
+            case VAULT_RICH:
+                return SkyCacheLoot.Tier.VAULT_RICH;
+            case STORE:
+            default:
+                return SkyCacheLoot.Tier.STORE;
+        }
+    }
+
+    /** A chest with its loot, seeded from where it stands, so it is the same whichever chunk writes it. */
+    private static void chest(World world, int x, int y, int z, SkyCacheLoot.Tier tier, SkyIslands.Island island) {
+        world.setBlock(x, y, z, Blocks.chest, 0, 2);
+        TileEntity tile = world.getTileEntity(x, y, z);
+        if (tile instanceof TileEntityChest) {
+            long seed = x * 0x9E3779B97F4A7C15L ^ y * 0xC2B2AE3D27D4EB4FL ^ z * 0x165667B19E3779F9L ^ island.cellX();
+            SkyCacheLoot.fill((TileEntityChest) tile, seed, tier);
+        }
     }
 
     // --- Giant terrain features ------------------------------------------------------------------------------

@@ -11,7 +11,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-/** What sky islands are like on top: kinds, plants, clouds, the waterfall and the shrine. */
+/** What sky islands are like on top: kinds, plants, clouds, and the waterfall. */
 final class SkyIslandLifeTest {
 
     private static final long SEED = 2024L;
@@ -25,9 +25,9 @@ final class SkyIslandLifeTest {
         return found;
     }
 
-    private static SkyIslands.Island first(SkyIslands field, SkyIslands.Kind kind, boolean withShrine) {
+    private static SkyIslands.Island first(SkyIslands field, SkyIslands.Kind kind) {
         for (SkyIslands.Island island : islands(field, 30)) {
-            if (island.kind() == kind && (!withShrine || field.shrineKind(island) != null)) return island;
+            if (island.kind() == kind) return island;
         }
         throw new AssertionError("no " + kind);
     }
@@ -45,7 +45,7 @@ final class SkyIslandLifeTest {
     void plantsGrowOnlyOnDryLandAndEachKindLooksItsPart() {
         SkyIslands field = new SkyIslands(SEED);
         for (SkyIslands.Kind kind : SkyIslands.Kind.values()) {
-            SkyIslands.Island island = first(field, kind, false);
+            SkyIslands.Island island = first(field, kind);
             Map<SkyIslands.Decor, Integer> decor = new EnumMap<>(SkyIslands.Decor.class);
             int rock = 0, columns = 0;
             int r = (int) (island.radius() * 1.3);
@@ -55,7 +55,7 @@ final class SkyIslandLifeTest {
                     if (d != SkyIslands.Decor.NONE) {
                         assertNotNull(field.column(island, x, z), "no plant in the air");
                         assertTrue(!field.pondAt(island, x, z) && !field.waterfallAt(island, x, z), "none in water");
-                        assertTrue(!field.shrineCovers(island, x, z), "none inside the shrine");
+                        assertTrue(!field.dungeonCovers(island, x, z), "none inside a dungeon");
                         decor.merge(d, 1, Integer::sum);
                     }
                     if (field.column(island, x, z) != null) {
@@ -81,12 +81,12 @@ final class SkyIslandLifeTest {
     @Test
     void groveHasSeveralTreesAndTheyStandOnLand() {
         SkyIslands field = new SkyIslands(SEED);
-        SkyIslands.Island grove = first(field, SkyIslands.Kind.GROVE, false);
+        SkyIslands.Island grove = first(field, SkyIslands.Kind.GROVE);
         List<int[]> trees = field.treeSpots(grove);
         assertTrue(trees.size() >= 2, "a grove is a stand of trees: " + trees.size());
         for (int[] spot : trees) assertNotNull(field.column(grove, spot[0], spot[1]));
         assertTrue(
-            field.treeSpots(first(field, SkyIslands.Kind.CRAG, false))
+            field.treeSpots(first(field, SkyIslands.Kind.CRAG))
                 .isEmpty(),
             "crags are bare");
     }
@@ -94,7 +94,7 @@ final class SkyIslandLifeTest {
     @Test
     void lakesSpillOverTheEdgeAsAWaterfall() {
         SkyIslands field = new SkyIslands(SEED);
-        SkyIslands.Island lake = first(field, SkyIslands.Kind.LAKE, false);
+        SkyIslands.Island lake = first(field, SkyIslands.Kind.LAKE);
         assertTrue(field.pondAt(lake, lake.centreX(), lake.centreZ()), "a pond in the middle");
         int[] lip = field.waterfallLip(lake);
         assertNotNull(lip, "the channel reaches out");
@@ -106,7 +106,7 @@ final class SkyIslandLifeTest {
     @Test
     void cloudsHangAtTheRimAndUnderneath() {
         SkyIslands field = new SkyIslands(SEED);
-        SkyIslands.Island island = first(field, SkyIslands.Kind.MEADOW, false);
+        SkyIslands.Island island = first(field, SkyIslands.Kind.MEADOW);
         int rim = 0, under = 0;
         int r = (int) (island.radius() * 1.4);
         for (int x = island.centreX() - r; x <= island.centreX() + r; x++) {
@@ -121,29 +121,5 @@ final class SkyIslandLifeTest {
         }
         assertTrue(rim > 10, "a cloud rim: " + rim);
         assertTrue(under > 0, "puffs underneath");
-    }
-
-    @Test
-    void shrinesSitOnTheIslandWithTheCacheInside() {
-        SkyIslands field = new SkyIslands(SEED);
-        int seen = 0;
-        for (SkyIslands.Island island : islands(field, 30)) {
-            SkyIslands.ShrineKind kind = field.shrineKind(island);
-            if (kind == null) continue;
-            seen++;
-            int[] origin = field.shrineOrigin(island);
-            assertNotNull(origin);
-            int chests = 0;
-            for (SkyIslands.Piece piece : field.shrinePieces(island)) {
-                if (piece.block == SkyIslands.Piece.Block.CHEST) chests++;
-                if (piece.dy == 0 && piece.block == SkyIslands.Piece.Block.SKYSTONE) assertNotNull(
-                    field.column(island, origin[0] + piece.dx, origin[2] + piece.dz),
-                    kind + " floor over the edge");
-            }
-            assertEquals(1, chests, kind + " holds the cache");
-            int[] chest = field.shrineChest(island);
-            assertTrue(chest[1] > origin[1], "the chest stands in the shrine, above the ground");
-        }
-        assertTrue(seen >= 10, "shrines are common on big islands: " + seen);
     }
 }

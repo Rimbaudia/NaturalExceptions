@@ -95,4 +95,68 @@ final class SkyIslandsTest {
             }
         }
     }
+
+    private static int count(SkyIslands field, SkyIslands.Tier tier, int blocks) {
+        int n = 0, cells = blocks / tier.cell();
+        for (long cx = 0; cx < cells; cx++)
+            for (long cz = 0; cz < cells; cz++) if (field.atCell(tier, cx, cz) != null) n++;
+        return n;
+    }
+
+    @Test
+    void mostlySmallSomeMediumAndGrandDungeonIslandsAreFew() {
+        SkyIslands field = new SkyIslands(SEED);
+        int span = 6144; // a 6 x 6 km square
+        int small = count(field, SkyIslands.Tier.SMALL, span);
+        int medium = count(field, SkyIslands.Tier.MEDIUM, span);
+        int grand = count(field, SkyIslands.Tier.GRAND, span);
+        assertTrue(small > 6 * medium, "small islands are the common ones: " + small + " vs " + medium);
+        assertTrue(medium > 5 * grand, "medium are much commoner than grand: " + medium + " vs " + grand);
+        assertTrue(grand >= 3 && grand <= 14, "a few dungeon islands: " + grand);
+        for (long cx = 0; cx < 4; cx++) for (long cz = 0; cz < 4; cz++) {
+            SkyIslands.Island island = field.atCell(SkyIslands.Tier.GRAND, cx, cz);
+            if (island == null) continue;
+            assertTrue(island.hasDungeon() && !island.hasCache(), "a grand island has a dungeon, not a heap cache");
+            assertNotNull(field.dungeonKind(island));
+        }
+    }
+
+    @Test
+    void cachesAreRareOnSmallIslandsAndNoneHasAShrine() {
+        SkyIslands field = new SkyIslands(SEED);
+        int small = 0, smallCaches = 0, medium = 0, mediumCaches = 0;
+        for (long cx = 0; cx < 48; cx++) for (long cz = 0; cz < 48; cz++) {
+            SkyIslands.Island island = field.atCell(SkyIslands.Tier.SMALL, cx, cz);
+            if (island != null) {
+                small++;
+                if (island.hasCache()) smallCaches++;
+                assertNull(field.dungeonKind(island));
+            }
+            if (cx < 16 && cz < 16) {
+                island = field.atCell(SkyIslands.Tier.MEDIUM, cx, cz);
+                if (island != null) {
+                    medium++;
+                    if (island.hasCache()) mediumCaches++;
+                    assertNull(field.dungeonKind(island));
+                }
+            }
+        }
+        assertTrue(smallCaches < small * 0.1, "one small island in twenty: " + smallCaches + " / " + small);
+        assertTrue(mediumCaches > medium * 0.15 && mediumCaches < medium * 0.45, mediumCaches + " / " + medium);
+    }
+
+    @Test
+    void everyTierIsFoundByNear() {
+        SkyIslands field = new SkyIslands(SEED);
+        for (SkyIslands.Tier tier : SkyIslands.Tier.values()) {
+            SkyIslands.Island island = null;
+            for (long c = 0; island == null && c < 40; c++) island = field.atCell(tier, c, c);
+            assertNotNull(island, tier.name());
+            boolean seen = false;
+            int x = island.centreX(), z = island.centreZ();
+            for (SkyIslands.Island near : field.near(x - 8, z - 8, x + 8, z + 8))
+                seen |= near.tier() == tier && near.cellX() == island.cellX() && near.cellZ() == island.cellZ();
+            assertTrue(seen, tier + " island is seen by the chunk over its middle");
+        }
+    }
 }
