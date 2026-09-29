@@ -17,7 +17,7 @@ public final class SkyIslands {
         /** Every few hundred blocks: lakes, groves, meadows and crags; sometimes a hidden cache. */
         MEDIUM(384, 0.40, 14.0, 24.0, 26.0, 135, 175, 36, 0.30),
         /** A few per few thousand blocks: each holds a sky dungeon. */
-        GRAND(1536, 0.50, 34.0, 44.0, 44.0, 150, 166, 90, 0.0);
+        GRAND(1536, 0.50, 46.0, 56.0, 62.0, 168, 180, 100, 0.0);
 
         final int cell;
         final double presence;
@@ -56,7 +56,7 @@ public final class SkyIslands {
     public static final int MIN_CENTRE_Y = 130;
     public static final int MAX_CENTRE_Y = 180;
     public static final double MIN_RADIUS = 5.0;
-    public static final double MAX_RADIUS = 44.0;
+    public static final double MAX_RADIUS = 56.0;
 
     public static final class Island {
 
@@ -212,8 +212,11 @@ public final class SkyIslands {
         double d = reach(island, x, z);
         if (d >= 1.0) return null;
         int top = island.centreY + (d < 0.5 ? 1 : 0);
-        double taper = Math.pow(1.0 - d, 0.7);
-        double ragged = 0.75 + 0.5 * noise.smooth(x, z, 5.0, island.cellX ^ (island.cellZ << 20));
+        // A dungeon island is a massive block of rock, its underside flat until near the rim; others taper to a point.
+        boolean grand = island.tier == Tier.GRAND;
+        double taper = Math.pow(1.0 - d, grand ? 0.3 : 0.7);
+        double noiseAt = noise.smooth(x, z, 5.0, island.cellX ^ (island.cellZ << 20));
+        double ragged = grand ? 0.9 + 0.2 * noiseAt : 0.75 + 0.5 * noiseAt;
         int bottom = island.centreY - (int) Math.round(island.thickness * taper * ragged);
         if (bottom > top - 1) bottom = top - 1;
         return new int[] { bottom, top };
@@ -438,11 +441,9 @@ public final class SkyIslands {
 
     /** Whether a dungeon's surface works (citadel, sanctum gateway) cover this column, so nothing grows there. */
     public boolean dungeonCovers(Island island, int x, int z) {
-        SkyDungeon.Kind kind = dungeonKind(island);
-        if (kind == null) return false;
-        int half = kind == SkyDungeon.Kind.CITADEL ? SkyDungeon.CITADEL_HALF + SkyDungeon.TOWER_HALF + 1
-            : SkyDungeon.GATEWAY_HALF + 1;
-        return Math.abs(x - island.centreX) <= half && Math.abs(z - island.centreZ) <= half;
+        if (!island.hasDungeon()) return false;
+        SkyDungeon dungeon = SkyDungeon.of(this, island);
+        return dungeon != null && dungeon.coversSurface(x, z);
     }
 
     /** A deterministic value in [0, 1) for one block of an island (ore veins, loot). */

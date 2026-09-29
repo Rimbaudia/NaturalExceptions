@@ -189,8 +189,8 @@ final class LandmarkMaterializer {
             .of(field, island);
         if (dungeon == null) return 0;
         int placed = 0;
-        for (naturalexceptions.core.worldgen.SkyDungeon.Piece piece : dungeon.pieces()) {
-            if (!insideChunk(piece.x, piece.z, x0, z0, 0) || piece.y < 1 || piece.y > 254) continue;
+        for (naturalexceptions.core.worldgen.SkyDungeon.Piece piece : dungeon.piecesInChunk(x0 >> 4, z0 >> 4)) {
+            if (piece.y < 1 || piece.y > 254) continue;
             writePiece(world, piece, island);
             placed++;
         }
@@ -199,62 +199,169 @@ final class LandmarkMaterializer {
 
     private static void writePiece(World world, naturalexceptions.core.worldgen.SkyDungeon.Piece piece,
         SkyIslands.Island island) {
-        int x = piece.x, y = piece.y, z = piece.z;
+        int x = piece.x, y = piece.y, z = piece.z, meta = piece.meta;
         switch (piece.block) {
             case SKYSTONE:
-                world.setBlock(x, y, z, orElse(NEBlocks.skystoneBricks, Blocks.stonebrick), piece.meta, 2);
+                set(world, x, y, z, orElse(NEBlocks.skystoneBricks, Blocks.stonebrick), meta);
                 break;
             case WARDED:
-                world.setBlock(x, y, z, orElse(NEBlocks.wardedSkystone, Blocks.bedrock), 0, 2);
+                set(world, x, y, z, orElse(NEBlocks.wardedSkystone, Blocks.bedrock), 0);
                 break;
             case LAMP:
-                world.setBlock(x, y, z, orElse(NEBlocks.lumeniteLamp, Blocks.glowstone), 0, 2);
+                set(world, x, y, z, orElse(NEBlocks.lumeniteLamp, Blocks.glowstone), 0);
                 break;
             case LADDER:
-                world.setBlock(x, y, z, Blocks.ladder, piece.meta, 2);
+                set(world, x, y, z, Blocks.ladder, meta);
                 break;
             case GLASS_PANE:
-                world.setBlock(x, y, z, Blocks.glass_pane, 0, 2);
+                set(world, x, y, z, Blocks.glass_pane, 0);
                 break;
             case CHEST:
                 chest(world, x, y, z, tierOf(piece.loot), island);
                 break;
-            case SPAWNER: {
-                world.setBlock(x, y, z, Blocks.mob_spawner, 0, 2);
-                TileEntity tile = world.getTileEntity(x, y, z);
-                if (tile instanceof net.minecraft.tileentity.TileEntityMobSpawner)
-                    ((net.minecraft.tileentity.TileEntityMobSpawner) tile).func_145881_a()
-                        .setEntityName(piece.mob);
+            case SPAWNER:
+                spawner(world, x, y, z, piece.mob);
                 break;
-            }
-            case ARROW_TRAP: {
-                world.setBlock(x, y, z, Blocks.dispenser, piece.meta, 2);
+            case DISPENSER: {
+                set(world, x, y, z, Blocks.dispenser, meta & 7);
+                // A dispenser aims itself at open air when placed; the dungeon's aim is the one that counts.
+                world.setBlockMetadataWithNotify(x, y, z, meta & 7, 2);
                 TileEntity tile = world.getTileEntity(x, y, z);
                 if (tile instanceof net.minecraft.tileentity.TileEntityDispenser) {
                     net.minecraft.tileentity.TileEntityDispenser dispenser = (net.minecraft.tileentity.TileEntityDispenser) tile;
+                    boolean fire = (meta & naturalexceptions.core.worldgen.SkyDungeon.FIRE) != 0;
                     for (int slot = 0; slot < 3; slot++) dispenser.setInventorySlotContents(
                         slot,
-                        new net.minecraft.item.ItemStack(net.minecraft.init.Items.arrow, 16));
+                        new net.minecraft.item.ItemStack(
+                            fire ? net.minecraft.init.Items.fire_charge : net.minecraft.init.Items.arrow,
+                            fire ? 8 : 16));
                 }
                 break;
             }
-            case PRESSURE_PLATE:
-                world.setBlock(x, y, z, Blocks.stone_pressure_plate, 0, 2);
+            case TRIGGER:
+                set(world, x, y, z, orElse(NEBlocks.triggerStone, Blocks.stone_pressure_plate), 0);
+                break;
+            case CRUMBLING:
+                set(world, x, y, z, orElse(NEBlocks.crumblingSkystone, Blocks.gravel), 0);
+                break;
+            case VENT:
+                set(world, x, y, z, orElse(NEBlocks.galeVent, Blocks.stonebrick), meta);
+                break;
+            case ALCOVE:
+                set(world, x, y, z, orElse(NEBlocks.sealedAlcove, Blocks.stonebrick), meta);
+                break;
+            case SEAL:
+                set(world, x, y, z, orElse(NEBlocks.wardenSeal, Blocks.stonebrick), 0);
+                break;
+            case TNT:
+                set(world, x, y, z, Blocks.tnt, 0);
                 break;
             case LAVA:
-                world.setBlock(x, y, z, Blocks.lava, 0, 2);
+                set(world, x, y, z, Blocks.lava, 0);
                 break;
             case WATER:
-                world.setBlock(x, y, z, Blocks.water, 0, 2);
+                set(world, x, y, z, Blocks.water, 0);
                 break;
             case GATE:
-                world.setBlock(x, y, z, orElse(NEBlocks.vaultGate, Blocks.iron_block), 0, 2);
+                set(world, x, y, z, orElse(NEBlocks.vaultGate, Blocks.iron_block), 0);
+                break;
+            case BOOKSHELF:
+                set(world, x, y, z, Blocks.bookshelf, 0);
+                break;
+            case COBWEB:
+                set(world, x, y, z, Blocks.web, 0);
+                break;
+            case RUBBLE:
+                set(
+                    world,
+                    x,
+                    y,
+                    z,
+                    meta == 1 ? Blocks.gravel : meta == 2 ? Blocks.mossy_cobblestone : Blocks.cobblestone,
+                    0);
+                break;
+            case IRON_BARS:
+                set(world, x, y, z, Blocks.iron_bars, 0);
+                break;
+            case GRASS:
+                set(world, x, y, z, Blocks.grass, 0);
+                break;
+            case TALL_GRASS:
+                set(world, x, y, z, Blocks.tallgrass, 1);
+                break;
+            case FLOWER:
+                set(world, x, y, z, meta == 1 ? Blocks.yellow_flower : Blocks.red_flower, 0);
+                break;
+            case WINDBLOOM:
+                set(world, x, y, z, orElse(NEBlocks.windbloom, Blocks.yellow_flower), 0);
+                break;
+            case CAULDRON:
+                set(world, x, y, z, Blocks.cauldron, 3);
+                break;
+            case FURNACE:
+                set(world, x, y, z, Blocks.furnace, meta);
+                world.setBlockMetadataWithNotify(x, y, z, meta, 2);
+                break;
+            case CRAFTING_TABLE:
+                set(world, x, y, z, Blocks.crafting_table, 0);
+                break;
+            case ANVIL:
+                set(world, x, y, z, Blocks.anvil, meta & 3);
+                break;
+            case FENCE:
+                set(world, x, y, z, Blocks.fence, 0);
+                break;
+            case QUARTZ:
+                set(world, x, y, z, Blocks.quartz_block, 2);
+                break;
+            case LOG:
+                set(world, x, y, z, Blocks.log, 0);
+                break;
+            case LEAVES:
+                set(world, x, y, z, Blocks.leaves, 4); // placed, not grown: never decays
                 break;
             case AIR:
             default:
-                world.setBlock(x, y, z, Blocks.air, 0, 2);
+                set(world, x, y, z, Blocks.air, 0);
                 break;
         }
+    }
+
+    private static void set(World world, int x, int y, int z, Block block, int meta) {
+        world.setBlock(x, y, z, block, meta, 2);
+    }
+
+    /**
+     * A spawner for a creature by its vanilla name; "Zombie+" (and the like) spawns it in iron armour with a
+     * weapon, through the spawner's own spawn data.
+     */
+    private static void spawner(World world, int x, int y, int z, String mob) {
+        set(world, x, y, z, Blocks.mob_spawner, 0);
+        TileEntity tile = world.getTileEntity(x, y, z);
+        if (!(tile instanceof net.minecraft.tileentity.TileEntityMobSpawner) || mob == null) return;
+        net.minecraft.tileentity.MobSpawnerBaseLogic logic = ((net.minecraft.tileentity.TileEntityMobSpawner) tile)
+            .func_145881_a();
+        boolean armed = mob.endsWith("+");
+        String name = armed ? mob.substring(0, mob.length() - 1) : mob;
+        logic.setEntityName(name);
+        if (!armed) return;
+        net.minecraft.nbt.NBTTagCompound tag = new net.minecraft.nbt.NBTTagCompound();
+        logic.writeToNBT(tag);
+        net.minecraft.nbt.NBTTagList equipment = new net.minecraft.nbt.NBTTagList();
+        net.minecraft.item.Item[] gear = {
+            name.equals("Skeleton") ? net.minecraft.init.Items.bow : net.minecraft.init.Items.iron_sword,
+            net.minecraft.init.Items.iron_boots, null, net.minecraft.init.Items.iron_chestplate,
+            net.minecraft.init.Items.iron_helmet };
+        for (net.minecraft.item.Item item : gear) {
+            net.minecraft.nbt.NBTTagCompound slot = new net.minecraft.nbt.NBTTagCompound();
+            if (item != null) new net.minecraft.item.ItemStack(item).writeToNBT(slot);
+            equipment.appendTag(slot);
+        }
+        net.minecraft.nbt.NBTTagCompound data = new net.minecraft.nbt.NBTTagCompound();
+        data.setTag("Equipment", equipment);
+        data.setBoolean("PersistenceRequired", true);
+        tag.setTag("SpawnData", data);
+        logic.readFromNBT(tag);
     }
 
     private static Block orElse(Block block, Block fallback) {
