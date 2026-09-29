@@ -187,13 +187,26 @@ public final class RenderStarterSmelter extends TileEntitySpecialRenderer {
             basisX[2] - p00[2] + basisZ[2] - p00[2]);
         double baseY = 0.04D;
         double yCursor = baseY;
+        int[] top0 = geometry.world(0, geometry.interiorHeight(), 1);
+        int roomLight = smelter.getWorldObj() != null ? smelter.getWorldObj()
+            .getLightBrightnessForSkyBlocks(top0[0], top0[1], top0[2], 0) : 0xF000F0;
+        // The cavity may be up to three blocks tall; contents stop just under its top.
+        double ceiling = geometry.interiorHeight() - 0.06D;
         for (AggregateLayer layer : layers) {
-            if (layer.phaseType() != AggregatePhaseType.MOLTEN_METAL && layer.phaseType() != AggregatePhaseType.SLAG)
-                continue;
+            boolean molten = layer.phaseType() == AggregatePhaseType.MOLTEN_METAL
+                || layer.phaseType() == AggregatePhaseType.SLAG;
+            boolean charge = layer.phaseType() == AggregatePhaseType.SOLID_CHARGE;
+            if (!molten && !charge) continue;
             double layerHeight = geometry.heightForVolume(layer.occupiedVolumeLitres());
-            if (layerHeight <= 0.0005D) continue;
-            int color = MaterialAppearance
-                .getMoltenColor(layer.materialRef(), layer.stateKey(), layer.temperatureKelvin());
+            if (layerHeight <= 0.0D || yCursor >= ceiling) continue;
+            // A cavity cell holds 25 L, so a few ores' worth of metal is a film; keep every layer visible.
+            layerHeight = Math.max(MIN_VISIBLE_LAYER, layerHeight);
+            int color = molten
+                ? MaterialAppearance.getMoltenColor(layer.materialRef(), layer.stateKey(), layer.temperatureKelvin())
+                : darken(MaterialAppearance.getSolidColor(layer.materialRef(), layer.stateKey()), 0.55F);
+            // Molten metal and slag glow; unmelted charge is lit like the room around it.
+            int light = molten ? 0xF000F0 : roomLight;
+            OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, light % 65536, light / 65536);
             float red = (color >> 16 & 255) / 255.0F;
             float green = (color >> 8 & 255) / 255.0F;
             float blue = (color & 255) / 255.0F;
@@ -205,7 +218,7 @@ public final class RenderStarterSmelter extends TileEntitySpecialRenderer {
             GL11.glColor4f(red, green, blue, 0.96F);
             Tessellator t = Tessellator.instance;
             double bottom = yCursor;
-            double top = Math.min(0.94D, bottom + layerHeight);
+            double top = Math.min(ceiling, bottom + layerHeight);
             t.startDrawingQuads();
             // The local-to-world transformed corners preserve the true rectangle for all rotations.
             t.addVertex(q00[0], top, q00[1]);
@@ -236,6 +249,16 @@ public final class RenderStarterSmelter extends TileEntitySpecialRenderer {
             GL11.glPopMatrix();
             yCursor = top;
         }
+    }
+
+    /** Thinnest layer drawn, in blocks: one texel. */
+    private static final double MIN_VISIBLE_LAYER = 1.0D / 16.0D;
+
+    private static int darken(int rgb, float factor) {
+        int r = Math.round(((rgb >> 16) & 0xFF) * factor);
+        int g = Math.round(((rgb >> 8) & 0xFF) * factor);
+        int b = Math.round((rgb & 0xFF) * factor);
+        return (r << 16) | (g << 8) | b;
     }
 
     private static double[] localCorner(int[] block, TileEntityStarterSmelter smelter) {

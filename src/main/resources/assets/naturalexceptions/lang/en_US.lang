@@ -60,3 +60,4 @@ tile.fallenStarSite.name=Fallen Star
 item.almanac.name=Almanac
 tile.impactCrust.name=Fused Impact Crust
 material.naturalexceptions.impact_crust=Fused Impact Crust
+death.attack.naturalexceptions.body=%1$s succumbed to their injuries

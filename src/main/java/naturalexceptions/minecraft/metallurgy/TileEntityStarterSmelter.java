@@ -163,6 +163,39 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
         return vesselGeometry;
     }
 
+    /**
+     * The vessel's contents are drawn by this controller across the whole cavity behind it. Without a box covering
+     * the cavity, the contents vanish whenever the controller block itself is out of view (looking down the shaft).
+     */
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public net.minecraft.util.AxisAlignedBB getRenderBoundingBox() {
+        naturalexceptions.minecraft.multiblock.SmelterVesselGeometry geometry = vesselGeometry();
+        if (geometry == null) return super.getRenderBoundingBox();
+        int[] box = renderBounds(xCoord, yCoord, zCoord, geometry.cavityCells());
+        return net.minecraft.util.AxisAlignedBB.getBoundingBox(box[0], box[1], box[2], box[3], box[4], box[5]);
+    }
+
+    /** {minX, minY, minZ, maxX, maxY, maxZ} covering the controller and every cavity cell, one block of margin. */
+    static int[] renderBounds(int x, int y, int z, java.util.List<int[]> worldCells) {
+        int[] box = { x, y, z, x + 1, y + 1, z + 1 };
+        for (int[] w : worldCells) {
+            box[0] = Math.min(box[0], w[0]);
+            box[1] = Math.min(box[1], w[1]);
+            box[2] = Math.min(box[2], w[2]);
+            box[3] = Math.max(box[3], w[0] + 1);
+            box[4] = Math.max(box[4], w[1] + 1);
+            box[5] = Math.max(box[5], w[2] + 1);
+        }
+        box[0]--;
+        box[1]--;
+        box[2]--;
+        box[3]++;
+        box[4]++;
+        box[5]++;
+        return box;
+    }
+
     public double vesselCapacityLitres() {
         naturalexceptions.minecraft.multiblock.SmelterVesselGeometry geometry = vesselGeometry();
         return geometry == null ? 0.0 : geometry.capacityLitres();

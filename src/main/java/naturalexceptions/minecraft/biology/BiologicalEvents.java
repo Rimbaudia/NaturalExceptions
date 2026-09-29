@@ -105,10 +105,54 @@ public final class BiologicalEvents {
         // Armor has absorbed and been worn by this hit here; the host armor step must not do it again.
         if (!equippedArmor.isEmpty()) ArmorPathGate.markResolved(target, now);
         double lost = Math.max(0.0, before - state.condition());
-        // Vanilla hearts are a derived compatibility summary; avoid applying both raw vanilla damage and injury damage.
-        event.ammount = (float) Math.min(raw, target.getMaxHealth() * lost);
+        // A hit always costs at least what it costs in vanilla (after the armour P10 just resolved); the body model
+        // only adds to it when it judges the injury worse. Hearts are never driven by condition alone, which caps
+        // injury burden and would otherwise leave badly hurt bodies unkillable.
+        float armourFactor = equippedArmor.isEmpty() || event.source.isUnblockable() ? 1.0F
+            : vanillaArmourFactor(target.getTotalArmorValue());
+        event.ammount = hitDamage(raw, armourFactor, target.getMaxHealth(), lost);
         rememberDerivedHealth(target, state);
         applyMovement(target, state);
+    }
+
+    /** Share of a blow vanilla armour lets through: 4% less per armour point, as in the host's own armour step. */
+    static float vanillaArmourFactor(int armourValue) {
+        return (25.0F - Math.max(0, Math.min(24, armourValue))) / 25.0F;
+    }
+
+    /** Damage for one hit: the vanilla blow after armour, or the body model's condition loss if that is worse. */
+    static float hitDamage(float raw, float armourFactor, float maxHealth, double conditionLost) {
+        float vanilla = raw * Math.max(0.0F, Math.min(1.0F, armourFactor));
+        float modelled = (float) (maxHealth * Math.max(0.0, conditionLost));
+        return Math.max(vanilla, modelled);
+    }
+
+    /** Health lost to the body itself (burns, bleeding, poisoning): it has a cause of its own, not an attacker. */
+    public static final net.minecraft.util.DamageSource BODY_FAILURE = new BodyFailureSource();
+
+    private static final class BodyFailureSource extends net.minecraft.util.DamageSource {
+
+        BodyFailureSource() {
+            super("naturalexceptions.body");
+            setDamageBypassesArmor();
+            setDamageIsAbsolute();
+        }
+    }
+
+    /**
+     * Moves an entity's health to {@code health} for a change the body model caused. Healing and non-lethal loss
+     * set health directly; a lethal loss goes through a real damage event so death, drops and the death message
+     * happen as for any other death.
+     */
+    static void applyBodyHealth(EntityLivingBase target, float health) {
+        float current = target.getHealth();
+        if (health > 0.0F) {
+            if (Math.abs(current - health) > 0.05F) target.setHealth(Math.min(target.getMaxHealth(), health));
+            return;
+        }
+        if (current <= 0.0F) return;
+        target.hurtResistantTime = 0;
+        target.attackEntityFrom(BODY_FAILURE, current + 1.0F);
     }
 
     private static final String KEY_DERIVED_HEALTH = "naturalexceptions.derived_health";
@@ -157,10 +201,15 @@ public final class BiologicalEvents {
         java.util.List<VanillaArmorAdapter.EquippedArmor> equippedArmor = VanillaArmorAdapter.capture(target);
         java.util.List<naturalexceptions.core.biology.ArmorLayer> layers = new java.util.ArrayList<>();
         for (VanillaArmorAdapter.EquippedArmor armor : equippedArmor) layers.add(armor.layer());
+        double before = state.condition();
         BiologicalInteractionResolver.apply(state, interaction, now, layers);
         for (VanillaArmorAdapter.EquippedArmor armor : equippedArmor) armor.commit(target);
-        if (state.condition() <= 0.0) target.setHealth(0.0F);
-        else target.setHealth((float) (target.getMaxHealth() * state.condition()));
+        // Lower health by what the burn cost; contact with something hot never raises health.
+        double lost = Math.max(0.0, before - state.condition());
+        if (lost > 0.0 || state.condition() <= 0.0) applyBodyHealth(
+            target,
+            state.condition() <= 0.0 ? 0.0F : (float) (target.getHealth() - target.getMaxHealth() * lost));
+        rememberDerivedHealth(target, state);
         applyMovement(target, state);
     }
 
@@ -217,8 +266,7 @@ public final class BiologicalEvents {
             : player.getHealth();
         float synced = syncedHealth(player.getHealth(), previousDerived, derivedHealth);
         data.setFloat(KEY_DERIVED_HEALTH, derivedHealth);
-        if (synced <= 0.0F) player.setHealth(0.0F);
-        else if (Math.abs(player.getHealth() - synced) > 0.05F) player.setHealth(synced);
+        applyBodyHealth(player, synced);
         int derivedFood = (int) Math.round(
             20.0 * state.energyReserveJoules()
                 / Math.max(
