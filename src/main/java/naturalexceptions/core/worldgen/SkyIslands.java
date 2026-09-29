@@ -18,9 +18,9 @@ public final class SkyIslands {
         MEDIUM(384, 0.40, 14.0, 24.0, 26.0, 135, 175, 36, 0.30),
         /**
          * A few per few thousand blocks: each holds a sky dungeon. A sanctum's island is 60 to 70 blocks across the
-         * radius, a citadel's a huge 90 to 105 (see {@link #GRAND_SANCTUM_RADIUS}).
+         * radius, a citadel's a huge 100 to 112 (see {@link #GRAND_SANCTUM_RADIUS}).
          */
-        GRAND(1536, 0.50, 60.0, 105.0, 72.0, 176, 190, 170, 0.0);
+        GRAND(1536, 0.50, 60.0, 112.0, 72.0, 176, 190, 170, 0.0);
 
         final int cell;
         final double presence;
@@ -59,10 +59,10 @@ public final class SkyIslands {
     public static final int MIN_CENTRE_Y = 130;
     public static final int MAX_CENTRE_Y = 190;
     public static final double MIN_RADIUS = 5.0;
-    public static final double MAX_RADIUS = 105.0;
+    public static final double MAX_RADIUS = 112.0;
     /** Radius ranges of the two kinds of dungeon island. */
     public static final double[] GRAND_SANCTUM_RADIUS = { 60.0, 70.0 };
-    public static final double[] GRAND_CITADEL_RADIUS = { 90.0, 105.0 };
+    public static final double[] GRAND_CITADEL_RADIUS = { 100.0, 112.0 };
 
     public static final class Island {
 

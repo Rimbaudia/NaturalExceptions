@@ -511,11 +511,86 @@ final class SkyDungeonTest {
         assertEquals(citadels, looks.size(), "every citadel is put together differently: " + looks);
     }
 
+    /**
+     * A walk at ground level from the causeway: only where there is ground (or a bridge) underfoot and two blocks of
+     * room, never up or down. {@code blocked} cells count as walls.
+     */
+    private static boolean walksTo(Sample s, int tx, int tz, Set<Long> blocked) {
+        int b = s.island.centreY() + 1, cx = s.island.centreX(), cz = s.island.centreZ(), r = 70;
+        int[] start = s.dungeon.entrance();
+        Set<Long> seen = new HashSet<>();
+        ArrayDeque<int[]> queue = new ArrayDeque<>();
+        queue.add(new int[] { start[0], start[2] });
+        seen.add(key(start[0], 0, start[2]));
+        while (!queue.isEmpty()) {
+            int[] p = queue.poll();
+            if (p[0] == tx && p[1] == tz) return true;
+            for (int[] st : new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                int x = p[0] + st[0], z = p[1] + st[1];
+                if (Math.abs(x - cx) > r || Math.abs(z - cz) > r || !seen.add(key(x, 0, z))) continue;
+                if (blocked.contains(key(x, 0, z))) continue;
+                if (!open(s, x, b + 1, z) || !open(s, x, b + 2, z) || open(s, x, b, z)) continue;
+                queue.add(new int[] { x, z });
+            }
+        }
+        return false;
+    }
+
+    private static boolean open(Sample s, int x, int y, int z) {
+        Piece p = s.dungeon.at(x, y, z);
+        if (p != null) return p.block == Block.AIR || p.block == Block.DOOR
+            || p.block == Block.TALL_GRASS
+            || p.block == Block.FLOWER
+            || p.block == Block.WINDBLOOM;
+        int[] column = s.rock(x, z);
+        return column == null || y > column[1] || y < column[0];
+    }
+
+    @Test
+    void citadelsAreWalledWithNoWayInButTheGates() {
+        for (Sample s : samples()) {
+            if (s.dungeon.kind() != SkyDungeon.Kind.CITADEL) continue;
+            int cx = s.island.centreX(), cz = s.island.centreZ(), b = s.island.centreY() + 1;
+            // The keep's hall, just inside its archway.
+            int kx = cx, kz = cz + 9;
+            assertTrue(walksTo(s, kx, kz, new HashSet<>()), s.name() + ": the keep can be walked to from the causeway");
+            Set<Long> outerGate = new HashSet<>(), innerGate = new HashSet<>();
+            for (int w = -2; w <= 2; w++) {
+                outerGate.add(key(cx + w, 0, cz + CitadelLayout.OUTER - 1));
+                innerGate.add(key(cx + CitadelLayout.INNER - 1, 0, cz + w));
+            }
+            assertTrue(!walksTo(s, kx, kz, outerGate), s.name() + ": no way in but the outer gate");
+            assertTrue(!walksTo(s, kx, kz, innerGate), s.name() + ": no way to the keep but the inner gate");
+            // The walls are three thick, all along.
+            for (int t = -40; t <= 40; t += 5) {
+                if (Math.abs(t) <= 6) continue;
+                for (int depth = 0; depth < 3; depth++) {
+                    int y = b + 4;
+                    int[][] cells = { { cx + t, cz - CitadelLayout.OUTER + depth },
+                        { cx - CitadelLayout.OUTER + depth, cz + t } };
+                    for (int[] c : cells) {
+                        Piece p = s.dungeon.at(c[0], y, c[1]);
+                        boolean inTower = Math.abs(c[0] - cx) <= 5 || Math.abs(c[1] - cz) <= 5;
+                        assertTrue(
+                            inTower || p != null && p.block == Block.SKYSTONE,
+                            s.name() + ": a solid wall at " + c[0] + "," + c[1]);
+                    }
+                }
+            }
+            int stairs = 0;
+            for (Piece p : s.dungeon.pieces())
+                if (p.block == Block.STAIRS && p.y > b && p.y <= b + CitadelLayout.INNER_HEIGHT) stairs++;
+            assertTrue(
+                stairs >= 8 * 8,
+                s.name() + ": stairs up onto both walls on every side, and in the towers: " + stairs);
+        }
+    }
+
     @Test
     void pitsWithoutLavaHaveALadderOut() {
         for (Sample s : samples()) {
             for (Room room : s.dungeon.rooms()) {
-                if (room.template == null) continue;
+                if (room.template == null || room.level < 0) continue; // the citadel's own buildings have no pits
                 RoomTemplate t = naturalexceptions.core.worldgen.dungeon.TemplateLibrary.named(room.template);
                 if (!(t.has(',') || t.has('%')) || t.pit.equals("lava")) continue;
                 boolean ladder = false;

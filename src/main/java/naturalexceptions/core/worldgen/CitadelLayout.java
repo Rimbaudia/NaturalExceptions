@@ -1,9 +1,8 @@
 package naturalexceptions.core.worldgen;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
 import naturalexceptions.core.worldgen.SkyDungeon.Block;
@@ -14,31 +13,37 @@ import naturalexceptions.core.worldgen.dungeon.RoomTemplate.Role;
 import naturalexceptions.core.worldgen.dungeon.TemplateLibrary;
 
 /**
- * Lays out a citadel on a grand island's top, composed from parts so that no two are alike:
+ * Lays out a citadel on a huge island: a fortified town round a grand keep, over a catacomb.
  * <ul>
- * <li>a square or octagonal curtain wall, 15 to 19 blocks from the middle, with a ruined gap or two;</li>
- * <li>a gatehouse on the south side with a portcullis and an ambush in its passage;</li>
- * <li>four to six towers, round or square, of different heights, some joined by rope bridges at the top;</li>
- * <li>courtyard works drawn from a garden, a forge, a barracks hut, a well and a ruin;</li>
- * <li>a keep of two to four floors, each an authored room;</li>
- * <li>under the keep, a catacomb of up to four levels ({@link SanctumLayout}) with the Sky Warden and the vault at
- * the bottom.</li>
+ * <li><b>The approach</b>: a paved causeway lit by lamp posts from the island's south rim, past a guard post, to a
+ * drawbridge over a dry moat; a ruined watchtower stands elsewhere on the island.</li>
+ * <li><b>The outer wall</b>: a square, three blocks thick, with a crenellated parapet and a wall-walk reached by stair
+ * flights; towers at the corners and on three sides (floors, stairs inside, doors onto the walk, arrow slits); a
+ * great gatehouse on the south with a raised portcullis, murder holes and an ambush in its passage.</li>
+ * <li><b>The town</b>: a ring road and four streets, lamp posts along them, authored buildings on plots facing the
+ * road (houses, barracks, smithy, chapel, stables, cistern, library tower, cloister, granary), yards between, and
+ * an orchard, a herb garden, a market and a training yard in the corners.</li>
+ * <li><b>The inner wall</b>: taller, with corner towers and its gatehouse on the east, so the way to the keep goes
+ * through the town.</li>
+ * <li><b>The grand keep</b>, a well square before it, and under it the catacomb ({@link SanctumLayout}) where the
+ * Sky Key, the Sky Warden and the vault are.</li>
  * </ul>
  */
 final class CitadelLayout {
 
-    static final int KEEP_HALF = 7;
-    static final int FLOOR_HEIGHT = 6;
     /** The level number of the citadel's own rooms (the catacomb's levels count from 0 downwards). */
     static final int SURFACE = -1;
-    static final int CELL = RoomTemplate.CELL;
+    static final int OUTER = 50, OUTER_HEIGHT = 8;
+    static final int INNER = 24, INNER_HEIGHT = 10;
+    static final int THICK = 3;
+    static final int MOAT_IN = 52, MOAT_OUT = 56, MOAT_DEPTH = 4;
+    static final int ROAD_IN = 25, ROAD_OUT = 28;
+    static final int PLOT_FRONT = 30, PLOT_BACK = 46;
 
     private final SkyDungeon d;
     private final Random random;
-    private final Map<RoomTemplate, Integer> used = new HashMap<>();
-
-    private int cx, cz, b, half;
-    private boolean octagon;
+    private int cx, cz, b;
+    private double radius;
 
     CitadelLayout(SkyDungeon dungeon) {
         this.d = dungeon;
@@ -46,333 +51,631 @@ final class CitadelLayout {
             dungeon.field.seed() * 37 + dungeon.island.cellX() * 998_244_353L + dungeon.island.cellZ());
     }
 
-    /** Whether (x, z) lies inside the curtain wall (walls included). */
-    private boolean inside(int x, int z) {
-        int dx = Math.abs(x - cx), dz = Math.abs(z - cz);
-        if (Math.max(dx, dz) > half) return false;
-        return !octagon || dx + dz <= half * 1.6;
-    }
-
     void build() {
         SkyIslands.Island island = d.island;
         cx = island.centreX();
         cz = island.centreZ();
         b = island.centreY() + 1;
-        half = 15 + random.nextInt(5);
-        octagon = random.nextBoolean();
-        int wallHeight = 6 + random.nextInt(3);
+        radius = island.radius();
 
-        // The platform and the curtain wall, crenellated, broken in a place or two.
-        List<int[]> wall = new ArrayList<>();
-        for (int x = cx - half; x <= cx + half; x++) for (int z = cz - half; z <= cz + half; z++) {
-            if (!inside(x, z)) continue;
-            d.stone(x, b, z);
-            boolean edge = !inside(x + 1, z) || !inside(x - 1, z) || !inside(x, z + 1) || !inside(x, z - 1);
-            if (edge) wall.add(new int[] { x, z });
-        }
-        int gaps = 1 + random.nextInt(2);
-        List<int[]> gapCentres = new ArrayList<>();
-        for (int g = 0; g < gaps; g++) {
-            int[] w = wall.get(random.nextInt(wall.size()));
-            if (Math.abs(w[0] - cx) < 5 && w[1] > cz) continue; // not at the gate
-            gapCentres.add(w);
-        }
-        for (int[] w : wall) {
-            boolean ruined = false;
-            for (int[] g : gapCentres) ruined |= Math.abs(w[0] - g[0]) + Math.abs(w[1] - g[1]) <= 2;
-            int top = ruined ? b + (int) (d.noise.unit(w[0], w[1], 40) * 2) : b + wallHeight;
-            for (int y = b + 1; y <= top; y++) d.stone(w[0], y, w[1]);
-            if (!ruined && (w[0] + w[1]) % 2 == 0) d.stone(w[0], top + 1, w[1]);
-            if (ruined) for (int[] s : new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
-                int rx = w[0] + s[0], rz = w[1] + s[1];
-                if (d.noise.unit(rx, rz, 41) < 0.4)
-                    d.put(rx, b + 1, rz, Block.RUBBLE, (int) (d.noise.unit(rz, rx, 42) * 3));
-            }
-        }
-
-        List<int[]> towers = towers();
+        ground();
+        moat();
+        roads();
+        wall(OUTER, OUTER_HEIGHT);
+        wall(INNER, INNER_HEIGHT);
+        gatehouse(0, OUTER, OUTER_HEIGHT, 7, true);
+        gatehouse(1, INNER, INNER_HEIGHT, 6, false);
+        outerTowers();
+        innerTowers();
+        town();
+        corners();
         keep();
-        gatehouse();
-        courtyard(towers);
-        // Under the keep: the catacomb, levels of it, with the Sky Warden and the vault at the bottom.
+        square();
+        stairsUp(); // last in the town: nothing is paved over the flights
+        approach();
+        watchtower();
+
+        // Under the keep: the catacomb, levels of it, with the Sky Key, the Sky Warden and the vault.
         new SanctumLayout(d, b).build();
 
-        d.entrance = new int[] { cx, b + 1, cz + half + 4 };
-        int reach = half + 5;
+        d.entrance = new int[] { cx, b + 1, cz + MOAT_OUT + 4 };
+        int reach = (int) Math.min(radius - 4, 84);
         d.surface = new int[] { cx - reach, cz - reach, cx + reach, cz + reach };
+    }
+
+    // --- Helpers --------------------------------------------------------------------------------------------
+
+    private void put(int dx, int y, int dz, Block block, int meta) {
+        d.put(cx + dx, y, cz + dz, block, meta);
+    }
+
+    private void put(int dx, int y, int dz, Block block) {
+        d.put(cx + dx, y, cz + dz, block);
+    }
+
+    private void stone(int dx, int y, int dz) {
+        d.stone(cx + dx, y, cz + dz);
+    }
+
+    private static boolean inSquare(int dx, int dz, int half) {
+        return Math.abs(dx) <= half && Math.abs(dz) <= half;
+    }
+
+    /** A wall's ring: inside the square of {@code half}, outside the one {@link #THICK} smaller. */
+    private static boolean inRing(int dx, int dz, int half) {
+        return inSquare(dx, dz, half) && !inSquare(dx, dz, half - THICK);
+    }
+
+    /** Vanilla stairs meta rising towards (sx, sz). */
+    private static int rising(int sx, int sz) {
+        return sx > 0 ? 0 : sx < 0 ? 1 : sz > 0 ? 2 : 3;
+    }
+
+    private void lampPost(int dx, int dz) {
+        put(dx, b + 1, dz, Block.FENCE);
+        put(dx, b + 2, dz, Block.FENCE);
+        put(dx, b + 3, dz, Block.LAMP);
+    }
+
+    // --- Ground, moat and walls -----------------------------------------------------------------------------
+
+    /** The ground inside the moat is made level at the citadel's floor height (the island's rim sits a step lower). */
+    private void ground() {
+        for (int dx = -MOAT_OUT - 2; dx <= MOAT_OUT + 2; dx++) for (int dz = -MOAT_OUT - 2; dz <= MOAT_OUT + 2; dz++) {
+            int[] column = d.field.column(d.island, cx + dx, cz + dz);
+            if (column != null && column[1] < b) {
+                put(dx, b, dz, Block.GRASS);
+                stone(dx, b - 1, dz);
+            }
+        }
+    }
+
+    /** A dry moat, five wide and four deep, lined with stone, all round the outer wall. */
+    private void moat() {
+        for (int dx = -MOAT_OUT - 1; dx <= MOAT_OUT + 1; dx++) for (int dz = -MOAT_OUT - 1; dz <= MOAT_OUT + 1; dz++) {
+            boolean ditch = inSquare(dx, dz, MOAT_OUT) && !inSquare(dx, dz, MOAT_IN - 1);
+            boolean lining = inSquare(dx, dz, MOAT_OUT + 1) && !ditch && !inSquare(dx, dz, MOAT_IN - 2);
+            if (ditch) {
+                for (int y = b - MOAT_DEPTH + 1; y <= b; y++) put(dx, y, dz, Block.AIR);
+                put(dx, b - MOAT_DEPTH, dz, Block.GRASS);
+            } else if (lining) for (int y = b - MOAT_DEPTH; y <= b; y++) stone(dx, y, dz);
+        }
+    }
+
+    /** A curtain wall, three thick, with a parapet and merlons on its outer edge; the wall-walk is its top. */
+    private void wall(int half, int height) {
+        for (int dx = -half; dx <= half; dx++) for (int dz = -half; dz <= half; dz++) {
+            if (!inRing(dx, dz, half)) continue;
+            stone(dx, b - 1, dz);
+            for (int y = b; y <= b + height; y++) stone(dx, y, dz);
+            boolean outerEdge = !inSquare(dx, dz, half - 1);
+            if (outerEdge) {
+                stone(dx, b + height + 1, dz);
+                if ((dx + dz) % 2 == 0) stone(dx, b + height + 2, dz);
+            }
+        }
+    }
+
+    /** Flights of stairs up the inside of both walls onto their walks, on every side. */
+    private void stairsUp() {
+        flightsFor(OUTER, OUTER_HEIGHT);
+        flightsFor(INNER, INNER_HEIGHT);
+    }
+
+    /** One flight up each side, clear of the gates, streets and towers (which are at the middles and corners). */
+    private void flightsFor(int half, int height) {
+        int face = half - THICK; // the first row of the bailey, against the wall
+        int from = 9;
+        flight(from, -face, 1, 0, height); // north wall, rising east
+        flight(-face, from, 0, 1, height); // west wall, rising south
+        flight(face, -from, 0, -1, height); // east wall, rising north
+        flight(-from, face, -1, 0, height); // south wall, rising west
+    }
+
+    /** {@code height} steps from (dx, dz) rising along (sx, sz), each on a solid footing, headroom kept above. */
+    private void flight(int dx, int dz, int sx, int sz, int height) {
+        for (int i = 0; i < height; i++) {
+            int x = dx + sx * i, z = dz + sz * i;
+            for (int y = b + 1; y < b + 1 + i; y++) stone(x, y, z);
+            put(x, b + 1 + i, z, Block.STAIRS, rising(sx, sz));
+            for (int y = b + 2 + i; y <= b + 4 + i; y++) put(x, y, z, Block.AIR);
+        }
     }
 
     // --- Towers ---------------------------------------------------------------------------------------------
 
-    /** Four to six towers at the wall's corners (and middles), round or square, with ladders; returns {x, z, top}. */
-    private List<int[]> towers() {
-        List<int[]> spots = new ArrayList<>();
-        if (octagon) {
-            int s = (int) Math.round(half * 0.6);
-            int[][] vertices = { { -half, -s }, { half, -s }, { -half, s }, { half, s }, { -s, -half }, { s, -half } };
-            for (int[] v : vertices) spots.add(v);
-        } else {
-            int[][] corners = { { -half, -half }, { half, -half }, { -half, half }, { half, half }, { -half, 0 },
-                { half, 0 } };
-            for (int[] c : corners) spots.add(c);
-        }
-        int count = 4 + random.nextInt(3);
-        List<int[]> towers = new ArrayList<>();
-        int guardTower = random.nextInt(count), storeTower = (guardTower + 1 + random.nextInt(count - 1)) % count;
-        for (int t = 0; t < count; t++) {
-            int tx = cx + spots.get(t)[0], tz = cz + spots.get(t)[1];
-            boolean round = random.nextBoolean();
-            int top = b + 10 + random.nextInt(7);
-            for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) {
-                boolean in = round ? dx * dx + dz * dz <= 12 : true;
-                boolean rim = in && (round ? dx * dx + dz * dz >= 5 : Math.abs(dx) == 3 || Math.abs(dz) == 3);
-                if (!in) continue;
-                d.stone(tx + dx, b, tz + dz);
-                for (int y = b + 1; y < top; y++) {
-                    if (rim) d.stone(tx + dx, y, tz + dz);
-                    else d.put(tx + dx, y, tz + dz, Block.AIR);
-                }
-                d.stone(tx + dx, top, tz + dz);
-                if (rim && (dx + dz) % 2 == 0) d.stone(tx + dx, top + 1, tz + dz);
-                // A floor halfway up with a window, so the climb has a landing.
-                if (!rim) d.stone(tx + dx, b + 6, tz + dz);
-            }
-            // The door faces the keep; the ladder climbs the far wall to the roof.
-            int sx = Integer.signum(cx - tx), sz = Integer.signum(cz - tz);
-            int doorX = Math.abs(tx - cx) >= Math.abs(tz - cz) ? tx + sx * 3 : tx;
-            int doorZ = Math.abs(tx - cx) >= Math.abs(tz - cz) ? tz : tz + sz * 3;
-            for (int y = b + 1; y <= b + 2; y++) d.put(doorX, y, doorZ, Block.AIR);
-            int lx = tx - (doorX - tx == 0 ? 0 : Integer.signum(doorX - tx) * 2);
-            int lz = tz - (doorZ - tz == 0 ? 0 : Integer.signum(doorZ - tz) * 2);
-            int ladderMeta = doorX != tx ? (doorX > tx ? 5 : 4) : (doorZ > tz ? 3 : 2);
-            for (int y = b + 1; y <= top; y++) d.put(lx, y, lz, Block.LADDER, ladderMeta);
-            d.put(tx + (doorX == tx ? 3 : 0), b + 8, tz + (doorZ == tz ? 3 : 0), Block.GLASS_PANE);
-            d.put(tx, top - 1, tz, Block.LAMP);
-            if (t == guardTower) d.put(tx, b + 1, tz, Block.SPAWNER, 0, null, "Skeleton");
-            if (t == storeTower) d.put(tx, top + 1, tz, Block.CHEST, 0, Loot.STORE, null);
-            towers.add(new int[] { tx, tz, top });
-        }
-        // Rope bridges between some neighbouring towers of the same line, at the lower of their tops.
-        for (int i = 0; i < towers.size(); i++) for (int j = i + 1; j < towers.size(); j++) {
-            int[] p = towers.get(i), q = towers.get(j);
-            boolean aligned = p[0] == q[0] || p[1] == q[1];
-            if (!aligned || random.nextDouble() > 0.5) continue;
-            int y = Math.min(p[2], q[2]);
-            boolean alongX = p[1] == q[1];
-            int from = alongX ? Math.min(p[0], q[0]) + 4 : Math.min(p[1], q[1]) + 4;
-            int to = alongX ? Math.max(p[0], q[0]) - 4 : Math.max(p[1], q[1]) - 4;
-            if (to - from > 32) continue;
-            for (int t = from; t <= to; t++) {
-                int x = alongX ? t : p[0], z = alongX ? p[1] : t;
-                d.put(x, y, z, Block.LOG);
-                d.put(alongX ? x : x - 1, y + 1, alongX ? z - 1 : z, Block.FENCE);
-                d.put(alongX ? x : x + 1, y + 1, alongX ? z + 1 : z, Block.FENCE);
-            }
-        }
-        return towers;
+    private void outerTowers() {
+        int c = OUTER - 1;
+        int[][] spots = { { -c, -c }, { c, -c }, { -c, c }, { c, c }, { 0, -c }, { -c, 0 }, { c, 0 } };
+        boolean round = random.nextBoolean();
+        for (int[] s : spots) tower(s[0], s[1], 4, OUTER_HEIGHT, OUTER_HEIGHT + 7 + random.nextInt(3), round);
     }
 
-    // --- The keep -------------------------------------------------------------------------------------------
-
-    private int kx, kz, keepFloors;
-
-    /** The keep: two to four floors, each an authored room; its ground floor opens down into the catacomb. */
-    private void keep() {
-        kx = cx;
-        kz = cz; // over the catacomb's first room, whose corner shaft comes up into the keep's
-        keepFloors = 2 + random.nextInt(3);
-        int k = KEEP_HALF, roof = b + keepFloors * FLOOR_HEIGHT;
-        d.shell(kx - k, b, kz - k, kx + k, roof, kz + k, false);
-        for (int f = 1; f < keepFloors; f++) for (int dx = -k; dx <= k; dx++)
-            for (int dz = -k; dz <= k; dz++) d.stone(kx + dx, b + f * FLOOR_HEIGHT, kz + dz);
-        for (int dx = -k; dx <= k; dx++) for (int dz = -k; dz <= k; dz++) {
-            boolean ring = Math.abs(dx) == k || Math.abs(dz) == k;
-            if (ring && (dx + dz) % 2 == 0) d.stone(kx + dx, roof + 1, kz + dz);
-        }
-        RoomWriter writer = new RoomWriter(d);
-        for (int f = 0; f < keepFloors; f++) {
-            int floor = b + f * FLOOR_HEIGHT;
-            d.clear(kx - k + 1, floor + 1, kz - k + 1, kx + k - 1, floor + FLOOR_HEIGHT - 1, kz + k - 1);
-            Role role = f == 0 ? Role.GUARD : Role.STORE;
-            RoomTemplate t = pick(role, f == 0);
-            writer.write(t, random.nextInt(4), kx - 4, kz - 4, floor, role, false);
-            for (int[] w : new int[][] { { k, 0 }, { -k, 0 }, { 0, -k }, { k, 3 }, { -k, -3 } })
-                d.put(kx + w[0], floor + 3, kz + w[1], Block.GLASS_PANE);
-            d.put(kx - k + 1, floor + FLOOR_HEIGHT, kz + k - 1, Block.LAMP);
-            Room room = new Room(
-                kx,
-                floor,
-                kz,
-                role,
-                t.name,
-                SURFACE,
-                kx - k + 1,
-                kx + k - 1,
-                kz - k + 1,
-                kz + k - 1,
-                5,
-                t.trapped);
-            d.rooms.add(room);
-        }
-        // The stair: a ladder up the north-west corner through every floor to the roof.
-        for (int y = b + 1; y <= roof; y++) d.put(kx - k + 1, y, kz - k + 1, Block.LADDER, 3);
-        for (int y = b + 1; y <= b + 3; y++) for (int dx = -1; dx <= 1; dx++) d.put(kx + dx, y, kz + k, Block.AIR);
+    private void innerTowers() {
+        int c = INNER - 1;
+        int[][] spots = { { -c, -c }, { c, -c }, { -c, c }, { c, c } };
+        for (int[] s : spots) tower(s[0], s[1], 4, INNER_HEIGHT, INNER_HEIGHT + 8, false);
     }
 
-    // --- The gatehouse --------------------------------------------------------------------------------------
-
-    /** A gatehouse over the south wall: a passage under a portcullis, and alcoves that burst open on intruders. */
-    private void gatehouse() {
-        int gz = cz + half;
-        for (int dx = -3; dx <= 3; dx++) for (int dz = -2; dz <= 2; dz++) {
-            d.stone(cx + dx, b, gz + dz);
-            for (int y = b + 1; y <= b + 7; y++) {
-                boolean passage = Math.abs(dx) <= 1 && y <= b + 4;
-                if (passage) d.put(cx + dx, y, gz + dz, Block.AIR);
-                else d.stone(cx + dx, y, gz + dz);
+    /**
+     * A tower on a wall: floors at the ground, at the wall-walk and a roof; stairs inside from each to the next;
+     * a door from the bailey and doors onto the walk where the wall meets it; arrow slits in its outer faces.
+     */
+    private void tower(int tx, int tz, int half, int walk, int top, boolean round) {
+        int outX = Integer.signum(tx), outZ = Integer.signum(tz);
+        for (int dx = -half; dx <= half; dx++) for (int dz = -half; dz <= half; dz++) {
+            int rr = dx * dx + dz * dz;
+            if (round && rr > half * half + 2) continue;
+            boolean rim = round ? rr > (half - 1) * (half - 1) + 1 : Math.abs(dx) == half || Math.abs(dz) == half;
+            int x = tx + dx, z = tz + dz;
+            stone(x, b - 1, z);
+            stone(x, b, z);
+            for (int y = b + 1; y < b + top; y++) {
+                if (rim) stone(x, y, z);
+                else put(x, y, z, Block.AIR);
             }
-            if ((dx + dz) % 2 == 0) d.stone(cx + dx, b + 8, gz + dz);
+            if (!rim) put(x, b + walk, z, Block.PLANKS, 1);
+            stone(x, b + top, z);
+            if (rim) {
+                stone(x, b + top + 1, z);
+                if ((dx + dz) % 2 == 0) stone(x, b + top + 2, z);
+            }
         }
-        for (int dx = -1; dx <= 1; dx++) d.put(cx + dx, b + 4, gz - 2, Block.IRON_BARS); // the raised portcullis
-        for (int dx = -1; dx <= 1; dx++) d.put(cx + dx, b, gz, Block.TRIGGER);
+        // Stairs: ground to the walk floor up one inner side, walk to roof up the other.
+        int side = tx > 0 ? -1 : 1;
+        int sx = tx + side * (half - 2);
+        for (int i = 0; i < walk && i < 2 * half - 3; i++) {
+            int z = tz - (half - 2) + i;
+            for (int y = b + 1; y < b + 1 + i; y++) stone(sx, y, z);
+            put(sx, b + 1 + i, z, Block.STAIRS, rising(0, 1));
+            for (int y = b + 2 + i; y <= b + walk; y++) put(sx, y, z, Block.AIR);
+        }
+        int rx = tx - side * (half - 2);
+        for (int i = 0; i < top - walk - 1 && i < 2 * half - 3; i++) {
+            int z = tz + (half - 2) - i;
+            for (int y = b + walk + 1; y < b + walk + 1 + i; y++) stone(rx, y, z);
+            put(rx, b + walk + 1 + i, z, Block.STAIRS, rising(0, -1));
+            for (int y = b + walk + 2 + i; y <= b + top; y++) put(rx, y, z, Block.AIR);
+        }
+        put(tx, b + walk - 1, tz, Block.LAMP);
+        put(tx, b + top - 1, tz, Block.LAMP);
+        // A door from the bailey, on the face towards the middle.
+        int inX = -outX, inZ = -outZ;
+        if (inX != 0 && inZ != 0) inZ = 0;
+        int doorX = tx + inX * half, doorZ = tz + inZ * half;
+        for (int y = b + 1; y <= b + 2; y++) put(doorX, y, doorZ, Block.AIR);
+        // Doors onto the walk wherever the wall runs into the tower; arrow slits in the faces looking out.
+        int[][] faces = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+        for (int[] f : faces) {
+            int fx = tx + f[0] * half, fz = tz + f[1] * half;
+            int beyondX = fx + f[0], beyondZ = fz + f[1];
+            boolean wallThere = inRing(beyondX, beyondZ, OUTER) && inRing(tx, tz, OUTER)
+                || inRing(beyondX, beyondZ, INNER) && inRing(tx, tz, INNER);
+            boolean outward = f[0] != 0 && f[0] == outX || f[1] != 0 && f[1] == outZ;
+            if (wallThere) {
+                for (int y = b + walk + 1; y <= b + walk + 2; y++) put(fx, y, fz, Block.AIR);
+            } else if (outward) {
+                for (int y = b + 3; y <= b + 4; y++) put(fx, y, fz, Block.IRON_BARS);
+                for (int y = b + walk + 2; y <= b + walk + 3; y++) put(fx, y, fz, Block.IRON_BARS);
+            }
+        }
+    }
+
+    // --- Gatehouses -----------------------------------------------------------------------------------------
+
+    /** Maps a gatehouse's own (u across, v outward) to the citadel's (dx, dz): side 0 south, 1 east. */
+    private static int gx(int side, int u, int v) {
+        return side == 0 ? u : v;
+    }
+
+    private static int gz(int side, int u, int v) {
+        return side == 0 ? v : u;
+    }
+
+    private void gput(int side, int u, int y, int v, Block block, int meta) {
+        put(gx(side, u, v), y, gz(side, u, v), block, meta);
+    }
+
+    private void gstone(int side, int u, int y, int v) {
+        stone(gx(side, u, v), y, gz(side, u, v));
+    }
+
+    /**
+     * A gatehouse through the wall of {@code half}: a passage five wide and six high, a guard room over it level
+     * with the wall-walk (murder holes in its floor), thick flanks; the outer one's portcullis hangs raised over its
+     * mouth, its passage hides an ambush, and a drawbridge crosses the moat before it.
+     */
+    private void gatehouse(int side, int half, int walk, int flank, boolean outer) {
+        int front = half + 1, back = half - THICK - 2;
+        for (int u = -flank; u <= flank; u++) for (int v = back; v <= front; v++) {
+            gstone(side, u, b - 1, v);
+            gstone(side, u, b, v);
+            boolean rim = Math.abs(u) == flank || v == back || v == front;
+            for (int y = b + 1; y <= b + walk + 4; y++) {
+                boolean passage = Math.abs(u) <= 2 && y <= b + 6;
+                boolean room = !rim && y >= b + walk + 1 && y <= b + walk + 3;
+                if (passage || room) gput(side, u, y, v, Block.AIR, 0);
+                else gstone(side, u, y, v);
+            }
+            if (rim && (u + v) % 2 == 0) gstone(side, u, b + walk + 5, v);
+        }
+        for (int u = -2; u <= 2; u++) for (int v = back; v <= front; v++) gput(side, u, b, v, Block.SKYSTONE, 0);
+        // Murder holes over the passage.
+        for (int v = back + 2; v <= front - 2; v += 2)
+            for (int y = b + 7; y <= b + walk; y++) gput(side, 0, y, v, Block.AIR, 0);
+        // The raised portcullis hanging in the outer mouth.
+        for (int u = -2; u <= 2; u++) gput(side, u, b + 6, front, Block.IRON_BARS, 0);
+        // Doors from the wall-walk into the guard room on either side.
+        for (int s : new int[] { -1, 1 })
+            for (int y = b + walk + 1; y <= b + walk + 2; y++) gput(side, s * flank, y, half - 1, Block.AIR, 0);
+        gput(side, 2, b + walk + 3, (back + front) / 2, Block.LAMP, 0);
+        for (int v = back + 1; v <= front - 1; v += 3) {
+            gput(side, 3, b + 4, v, Block.LAMP, 0);
+            gput(side, -3, b + 4, v, Block.LAMP, 0);
+        }
+        int mid = (back + front) / 2;
+        if (!outer) return;
+        // The ambush: a trigger across the passage, alcoves in its walls.
+        for (int u = -2; u <= 2; u++) gput(side, u, b, mid, Block.TRIGGER, 0);
         String[] mobs = { "Zombie", "Skeleton", "Zombie+" };
-        for (int dz : new int[] { -2, 2 }) for (int dx : new int[] { -2, 2 })
-            d.put(cx + dx, b + 1, gz + dz, Block.ALCOVE, RoomWriter.alcoveMeta(mobs[random.nextInt(mobs.length)]));
-        d.put(cx, b + 5, gz, Block.LAMP);
-        Room gate = new Room(cx, b, gz, Role.ENTRANCE, null, SURFACE, cx - 1, cx + 1, gz - 2, gz + 2, 4, true);
-        d.rooms.add(gate);
+        for (int v : new int[] { mid - 2, mid + 2 }) for (int u : new int[] { -3, 3 })
+            gput(side, u, b + 1, v, Block.ALCOVE, RoomWriter.alcoveMeta(mobs[random.nextInt(mobs.length)]));
+        d.rooms.add(
+            new Room(
+                cx + gx(side, 0, mid),
+                b,
+                cz + gz(side, 0, mid),
+                Role.ENTRANCE,
+                null,
+                SURFACE,
+                cx - 2,
+                cx + 2,
+                cz + back,
+                cz + front,
+                6,
+                true));
+        // The drawbridge over the moat, railed.
+        for (int v = front + 1; v <= MOAT_OUT + 1; v++) {
+            for (int u = -2; u <= 2; u++) gput(side, u, b, v, Block.PLANKS, 1);
+            gput(side, -3, b + 1, v, Block.FENCE, 0);
+            gput(side, 3, b + 1, v, Block.FENCE, 0);
+        }
     }
 
-    // --- The courtyard --------------------------------------------------------------------------------------
+    // --- The town -------------------------------------------------------------------------------------------
 
-    private void courtyard(List<int[]> towers) {
-        int[][] spots = { { -10, 11 }, { 10, 11 }, { -11, -7 }, { 11, -7 } };
-        List<String> works = new ArrayList<>();
-        java.util.Collections.addAll(works, "garden", "forge", "barracks", "well", "ruins");
-        java.util.Collections.shuffle(works, random);
-        int n = 3 + random.nextInt(2);
-        for (int i = 0; i < n; i++) {
-            int x = cx + spots[i][0], z = cz + spots[i][1];
-            if (!inside(x - 3, z - 3) || !inside(x + 3, z + 3) || !inside(x - 3, z + 3) || !inside(x + 3, z - 3))
-                continue;
-            boolean clear = true;
-            for (int[] t : towers) clear &= Math.abs(t[0] - x) > 7 || Math.abs(t[1] - z) > 7;
-            if (!clear) continue;
-            switch (works.get(i)) {
-                case "garden":
-                    garden(x, z);
+    private void pave(int dx, int dz) {
+        double r = d.noise.unit(cx + dx, cz + dz, 60);
+        if (r < 0.12) put(dx, b, dz, Block.RUBBLE, 1);
+        else put(dx, b, dz, Block.SKYSTONE, r < 0.3 ? 1 : 0);
+        for (int y = b + 1; y <= b + 3; y++) put(dx, y, dz, Block.AIR);
+    }
+
+    /** The ring road round the inner wall and four streets out to the outer wall's towers and gate. */
+    private void roads() {
+        for (int dx = -ROAD_OUT; dx <= ROAD_OUT; dx++)
+            for (int dz = -ROAD_OUT; dz <= ROAD_OUT; dz++) if (!inSquare(dx, dz, ROAD_IN - 1)) pave(dx, dz);
+        for (int t = ROAD_OUT + 1; t <= OUTER - THICK; t++) for (int w = -2; w <= 2; w++) {
+            pave(w, t);
+            pave(w, -t);
+            pave(t, w);
+            pave(-t, w);
+        }
+        for (int t = -ROAD_OUT + 3; t <= ROAD_OUT - 3; t += 8) {
+            if (Math.abs(t) <= 3) continue;
+            lampPost(t, ROAD_OUT + 1);
+            lampPost(t, -ROAD_OUT - 1);
+            lampPost(ROAD_OUT + 1, t);
+            lampPost(-ROAD_OUT - 1, t);
+        }
+        for (int t = ROAD_OUT + 5; t < OUTER - THICK - 3; t += 8) for (int s : new int[] { -3, 3 }) {
+            lampPost(s, t);
+            lampPost(s, -t);
+            lampPost(t, s);
+            lampPost(-t, s);
+        }
+    }
+
+    /**
+     * Buildings on plots along each side of the ring road, facing it, between the streets; the gaps become yards.
+     * A town has one each of the barracks, smithy, chapel, library tower, cloister and cistern house, a stable or
+     * two, a granary or two, and houses for the rest.
+     */
+    private void town() {
+        List<String> deck = new ArrayList<>();
+        Collections.addAll(
+            deck,
+            "barracks",
+            "smithy",
+            "chapel",
+            "library_tower",
+            "cloister",
+            "cistern_house",
+            "stables",
+            "granary");
+        if (random.nextBoolean()) deck.add("stables");
+        if (random.nextBoolean()) deck.add("granary");
+        Collections.shuffle(deck, random);
+        for (int side = 0; side < 4; side++) {
+            for (int[] segment : new int[][] { { -ROAD_OUT, -4 }, { 4, ROAD_OUT } }) {
+                int at = segment[0];
+                while (at <= segment[1]) {
+                    RoomTemplate t = nextBuilding(deck, segment[1] - at + 1);
+                    if (t == null) {
+                        yard(side, at, segment[1]);
+                        break;
+                    }
+                    place(side, at, t);
+                    int gap = 2 + random.nextInt(2);
+                    if (gap >= 3) yard(side, at + t.width(), Math.min(segment[1], at + t.width() + gap - 1));
+                    at += t.width() + gap;
+                }
+            }
+        }
+    }
+
+    private RoomTemplate nextBuilding(List<String> deck, int room) {
+        for (int i = 0; i < deck.size(); i++) {
+            RoomTemplate t = TemplateLibrary.building(deck.get(i));
+            if (t.width() <= room && t.depth() <= PLOT_BACK - PLOT_FRONT + 1) {
+                deck.remove(i);
+                return t;
+            }
+        }
+        RoomTemplate house = TemplateLibrary.building(random.nextInt(3) == 0 ? "house_tall" : "house_small");
+        if (house.width() <= room) return house;
+        RoomTemplate small = TemplateLibrary.building("house_small");
+        return small.width() <= room ? small : null;
+    }
+
+    /** A building on side (0 north .. 3 west) starting {@code along} blocks along it, facing the ring road. */
+    private void place(int side, int along, RoomTemplate t) {
+        int w = t.width(), dp = t.depth();
+        int rotation, minX, minZ;
+        switch (side) {
+            case 0: // north side, front south
+                rotation = 0;
+                minX = along;
+                minZ = -PLOT_FRONT - dp + 1;
+                break;
+            case 1: // east side, front west
+                rotation = 1;
+                minX = PLOT_FRONT;
+                minZ = along;
+                break;
+            case 2: // south side, front north
+                rotation = 2;
+                minX = along;
+                minZ = PLOT_FRONT;
+                break;
+            default: // west side, front east
+                rotation = 3;
+                minX = -PLOT_FRONT - dp + 1;
+                minZ = along;
+                break;
+        }
+        int sizeX = t.width(rotation), sizeZ = t.depth(rotation);
+        for (int x = minX; x < minX + sizeX; x++) for (int z = minZ; z < minZ + sizeZ; z++) stone(x, b - 1, z);
+        Role role = t.roles.iterator()
+            .next();
+        new RoomWriter(d).write(t, rotation, cx + minX, cz + minZ, b, role, false);
+        // A short paved path from its door to the road.
+        int mid = along + w / 2;
+        switch (side) {
+            case 0:
+                pave(mid, -PLOT_FRONT + 1);
+                break;
+            case 1:
+                pave(PLOT_FRONT - 1, mid);
+                break;
+            case 2:
+                pave(mid, PLOT_FRONT - 1);
+                break;
+            default:
+                pave(-PLOT_FRONT + 1, mid);
+                break;
+        }
+    }
+
+    /** A yard between buildings: a garden bed, a hay pile or a stack of crates. */
+    private void yard(int side, int from, int to) {
+        if (to - from < 1) return;
+        int kind = random.nextInt(3);
+        for (int a = from; a <= to; a++) for (int depth = 1; depth <= 4; depth++) {
+            int dx, dz;
+            switch (side) {
+                case 0:
+                    dx = a;
+                    dz = -PLOT_FRONT - depth;
                     break;
-                case "forge":
-                    forge(x, z);
+                case 1:
+                    dx = PLOT_FRONT + depth;
+                    dz = a;
                     break;
-                case "barracks":
-                    barracks(x, z);
-                    break;
-                case "well":
-                    well(x, z);
+                case 2:
+                    dx = a;
+                    dz = PLOT_FRONT + depth;
                     break;
                 default:
-                    ruins(x, z);
+                    dx = -PLOT_FRONT - depth;
+                    dz = a;
                     break;
             }
-        }
-    }
-
-    private void garden(int x, int z) {
-        for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) {
-            boolean border = Math.abs(dx) == 3 || Math.abs(dz) == 3;
-            if (border) {
-                d.put(x + dx, b + 1, z + dz, Block.QUARTZ);
-                continue;
-            }
-            d.put(x + dx, b, z + dz, Block.GRASS);
-            double r = d.noise.unit(x + dx, z + dz, 43);
-            if (r < 0.2) d.put(x + dx, b + 1, z + dz, Block.WINDBLOOM);
-            else if (r < 0.35) d.put(x + dx, b + 1, z + dz, Block.FLOWER, r < 0.27 ? 0 : 1);
-            else if (r < 0.6) d.put(x + dx, b + 1, z + dz, Block.TALL_GRASS);
-        }
-        for (int y = b + 1; y <= b + 4; y++) d.put(x, y, z, Block.LOG);
-        for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) for (int y = b + 4; y <= b + 6; y++) {
-            if (dx == 0 && dz == 0 && y < b + 5) continue;
-            if (Math.abs(dx) + Math.abs(dz) + Math.abs(y - (b + 5)) <= 3) d.put(x + dx, y, z + dz, Block.LEAVES);
-        }
-    }
-
-    private void forge(int x, int z) {
-        for (int dx = -3; dx <= 3; dx++) {
-            d.put(x + dx, b, z - 3, Block.LAVA);
-            d.stone(x + dx, b - 1, z - 3);
-            d.put(x + dx, b + 1, z - 3, Block.IRON_BARS);
-        }
-        d.put(x - 2, b + 1, z - 1, Block.FURNACE, 3);
-        d.put(x + 2, b + 1, z - 1, Block.FURNACE, 3);
-        d.put(x, b + 1, z, Block.ANVIL, random.nextInt(4));
-        d.put(x - 2, b + 1, z + 2, Block.CAULDRON);
-        d.put(x + 2, b + 1, z + 2, Block.CRAFTING_TABLE);
-        if (random.nextBoolean()) d.put(x + 3, b + 1, z + 2, Block.CHEST, 0, Loot.STORE, null);
-        for (int dx = -3; dx <= 3; dx += 6) for (int y = b + 1; y <= b + 3; y++) d.put(x + dx, y, z - 2, Block.FENCE);
-    }
-
-    /** A dark hut with a spawner inside (spawners need the dark). */
-    private void barracks(int x, int z) {
-        for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) for (int y = b + 1; y <= b + 4; y++) {
-            boolean shell = Math.abs(dx) == 3 || Math.abs(dz) == 3 || y == b + 4;
-            if (shell) d.stone(x + dx, y, z + dz);
-            else d.put(x + dx, y, z + dz, Block.AIR);
-        }
-        for (int y = b + 1; y <= b + 2; y++) d.put(x, y, z + (z > cz ? -3 : 3), Block.AIR);
-        d.put(x, b + 1, z, Block.SPAWNER, 0, null, random.nextBoolean() ? "Zombie+" : "Skeleton+");
-        d.put(x - 2, b + 1, z - 2, Block.FENCE);
-        d.put(x + 2, b + 1, z - 2, Block.FENCE);
-    }
-
-    private void well(int x, int z) {
-        for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) {
-            for (int y = b - 3; y <= b; y++) d.stone(x + dx, y, z + dz);
-            if (Math.abs(dx) == 2 || Math.abs(dz) == 2) d.stone(x + dx, b + 1, z + dz);
-        }
-        for (int dx = -1; dx <= 1; dx++)
-            for (int dz = -1; dz <= 1; dz++) for (int y = b - 2; y <= b; y++) d.put(x + dx, y, z + dz, Block.WATER);
-        for (int s : new int[] { -2, 2 }) for (int y = b + 2; y <= b + 3; y++) d.put(x + s, y, z, Block.FENCE);
-        for (int dx = -2; dx <= 2; dx++) d.put(x + dx, b + 4, z, Block.LOG);
-    }
-
-    private void ruins(int x, int z) {
-        for (int[] p : new int[][] { { -2, -2 }, { 2, -2 }, { -2, 2 }, { 2, 2 } }) {
-            int height = 1 + (int) (d.noise.unit(x + p[0], z + p[1], 44) * 4);
-            for (int y = b + 1; y <= b + height; y++) d.put(x + p[0], y, z + p[1], Block.QUARTZ);
-        }
-        for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) {
-            double r = d.noise.unit(x + dx, z + dz, 45);
-            if (r < 0.2) d.put(x + dx, b + 1, z + dz, Block.RUBBLE, (int) (r * 15) % 3);
-        }
-        if (random.nextDouble() < 0.4) d.put(x, b + 1, z, Block.CHEST, 0, Loot.STORE, null);
-    }
-
-    /** An authored one-cell room for a role, favouring ones not used yet; no pits (floors stack here). */
-    private RoomTemplate pick(Role role, boolean needCorners) {
-        List<RoomTemplate> options = new ArrayList<>();
-        List<Double> weights = new ArrayList<>();
-        for (RoomTemplate t : TemplateLibrary.all()) {
-            if (!t.roles.contains(role) || !t.kinds.contains(RoomTemplate.Kind.CITADEL)) continue;
-            if (t.small || t.cellsX != 1 || t.cellsZ != 1 || t.height != 5) continue;
-            if (t.trapped || t.has(',') || t.has('%') || t.has('T') || t.has('~') || t.has('=')) continue;
-            if (needCorners && !SanctumLayout.cornersOpen(t)) continue;
-            options.add(t);
-            weights.add(t.weight / (1.0 + 3.0 * used.getOrDefault(t, 0)));
-        }
-        double total = 0;
-        for (double w : weights) total += w;
-        double roll = random.nextDouble() * total;
-        RoomTemplate pick = options.get(options.size() - 1);
-        for (int i = 0; i < options.size(); i++) {
-            roll -= weights.get(i);
-            if (roll <= 0) {
-                pick = options.get(i);
-                break;
+            double r = d.noise.unit(cx + dx, cz + dz, 61);
+            if (kind == 0) {
+                put(dx, b, dz, Block.GRASS);
+                if (r < 0.35) put(dx, b + 1, dz, Block.WINDBLOOM);
+                else if (r < 0.55) put(dx, b + 1, dz, Block.FLOWER, r < 0.45 ? 0 : 1);
+            } else if (kind == 1) {
+                if (r < 0.4) put(dx, b + 1, dz, Block.HAY);
+                if (r < 0.15) put(dx, b + 2, dz, Block.HAY);
+            } else if (r < 0.3) {
+                put(dx, b + 1, dz, Block.PLANKS, r < 0.15 ? 0 : 1);
+                if (r < 0.1) put(dx, b + 2, dz, Block.LOG);
             }
         }
-        used.merge(pick, 1, Integer::sum);
-        return pick;
+    }
+
+    /** The four corners of the town: an orchard, a herb garden of Windbloom, a market and a training yard. */
+    private void corners() {
+        int lo = ROAD_OUT + 3, hi = OUTER - THICK - 2;
+        List<Integer> kinds = new ArrayList<>();
+        Collections.addAll(kinds, 0, 1, 2, 3);
+        Collections.shuffle(kinds, random);
+        int[][] signs = { { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } };
+        for (int c = 0; c < 4; c++) {
+            int sx = signs[c][0], sz = signs[c][1];
+            int kind = kinds.get(c);
+            for (int a = lo; a <= hi; a++) for (int e = lo; e <= hi; e++) {
+                int dx = sx * a, dz = sz * e;
+                if (inSquare(dx - sx * (OUTER - 1), dz - sz * (OUTER - 1), 5)) continue; // the corner tower
+                double r = d.noise.unit(cx + dx, cz + dz, 62);
+                switch (kind) {
+                    case 0: // orchard: a grid of small trees on grass
+                        put(dx, b, dz, Block.GRASS);
+                        if ((a - lo) % 5 == 2 && (e - lo) % 5 == 2) tree(dx, dz);
+                        else if (r < 0.2) put(dx, b + 1, dz, Block.TALL_GRASS);
+                        break;
+                    case 1: // herb garden: rows of Windbloom with paths between
+                        if ((e - lo) % 3 == 0) pave(dx, dz);
+                        else {
+                            put(dx, b, dz, Block.GRASS);
+                            if (r < 0.85) put(dx, b + 1, dz, Block.WINDBLOOM);
+                            else put(dx, b + 1, dz, Block.FLOWER, r < 0.92 ? 0 : 1);
+                        }
+                        break;
+                    case 2: // market: a paved square with stalls under blue awnings
+                        pave(dx, dz);
+                        break;
+                    default: // training yard: packed gravel, straw targets on posts
+                        put(dx, b, dz, Block.RUBBLE, 1);
+                        if ((a - lo) % 5 == 2 && (e - lo) % 6 == 3) {
+                            put(dx, b + 1, dz, Block.FENCE);
+                            put(dx, b + 2, dz, Block.HAY);
+                        }
+                        break;
+                }
+            }
+            if (kind == 2) for (int a = lo + 1; a + 2 <= hi; a += 6) for (int e = lo + 1; e + 2 <= hi; e += 6) {
+                int dx = sx > 0 ? a : -a - 2, dz = sz > 0 ? e : -e - 2;
+                if (!inSquare(dx + 1 - sx * (OUTER - 1), dz + 1 - sz * (OUTER - 1), 6)) stall(dx, dz);
+            }
+        }
+    }
+
+    private void tree(int dx, int dz) {
+        for (int y = b + 1; y <= b + 3; y++) put(dx, y, dz, Block.LOG);
+        for (int x = -1; x <= 1; x++) for (int z = -1; z <= 1; z++) for (int y = b + 3; y <= b + 5; y++) {
+            if (x == 0 && z == 0 && y == b + 3) continue;
+            if (Math.abs(x) + Math.abs(z) + Math.abs(y - (b + 4)) <= 2) put(dx + x, y, dz + z, Block.LEAVES);
+        }
+    }
+
+    /** A market stall: four posts, a counter, a blue awning. */
+    private void stall(int dx, int dz) {
+        for (int x = 0; x <= 2; x++) for (int z = 0; z <= 2; z++) {
+            boolean post = (x == 0 || x == 2) && (z == 0 || z == 2);
+            if (post) for (int y = b + 1; y <= b + 2; y++) put(dx + x, y, dz + z, Block.FENCE);
+            put(dx + x, b + 3, dz + z, Block.WOOL, 11);
+        }
+        put(dx + 1, b + 1, dz + 2, Block.SLAB, 8);
+        if (random.nextInt(3) == 0) d.put(cx + dx + 1, b + 1, cz + dz, Block.CHEST, 0, Loot.STORE, null);
+    }
+
+    // --- The keep and its square ----------------------------------------------------------------------------
+
+    private void keep() {
+        RoomTemplate keep = TemplateLibrary.building("grand_keep");
+        int half = keep.width() / 2;
+        for (int x = -half; x <= half; x++) for (int z = -half; z <= half; z++) stone(x, b - 1, z);
+        new RoomWriter(d).write(keep, 0, cx - half, cz - half, b, Role.STORE, false);
+        d.rooms.add(new Room(cx, b, cz, Role.HALL, keep.name, SURFACE, cx - 9, cx + 9, cz - 9, cz + 9, 10, false));
+    }
+
+    /** Before the keep: a square with a well, benches facing it and lamp posts; lawns round the keep's sides. */
+    private void square() {
+        int inside = INNER - THICK - 1;
+        int z0 = 13, z1 = inside;
+        for (int dx = -inside; dx <= inside; dx++) for (int dz = -inside; dz <= inside; dz++) {
+            if (inSquare(dx, dz, 12)) continue;
+            if (inSquare(dx - (INNER - 1), dz, 0) || inSquare(dx, dz, inside) && dz >= z0) continue;
+            if (Math.abs(dx) >= inside - 4 && Math.abs(dz) >= inside - 4) continue; // corner towers
+            put(dx, b, dz, Block.GRASS);
+            double r = d.noise.unit(cx + dx, cz + dz, 63);
+            if (r < 0.12) put(dx, b + 1, dz, Block.WINDBLOOM);
+            else if (r < 0.25) put(dx, b + 1, dz, Block.TALL_GRASS);
+        }
+        for (int dx = -inside; dx <= inside; dx++) for (int dz = z0; dz <= z1; dz++) {
+            if (Math.abs(dx) >= inside - 4 && dz >= inside - 4) continue;
+            pave(dx, dz);
+        }
+        for (int dz = -2; dz <= 2; dz++) for (int dx = 13; dx <= inside; dx++) pave(dx, dz); // to the east gate
+        int wz = (z0 + z1) / 2;
+        for (int x = -2; x <= 2; x++) for (int z = -2; z <= 2; z++) {
+            for (int y = b - 3; y <= b; y++) stone(x, y, wz + z);
+            if (Math.abs(x) == 2 || Math.abs(z) == 2) stone(x, b + 1, wz + z);
+        }
+        for (int x = -1; x <= 1; x++)
+            for (int z = -1; z <= 1; z++) for (int y = b - 2; y <= b; y++) put(x, y, wz + z, Block.WATER);
+        for (int s : new int[] { -2, 2 }) for (int y = b + 2; y <= b + 3; y++) put(s, y, wz, Block.FENCE);
+        for (int x = -2; x <= 2; x++) put(x, b + 4, wz, Block.SLAB, 0);
+        for (int x : new int[] { -6, -5, 5, 6 }) put(x, b + 1, wz, Block.STAIRS, rising(x > 0 ? 1 : -1, 0));
+        for (int x : new int[] { -9, 9 }) lampPost(x, wz);
+    }
+
+    // --- The approach ---------------------------------------------------------------------------------------
+
+    /** A causeway from the island's south rim to the drawbridge, lit, with a guard post beside it. */
+    private void approach() {
+        int end = (int) (radius * 0.9);
+        for (int t = MOAT_OUT + 2; t <= end; t++) {
+            if (d.field.column(d.island, cx, cz + t) == null) break;
+            for (int w = -2; w <= 2; w++) {
+                pave(w, t);
+                stone(w, b - 1, t);
+            }
+            if ((t - MOAT_OUT) % 8 == 4) {
+                lampPost(-3, t);
+                lampPost(3, t);
+            }
+        }
+        RoomTemplate post = TemplateLibrary.building("house_small");
+        int pz = MOAT_OUT + 12;
+        for (int x = 5; x < 5 + post.width(1); x++) for (int z = pz; z < pz + post.depth(1); z++) {
+            stone(x, b - 1, z);
+            put(x, b, z, Block.GRASS);
+        }
+        new RoomWriter(d).write(post, 1, cx + 5, cz + pz, b, Role.GUARD, false);
+    }
+
+    /** A ruined watchtower out on the island: a broken round shell, rubble round its foot, a ladder to a lookout. */
+    private void watchtower() {
+        double angle = Math.PI * (1.15 + 0.7 * random.nextDouble()); // somewhere on the north side
+        int r = (int) (radius * 0.72);
+        int tx = cx + (int) Math.round(Math.cos(angle) * r), tz = cz + (int) Math.round(Math.sin(angle) * r);
+        int[] column = d.field.column(d.island, tx, tz);
+        if (column == null) return;
+        int ground = column[1];
+        for (int x = -3; x <= 3; x++) for (int z = -3; z <= 3; z++) {
+            int rr = x * x + z * z;
+            if (rr > 12) continue;
+            boolean rim = rr >= 5;
+            int height = rim ? 6 + (int) (d.noise.unit(tx + x, tz + z, 64) * 9) : 0;
+            d.stone(tx + x, ground, tz + z);
+            for (int y = ground + 1; y <= ground + 15; y++) {
+                if (rim && y <= ground + height) d.stone(tx + x, y, tz + z);
+                else d.put(tx + x, y, tz + z, Block.AIR);
+            }
+        }
+        for (int x = -1; x <= 1; x++) for (int z = -1; z <= 1; z++) d.put(tx + x, ground + 7, tz + z, Block.PLANKS, 1);
+        d.stone(tx, ground + 1, tz - 2);
+        for (int y = ground + 1; y <= ground + 7; y++) d.put(tx, y, tz - 1, Block.LADDER, 3);
+        d.put(tx + 1, ground + 8, tz + 1, Block.CHEST, 0, Loot.STORE, null);
+        for (int k = 0; k < 12; k++) {
+            int x = (int) ((d.noise.unit(tx + k, tz, 65) - 0.5) * 14),
+                z = (int) ((d.noise.unit(tx, tz + k, 66) - 0.5) * 14);
+            if (x * x + z * z > 13) d.put(tx + x, ground + 1, tz + z, Block.RUBBLE, k % 3);
+        }
+        for (int y = ground + 1; y <= ground + 2; y++) d.put(tx, y, tz + 3, Block.AIR);
     }
 }
