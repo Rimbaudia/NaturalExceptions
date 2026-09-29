@@ -36,9 +36,7 @@ public final class BodyTreatment {
             .state();
         long now = player.worldObj.getTotalWorldTime();
         state.advanceTo(Math.max(state.lastResolvedTick(), now));
-        BiologicalInjury injury = pick(state, regionId);
-        if (injury == null) return false;
-        state.treatInjury(injury.id(), treatmentFor(injury.kind()));
+        if (treatGroup(state, regionId) == 0) return false;
         if (!player.capabilities.isCreativeMode) {
             held.stackSize--;
             player.inventory.setItemStack(held.stackSize <= 0 ? null : held);
@@ -47,6 +45,27 @@ public final class BodyTreatment {
         player.worldObj.playSoundAtEntity(player, "step.cloth", 1.0F, 0.9F);
         BodyStatusSync.sendNow(player, state, now);
         return true;
+    }
+
+    /**
+     * Treats the worst untreated injury in {@code regionId} together with every other untreated injury of the same
+     * kind there: one dressing covers a burned arm however many times it was burned. Returns how many were treated.
+     */
+    public static int treatGroup(BiologicalState state, String regionId) {
+        BiologicalInjury worst = pick(state, regionId);
+        if (worst == null) return 0;
+        BiologicalTreatment treatment = treatmentFor(worst.kind());
+        java.util.List<BiologicalInjury> group = new java.util.ArrayList<>();
+        for (BiologicalInjury injury : state.injuries()) {
+            if (injury.kind() == worst.kind() && injury.treatment() <= 0.0
+                && !injury.resolved()
+                && injury.regionId()
+                    .toString()
+                    .equals(regionId))
+                group.add(injury);
+        }
+        for (BiologicalInjury injury : group) state.treatInjury(injury.id(), treatment);
+        return group.size();
     }
 
     /** Broken bones are splinted; cuts and burns are dressed. */

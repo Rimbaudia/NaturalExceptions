@@ -62,15 +62,27 @@ public final class BodyStatusSnapshot {
         private final float bleeding;
         private final float treatment;
         private final boolean closed;
+        /** How many separate injury records this line stands for (see {@link #groupedInjuries()}). */
+        private final int count;
 
         public Injury(BiologicalInjury.Kind kind, String regionId, float severity, float bleeding, float treatment,
             boolean closed) {
+            this(kind, regionId, severity, bleeding, treatment, closed, 1);
+        }
+
+        Injury(BiologicalInjury.Kind kind, String regionId, float severity, float bleeding, float treatment,
+            boolean closed, int count) {
             this.kind = kind;
             this.regionId = regionId;
             this.severity = severity;
             this.bleeding = bleeding;
             this.treatment = treatment;
             this.closed = closed;
+            this.count = count;
+        }
+
+        public int count() {
+            return count;
         }
 
         public BiologicalInjury.Kind kind() {
@@ -403,6 +415,38 @@ public final class BodyStatusSnapshot {
 
     public List<Exposure> exposures() {
         return exposures;
+    }
+
+    /**
+     * Injuries as a person would describe them: repeated records of the same kind on the same part (four burns from
+     * standing on something hot) become one entry with the worst severity, the combined bleeding, and "treated" only
+     * if every one of them is. In first-seen order.
+     */
+    public List<Injury> groupedInjuries() {
+        List<Injury> groups = new ArrayList<>();
+        for (Injury injury : injuries) {
+            int found = -1;
+            for (int i = 0; i < groups.size(); i++) {
+                Injury group = groups.get(i);
+                if (group.kind == injury.kind && group.regionId.equals(injury.regionId)) found = i;
+            }
+            if (found < 0) {
+                groups.add(injury);
+                continue;
+            }
+            Injury group = groups.get(found);
+            groups.set(
+                found,
+                new Injury(
+                    group.kind,
+                    group.regionId,
+                    Math.max(group.severity, injury.severity),
+                    group.bleeding + injury.bleeding,
+                    Math.min(group.treatment, injury.treatment),
+                    group.closed && injury.closed,
+                    group.count + injury.count));
+        }
+        return groups;
     }
 
     public List<Injury> injuriesIn(String regionId) {

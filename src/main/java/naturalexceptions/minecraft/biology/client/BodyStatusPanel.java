@@ -245,7 +245,9 @@ public final class BodyStatusPanel {
     private static List<String> regionTooltip(BodyStatusSnapshot body, String id, boolean bandage, boolean treatable) {
         List<String> lines = new ArrayList<>();
         lines.add(BodyStatusSnapshot.label(id));
-        List<BodyStatusSnapshot.Injury> injuries = body.injuriesIn(id);
+        List<BodyStatusSnapshot.Injury> injuries = new ArrayList<>();
+        for (BodyStatusSnapshot.Injury injury : body.groupedInjuries()) if (injury.regionId()
+            .equals(id)) injuries.add(injury);
         for (BodyStatusSnapshot.Injury injury : injuries) lines.add("\u00a77" + BodyWords.injury(body, injury));
         BodyStatusSnapshot.Region region = body.region(id);
         if (injuries.isEmpty())
@@ -308,7 +310,7 @@ public final class BodyStatusPanel {
         int bottom = layout.listBottom();
         List<Line> lines = new ArrayList<>();
 
-        for (BodyStatusSnapshot.Injury injury : body.injuries()) {
+        for (BodyStatusSnapshot.Injury injury : body.groupedInjuries()) {
             boolean urgent = injury.severity() >= 0.5F && injury.treatment() <= 0.0F;
             addWrapped(
                 font,

@@ -124,6 +124,59 @@ final class BodyWordsAndTreatmentTest {
             BodyWords.exposure(new BodyStatusSnapshot.Exposure("x:lead", ExposureRoute.INGESTION, 1.0), "Lead"));
     }
 
+    @Test
+    void repeatedBurnsReadAsOneLineAndOneDressingCoversThem() {
+        BiologicalState state = body();
+        for (int i = 0; i < 4; i++)
+            state.addInjury(injury("burn" + i, BiologicalInjury.Kind.BURN, LEFT_ARM, 0.5 + i * 0.1, 0.0));
+        state.addInjury(injury("cut", BiologicalInjury.Kind.CUT, LEFT_ARM, 0.3, 1.0));
+        BodyStatusSnapshot snapshot = BodyStatusSnapshot.from(state);
+        assertEquals(
+            5,
+            snapshot.injuries()
+                .size());
+        assertEquals(
+            2,
+            snapshot.groupedInjuries()
+                .size(),
+            "four burns and a cut");
+        BodyStatusSnapshot.Injury burns = snapshot.groupedInjuries()
+            .get(0);
+        assertEquals(4, burns.count());
+        assertEquals(0.8F, burns.severity(), 1.0e-4F, "the worst of them");
+        assertEquals("Bad burns on the left arm", BodyWords.injury(snapshot, burns));
+
+        assertEquals(4, BodyTreatment.treatGroup(state, "naturalexceptions:left_arm"), "the burns, not the cut");
+        BodyStatusSnapshot after = BodyStatusSnapshot.from(state);
+        assertEquals(
+            "Bad burns on the left arm, dressed",
+            BodyWords.injury(
+                after,
+                after.groupedInjuries()
+                    .get(0)));
+        assertEquals(
+            "Cut on the left arm, bleeding",
+            BodyWords.injury(
+                after,
+                after.groupedInjuries()
+                    .get(1)));
+        assertEquals(1, BodyTreatment.treatGroup(state, "naturalexceptions:left_arm"), "next bandage: the cut");
+        assertEquals(0, BodyTreatment.treatGroup(state, "naturalexceptions:left_arm"), "nothing left to treat");
+    }
+
+    @Test
+    void everyGuiTextureIsTheSizeMinecraftAssumes() throws Exception {
+        java.io.File dir = new java.io.File("src/main/resources/assets/naturalexceptions/textures/gui");
+        java.io.File[] files = dir.listFiles((d, name) -> name.endsWith(".png"));
+        assertTrue(files != null && files.length > 0);
+        for (java.io.File file : files) {
+            java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(file);
+            // drawTexturedModalRect maps UVs as pixels / 256; any other size stretches or misplaces every sprite.
+            assertEquals(256, image.getWidth(), file.getName());
+            assertEquals(256, image.getHeight(), file.getName());
+        }
+    }
+
     private static BodyStatusSnapshot snapshotWithCondition(float condition) {
         return new BodyStatusSnapshot(
             condition,

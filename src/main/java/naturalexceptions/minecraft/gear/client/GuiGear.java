@@ -33,6 +33,13 @@ public final class GuiGear extends GuiContainer {
         ySize = GearLayout.HEIGHT;
     }
 
+    /** The screen is tall; keep room above it for the tabs whenever the window allows. */
+    @Override
+    public void initGui() {
+        super.initGui();
+        guiTop = Math.max(guiTop, Math.min(InventoryTab.RISE + 2, height - ySize));
+    }
+
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         super.drawScreen(mouseX, mouseY, partialTicks);

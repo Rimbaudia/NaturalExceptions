@@ -36,7 +36,13 @@ import naturalexceptions.minecraft.registry.NEItems;
 public final class InventoryTabs {
 
     private static final ResourceLocation TABS = new ResourceLocation(
-        "textures/gui/container/creative_inventory/tabs.png");
+        "naturalexceptions",
+        "textures/gui/inventory_tabs.png");
+    /** Sprite u in the tabs texture: raised (joins the screen), lowered, raised flush left / right. */
+    private static final int U_RAISED = 0;
+    private static final int U_LOWERED = 28;
+    private static final int U_RAISED_LEFT = 56;
+    private static final int U_RAISED_RIGHT = 84;
     private static final RenderItem ITEM_RENDER = new RenderItem();
 
     private InventoryTabs() {}
@@ -84,8 +90,8 @@ public final class InventoryTabs {
                 GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
                 mc.getTextureManager()
                     .bindTexture(TABS);
-                // A raised tab joins the screen's edge; a lowered one stops short of it, as if tucked behind.
-                gui.drawTexturedModalRect(x, y, tab.column() * 28, on ? 32 : 0, InventoryTab.WIDTH, on ? 32 : 28);
+                // A raised tab opens into the screen; a lowered one stops at its edge, as if tucked behind.
+                gui.drawTexturedModalRect(x, y, spriteU(tab, on), 0, InventoryTab.WIDTH, on ? 32 : 28);
                 drawIcon(mc, iconFor(tab), x + 6, y + (on ? 9 : 10));
                 if (tab == InventoryTab.BODY && !on && BodyStatusPanel.needsAttention())
                     Gui.drawRect(x + 20, y + 5, x + 23, y + 8, 0xFFC0302A);
@@ -128,6 +134,13 @@ public final class InventoryTabs {
         mc.getSoundHandler()
             .playSound(PositionedSoundRecord.func_147674_a(new ResourceLocation("gui.button.press"), 1.0F));
         return true;
+    }
+
+    private static int spriteU(InventoryTab tab, boolean raised) {
+        if (!raised) return U_LOWERED;
+        if (tab.column() == 0) return U_RAISED_LEFT;
+        if (tab.column() == 5) return U_RAISED_RIGHT;
+        return U_RAISED;
     }
 
     private static ItemStack iconFor(InventoryTab tab) {

@@ -30,14 +30,16 @@ public final class BodyWords {
         StringBuilder text = new StringBuilder();
         switch (injury.kind()) {
             case CUT:
-                text.append(injury.severity() >= 0.5F ? "Deep cut" : injury.severity() < 0.2F ? "Graze" : "Cut")
+                String cut = injury.severity() >= 0.5F ? "Deep cut" : injury.severity() < 0.2F ? "Graze" : "Cut";
+                text.append(injury.count() > 1 ? cut + "s" : cut)
                     .append(" on the ")
                     .append(place);
                 if (treated) text.append(", dressed");
                 else if (injury.bleeding() > 0.05F) text.append(", bleeding");
                 break;
             case BURN:
-                text.append(injury.severity() >= 0.5F ? "Bad burn" : "Burn")
+                boolean several = injury.count() > 1;
+                text.append(injury.severity() >= 0.5F ? several ? "Bad burns" : "Bad burn" : several ? "Burns" : "Burn")
                     .append(" on the ")
                     .append(place);
                 if (treated) text.append(", dressed");
