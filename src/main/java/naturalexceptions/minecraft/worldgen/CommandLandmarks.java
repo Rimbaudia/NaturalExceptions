@@ -54,25 +54,36 @@ public final class CommandLandmarks extends CommandBase {
         found.sort(
             (a, b) -> Double
                 .compare(distance(a.centreX(), a.centreZ(), px, pz), distance(b.centreX(), b.centreZ(), px, pz)));
-        sender.addChatMessage(new ChatComponentText("§eNearest sky islands:"));
+        sender.addChatMessage(new ChatComponentText("\u00a7eNearest sky islands:"));
+        SkyIslands.Island target = null;
         for (int i = 0; i < Math.min(SHOWN, found.size()); i++) {
             SkyIslands.Island island = found.get(i);
+            Presence presence = presence(world, islands, island);
+            if (target == null && presence != Presence.MISSING) target = island;
             sender.addChatMessage(
                 new ChatComponentText(
                     String.format(
-                        "  %d, %d, %d  (%d blocks %s)%s",
+                        "  %s%d, %d, %d  (%d blocks %s)%s - %s",
+                        presence == Presence.MISSING ? "\u00a78" : "",
                         island.centreX(),
                         island.centreY(),
                         island.centreZ(),
                         (int) distance(island.centreX(), island.centreZ(), px, pz),
                         direction(island.centreX() - px, island.centreZ() - pz),
-                        island.hasCache() ? ", has a sky cache" : "")));
+                        island.hasCache() ? ", has a sky cache" : "",
+                        presence.words)));
+        }
+        if (target == null) for (SkyIslands.Island island : found) {
+            if (presence(world, islands, island) != Presence.MISSING) {
+                target = island;
+                break;
+            }
         }
         Landmarks landmarks = new Landmarks(seed);
         List<Landmarks.Landmark> giants = new ArrayList<>(
             landmarks.near(px - SEARCH, pz - SEARCH, px + SEARCH, pz + SEARCH));
         giants.sort((a, b) -> Double.compare(distance(a.x(), a.z(), px, pz), distance(b.x(), b.z(), px, pz)));
-        sender.addChatMessage(new ChatComponentText("§eNearest landmarks:"));
+        sender.addChatMessage(new ChatComponentText("\u00a7eNearest landmarks:"));
         for (int i = 0; i < Math.min(SHOWN, giants.size()); i++) {
             Landmarks.Landmark landmark = giants.get(i);
             sender.addChatMessage(
@@ -87,10 +98,81 @@ public final class CommandLandmarks extends CommandBase {
                         (int) distance(landmark.x(), landmark.z(), px, pz),
                         direction(landmark.x() - px, landmark.z() - pz))));
         }
-        sender.addChatMessage(new ChatComponentText("§8Only land generated since they were added has them."));
-        if (args.length > 0 && "tp".equalsIgnoreCase(args[0]) && !found.isEmpty()) {
-            SkyIslands.Island island = found.get(0);
-            player.setPositionAndUpdate(island.centreX() + 0.5, island.centreY() + 3, island.centreZ() + 0.5);
+        sender
+            .addChatMessage(new ChatComponentText("\u00a78Islands only form in land generated after they were added."));
+        if (args.length > 0 && "tp".equalsIgnoreCase(args[0])) {
+            if (target == null) {
+                sender.addChatMessage(new ChatComponentText("No island within reach can still appear here."));
+                return;
+            }
+            prepare(world, target);
+            int[] top = islands.column(target, target.centreX(), target.centreZ());
+            int y = (top != null ? top[1] : target.centreY()) + 2;
+            player.setPositionAndUpdate(target.centreX() + 0.5, y, target.centreZ() + 0.5);
+            sender.addChatMessage(
+                new ChatComponentText(
+                    "Went to the island at " + target.centreX()
+                        + ", "
+                        + target.centreY()
+                        + ", "
+                        + target.centreZ()
+                        + " ("
+                        + presence(world, islands, target).words
+                        + ")."));
+        }
+    }
+
+    /** Whether an island listed from the seed is really in this world. */
+    enum Presence {
+
+        /** Its blocks are there. */
+        THERE("there"),
+        /** Its land has not been generated yet; it appears when it is. */
+        UNEXPLORED("not generated yet"),
+        /** Generated but not yet finished (neighbouring land missing); it fills in as you approach. */
+        PENDING("still forming"),
+        /** Its land was generated before islands (or before their current layout); it will never have it. */
+        MISSING("missing: this land is older than the islands");
+
+        final String words;
+
+        Presence(String words) {
+            this.words = words;
+        }
+    }
+
+    static Presence presence(World world, SkyIslands islands, SkyIslands.Island island) {
+        int x = island.centreX(), z = island.centreZ();
+        int cx = x >> 4, cz = z >> 4;
+        if (!chunkOnRecord(world, cx, cz)) return Presence.UNEXPLORED;
+        net.minecraft.world.chunk.Chunk chunk = world.getChunkFromChunkCoords(cx, cz);
+        int[] column = islands.column(island, x, z);
+        if (column != null) for (int y = column[0]; y <= column[1]; y++) {
+            if (!world.isAirBlock(x, y, z)) return Presence.THERE;
+        }
+        return chunk.isTerrainPopulated ? Presence.MISSING : Presence.PENDING;
+    }
+
+    /** Loaded, or saved on disk; never generates anything. */
+    private static boolean chunkOnRecord(World world, int cx, int cz) {
+        if (!(world.getChunkProvider() instanceof net.minecraft.world.gen.ChunkProviderServer)) return true;
+        net.minecraft.world.gen.ChunkProviderServer provider = (net.minecraft.world.gen.ChunkProviderServer) world
+            .getChunkProvider();
+        if (provider.chunkExists(cx, cz)) return true;
+        return provider.currentChunkLoader instanceof net.minecraft.world.chunk.storage.AnvilChunkLoader
+            && ((net.minecraft.world.chunk.storage.AnvilChunkLoader) provider.currentChunkLoader)
+                .chunkExists(world, cx, cz);
+    }
+
+    /**
+     * Generates (and so populates) the land under and around an island before a teleport, so the island is
+     * already there on arrival. One ring of extra chunks lets the edge chunks finish too.
+     */
+    private static void prepare(World world, SkyIslands.Island island) {
+        int reach = ((int) Math.ceil(island.radius() * 1.3) >> 4) + 2;
+        int cx = island.centreX() >> 4, cz = island.centreZ() >> 4;
+        for (int dx = -reach; dx <= reach; dx++) {
+            for (int dz = -reach; dz <= reach; dz++) world.getChunkFromChunkCoords(cx + dx, cz + dz);
         }
     }
 
