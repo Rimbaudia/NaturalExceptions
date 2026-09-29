@@ -29,6 +29,20 @@ public final class BiologicalState {
     private double bloodReserveMillilitres;
     private long lastResolvedTick;
 
+    /** Time to regain a full blood reserve from empty, well fed and watered. */
+    public static final double BLOOD_RECOVERY_SECONDS = 4800.0;
+
+    /** Seconds until {@code injury} closes at current reserves, if nothing else happens to it. */
+    public double secondsToHeal(BiologicalInjury injury) {
+        PhysiologyProfile physiology = physiology();
+        double rate = injury.kind() == BiologicalInjury.Kind.STRUCTURAL ? physiology.structuralHealingPerSecond()
+            : physiology.woundHealingPerSecond();
+        double reserves = Math.min(energyReserveJoules / Math.max(1.0, physiology.energyCapacityJoules()),
+            hydrationReserveMillilitres / Math.max(1.0, physiology.hydrationCapacityMillilitres()));
+        double effective = rate * (0.25 + 0.75 * injury.treatment()) * (0.15 + 0.85 * reserves);
+        return effective <= 0.0 ? Double.POSITIVE_INFINITY : Math.max(0.0, injury.severity() - 0.001) / effective;
+    }
+
     public BiologicalState(BodyPlan bodyPlan, long createdAtTick) {
         this(bodyPlan, DeterministicId.derive("organism", bodyPlan.id().toString(), Long.toString(createdAtTick)), createdAtTick);
     }
@@ -202,6 +216,16 @@ public final class BiologicalState {
             if (injury.resolved()) injuries.remove(i);
         }
         for (ExposureBurden burden : exposures) burden.resolve(worldTick);
+        boolean bleeding = false;
+        for (BiologicalInjury injury : injuries) bleeding |= injury.bleedingMillilitresPerSecond() > 0.0;
+        if (physiology.canBleed() && !bleeding) {
+            // Once nothing bleeds, lost blood comes back over about four Minecraft days, slower when starved or dry.
+            double reserves = Math.min(energyReserveJoules / Math.max(1.0, physiology.energyCapacityJoules()),
+                hydrationReserveMillilitres / Math.max(1.0, physiology.hydrationCapacityMillilitres()));
+            double regained = physiology.bloodCapacityMillilitres() / BLOOD_RECOVERY_SECONDS * elapsedSeconds
+                * (0.15 + 0.85 * reserves);
+            bloodReserveMillilitres = Math.min(physiology.bloodCapacityMillilitres(), bloodReserveMillilitres + regained);
+        }
         lastResolvedTick = worldTick;
     }
 

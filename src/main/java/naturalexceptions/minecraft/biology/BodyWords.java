@@ -56,6 +56,23 @@ public final class BodyWords {
         return text.toString();
     }
 
+    /** Seconds in a Minecraft day and hour. */
+    static final double DAY_SECONDS = 1200.0;
+    static final double HOUR_SECONDS = DAY_SECONDS / 24.0;
+
+    /** e.g. "heals in about 2 days", "heals within the hour", "not healing". */
+    public static String healing(BodyStatusSnapshot.Injury injury) {
+        double seconds = injury.healSeconds();
+        if (Double.isInfinite(seconds) || Double.isNaN(seconds)) return "not healing";
+        if (seconds < HOUR_SECONDS) return "heals within the hour";
+        if (seconds < DAY_SECONDS) {
+            long hours = Math.max(1, Math.round(seconds / HOUR_SECONDS));
+            return "heals in about " + hours + (hours == 1 ? " hour" : " hours");
+        }
+        long days = Math.max(1, Math.round(seconds / DAY_SECONDS));
+        return "heals in about " + days + (days == 1 ? " day" : " days");
+    }
+
     /** How strongly an exposure is affecting you: trace, mild, moderate, severe. */
     public static String level(BodyStatusSnapshot.Exposure exposure) {
         double penalty = exposure.conditionPenalty();

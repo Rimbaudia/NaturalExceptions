@@ -55,12 +55,14 @@ public final class PhysiologyProfile {
     }
 
     public static PhysiologyProfile humanLike() {
-        return new PhysiologyProfile(true, 5000.0, 0.012, 0.000003, 0.0000004,
+        // Healing in game time (a Minecraft day is 1200 s): a dressed wound of full severity closes in about three
+        // days and a splinted break mends in about six; untreated, each takes about four times as long.
+        return new PhysiologyProfile(true, 5000.0, 0.012, 0.00035, 0.00017,
             12_000_000.0, 2500.0, 130.0, 0.00012);
     }
 
     public static PhysiologyProfile crystalline() {
-        return new PhysiologyProfile(false, 0.0, 0.0, 0.0, 0.000000015,
+        return new PhysiologyProfile(false, 0.0, 0.0, 0.0, 0.0000064,
             2_000_000.0, 300.0, 2.0, 0.000002, 0.2);
     }
 

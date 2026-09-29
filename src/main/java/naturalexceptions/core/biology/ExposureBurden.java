@@ -6,6 +6,7 @@ import naturalexceptions.core.id.ResourceId;
 /** Coalesced persistent quantitative dose for one material and route. */
 public final class ExposureBurden {
     public static final long DOSE_MICRO_UNITS_PER_UNIT = 1_000_000L;
+    public static final double CLEARANCE_HALF_LIFE_SECONDS = 2400.0;
     public static final long MAX_DOSE_MICRO_UNITS = 1_000_000_000_000_000_000L;
     private final ResourceId material;
     private final ExposureRoute route;
@@ -35,8 +36,10 @@ public final class ExposureBurden {
     void resolve(long tick) {
         if (tick < lastResolvedTick) throw new IllegalArgumentException("time cannot move backward");
         double seconds = (tick - lastResolvedTick) / BiologicalState.TICKS_PER_SECOND;
-        // Coarse deterministic clearance only; current dose remains inspectable and accumulation is bounded.
-        double clearance = seconds * 0.00001 * DOSE_MICRO_UNITS_PER_UNIT;
+        // The body clears what it took in: half the dose every CLEARANCE_HALF_LIFE_SECONDS (two Minecraft days),
+        // plus a small steady clearance so a trace reaches zero rather than lingering forever.
+        double remaining = doseMicrounits * Math.pow(0.5, seconds / CLEARANCE_HALF_LIFE_SECONDS);
+        double clearance = (doseMicrounits - remaining) + seconds * 0.001 * DOSE_MICRO_UNITS_PER_UNIT;
         long removed = !Double.isFinite(clearance) || clearance >= doseMicrounits
             ? doseMicrounits : Math.max(0L, Math.round(clearance));
         doseMicrounits -= removed;

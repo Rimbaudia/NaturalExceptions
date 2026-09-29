@@ -319,6 +319,7 @@ public final class BodyStatusPanel {
                 BodyWords.injury(body, injury),
                 width,
                 urgent ? WARN_TEXT : GUI_TEXT);
+            addWrapped(font, lines, -1, BodyWords.healing(injury), width, MUTED_TEXT);
         }
         for (BodyStatusSnapshot.Exposure exposure : body.exposures()) {
             String level = BodyWords.level(exposure);

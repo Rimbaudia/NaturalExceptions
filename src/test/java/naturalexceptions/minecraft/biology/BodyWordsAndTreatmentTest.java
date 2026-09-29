@@ -177,6 +177,19 @@ final class BodyWordsAndTreatmentTest {
         }
     }
 
+    @Test
+    void timeToHealReadsInMinecraftDaysAndHours() {
+        assertEquals("heals in about 3 days", BodyWords.healing(healingIn(3.2F * 1200.0F)));
+        assertEquals("heals in about 1 day", BodyWords.healing(healingIn(1300.0F)));
+        assertEquals("heals in about 6 hours", BodyWords.healing(healingIn(6.0F * 50.0F)));
+        assertEquals("heals within the hour", BodyWords.healing(healingIn(20.0F)));
+        assertEquals("not healing", BodyWords.healing(healingIn(Float.POSITIVE_INFINITY)));
+    }
+
+    private static BodyStatusSnapshot.Injury healingIn(float seconds) {
+        return new BodyStatusSnapshot.Injury(BiologicalInjury.Kind.CUT, "x:torso", 0.5F, 0.0F, 0.0F, false, 1, seconds);
+    }
+
     private static BodyStatusSnapshot snapshotWithCondition(float condition) {
         return new BodyStatusSnapshot(
             condition,

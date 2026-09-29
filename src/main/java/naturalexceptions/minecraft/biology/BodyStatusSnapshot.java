@@ -64,14 +64,16 @@ public final class BodyStatusSnapshot {
         private final boolean closed;
         /** How many separate injury records this line stands for (see {@link #groupedInjuries()}). */
         private final int count;
+        /** Estimated seconds until it closes at the body's current state; infinite if it is not healing. */
+        private final float healSeconds;
 
         public Injury(BiologicalInjury.Kind kind, String regionId, float severity, float bleeding, float treatment,
             boolean closed) {
-            this(kind, regionId, severity, bleeding, treatment, closed, 1);
+            this(kind, regionId, severity, bleeding, treatment, closed, 1, Float.POSITIVE_INFINITY);
         }
 
-        Injury(BiologicalInjury.Kind kind, String regionId, float severity, float bleeding, float treatment,
-            boolean closed, int count) {
+        public Injury(BiologicalInjury.Kind kind, String regionId, float severity, float bleeding, float treatment,
+            boolean closed, int count, float healSeconds) {
             this.kind = kind;
             this.regionId = regionId;
             this.severity = severity;
@@ -79,6 +81,11 @@ public final class BodyStatusSnapshot {
             this.treatment = treatment;
             this.closed = closed;
             this.count = count;
+            this.healSeconds = healSeconds;
+        }
+
+        public float healSeconds() {
+            return healSeconds;
         }
 
         public int count() {
@@ -198,7 +205,9 @@ public final class BodyStatusSnapshot {
                     (float) injury.severity(),
                     (float) injury.bleedingMillilitresPerSecond(),
                     (float) injury.treatment(),
-                    injury.closed()));
+                    injury.closed(),
+                    1,
+                    (float) state.secondsToHeal(injury)));
         }
         List<Exposure> exposures = new ArrayList<>();
         for (ExposureBurden burden : state.exposures()) {
@@ -256,6 +265,7 @@ public final class BodyStatusSnapshot {
             buf.writeFloat(injury.bleeding);
             buf.writeFloat(injury.treatment);
             buf.writeBoolean(injury.closed);
+            buf.writeFloat(injury.healSeconds);
         }
         buf.writeByte(exposures.size());
         for (Exposure exposure : exposures) {
@@ -294,7 +304,9 @@ public final class BodyStatusSnapshot {
                     buf.readFloat(),
                     buf.readFloat(),
                     buf.readFloat(),
-                    buf.readBoolean()));
+                    buf.readBoolean(),
+                    1,
+                    buf.readFloat()));
         }
         List<Exposure> exposures = new ArrayList<>();
         int exposureCount = Math.min(MAX_EXPOSURES, buf.readUnsignedByte());
@@ -444,7 +456,8 @@ public final class BodyStatusSnapshot {
                     group.bleeding + injury.bleeding,
                     Math.min(group.treatment, injury.treatment),
                     group.closed && injury.closed,
-                    group.count + injury.count));
+                    group.count + injury.count,
+                    Math.max(group.healSeconds, injury.healSeconds)));
         }
         return groups;
     }

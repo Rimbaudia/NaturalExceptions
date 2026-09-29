@@ -32,6 +32,7 @@ final class CombustionInhalationTest {
         assertTrue(firstBare > firstMasked);
         assertTrue(firstMasked > 0.0, "a physical filter reduces dose but is not immunity");
         assertEquals(firstBare * 0.25, firstMasked, 1.0e-9);
-        assertEquals(firstBare + secondBare, bare.exposureEffect(), 2.0e-5);
+        // Doses add up; the body clears a little in the second between them (half-life of two Minecraft days).
+        assertEquals(firstBare + secondBare, bare.exposureEffect(), 0.01);
     }
 }
