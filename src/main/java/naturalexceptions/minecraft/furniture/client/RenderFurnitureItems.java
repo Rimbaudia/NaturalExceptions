@@ -18,6 +18,7 @@ import org.lwjgl.opengl.GL12;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import naturalexceptions.minecraft.furniture.BlockPantryShelf;
 import naturalexceptions.minecraft.furniture.TileEntityMarketCounter;
 import naturalexceptions.minecraft.furniture.TileEntityPantryShelf;
 import naturalexceptions.minecraft.furniture.TileEntityStorage;
@@ -27,15 +28,18 @@ import naturalexceptions.minecraft.furniture.TileEntityWoodenTable;
 
 /**
  * Shows what furniture holds, drawn as a held item is (a sprite with thickness, or a small block): goods lying on
- * a counter or a table, food on a pantry shelf's front, things standing on a wall shelf, weapons hanging in a rack.
+ * a counter or a table, food inside a pantry shelf's tiers, things standing on a wall shelf, weapons in a rack.
  */
 @SideOnly(Side.CLIENT)
 public final class RenderFurnitureItems extends TileEntitySpecialRenderer {
 
-    /** Places on a table's top and a counter's, one per slot, and how each lies turned. */
-    private static final double[][] TABLE = { { 0.28, 0.28, 20 }, { 0.72, 0.28, -35 }, { 0.28, 0.72, 60 },
-        { 0.72, 0.72, -10 } };
-    private static final double[][] COUNTER = { { 0.2, 0.5, 15 }, { 0.5, 0.45, -25 }, { 0.8, 0.55, 40 } };
+    /**
+     * Places on a table's top and a counter's, one per slot, and how each lies turned; each thing is drawn small
+     * enough to stay inside its own place, so none runs into the next or over the edge.
+     */
+    private static final double[][] TABLE = { { 0.27, 0.27, 10 }, { 0.73, 0.27, -10 }, { 0.27, 0.73, 5 },
+        { 0.73, 0.73, -5 } };
+    private static final double[][] COUNTER = { { 0.3, 0.5, 0 }, { 0.7, 0.5, 0 } };
 
     private final RenderBlocks blocks = new RenderBlocks();
 
@@ -48,8 +52,14 @@ public final class RenderFurnitureItems extends TileEntitySpecialRenderer {
         GL11.glEnable(GL12.GL_RESCALE_NORMAL);
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         if (tile instanceof TileEntityWoodenTable) {
-            for (int i = 0; i < TABLE.length; i++)
-                lying(storage.getStackInSlot(i), x + TABLE[i][0], y + 1.0, z + TABLE[i][1], (float) TABLE[i][2], 0.45F);
+            for (int i = 0; i < TABLE.length; i++) lying(
+                storage.getStackInSlot(i),
+                x + TABLE[i][0],
+                y + 1.0,
+                z + TABLE[i][1],
+                (float) TABLE[i][2],
+                0.3F,
+                0.2F);
         } else if (tile instanceof TileEntityMarketCounter) {
             for (int i = 0; i < COUNTER.length; i++) lying(
                 storage.getStackInSlot(i),
@@ -57,20 +67,33 @@ public final class RenderFurnitureItems extends TileEntitySpecialRenderer {
                 y + 1.0,
                 z + COUNTER[i][1],
                 (float) COUNTER[i][2],
-                0.45F);
+                0.34F,
+                0.22F);
         } else if (tile instanceof TileEntityPantryShelf) {
-            // Its front faces away from its wall: meta is that face (2..5); the wall is the opposite side.
+            // Inside the cabinet, three to a tier. Its front faces away from its wall: meta is that face (2..5).
             int wall = meta ^ 1;
             for (int i = 0; i < 9; i++) {
-                double u = 0.22 + 0.28 * (i % 3), v = 0.72 - 0.3 * (i / 3);
-                standing(storage.getStackInSlot(i), x, y, z, wall, u, v - 0.12, 1.02, 0.32F, false);
+                double u = 0.2 + 0.3 * (i % 3), floor = BlockPantryShelf.TIERS[i / 3];
+                standing(storage.getStackInSlot(i), x, y, z, wall, u, floor, 0.5, 0.26F, 0.18F, false);
             }
         } else if (tile instanceof TileEntityWallShelf) {
             for (int i = 0; i < 3; i++)
-                standing(storage.getStackInSlot(i), x, y, z, meta, 0.2 + 0.3 * i, 0.58, 0.28, 0.36F, false);
+                standing(storage.getStackInSlot(i), x, y, z, meta, 0.2 + 0.3 * i, 0.5625, 0.28, 0.3F, 0.2F, false);
         } else if (tile instanceof TileEntityWeaponRack) {
             for (int i = 0; i < 3; i++)
-                standing(storage.getStackInSlot(i), x, y, z, meta, 0.2 + 0.3 * i, 0.12, 0.2, 0.8F, true);
+                // A third of the rack each, a little further out each, so no two share a plane.
+                standing(
+                    storage.getStackInSlot(i),
+                    x,
+                    y,
+                    z,
+                    meta,
+                    0.2 + 0.3 * i,
+                    0.1,
+                    0.14 + 0.03 * i,
+                    0.42F,
+                    0.3F,
+                    true);
         }
         GL11.glDisable(GL12.GL_RESCALE_NORMAL);
     }
@@ -88,11 +111,12 @@ public final class RenderFurnitureItems extends TileEntitySpecialRenderer {
     }
 
     /** A thing lying on a surface at (x, y, z), turned {@code yaw} degrees. */
-    private void lying(ItemStack stack, double x, double y, double z, float yaw, float scale) {
+    private void lying(ItemStack stack, double x, double y, double z, float yaw, float itemScale, float blockScale) {
         if (stack == null || stack.getItem() == null) return;
         GL11.glPushMatrix();
         GL11.glTranslated(x, y, z);
         GL11.glRotatef(yaw, 0.0F, 1.0F, 0.0F);
+        float scale = isBlock(stack) ? blockScale : itemScale;
         GL11.glScalef(scale, scale, scale);
         if (isBlock(stack)) {
             GL11.glTranslatef(0.0F, 0.5F, 0.0F);
@@ -111,7 +135,7 @@ public final class RenderFurnitureItems extends TileEntitySpecialRenderer {
      * weapon is turned upright (its picture lies on the diagonal, blade to the upper right).
      */
     private void standing(ItemStack stack, double x, double y, double z, int wall, double u, double up, double out,
-        float scale, boolean weapon) {
+        float itemScale, float blockScale, boolean weapon) {
         if (stack == null || stack.getItem() == null) return;
         double px, pz;
         float yaw;
@@ -140,6 +164,7 @@ public final class RenderFurnitureItems extends TileEntitySpecialRenderer {
         GL11.glPushMatrix();
         GL11.glTranslated(x + px, y + up, z + pz);
         GL11.glRotatef(yaw, 0.0F, 1.0F, 0.0F);
+        float scale = isBlock(stack) ? blockScale : itemScale;
         GL11.glScalef(scale, scale, scale);
         if (isBlock(stack)) {
             GL11.glTranslatef(0.0F, 0.5F, 0.0F);

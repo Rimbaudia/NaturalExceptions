@@ -1,7 +1,6 @@
 package naturalexceptions.minecraft.furniture;
 
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockContainer;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.EntityLivingBase;
@@ -16,21 +15,28 @@ import net.minecraft.world.World;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import naturalexceptions.NaturalExceptions;
+import naturalexceptions.minecraft.block.PartModel;
 import naturalexceptions.minecraft.gui.NEGuiHandler;
 
 /**
- * A pantry shelf, facing out from the wall it stands against (meta: vanilla side 2..5). It holds food only. With an
- * empty hand, a hungry player eats from it, a proper meal ({@link Meals}); otherwise it opens.
+ * A pantry shelf: a spruce cabinet open at the front, three tiers of food inside (meta: the side its front faces,
+ * vanilla 2..5; its back is to the wall opposite). It holds food only. With an empty hand, a hungry player eats from
+ * it, a proper meal ({@link Meals}); otherwise it opens.
  */
-public final class BlockPantryShelf extends BlockContainer {
+public final class BlockPantryShelf extends BlockParts {
 
-    @SideOnly(Side.CLIENT)
-    private IIcon front;
+    /** Heights of the three tiers' floors, where the goods stand. */
+    public static final double[] TIERS = { 0.0625, 0.375, 0.6875 };
+
+    /** Authored with the wall to the north (-z): back, sides, bottom, two shelves, top. */
+    private static final double[][] PARTS = { { 0.0, 0.0, 0.0, 1.0, 1.0, 0.0625 }, { 0.0, 0.0, 0.0, 0.0625, 1.0, 1.0 },
+        { 0.9375, 0.0, 0.0, 1.0, 1.0, 1.0 }, { 0.0, 0.0, 0.0, 1.0, 0.0625, 1.0 }, { 0.0, 0.3125, 0.0, 1.0, 0.375, 1.0 },
+        { 0.0, 0.625, 0.0, 1.0, 0.6875, 1.0 }, { 0.0, 0.9375, 0.0, 1.0, 1.0, 1.0 } };
 
     public BlockPantryShelf() {
         super(Material.wood);
         setBlockName("pantryShelf");
-        setBlockTextureName("naturalexceptions:pantry_shelf_front");
+        setBlockTextureName("planks_spruce");
         setHardness(2.0F);
         setResistance(5.0F);
         setStepSound(soundTypeWood);
@@ -38,16 +44,32 @@ public final class BlockPantryShelf extends BlockContainer {
     }
 
     @Override
-    @SideOnly(Side.CLIENT)
-    public void registerBlockIcons(IIconRegister register) {
-        front = register.registerIcon("naturalexceptions:pantry_shelf_front");
+    public double[][] parts(int metadata) {
+        int front = metadata < 2 || metadata > 5 ? 3 : metadata;
+        double[][] out = new double[PARTS.length][];
+        for (int i = 0; i < PARTS.length; i++) out[i] = PartModel.rotate(PARTS[i], front ^ 1);
+        return out;
     }
 
     @Override
     @SideOnly(Side.CLIENT)
+    public void registerBlockIcons(IIconRegister register) {}
+
+    @Override
+    @SideOnly(Side.CLIENT)
     public IIcon getIcon(int side, int meta) {
-        int facing = meta < 2 ? 3 : meta;
-        return side == facing ? front : Blocks.planks.getIcon(side, 1);
+        return Blocks.planks.getIcon(side, 1);
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public IIcon partIcon(int index, int metadata) {
+        return getIcon(1, 1);
+    }
+
+    @Override
+    public int inventoryMetadata() {
+        return 3;
     }
 
     @Override
@@ -62,7 +84,12 @@ public final class BlockPantryShelf extends BlockContainer {
     }
 
     @Override
-    public TileEntity createNewTileEntity(World world, int meta) {
+    public boolean hasTileEntity(int metadata) {
+        return true;
+    }
+
+    @Override
+    public TileEntity createTileEntity(World world, int metadata) {
         return new TileEntityPantryShelf();
     }
 
@@ -92,10 +119,5 @@ public final class BlockPantryShelf extends BlockContainer {
         if (tile instanceof TileEntityStorage && !world.isRemote)
             ((TileEntityStorage) tile).dropContents(world, x, y, z);
         super.breakBlock(world, x, y, z, block, meta);
-    }
-
-    @Override
-    public boolean isOpaqueCube() {
-        return true;
     }
 }
