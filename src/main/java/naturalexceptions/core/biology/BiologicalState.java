@@ -299,17 +299,19 @@ public final class BiologicalState {
         return total;
     }
 
+    /**
+     * How sound the body is, 0 to 1, which the host's health follows: injuries, blood lost and exposure take from it.
+     * Hunger and thirst do not: an empty stomach is felt through the food bar (no healing, no sprinting, starving
+     * when it is empty), not as wounds.
+     */
     public double condition() {
-        double reserve = 0.35 + 0.65 * Math.min(
-            energyReserveJoules / Math.max(1.0, physiology().energyCapacityJoules()),
-            hydrationReserveMillilitres / Math.max(1.0, physiology().hydrationCapacityMillilitres()));
         double injuryBurden = 0.0;
         for (BiologicalInjury injury : injuries) injuryBurden = Math.min(0.7, injuryBurden + injury.severity() * 0.15);
         return Math.max(
             0.0,
             Math.min(
                 1.0,
-                reserve - injuryBurden
+                1.0 - injuryBurden
                     - Math.min(0.7, exposureEffect() * 0.0001)
                     - Math.min(
                         0.4,

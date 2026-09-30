@@ -33,6 +33,14 @@ final class BodyNeedsTest {
     }
 
     @Test
+    void hungerAndThirstAreNotWounds() {
+        BiologicalState body = body();
+        assertEquals(1.0, body.condition(), 1.0e-9, "whole and fed");
+        body.spend(body.energyReserveJoules() * 0.9, body.hydrationReserveMillilitres() * 0.9);
+        assertEquals(1.0, body.condition(), 1.0e-9, "hungry and thirsty, but not hurt: hearts stay");
+    }
+
+    @Test
     void anArrowWoundBleedsThenClots() {
         BiologicalState body = body();
         BiologicalInteractionResolver.apply(

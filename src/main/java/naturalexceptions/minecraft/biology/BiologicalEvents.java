@@ -208,6 +208,14 @@ public final class BiologicalEvents {
     /** Health lost to the body itself (burns, bleeding, poisoning): it has a cause of its own, not an attacker. */
     public static final net.minecraft.util.DamageSource BODY_FAILURE = new BodyFailureSource();
 
+    /** Health lost to thirst: with no water left, a little every few seconds, as starving does. */
+    public static final net.minecraft.util.DamageSource THIRST = new net.minecraft.util.DamageSource(
+        "naturalexceptions.thirst").setDamageBypassesArmor();
+    private static final String KEY_THIRST_WARNING = "naturalexceptions.thirst_warning";
+    /** Ticks between thirst's blows, and what each takes. */
+    static final int THIRST_TICKS = 80;
+    static final float THIRST_DAMAGE = 1.0F;
+
     private static final class BodyFailureSource extends net.minecraft.util.DamageSource {
 
         BodyFailureSource() {
@@ -359,8 +367,27 @@ public final class BiologicalEvents {
         player.getFoodStats()
             .setFoodLevel(Math.max(0, Math.min(20, derivedFood)));
         applyMovement(player, state);
+        thirst(player, state);
         if (player instanceof net.minecraft.entity.player.EntityPlayerMP)
             BodyStatusSync.maybeSend((net.minecraft.entity.player.EntityPlayerMP) player, state, now);
+    }
+
+    /** With no water left the body suffers: a warning once, then a heart's half every four seconds. */
+    private static void thirst(EntityPlayer player, BiologicalState state) {
+        net.minecraft.nbt.NBTTagCompound data = player.getEntityData();
+        boolean parched = state.hydrationReserveMillilitres() <= 0.0;
+        if (!parched) {
+            data.setBoolean(KEY_THIRST_WARNING, false);
+            return;
+        }
+        if (player.capabilities.isCreativeMode) return;
+        if (!data.getBoolean(KEY_THIRST_WARNING)) {
+            data.setBoolean(KEY_THIRST_WARNING, true);
+            player.addChatMessage(
+                new net.minecraft.util.ChatComponentText(
+                    "\u00a7cYou are parched. Drink: a water bottle, a barrel, a fountain."));
+        }
+        if (player.ticksExisted % THIRST_TICKS == 0) player.attackEntityFrom(THIRST, THIRST_DAMAGE);
     }
 
     @SubscribeEvent
