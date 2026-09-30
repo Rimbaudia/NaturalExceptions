@@ -20,11 +20,14 @@ Legend (one character per block):
   W  Warden Seal                   ?  ruined: masonry or air, half and half
   H  ladder (on the nearest wall)  K  cauldron      O  furnace     N  crafting table     A  anvil
   |  glass pane                    <  stained glass pane (the "glass:" colour)             E  glass
-  o  fence                         ]  fence gate    /  wooden pressure plate (on a fence: a table)
-  Q  quartz pillar                 Y  oak log       *  oak leaves  Z  hay bale
-  p  oak planks                    P  spruce planks
-  1-4  spruce stairs rising to the north, east, south, west; 5-8 the same upside down
-  _ -  spruce slab, bottom / top half                  D  wooden door (two layers)       e  chiseled quartz
+  o  fence                         ]  fence gate    /  Wooden Table (of the timber wood)
+  Y  log (timber)                  *  oak leaves    Z  hay bale
+  p  oak planks                    P  planks (timber)
+  1-4  wooden stairs rising to the north, east, south, west; 5-8 the same upside down
+  _ -  wooden slab, bottom / top half                  D  wooden door (two layers)
+       (stairs and slabs from the "eaves:" layer up are of the "roof:" material: spruce, dark oak or Skyslate)
+Skyslate:
+  Q  Skyslate bricks               e  Skyslate shingles
 Skystone:
   0  pillar, upright               ( )  pillar lying along x / along z
   9  chiseled                      j  polished                     k  tiles
@@ -35,6 +38,10 @@ Furnishings:
   d  torch (on a wall beside it, else standing)                   [  trapdoor shelf (hinged to a wall beside it)
   @  flower pot with a plant       &  brewing stand   $  enchanting table   +  jukebox
   }  an empty chest (furniture: a footlocker, a cupboard)
+  !  barrel      {  crate      :  pantry shelf (faces away from the wall beside it)
+  `  market counter (the "goods:" kind)        '  awning (the "awning:" colour), hung from the wall beside it
+
+Headers for buildings: carpet, glass (colours); roof, timber, eaves; goods; awning. See RoomTemplate.java.
 
 Doorways must stay open on layers 1-3: the middle three columns or rows next to each wall, two deep.
 Rooms that link levels also keep each corner's 2 x 2 open on layers 1-3.

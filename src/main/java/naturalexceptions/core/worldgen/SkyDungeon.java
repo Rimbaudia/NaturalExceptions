@@ -74,11 +74,15 @@ public final class SkyDungeon {
         FENCE,
         /** Quartz; meta 0 pillar, 1 chiseled, 2 plain. */
         QUARTZ,
+        /** Log, upright; meta 0 oak, 1 spruce, 5 dark oak. */
         LOG,
         LEAVES,
-        /** Spruce stairs; meta: vanilla stairs meta (0 up to the east, 1 west, 2 south, 3 north; +4 upside down). */
+        /**
+         * Wooden stairs; meta: vanilla stairs meta (0 up to the east, 1 west, 2 south, 3 north; +4 upside down), plus
+         * the wood times 8 (0 spruce, 1 oak, 2 dark oak).
+         */
         STAIRS,
-        /** Spruce slab; meta 0 bottom half, 8 top half. */
+        /** Wooden slab; meta: vanilla wooden slab meta (0 oak, 1 spruce, 5 dark oak), plus 8 for the top half. */
         SLAB,
         /** A wooden door's lower half; meta: vanilla door facing (0..3). The upper half is written with it. */
         DOOR,
@@ -119,7 +123,29 @@ public final class SkyDungeon {
         ENCHANTING_TABLE,
         JUKEBOX,
         /** Stained glass pane; meta: vanilla colour. */
-        STAINED_GLASS_PANE
+        STAINED_GLASS_PANE,
+        /** Skyslate; meta 0 bricks, 1 shingles. */
+        SKYSLATE,
+        /** Skyslate shingle stairs (roofs); meta as {@link #SKY_STAIRS}. */
+        SHINGLE_STAIRS,
+        /** Skyslate slab; meta 0 brick, 1 shingles; plus 8 for the top half. */
+        SKYSLATE_SLAB,
+        CRATE,
+        /** A barrel; meta 1 when it holds water. */
+        BARREL,
+        /** A pantry shelf; meta: the way its front faces ({@link #NORTH} ..). */
+        PANTRY_SHELF,
+        /** A market counter, stocked; meta: its goods (0 produce, 1 fish, 2 pottery, 3 cloth). */
+        MARKET_COUNTER,
+        /** A wooden table; meta 0 oak, 1 spruce, 2 dark oak. */
+        WOODEN_TABLE,
+        /** An awning; meta: colour (0 red, 1 blue, 2 green, 3 yellow) times 4, plus the wall it hangs from. */
+        AWNING,
+        DIRT,
+        /** Tilled, watered soil. */
+        FARMLAND,
+        /** A ripe crop on farmland; meta 0 wheat, 1 carrots, 2 potatoes. */
+        CROP
     }
 
     /** Directions for beds, torches, trapdoors and fence gates. */
@@ -264,6 +290,8 @@ public final class SkyDungeon {
     private int[] tableIndex = new int[1 << 13];
     private final List<String> mobNames = new ArrayList<>();
     final List<Room> rooms = new ArrayList<>();
+    /** The citadel's features out on its island (a farmstead, the pier ...), by name, as they were built. */
+    final List<String> features = new ArrayList<>();
     final List<Connection> connections = new ArrayList<>();
     int[] entrance;
     /** {minX, minZ, maxX, maxZ} of what stands on the island's surface. */
@@ -371,6 +399,10 @@ public final class SkyDungeon {
 
     private static long chunkKey(int cx, int cz) {
         return ((long) cx << 32) ^ (cz & 0xffffffffL);
+    }
+
+    public List<String> features() {
+        return Collections.unmodifiableList(features);
     }
 
     public List<Room> rooms() {

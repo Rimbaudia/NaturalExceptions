@@ -36,6 +36,7 @@ final class RoomWriter {
     void write(RoomTemplate template, int rotation, int minX, int minZ, int floor, RoomTemplate.Role role,
         boolean walls) {
         int w = template.width(rotation), dp = template.depth(rotation), h = template.height;
+        this.floorY = floor;
         boolean warded = role == RoomTemplate.Role.VAULT;
         if (walls) d.shell(minX - 1, floor, minZ - 1, minX + w, floor + h + 1, minZ + dp, warded);
         if (warded) {
@@ -51,8 +52,14 @@ final class RoomWriter {
                 int x = minX + tx, z = minZ + tz, wy = floor + y;
                 boolean shellLayer = y == 0 || y == h + 1;
                 if (c == 'D') door(template, rotation, tx, y, tz, x, wy, z);
-                else if (c >= '1' && c <= '8') d.put(x, wy, z, Block.STAIRS, stairs(c, rotation));
-                else if (SKY_STAIRS.indexOf(c) >= 0)
+                else if (c >= '1' && c <= '8') woodStairs(template, x, wy, z, y, stairs(c, rotation));
+                else if (c == ':') {
+                    int wall = nearestSolid(template, rotation, tx, y, tz);
+                    d.put(x, wy, z, Block.PANTRY_SHELF, wall < 0 ? SkyDungeon.SOUTH : (wall + 2) & 3);
+                } else if (c == '\'') {
+                    int wall = nearestSolid(template, rotation, tx, y, tz);
+                    d.put(x, wy, z, Block.AWNING, template.awning << 2 | (wall < 0 ? SkyDungeon.NORTH : wall));
+                } else if (SKY_STAIRS.indexOf(c) >= 0)
                     d.put(x, wy, z, Block.SKY_STAIRS, stairs((char) ('1' + SKY_STAIRS.indexOf(c)), rotation));
                 else if (c == 'b' || c == 'u') bed(template, rotation, tx, y, tz, x, wy, z, c == 'b');
                 else if (c == 'd') d.put(x, wy, z, Block.TORCH, torch(template, rotation, tx, y, tz));
@@ -85,6 +92,31 @@ final class RoomWriter {
     }
 
     private static final int LAYER_FLOOR = 0, LAYER_WALL = 1, LAYER_CEILING = 2;
+    /** Planks (and log) meta for each timber: oak, spruce, dark oak. */
+    private static final int[] PLANKS = { 0, 1, 5 };
+    /** The wood of stairs for each timber, as {@link Block#STAIRS} counts it: oak 1, spruce 0, dark oak 2. */
+    private static final int[] STAIR_WOOD = { 1, 0, 2 };
+    private int floorY;
+
+    /** The template layer of world height {@code y}. */
+    private int layerY(RoomTemplate t, int y) {
+        return y - floorY;
+    }
+
+    /** Stairs of the roof's material from the eaves up, of the timber's wood below. */
+    private void woodStairs(RoomTemplate t, int x, int y, int z, int layer, int meta) {
+        if (layer >= t.eaves && t.roof == 2) d.put(x, y, z, Block.SHINGLE_STAIRS, meta);
+        else if (layer >= t.eaves) d.put(x, y, z, Block.STAIRS, meta | (t.roof == 1 ? 2 : 0) << 3);
+        else d.put(x, y, z, Block.STAIRS, meta | STAIR_WOOD[t.timber] << 3);
+    }
+
+    private void slab(RoomTemplate t, int x, int y, int z, int layer, boolean top) {
+        int half = top ? 8 : 0;
+        if (layer >= t.eaves && t.roof == 2) d.put(x, y, z, Block.SKYSLATE_SLAB, 1 | half);
+        else if (layer >= t.eaves) d.put(x, y, z, Block.SLAB, (t.roof == 1 ? 5 : 1) | half);
+        else d.put(x, y, z, Block.SLAB, PLANKS[t.timber] | half);
+    }
+
     /** Skystone stairs rising to the north, east, south, west; then the same upside down. */
     static final String SKY_STAIRS = "ilmnJUVX";
 
@@ -212,26 +244,18 @@ final class RoomWriter {
             case 'M':
                 d.put(x, y, z, Block.SKYSTONE, 2);
                 break;
-            case 'Q':
-                d.put(x, y, z, Block.QUARTZ);
-                break;
             case 'Y':
-                d.put(x, y, z, Block.LOG);
-                break;
-            case 'e':
-                d.put(x, y, z, Block.QUARTZ, 1);
+                d.put(x, y, z, Block.LOG, PLANKS[template.timber]);
                 break;
             case '_':
-                d.put(x, y, z, Block.SLAB, 0);
-                break;
             case '-':
-                d.put(x, y, z, Block.SLAB, 8);
+                slab(template, x, y, z, layerY(template, y), c == '-');
                 break;
             case 'p':
                 d.put(x, y, z, Block.PLANKS, 0);
                 break;
             case 'P':
-                d.put(x, y, z, Block.PLANKS, 1);
+                d.put(x, y, z, Block.PLANKS, PLANKS[template.timber]);
                 break;
             case '0':
                 d.pillar(x, y, z);
@@ -264,7 +288,22 @@ final class RoomWriter {
                 d.put(x, y, z, Block.FLOWER_POT, (int) (d.noise.unit3(x, y, z, 27) * SkyDungeon.POT_PLANTS));
                 break;
             case '/':
-                d.put(x, y, z, Block.PRESSURE_PLATE);
+                d.put(x, y, z, Block.WOODEN_TABLE, template.timber);
+                break;
+            case '!':
+                d.put(x, y, z, Block.BARREL);
+                break;
+            case '{':
+                d.put(x, y, z, Block.CRATE);
+                break;
+            case '`':
+                d.put(x, y, z, Block.MARKET_COUNTER, template.goods);
+                break;
+            case 'Q':
+                d.put(x, y, z, Block.SKYSLATE, 0);
+                break;
+            case 'e':
+                d.put(x, y, z, Block.SKYSLATE, 1);
                 break;
             case '&':
                 d.put(x, y, z, Block.BREWING_STAND);

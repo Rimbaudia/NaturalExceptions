@@ -389,11 +389,73 @@ final class LandmarkMaterializer {
             case QUARTZ:
                 set(world, x, y, z, Blocks.quartz_block, meta == 1 ? 1 : meta == 2 ? 0 : 2);
                 break;
-            case STAIRS:
-                set(world, x, y, z, Blocks.spruce_stairs, meta);
+            case STAIRS: {
+                int wood = (meta >> 3) & 3;
+                Block stairs = wood == 1 ? Blocks.oak_stairs
+                    : wood == 2 ? Blocks.dark_oak_stairs : Blocks.spruce_stairs;
+                set(world, x, y, z, stairs, meta & 7);
                 break;
+            }
             case SLAB:
-                set(world, x, y, z, Blocks.wooden_slab, 1 | (meta & 8));
+                set(world, x, y, z, Blocks.wooden_slab, meta & 15);
+                break;
+            case SKYSLATE:
+                set(
+                    world,
+                    x,
+                    y,
+                    z,
+                    orElse(NEBlocks.skyslate, Blocks.stonebrick),
+                    NEBlocks.skyslate != null ? meta & 1 : 0);
+                break;
+            case SHINGLE_STAIRS:
+                set(world, x, y, z, orElse(NEBlocks.skyslateShingleStairs, Blocks.stone_brick_stairs), meta & 7);
+                break;
+            case SKYSLATE_SLAB:
+                if (NEBlocks.skyslateSlab != null) set(world, x, y, z, NEBlocks.skyslateSlab, meta & 15);
+                else set(world, x, y, z, Blocks.stone_slab, 5 | (meta & 8));
+                break;
+            case DIRT:
+                set(world, x, y, z, Blocks.dirt, 0);
+                break;
+            case FARMLAND:
+                set(world, x, y, z, Blocks.farmland, 7);
+                break;
+            case CROP:
+                set(world, x, y, z, meta == 1 ? Blocks.carrots : meta == 2 ? Blocks.potatoes : Blocks.wheat, 7);
+                break;
+            case CRATE:
+                set(world, x, y, z, orElse(NEBlocks.crate, Blocks.chest), 0);
+                break;
+            case BARREL: {
+                set(world, x, y, z, orElse(NEBlocks.barrel, Blocks.cauldron), 0);
+                TileEntity tile = world.getTileEntity(x, y, z);
+                if (meta == 1 && tile instanceof naturalexceptions.minecraft.furniture.TileEntityBarrel)
+                    while (((naturalexceptions.minecraft.furniture.TileEntityBarrel) tile).pourWater()) {}
+                break;
+            }
+            case PANTRY_SHELF: {
+                set(world, x, y, z, orElse(NEBlocks.pantryShelf, Blocks.bookshelf), SIDE_FACING[meta & 3]);
+                TileEntity tile = world.getTileEntity(x, y, z);
+                if (tile instanceof net.minecraft.inventory.IInventory)
+                    Wares.stockPantry((net.minecraft.inventory.IInventory) tile, wareSeed(x, y, z));
+                break;
+            }
+            case MARKET_COUNTER: {
+                set(world, x, y, z, orElse(NEBlocks.marketCounter, Blocks.crafting_table), meta & 3);
+                TileEntity tile = world.getTileEntity(x, y, z);
+                if (tile instanceof net.minecraft.inventory.IInventory)
+                    Wares.stockCounter((net.minecraft.inventory.IInventory) tile, meta & 3, wareSeed(x, y, z));
+                break;
+            }
+            case WOODEN_TABLE:
+                if (NEBlocks.woodenTable != null) set(world, x, y, z, NEBlocks.woodenTable, meta & 3);
+                else set(world, x, y, z, Blocks.fence, 0);
+                break;
+            case AWNING:
+                if (NEBlocks.marketAwning != null)
+                    set(world, x, y, z, NEBlocks.marketAwning, (meta & 12) | AWNING_WALL[meta & 3]);
+                else set(world, x, y, z, Blocks.wool, 14);
                 break;
             case DOOR: {
                 // Both halves at once (same column, same chunk); the layout keeps the block above clear for it.
@@ -414,7 +476,8 @@ final class LandmarkMaterializer {
                 set(world, x, y, z, Blocks.glass, 0);
                 break;
             case LOG:
-                set(world, x, y, z, Blocks.log, 0);
+                if (meta == 5) set(world, x, y, z, Blocks.log2, 1); // dark oak
+                else set(world, x, y, z, Blocks.log, meta & 3);
                 break;
             case LEAVES:
                 set(world, x, y, z, Blocks.leaves, 4); // placed, not grown: never decays
@@ -424,6 +487,15 @@ final class LandmarkMaterializer {
                 set(world, x, y, z, Blocks.air, 0);
                 break;
         }
+    }
+
+    /** Vanilla side for a dungeon direction (north, east, south, west): what a shelf's front faces. */
+    private static final int[] SIDE_FACING = { 2, 5, 3, 4 };
+    /** An awning's wall, as its block counts them (0 north, 1 south, 2 west, 3 east), by dungeon direction. */
+    private static final int[] AWNING_WALL = { 0, 3, 1, 2 };
+
+    private static long wareSeed(int x, int y, int z) {
+        return x * 0x9E3779B97F4A7C15L ^ y * 0xC2B2AE3D27D4EB4FL ^ z * 0x165667B19E3779F9L;
     }
 
     /** Vanilla facing for a dungeon direction (north, east, south, west): beds and fence gates. */

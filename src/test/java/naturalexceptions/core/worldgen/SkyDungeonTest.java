@@ -244,6 +244,101 @@ final class SkyDungeonTest {
     }
 
     @Test
+    void citadelsHaveAWetMoatAClearWallLaneAndLandsOutside() {
+        int citadels = 0;
+        for (Sample s : samples()) {
+            if (s.dungeon.kind() != SkyDungeon.Kind.CITADEL) continue;
+            citadels++;
+            int cx = s.island.centreX(), cz = s.island.centreZ(), b = s.island.centreY() + 1;
+            int m = (CitadelLayout.MOAT_IN + CitadelLayout.MOAT_OUT) / 2;
+            for (int[] at : new int[][] { { cx - m, cz }, { cx + m, cz }, { cx, cz - m }, { cx + 20, cz + m } }) {
+                Piece water = s.dungeon.at(at[0], b - 1, at[1]);
+                assertTrue(water != null && water.block == Block.WATER, s.name() + ": the moat holds water");
+            }
+            // Behind the plots and in front of the wall, the lane stays open where the stairs go up.
+            int face = CitadelLayout.OUTER - CitadelLayout.THICK;
+            for (int x = 9; x < 9 + CitadelLayout.OUTER_HEIGHT; x++)
+                for (int row = face - 3; row < face; row++) for (int y = b + 1; y <= b + 2; y++) {
+                    Piece p = s.dungeon.at(cx + x, y, cz - row);
+                    assertTrue(
+                        p == null || passableForWalk(p.block),
+                        s.name() + ": the lane before the north wall's stairs is clear at " + x + "," + row);
+                }
+            assertTrue(
+                s.dungeon.features()
+                    .size() >= 3,
+                s.name() + ": lands outside the walls: " + s.dungeon.features());
+        }
+        assertTrue(citadels >= 3, "enough citadels to judge: " + citadels);
+    }
+
+    @Test
+    void towersCanBeClimbedToTheWalkAndTheRoof() {
+        for (Sample s : samples()) {
+            if (s.dungeon.kind() != SkyDungeon.Kind.CITADEL) continue;
+            int cx = s.island.centreX(), cz = s.island.centreZ(), b = s.island.centreY() + 1;
+            int c = CitadelLayout.OUTER - 1;
+            int tx = cx + c, tz = cz + c; // the south-east corner tower; its door is at its inner corner
+            Set<Long> reached = new HashSet<>();
+            for (boolean round : new boolean[] { false, true }) {
+                int[] door = CitadelLayout.door(4, 1, 1, round);
+                int ox = tx + door[0] - 1, oz = tz + door[1] - (round ? 0 : 0);
+                if (standable(s, ox, b + 1, oz))
+                    reached.addAll(climb(s, new int[] { ox, b + 1, oz }, tx - 5, tx + 5, tz - 5, tz + 5, b + 40));
+            }
+            boolean walk = false, roof = false;
+            for (long k : reached) {
+                int y = (int) (k >> 40);
+                if (y == b + CitadelLayout.OUTER_HEIGHT + 1) walk = true;
+                if (y >= b + CitadelLayout.OUTER_HEIGHT + 7) roof = true;
+            }
+            assertTrue(walk, s.name() + ": up the tower's stair to the wall-walk");
+            assertTrue(roof, s.name() + ": and on up to its roof");
+        }
+    }
+
+    /** Places a player can stand in, from {@code start}, within the box; jumps of one, falls of any height. */
+    private static Set<Long> climb(Sample s, int[] start, int x0, int x1, int z0, int z1, int yMax) {
+        Set<Long> seen = new HashSet<>();
+        ArrayDeque<int[]> queue = new ArrayDeque<>();
+        queue.add(start);
+        seen.add(walkKey(start[0], start[1], start[2]));
+        while (!queue.isEmpty()) {
+            int[] p = queue.poll();
+            for (int[] st : new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                int x = p[0] + st[0], z = p[2] + st[1];
+                if ((x < x0 || x > x1 || z < z0 || z > z1) && !(x == start[0] && z == start[2])) continue;
+                int y = -1;
+                if (p[1] + 1 <= yMax && open(s, p[0], p[1] + 2, p[2]) && standable(s, x, p[1] + 1, z)) y = p[1] + 1;
+                else if (standable(s, x, p[1], z)) y = p[1];
+                else if (open(s, x, p[1], z) && open(s, x, p[1] + 1, z)) {
+                    int f = p[1];
+                    while (f > p[1] - 12 && open(s, x, f - 1, z)) f--;
+                    if (standable(s, x, f, z)) y = f;
+                }
+                if (y >= 0 && seen.add(walkKey(x, y, z))) queue.add(new int[] { x, y, z });
+            }
+        }
+        return seen;
+    }
+
+    private static boolean standable(Sample s, int x, int y, int z) {
+        return open(s, x, y, z) && open(s, x, y + 1, z) && !open(s, x, y - 1, z);
+    }
+
+    private static long walkKey(int x, int y, int z) {
+        return (long) y << 40 | (long) (x & 0xFFFFF) << 20 | (z & 0xFFFFF);
+    }
+
+    private static boolean passableForWalk(Block block) {
+        return block == Block.AIR || block == Block.CARPET
+            || block == Block.TORCH
+            || block == Block.TALL_GRASS
+            || block == Block.FLOWER
+            || block == Block.WINDBLOOM;
+    }
+
+    @Test
     void everyBedHasBothHalves() {
         int beds = 0;
         int[][] step = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
@@ -505,8 +600,9 @@ final class SkyDungeonTest {
     @Test
     void theDungeonStaysOnItsIslandAndIsTheSameEveryTime() {
         for (Sample s : samples()) {
+            // Only a citadel's pier reaches out over the sky, and no further than the island's chunks are written.
             for (Piece piece : s.dungeon.pieces()) assertTrue(
-                s.field.reach(s.island, piece.x, piece.z) < 1.0,
+                s.field.reach(s.island, piece.x, piece.z) < (s.dungeon.kind() == SkyDungeon.Kind.CITADEL ? 1.18 : 1.0),
                 s.name() + ": piece off the island at " + piece.x + "," + piece.z);
         }
         Sample s = sanctums().get(0);
@@ -567,7 +663,7 @@ final class SkyDungeonTest {
      */
     private static boolean walksTo(Sample s, int tx, int tz, Set<Long> blocked) {
         int b = s.island.centreY() + 1, cx = s.island.centreX(), cz = s.island.centreZ(), r = 70;
-        int[] start = s.dungeon.entrance();
+        int[] start = { cx, b + 1, cz + CitadelLayout.MOAT_OUT }; // on the drawbridge
         Set<Long> seen = new HashSet<>();
         ArrayDeque<int[]> queue = new ArrayDeque<>();
         queue.add(new int[] { start[0], start[2] });

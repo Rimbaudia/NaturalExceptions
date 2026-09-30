@@ -33,11 +33,12 @@ final class CitadelLayout {
 
     /** The level number of the citadel's own rooms (the catacomb's levels count from 0 downwards). */
     static final int SURFACE = -1;
-    static final int OUTER = 50, OUTER_HEIGHT = 8;
+    static final int OUTER = 53, OUTER_HEIGHT = 8;
     static final int INNER = 24, INNER_HEIGHT = 10;
     static final int THICK = 3;
-    static final int MOAT_IN = 52, MOAT_OUT = 56, MOAT_DEPTH = 4;
+    static final int MOAT_IN = 55, MOAT_OUT = 59, MOAT_DEPTH = 4;
     static final int ROAD_IN = 25, ROAD_OUT = 28;
+    /** Plots run from the ring road back to 46; the lane behind them, along the outer wall, is four wide. */
     static final int PLOT_FRONT = 30, PLOT_BACK = 46;
 
     private final SkyDungeon d;
@@ -73,12 +74,13 @@ final class CitadelLayout {
         square();
         stairsUp(); // last in the town: nothing is paved over the flights
         approach();
+        outskirts();
         watchtower();
 
         // Under the keep: the catacomb, levels of it, with the Sky Key, the Sky Warden and the vault.
         new SanctumLayout(d, b).build();
 
-        d.entrance = new int[] { cx, b + 1, cz + MOAT_OUT + 4 };
+        d.entrance = new int[] { cx, groundAt(0, MOAT_OUT + 4) + 1, cz + MOAT_OUT + 4 };
         int reach = (int) Math.min(radius - 4, 84);
         d.surface = new int[] { cx - reach, cz - reach, cx + reach, cz + reach };
     }
@@ -112,9 +114,13 @@ final class CitadelLayout {
     }
 
     private void lampPost(int dx, int dz) {
-        put(dx, b + 1, dz, Block.FENCE);
-        put(dx, b + 2, dz, Block.FENCE);
-        put(dx, b + 3, dz, Block.LAMP);
+        lampPost(dx, dz, b);
+    }
+
+    private void lampPost(int dx, int dz, int ground) {
+        put(dx, ground + 1, dz, Block.FENCE);
+        put(dx, ground + 2, dz, Block.FENCE);
+        put(dx, ground + 3, dz, Block.LAMP);
     }
 
     // --- Ground, moat and walls -----------------------------------------------------------------------------
@@ -130,15 +136,24 @@ final class CitadelLayout {
         }
     }
 
-    /** A dry moat, five wide and four deep, lined with stone, all round the outer wall. */
+    /**
+     * A moat five wide and four deep all round the outer wall, lined with stone and full of water to a block below
+     * the ground; a kerb of polished slabs along its outer lip, open where the drawbridge lands.
+     */
     private void moat() {
         for (int dx = -MOAT_OUT - 1; dx <= MOAT_OUT + 1; dx++) for (int dz = -MOAT_OUT - 1; dz <= MOAT_OUT + 1; dz++) {
             boolean ditch = inSquare(dx, dz, MOAT_OUT) && !inSquare(dx, dz, MOAT_IN - 1);
             boolean lining = inSquare(dx, dz, MOAT_OUT + 1) && !ditch && !inSquare(dx, dz, MOAT_IN - 2);
             if (ditch) {
-                for (int y = b - MOAT_DEPTH + 1; y <= b; y++) put(dx, y, dz, Block.AIR);
-                put(dx, b - MOAT_DEPTH, dz, Block.GRASS);
-            } else if (lining) for (int y = b - MOAT_DEPTH; y <= b; y++) stone(dx, y, dz);
+                put(dx, b, dz, Block.AIR);
+                for (int y = b - MOAT_DEPTH + 1; y <= b - 1; y++) put(dx, y, dz, Block.WATER);
+                stone(dx, b - MOAT_DEPTH, dz);
+            } else if (lining) {
+                for (int y = b - MOAT_DEPTH; y <= b - 1; y++) stone(dx, y, dz);
+                put(dx, b, dz, Block.POLISHED);
+                boolean outerLip = !inSquare(dx, dz, MOAT_OUT);
+                if (outerLip && !(dz > 0 && Math.abs(dx) <= 3)) put(dx, b + 1, dz, Block.SKY_SLAB, 2);
+            }
         }
     }
 
@@ -157,7 +172,7 @@ final class CitadelLayout {
             stone(dx, b, dz);
             for (int y = b + 1; y < b + height; y++) {
                 if (buttress) put(dx, y, dz, Block.PILLAR);
-                else if (y == b + 1 && (outerEdge || innerEdge)) put(dx, y, dz, Block.POLISHED);
+                else if (y == b + 1 && (outerEdge || innerEdge)) put(dx, y, dz, Block.SKYSLATE, 0);
                 else stone(dx, y, dz);
             }
             if (outerEdge) {
@@ -165,7 +180,7 @@ final class CitadelLayout {
                 stone(dx, b + height + 1, dz);
                 if ((dx + dz) % 2 == 0) {
                     stone(dx, b + height + 2, dz);
-                    put(dx, b + height + 3, dz, Block.SKY_SLAB, 2);
+                    put(dx, b + height + 3, dz, Block.SKYSLATE_SLAB, 0);
                 }
             } else d.floorTile(cx + dx, b + height, cz + dz);
         }
@@ -213,8 +228,10 @@ final class CitadelLayout {
     }
 
     /**
-     * A tower on a wall: floors at the ground, at the wall-walk and a roof; stairs inside from each to the next;
-     * a door from the bailey and doors onto the walk where the wall meets it; arrow slits in its outer faces.
+     * A tower on a wall: a floor at the wall-walk and a walkable roof, joined to the ground by one stair winding up
+     * round the tower's middle ({@link #helix}); a door from the bailey, doors onto the walk where the wall meets it,
+     * arrow slits in the faces looking out. The stair passes each floor through an opening cut for its headroom, and
+     * comes out on the roof through a hatch railed on the far side.
      */
     private void tower(int tx, int tz, int half, int walk, int top, boolean round) {
         int outX = Integer.signum(tx), outZ = Integer.signum(tz);
@@ -222,15 +239,16 @@ final class CitadelLayout {
             int rr = dx * dx + dz * dz;
             if (round && rr > half * half + 2) continue;
             boolean rim = round ? rr > (half - 1) * (half - 1) + 1 : Math.abs(dx) == half || Math.abs(dz) == half;
-            int x = tx + dx, z = tz + dz;
             boolean corner = !round && Math.abs(dx) == half && Math.abs(dz) == half;
+            int x = tx + dx, z = tz + dz;
             stone(x, b - 1, z);
             if (rim) stone(x, b, z);
             else d.floorTile(cx + x, b, cz + z);
             for (int y = b + 1; y < b + top; y++) {
                 if (!rim) put(x, y, z, Block.AIR);
                 else if (corner) put(x, y, z, Block.PILLAR);
-                else if (y == b + 1 || y == b + walk) put(x, y, z, Block.POLISHED); // plinth, string course
+                else if (y == b + 1) put(x, y, z, Block.SKYSLATE, 0); // plinth
+                else if (y == b + walk) put(x, y, z, Block.POLISHED); // string course at the walk
                 else stone(x, y, z);
             }
             if (!rim) put(x, b + walk, z, Block.PLANKS, 1);
@@ -240,33 +258,21 @@ final class CitadelLayout {
                 stone(x, b + top + 1, z);
                 if ((dx + dz) % 2 == 0) {
                     stone(x, b + top + 2, z);
-                    put(x, b + top + 3, z, Block.SKY_SLAB, 2);
+                    put(x, b + top + 3, z, Block.SKYSLATE_SLAB, 0);
                 }
             }
         }
-        // Stairs: ground to the walk floor up one inner side, walk to roof up the other.
-        int side = tx > 0 ? -1 : 1;
-        int sx = tx + side * (half - 2);
-        for (int i = 0; i < walk && i < 2 * half - 3; i++) {
-            int z = tz - (half - 2) + i;
-            for (int y = b + 1; y < b + 1 + i; y++) stone(sx, y, z);
-            put(sx, b + 1 + i, z, Block.SKY_STAIRS, rising(0, 1));
-            for (int y = b + 2 + i; y <= b + walk; y++) put(sx, y, z, Block.AIR);
-        }
-        int rx = tx - side * (half - 2);
-        for (int i = 0; i < top - walk - 1 && i < 2 * half - 3; i++) {
-            int z = tz + (half - 2) - i;
-            for (int y = b + walk + 1; y < b + walk + 1 + i; y++) stone(rx, y, z);
-            put(rx, b + walk + 1 + i, z, Block.SKY_STAIRS, rising(0, -1));
-            for (int y = b + walk + 2 + i; y <= b + top; y++) put(rx, y, z, Block.AIR);
-        }
+        helix(tx, tz, walk, top);
         put(tx, b + walk - 1, tz, Block.LAMP);
         put(tx, b + top - 1, tz, Block.LAMP);
-        // A door from the bailey, on the face towards the middle.
-        int inX = -outX, inZ = -outZ;
-        if (inX != 0 && inZ != 0) inZ = 0;
-        int doorX = tx + inX * half, doorZ = tz + inZ * half;
-        for (int y = b + 1; y <= b + 2; y++) put(doorX, y, doorZ, Block.AIR);
+        // A door from the bailey, on the face towards the middle; a corner tower's two inner faces meet walls, so
+        // its door is at the inner corner, where the tower stands clear of them.
+        int[] door = door(half, outX, outZ, round);
+        for (int y = b + 1; y <= b + 2; y++) {
+            put(tx + door[0], y, tz + door[1], Block.AIR);
+            // A round tower's wall is two thick on the diagonal: the doorway goes through both.
+            if (round && outX != 0 && outZ != 0) put(tx + door[0] + outX, y, tz + door[1], Block.AIR);
+        }
         // Doors onto the walk wherever the wall runs into the tower; arrow slits in the faces looking out.
         int[][] faces = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
         for (int[] f : faces) {
@@ -282,6 +288,65 @@ final class CitadelLayout {
                 for (int y = b + walk + 2; y <= b + walk + 3; y++) put(fx, y, fz, Block.IRON_BARS);
             }
         }
+    }
+
+    /**
+     * A tower's ground door, as an offset from its middle: on the face towards the citadel's middle, or for a corner
+     * tower at its inner corner (the diagonal of a round one, beside the corner of a square one).
+     */
+    static int[] door(int half, int outX, int outZ, boolean round) {
+        if (outX == 0 || outZ == 0) return new int[] { -outX * half, -outZ * half };
+        if (round) return new int[] { -outX * (half - 1), -outZ * (half - 1) };
+        return new int[] { -outX * half, -outZ * (half - 2) };
+    }
+
+    /** The square ring two in from a tower's middle, walked clockwise from its north-west corner: 16 places. */
+    static int[][] helixRing() {
+        int[][] ring = new int[16][];
+        int k = 0;
+        for (int x = -2; x < 2; x++) ring[k++] = new int[] { x, -2 };
+        for (int z = -2; z < 2; z++) ring[k++] = new int[] { 2, z };
+        for (int x = 2; x > -2; x--) ring[k++] = new int[] { x, 2 };
+        for (int z = 2; z > -2; z--) ring[k++] = new int[] { -2, z };
+        return ring;
+    }
+
+    /**
+     * The stair round a tower: step {@code i} is at the ring's place {@code i % 16}, one higher than the last, rising
+     * from the ground to the roof. The walk floor keeps its ring places except where the stair needs headroom through
+     * it; the roof opens over the last steps (the hatch) and a rail stands round the hatch but for its way out.
+     */
+    private void helix(int tx, int tz, int walk, int top) {
+        int[][] ring = helixRing();
+        int steps = top - 1; // the last step's top is one below the roof: step up from it onto the roof
+        for (int i = 0; i < steps; i++) {
+            int[] at = ring[i % ring.length], next = ring[(i + 1) % ring.length];
+            int y = b + 1 + i;
+            put(tx + at[0], y, tz + at[1], Block.SKY_STAIRS, rising(next[0] - at[0], next[1] - at[1]));
+            // Headroom over the step: three open blocks, cutting through the walk floor or the roof.
+            for (int h = y + 1; h <= y + 3 && h <= b + top; h++) put(tx + at[0], h, tz + at[1], Block.AIR);
+        }
+        // The hatch's rail: fences on the roof round the opening, but not ahead of the last step.
+        int[] last = ring[(steps - 1) % ring.length], out = ring[steps % ring.length];
+        for (int k = steps - 3; k < steps; k++) {
+            int[] at = ring[Math.floorMod(k, ring.length)];
+            for (int[] st : new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                int rx = at[0] + st[0], rz = at[1] + st[1];
+                if (rx == out[0] && rz == out[1]) continue;
+                if (Math.abs(rx) > 3 || Math.abs(rz) > 3) continue;
+                if (isHatch(ring, steps, rx, rz)) continue;
+                put(tx + rx, b + top + 1, tz + rz, Block.FENCE);
+            }
+        }
+        put(tx + last[0], b + top + 1, tz + last[1], Block.AIR);
+    }
+
+    private static boolean isHatch(int[][] ring, int steps, int x, int z) {
+        for (int k = steps - 3; k < steps; k++) {
+            int[] at = ring[Math.floorMod(k, ring.length)];
+            if (at[0] == x && at[1] == z) return true;
+        }
+        return false;
     }
 
     // --- Gatehouses -----------------------------------------------------------------------------------------
@@ -425,7 +490,11 @@ final class CitadelLayout {
             "cloister",
             "cistern_house",
             "stables",
-            "granary");
+            "granary",
+            "tavern",
+            "bakery",
+            "market_hall",
+            "guardhouse");
         if (random.nextBoolean()) deck.add("stables");
         if (random.nextBoolean()) deck.add("granary");
         Collections.shuffle(deck, random);
@@ -455,10 +524,14 @@ final class CitadelLayout {
                 return t;
             }
         }
-        RoomTemplate house = TemplateLibrary.building(random.nextInt(3) == 0 ? "house_tall" : "house_small");
+        String[] houses = { "house_small", "house_timber", "house_corner", "house_tall" };
+        RoomTemplate house = TemplateLibrary.building(houses[random.nextInt(houses.length)]);
         if (house.width() <= room) return house;
-        RoomTemplate small = TemplateLibrary.building("house_small");
-        return small.width() <= room ? small : null;
+        for (String name : houses) {
+            RoomTemplate t = TemplateLibrary.building(name);
+            if (t.width() <= room) return t;
+        }
+        return null;
     }
 
     /** A building on side (0 north .. 3 west) starting {@code along} blocks along it, facing the ring road. */
@@ -492,6 +565,7 @@ final class CitadelLayout {
         Role role = t.roles.iterator()
             .next();
         new RoomWriter(d).write(t, rotation, cx + minX, cz + minZ, b, role, false);
+        garden(side, along, w, dp + 1);
         // A short paved path from its door to the road.
         int mid = along + w / 2;
         switch (side) {
@@ -510,42 +584,88 @@ final class CitadelLayout {
         }
     }
 
-    /** A yard between buildings: a garden bed, a hay pile or a stack of crates. */
+    /**
+     * The citadel offset of a place on a plot: {@code a} along side (0 north .. 3 west), {@code depth} back from the
+     * road.
+     */
+    private static int[] plotPoint(int side, int a, int depth) {
+        switch (side) {
+            case 0:
+                return new int[] { a, -PLOT_FRONT + 1 - depth };
+            case 1:
+                return new int[] { PLOT_FRONT - 1 + depth, a };
+            case 2:
+                return new int[] { a, PLOT_FRONT - 1 + depth };
+            default:
+                return new int[] { -PLOT_FRONT + 1 - depth, a };
+        }
+    }
+
+    /**
+     * A yard between buildings, four deep from the road: a flower bed, a hay store, or a stack of crates and barrels.
+     */
     private void yard(int side, int from, int to) {
         if (to - from < 1) return;
         int kind = random.nextInt(3);
         for (int a = from; a <= to; a++) for (int depth = 1; depth <= 4; depth++) {
-            int dx, dz;
-            switch (side) {
-                case 0:
-                    dx = a;
-                    dz = -PLOT_FRONT - depth;
-                    break;
-                case 1:
-                    dx = PLOT_FRONT + depth;
-                    dz = a;
-                    break;
-                case 2:
-                    dx = a;
-                    dz = PLOT_FRONT + depth;
-                    break;
-                default:
-                    dx = -PLOT_FRONT - depth;
-                    dz = a;
-                    break;
-            }
+            int[] p = plotPoint(side, a, depth);
+            int dx = p[0], dz = p[1];
             double r = d.noise.unit(cx + dx, cz + dz, 61);
             if (kind == 0) {
                 put(dx, b, dz, Block.GRASS);
                 if (r < 0.35) put(dx, b + 1, dz, Block.WINDBLOOM);
                 else if (r < 0.55) put(dx, b + 1, dz, Block.FLOWER, r < 0.45 ? 0 : 1);
             } else if (kind == 1) {
-                if (r < 0.4) put(dx, b + 1, dz, Block.HAY);
-                if (r < 0.15) put(dx, b + 2, dz, Block.HAY);
-            } else if (r < 0.3) {
-                put(dx, b + 1, dz, Block.PLANKS, r < 0.15 ? 0 : 1);
-                if (r < 0.1) put(dx, b + 2, dz, Block.LOG);
+                if (depth >= 2 && r < 0.5) put(dx, b + 1, dz, Block.HAY);
+                if (depth >= 3 && r < 0.2) put(dx, b + 2, dz, Block.HAY);
+            } else if (depth >= 2 && r < 0.45) {
+                put(dx, b + 1, dz, r < 0.2 ? Block.BARREL : Block.CRATE);
+                if (r < 0.12) put(dx, b + 2, dz, Block.CRATE);
             }
+        }
+    }
+
+    /**
+     * Behind a building, the rest of its plot: a fenced kitchen garden of crops watered by a channel down its middle,
+     * or a flower garden, or (behind the big buildings) a paved court with barrels and crates; a gate on the side.
+     */
+    private void garden(int side, int along, int width, int from) {
+        int to = PLOT_BACK - PLOT_FRONT + 1;
+        if (to - from < 3 || width < 4) return;
+        int kind = width >= 13 ? 2 : random.nextInt(4) == 0 ? 1 : 0;
+        int crop = random.nextInt(3);
+        int mid = (from + to) / 2;
+        for (int a = along; a < along + width; a++) for (int depth = from; depth <= to; depth++) {
+            int[] p = plotPoint(side, a, depth);
+            int dx = p[0], dz = p[1];
+            boolean edge = a == along || a == along + width - 1 || depth == to;
+            if (kind == 2) {
+                pave(dx, dz);
+                double r = d.noise.unit(cx + dx, cz + dz, 67);
+                if (!edge && depth > from && r < 0.12) put(dx, b + 1, dz, r < 0.06 ? Block.BARREL : Block.CRATE);
+                continue;
+            }
+            if (edge) {
+                put(dx, b, dz, Block.GRASS);
+                put(dx, b + 1, dz, Block.FENCE);
+                continue;
+            }
+            if (kind == 1) {
+                put(dx, b, dz, Block.GRASS);
+                double r = d.noise.unit(cx + dx, cz + dz, 68);
+                put(dx, b + 1, dz, r < 0.5 ? Block.WINDBLOOM : Block.FLOWER, r < 0.75 ? 0 : 1);
+            } else if (depth == mid) {
+                put(dx, b, dz, Block.WATER);
+                put(dx, b - 1, dz, Block.POLISHED);
+            } else {
+                put(dx, b, dz, Block.FARMLAND);
+                put(dx, b + 1, dz, Block.CROP, crop);
+            }
+        }
+        if (kind != 2) {
+            int[] gate = plotPoint(side, along, (from + to) / 2 + 1);
+            put(gate[0], b + 1, gate[1], Block.FENCE_GATE, side == 0 || side == 2 ? SkyDungeon.EAST : SkyDungeon.SOUTH);
+            put(gate[0], b, gate[1], Block.TILES);
         }
     }
 
@@ -580,18 +700,19 @@ final class CitadelLayout {
                     case 2: // market: a paved square with stalls under striped awnings
                         pave(dx, dz);
                         break;
-                    default: // training yard: packed gravel, straw targets on posts
+                    default: // training yard: packed gravel, straw dummies on posts, barrels of water at the edge
                         put(dx, b, dz, Block.GRAVEL);
                         if ((a - lo) % 5 == 2 && (e - lo) % 6 == 3) {
                             put(dx, b + 1, dz, Block.FENCE);
                             put(dx, b + 2, dz, Block.HAY);
-                        }
+                            put(dx, b + 3, dz, Block.FENCE);
+                        } else if ((a == lo || e == lo) && r < 0.15) put(dx, b + 1, dz, Block.BARREL, 1);
                         break;
                 }
             }
-            if (kind == 2) for (int a = lo + 1; a + 2 <= hi; a += 6) for (int e = lo + 1; e + 2 <= hi; e += 6) {
-                int dx = sx > 0 ? a : -a - 2, dz = sz > 0 ? e : -e - 2;
-                if (!inSquare(dx + 1 - sx * (OUTER - 1), dz + 1 - sz * (OUTER - 1), 6)) stall(dx, dz);
+            if (kind == 2) for (int a = lo + 1; a + 3 <= hi; a += 5) for (int e = lo + 1; e + 2 <= hi; e += 5) {
+                int dx = sx > 0 ? a : -a - 3, dz = sz > 0 ? e : -e - 2;
+                if (!inSquare(dx + 1 - sx * (OUTER - 1), dz + 1 - sz * (OUTER - 1), 7)) stall(dx, dz);
             }
         }
     }
@@ -604,15 +725,20 @@ final class CitadelLayout {
         }
     }
 
-    /** A market stall: four posts, a counter, a striped awning. */
+    /**
+     * A market stall facing south, three wide: a back panel of spruce between log posts, three counters of one kind
+     * of goods set out before it, a striped awning over them hung from the panel, and a barrel or crate at its side.
+     */
     private void stall(int dx, int dz) {
-        for (int x = 0; x <= 2; x++) for (int z = 0; z <= 2; z++) {
-            boolean post = (x == 0 || x == 2) && (z == 0 || z == 2);
-            if (post) for (int y = b + 1; y <= b + 2; y++) put(dx + x, y, dz + z, Block.FENCE);
-            put(dx + x, b + 3, dz + z, Block.WOOL, x == 1 ? 0 : 14); // a striped awning
+        int goods = random.nextInt(4), colour = random.nextInt(4);
+        for (int x = 0; x <= 2; x++) {
+            boolean post = x != 1;
+            for (int y = b + 1; y <= b + 3; y++) put(dx + x, y, dz, post ? Block.LOG : Block.PLANKS, 1);
+            put(dx + x, b + 1, dz + 1, Block.MARKET_COUNTER, goods);
+            for (int y = b + 2; y <= b + 3; y++) put(dx + x, y, dz + 1, Block.AIR);
+            put(dx + x, b + 3, dz + 1, Block.AWNING, colour << 2 | SkyDungeon.NORTH);
         }
-        put(dx + 1, b + 1, dz + 2, Block.SLAB, 8);
-        if (random.nextInt(3) == 0) d.put(cx + dx + 1, b + 1, cz + dz, Block.CHEST, 0, Loot.STORE, null);
+        put(dx + 3, b + 1, dz, random.nextBoolean() ? Block.BARREL : Block.CRATE);
     }
 
     // --- The keep and its square ----------------------------------------------------------------------------
@@ -652,39 +778,336 @@ final class CitadelLayout {
         for (int x = -1; x <= 1; x++)
             for (int z = -1; z <= 1; z++) for (int y = b - 2; y <= b; y++) put(x, y, wz + z, Block.WATER);
         for (int s : new int[] { -2, 2 }) for (int y = b + 2; y <= b + 3; y++) put(s, y, wz, Block.FENCE);
-        for (int x = -2; x <= 2; x++) put(x, b + 4, wz, Block.SLAB, 0);
+        for (int x = -2; x <= 2; x++) put(x, b + 4, wz, Block.SLAB, 1);
         for (int x : new int[] { -6, -5, 5, 6 }) put(x, b + 1, wz, Block.STAIRS, rising(x > 0 ? 1 : -1, 0));
         for (int x : new int[] { -9, 9 }) lampPost(x, wz);
     }
 
     // --- The approach ---------------------------------------------------------------------------------------
 
-    /** A causeway from the island's south rim to the drawbridge, lit, with a guard post beside it. */
+    /**
+     * A causeway from the drawbridge to the island's south rim, laid on the ground as it falls (a stair down where it
+     * steps), lit by lamp posts, a pier out over the sky where it ends, and the guardhouse beside the road.
+     */
     private void approach() {
-        int end = (int) (radius * 0.9);
-        for (int t = MOAT_OUT + 2; t <= end; t++) {
-            if (d.field.column(d.island, cx, cz + t) == null) break;
+        int end = MOAT_OUT + 2, last = b;
+        for (int t = MOAT_OUT + 2; t <= radius + 4; t++) {
+            boolean land = true;
+            for (int w = -3; w <= 3; w++) land &= d.field.column(d.island, cx + w, cz + t) != null;
+            if (!land) break;
+            int g = Math.min(last, groundAt(0, t));
+            level(-3, t, 3, t, g);
             for (int w = -2; w <= 2; w++) {
-                pave(w, t);
-                stone(w, b - 1, t);
+                paveAt(w, t, g);
+                if (g < last) put(w, g + 1, t, Block.SKY_STAIRS, rising(0, -1)); // a step up towards the gate
             }
             if ((t - MOAT_OUT) % 8 == 4) {
-                lampPost(-3, t);
-                lampPost(3, t);
+                lampPost(-3, t, g);
+                lampPost(3, t, g);
+            }
+            last = g;
+            end = t;
+        }
+        pier(end, last);
+        building("guardhouse", 6, MOAT_OUT + 8, "guardhouse");
+    }
+
+    private void paveAt(int dx, int dz, int ground) {
+        d.floorTile(cx + dx, ground, cz + dz);
+        for (int y = ground + 1; y <= ground + 3; y++) put(dx, y, dz, Block.AIR);
+    }
+
+    /** The island's surface height at a citadel offset (the citadel's own level where there is none). */
+    private int groundAt(int dx, int dz) {
+        int[] column = d.field.column(d.island, cx + dx, cz + dz);
+        return column == null ? b : Math.min(b, column[1]);
+    }
+
+    /** A timber pier out over the sky from the causeway's end at {@code g}: railed, with a crane, cargo and lamps. */
+    private void pier(int end, int g) {
+        int from = end - 2, to = end + 10;
+        for (int t = from; t <= to; t++) {
+            for (int w = -2; w <= 2; w++) {
+                put(w, g, t, Block.PLANKS, 1);
+                for (int y = g + 1; y <= g + 3; y++) put(w, y, t, Block.AIR);
+            }
+            put(-3, g + 1, t, Block.FENCE);
+            put(3, g + 1, t, Block.FENCE);
+            put(-3, g, t, Block.LOG, 1);
+            put(3, g, t, Block.LOG, 1);
+            if (t > end && (t - end) % 4 == 0)
+                for (int w : new int[] { -3, 3 }) for (int y = g - 3; y < g; y++) put(w, y, t, Block.LOG, 1); // posts
+                                                                                                              // down
+                                                                                                              // into
+                                                                                                              // the
+                                                                                                              // cloud
+        }
+        for (int w = -2; w <= 2; w++) put(w, g + 1, to, Block.FENCE);
+        // The crane: a mast, an arm out over the edge, a chain hanging from it with a crate on the hook.
+        for (int y = g + 1; y <= g + 6; y++) put(3, y, to - 2, Block.LOG, 1);
+        for (int k = 1; k <= 4; k++) put(3 + k, g + 6, to - 2, Block.FENCE);
+        for (int y = g + 3; y <= g + 5; y++) put(7, y, to - 2, Block.IRON_BARS);
+        put(7, g + 2, to - 2, Block.CRATE);
+        put(-2, g + 1, end + 2, Block.CRATE);
+        put(-2, g + 2, end + 2, Block.CRATE);
+        put(-2, g + 1, end + 3, Block.BARREL);
+        put(2, g + 1, end + 6, Block.BARREL);
+        put(-2, g + 1, end + 7, Block.CRATE);
+        lampPost(-3, end + 4, g);
+        lampPost(3, end + 8, g);
+        d.features.add("pier");
+    }
+
+    /** The ground height most of the rectangle stands at, or -1 if any of it is off the island or too uneven. */
+    private int ground(int x0, int z0, int x1, int z1) {
+        java.util.Map<Integer, Integer> counts = new java.util.HashMap<>();
+        int least = Integer.MAX_VALUE, most = Integer.MIN_VALUE;
+        for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) {
+            int[] column = d.field.column(d.island, cx + x, cz + z);
+            if (column == null) return -1;
+            counts.merge(column[1], 1, Integer::sum);
+            least = Math.min(least, column[1]);
+            most = Math.max(most, column[1]);
+        }
+        if (most - least > 4) return -1;
+        int best = -1, bestCount = -1;
+        for (java.util.Map.Entry<Integer, Integer> e : counts.entrySet()) if (e.getValue() > bestCount) {
+            best = e.getKey();
+            bestCount = e.getValue();
+        }
+        return Math.min(best, b);
+    }
+
+    /** Brings the rectangle's ground to height {@code g}: earth filled under it, grass on top, rock cut away. */
+    private void level(int x0, int z0, int x1, int z1, int g) {
+        for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) {
+            int[] column = d.field.column(d.island, cx + x, cz + z);
+            if (column == null) continue;
+            int top = column[1];
+            for (int y = Math.min(top + 1, g - 1); y < g; y++) put(x, y, z, Block.DIRT);
+            put(x, g, z, Block.GRASS);
+            for (int y = g + 1; y <= top + 1; y++) put(x, y, z, Block.AIR);
+        }
+    }
+
+    /**
+     * An authored building out on the island at citadel offset (minX, minZ), facing south, on its ground levelled
+     * with a margin of two all round and a Skyslate footing under it; false if the ground there will not take it.
+     */
+    private boolean building(String name, int minX, int minZ, String feature) {
+        RoomTemplate t = TemplateLibrary.building(name);
+        int maxX = minX + t.width() - 1, maxZ = minZ + t.depth() - 1;
+        int g = ground(minX - 2, minZ - 2, maxX + 2, maxZ + 4);
+        if (g < 0) return false;
+        level(minX - 2, minZ - 2, maxX + 2, maxZ + 4, g);
+        for (int x = minX; x <= maxX; x++) for (int z = minZ; z <= maxZ; z++) put(x, g - 1, z, Block.SKYSLATE, 0);
+        new RoomWriter(d).write(
+            t,
+            0,
+            cx + minX,
+            cz + minZ,
+            g,
+            t.roles.iterator()
+                .next(),
+            false);
+        paveAt((minX + maxX) / 2, maxZ + 1, g);
+        paveAt((minX + maxX) / 2, maxZ + 2, g);
+        if (feature != null) d.features.add(feature);
+        lastGround = g;
+        return true;
+    }
+
+    /** The ground the last outside building was set on. */
+    private int lastGround;
+
+    /** A fenced field of one crop on tilled soil, watered by a channel down its middle, with a gate. */
+    private boolean field(int x0, int z0, int w, int dp) {
+        int g = ground(x0, z0, x0 + w - 1, z0 + dp - 1);
+        if (g < 0) return false;
+        int crop = random.nextInt(3);
+        level(x0, z0, x0 + w - 1, z0 + dp - 1, g);
+        int mid = x0 + w / 2;
+        for (int x = x0; x < x0 + w; x++) for (int z = z0; z < z0 + dp; z++) {
+            boolean edge = x == x0 || x == x0 + w - 1 || z == z0 || z == z0 + dp - 1;
+            if (edge) put(x, g + 1, z, Block.FENCE);
+            else if (x == mid) {
+                put(x, g, z, Block.WATER);
+                put(x, g - 1, z, Block.POLISHED);
+            } else {
+                put(x, g, z, Block.FARMLAND);
+                put(x, g + 1, z, Block.CROP, crop);
             }
         }
-        RoomTemplate post = TemplateLibrary.building("house_small");
-        int pz = MOAT_OUT + 12;
-        for (int x = 5; x < 5 + post.width(1); x++) for (int z = pz; z < pz + post.depth(1); z++) {
-            stone(x, b - 1, z);
-            put(x, b, z, Block.GRASS);
+        put(mid + 1, g + 1, z0 + dp - 1, Block.FENCE_GATE, SkyDungeon.SOUTH);
+        return true;
+    }
+
+    /**
+     * The citadel's lands between the moat and the rim: a farmstead to the west, a windmill and a barn with a field
+     * to the east, a walled graveyard with its chapel to the north, a quarry south-west of the causeway and an
+     * orchard south-east of it, a pasture south of the farmstead. Each goes only where the island is there to take it.
+     */
+    private void outskirts() {
+        int far = MOAT_OUT + 4;
+        // West: the farmstead.
+        int wx = -far - 24;
+        if (building("farmhouse", wx, -14, null)) {
+            building("barn", wx + 12, -14, null);
+            field(wx, 1, 10, 12);
+            field(wx + 12, 4, 11, 12);
+            for (int k = 0; k < 4; k++) put(wx + 23, lastGround + 1, -12 + k, Block.HAY);
+            d.features.add("farmstead");
         }
-        new RoomWriter(d).write(post, 1, cx + 5, cz + pz, b, Role.GUARD, false);
+        // East: the windmill, a field, a barn.
+        if (building("windmill", far + 2, -22, "windmill")) {
+            sails(far + 2, -22, lastGround);
+            field(far + 1, -10, 11, 11);
+        }
+        building("barn", far + 1, 4, "barn");
+        // North: the graveyard. North-west: a pasture.
+        graveyard(-10, -far - 18);
+        pasture(-far - 24, 20);
+        // South: a quarry west of the causeway, an orchard east of it.
+        quarry(-26, far + 6);
+        orchard(20, far + 3);
+    }
+
+    /** A windmill's sails on its south face at the cap: four lattice arms of fence with white canvas. */
+    private void sails(int minX, int minZ, int g) {
+        int hx = minX + 4, hy = g + 12, hz = minZ + 9;
+        put(hx, hy, hz - 1, Block.LOG);
+        put(hx, hy, hz, Block.LOG);
+        for (int k = 1; k <= 5; k++) {
+            put(hx, hy + k, hz, Block.FENCE);
+            put(hx, hy - k, hz, Block.FENCE);
+            put(hx - k, hy, hz, Block.FENCE);
+            put(hx + k, hy, hz, Block.FENCE);
+            if (k >= 2) {
+                put(hx + 1, hy + k, hz, Block.WOOL, 0);
+                put(hx - 1, hy - k, hz, Block.WOOL, 0);
+                put(hx - k, hy + 1, hz, Block.WOOL, 0);
+                put(hx + k, hy - 1, hz, Block.WOOL, 0);
+            }
+        }
+    }
+
+    /**
+     * A graveyard: a low Skyslate wall with a gate, rows of carved headstones with flowers before them, a gravel
+     * path, lamp posts, and the mortuary chapel at the back.
+     */
+    private void graveyard(int x0, int z0) {
+        int w = 21, dp = 19;
+        int g = ground(x0 - 1, z0 - 1, x0 + w, z0 + dp);
+        if (g < 0) return;
+        level(x0 - 1, z0 - 1, x0 + w, z0 + dp, g);
+        int gate = x0 + w / 2;
+        building("mortuary_chapel", gate - 3, z0 + 1, null); // first: its levelled margin must not cut the wall
+        for (int x = x0; x < x0 + w; x++) for (int z = z0; z < z0 + dp; z++) {
+            boolean edge = x == x0 || x == x0 + w - 1 || z == z0 || z == z0 + dp - 1;
+            if (edge && !(z == z0 + dp - 1 && Math.abs(x - gate) <= 1)) {
+                put(x, g + 1, z, Block.SKYSLATE, 0);
+                put(x, g + 2, z, Block.SKYSLATE_SLAB, 0);
+            } else if (Math.abs(x - gate) <= 1 && z > z0 + 11) put(x, g, z, Block.GRAVEL);
+        }
+        for (int x = x0 + 2; x < x0 + w - 2; x += 2) {
+            if (Math.abs(x - gate) <= 4) continue;
+            for (int z = z0 + 3; z < z0 + dp - 2; z += 3) {
+                put(x, g + 1, z, Block.CHISELED);
+                double r = d.noise.unit(cx + x, cz + z, 69);
+                if (r < 0.5) put(x, g + 1, z + 1, Block.FLOWER, r < 0.25 ? 0 : 1);
+                else if (r < 0.7) put(x, g + 1, z + 1, Block.FLOWER_POT, (int) (r * 10) % SkyDungeon.POT_PLANTS);
+            }
+        }
+        lampPost(gate - 2, z0 + dp, g);
+        lampPost(gate + 2, z0 + dp, g);
+        d.features.add("graveyard");
+    }
+
+    /**
+     * A quarry: a pit cut in stepped terraces into the island, cut Skystone stacked by its lip, a crane over it,
+     * crates and barrels of tools.
+     */
+    private void quarry(int x0, int z0) {
+        int size = 13;
+        int g = ground(x0 - 2, z0 - 2, x0 + size + 2, z0 + size + 1);
+        if (g < 0) return;
+        level(x0 - 2, z0 - 2, x0 + size + 2, z0 + size + 1, g);
+        for (int x = x0; x < x0 + size; x++) for (int z = z0; z < z0 + size; z++) {
+            int in = Math.min(Math.min(x - x0, x0 + size - 1 - x), Math.min(z - z0, z0 + size - 1 - z));
+            int depth = Math.min(4, in); // one step down per block in from the lip
+            for (int y = g - depth + 1; y <= g; y++) put(x, y, z, Block.AIR);
+            if (depth > 0 && d.noise.unit(cx + x, cz + z, 70) < 0.08) put(x, g - depth + 1, z, Block.SKYSTONE, 1);
+        }
+        for (int x = x0 + size + 1; x <= x0 + size + 2; x++) for (int z = z0 + 1; z <= z0 + 3; z++) {
+            put(x, g + 1, z, Block.SKYSTONE, 0);
+            if (z != z0 + 3) put(x, g + 2, z, Block.SKYSTONE, 0);
+        }
+        for (int y = g + 1; y <= g + 7; y++) put(x0 - 1, y, z0 + 6, Block.LOG, 1);
+        for (int k = 0; k <= 4; k++) put(x0 + k, g + 7, z0 + 6, Block.FENCE);
+        for (int y = g + 3; y <= g + 6; y++) put(x0 + 4, y, z0 + 6, Block.IRON_BARS);
+        put(x0 - 1, g + 1, z0 + 8, Block.CRATE);
+        put(x0 - 1, g + 1, z0 + 9, Block.BARREL, 1);
+        put(x0 - 1, g + 2, z0 + 8, Block.CRATE);
+        d.features.add("quarry");
+    }
+
+    /** An orchard: rows of small trees on grass inside a fence, a gate, crates for the picking. */
+    private void orchard(int x0, int z0) {
+        int w = 23, dp = 19;
+        int g = ground(x0, z0, x0 + w - 1, z0 + dp - 1);
+        if (g < 0) return;
+        level(x0, z0, x0 + w - 1, z0 + dp - 1, g);
+        for (int x = x0; x < x0 + w; x++) for (int z = z0; z < z0 + dp; z++) {
+            boolean edge = x == x0 || x == x0 + w - 1 || z == z0 || z == z0 + dp - 1;
+            if (edge) put(x, g + 1, z, Block.FENCE);
+            else if ((x - x0) % 5 == 2 && (z - z0) % 5 == 2) treeAt(x, z, g);
+        }
+        put(x0 + w / 2, g + 1, z0, Block.FENCE_GATE, SkyDungeon.SOUTH);
+        put(x0 + 1, g + 1, z0 + 1, Block.CRATE);
+        put(x0 + 2, g + 1, z0 + 1, Block.CRATE);
+        put(x0 + 1, g + 1, z0 + 2, Block.BARREL);
+        d.features.add("orchard");
+    }
+
+    /** A pasture: a fenced meadow with a gate, a lean-to shelter of spruce, hay and water barrels. */
+    private void pasture(int x0, int z0) {
+        int w = 21, dp = 17;
+        int g = ground(x0, z0, x0 + w - 1, z0 + dp - 1);
+        if (g < 0) return;
+        level(x0, z0, x0 + w - 1, z0 + dp - 1, g);
+        for (int x = x0; x < x0 + w; x++) for (int z = z0; z < z0 + dp; z++) {
+            boolean edge = x == x0 || x == x0 + w - 1 || z == z0 || z == z0 + dp - 1;
+            double r = d.noise.unit(cx + x, cz + z, 71);
+            if (edge) put(x, g + 1, z, Block.FENCE);
+            else if (r < 0.2) put(x, g + 1, z, Block.TALL_GRASS);
+            else if (r < 0.24) put(x, g + 1, z, Block.FLOWER, r < 0.22 ? 0 : 1);
+        }
+        put(x0 + w - 1, g + 1, z0 + dp / 2, Block.FENCE_GATE, SkyDungeon.EAST);
+        // The shelter in the north-west corner: log posts, a sloping spruce roof, hay and water inside.
+        for (int x = x0 + 1; x <= x0 + 5; x++) {
+            for (int z = z0 + 1; z <= z0 + 3; z++)
+                put(x, g + 3 + (z == z0 + 1 ? 1 : 0), z, Block.STAIRS, rising(0, -1));
+            put(x, g + 1, z0 + 1, Block.HAY);
+        }
+        for (int[] post : new int[][] { { x0 + 1, z0 + 3 }, { x0 + 5, z0 + 3 } })
+            for (int y = g + 1; y <= g + 2; y++) put(post[0], y, post[1], Block.LOG, 1);
+        for (int x = x0 + 1; x <= x0 + 5; x++) for (int y = g + 1; y <= g + 3; y++) put(x, y, z0, Block.PLANKS, 1);
+        put(x0 + 2, g + 1, z0 + 2, Block.BARREL, 1);
+        put(x0 + 4, g + 1, z0 + 2, Block.BARREL, 1);
+        d.features.add("pasture");
+    }
+
+    private void treeAt(int dx, int dz, int g) {
+        for (int y = g + 1; y <= g + 3; y++) put(dx, y, dz, Block.LOG);
+        for (int x = -1; x <= 1; x++) for (int z = -1; z <= 1; z++) for (int y = g + 3; y <= g + 5; y++) {
+            if (x == 0 && z == 0 && y == g + 3) continue;
+            if (Math.abs(x) + Math.abs(z) + Math.abs(y - (g + 4)) <= 2) put(dx + x, y, dz + z, Block.LEAVES);
+        }
     }
 
     /** A ruined watchtower out on the island: a broken round shell, rubble round its foot, a ladder to a lookout. */
     private void watchtower() {
-        double angle = Math.PI * (1.15 + 0.7 * random.nextDouble()); // somewhere on the north side
+        double angle = Math.PI * (1.62 + 0.23 * random.nextDouble()); // north-east, clear of the graveyard
         int r = (int) (radius * 0.72);
         int tx = cx + (int) Math.round(Math.cos(angle) * r), tz = cz + (int) Math.round(Math.sin(angle) * r);
         int[] column = d.field.column(d.island, tx, tz);

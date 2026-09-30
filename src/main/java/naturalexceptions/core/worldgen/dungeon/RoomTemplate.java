@@ -25,6 +25,11 @@ import java.util.Set;
  * footprint: 9x11         ; a building's size in blocks, walls included (x by z); its front (door) is south
  * carpet: red             ; the colour of its carpets (q)
  * glass: light_blue       ; the colour of its stained glass panes (&lt;)
+ * roof: spruce            ; what stairs (1-8) and slabs (_ -) from the eaves up are: spruce, dark_oak or skyslate
+ * eaves: 5                ; the first layer of the roof (below it, stairs and slabs are of the timber wood)
+ * timber: spruce          ; what its logs (Y), spruce planks (P) and tables (/) are: oak, spruce or dark_oak
+ * goods: produce          ; what its market counters (`) hold: produce, fish, pottery or cloth
+ * awning: red             ; the colour of its awnings ('): red, blue, green or yellow
  * ---
  * floor:                  ; then one row per z (north first), one character per x (west first)
  * layer 1-3:              ; the open layers, from 1 (standing on the floor) up to height
@@ -37,7 +42,7 @@ public final class RoomTemplate {
 
     /** What each character in a template means. */
     public static final String LEGEND = ".#LB~=xRIGtfwcCsS^vF%,ghaTW?HKONA|oMQY*12345678_-DpPZeE"
-        + "09jkilmnJUVXyzrbuqd<@/&$+[]()}";
+        + "09jkilmnJUVXyzrbuqd<@/&$+[]()}!{:`'";
 
     /** Vanilla dye colours by name, for carpets and stained glass. */
     public static final List<String> COLOURS = java.util.Arrays.asList(
@@ -89,12 +94,21 @@ public final class RoomTemplate {
     public final boolean building;
     /** Vanilla colours of its carpets and stained glass. */
     public final int carpet, glass;
+    /** Its materials and wares, by index into {@link #ROOFS}, {@link #TIMBERS}, {@link #GOODS}, {@link #AWNINGS}. */
+    public final int roof, timber, goods, awning;
+    /** The first layer of its roof. */
+    public final int eaves;
+
+    public static final List<String> ROOFS = java.util.Arrays.asList("spruce", "dark_oak", "skyslate");
+    public static final List<String> TIMBERS = java.util.Arrays.asList("oak", "spruce", "dark_oak");
+    public static final List<String> GOODS = java.util.Arrays.asList("produce", "fish", "pottery", "cloth");
+    public static final List<String> AWNINGS = java.util.Arrays.asList("red", "blue", "green", "yellow");
     /** [y][z][x]: y 0 is the floor, 1..height the open layers, height + 1 the ceiling. */
     private final char[][][] grid;
 
     private RoomTemplate(String name, int cellsX, int cellsZ, boolean small, int height, Set<Role> roles,
         Set<Kind> kinds, int weight, List<String> mobs, String pit, boolean trapped, boolean building, int carpet,
-        int glass, char[][][] grid) {
+        int glass, int[] wares, char[][][] grid) {
         this.name = name;
         this.cellsX = cellsX;
         this.cellsZ = cellsZ;
@@ -109,6 +123,11 @@ public final class RoomTemplate {
         this.building = building;
         this.carpet = carpet;
         this.glass = glass;
+        this.roof = wares[0];
+        this.timber = wares[1];
+        this.goods = wares[2];
+        this.awning = wares[3];
+        this.eaves = wares[4];
         this.grid = grid;
     }
 
@@ -178,6 +197,7 @@ public final class RoomTemplate {
         boolean small = false, trapped = false, building = false;
         int footprintX = 0, footprintZ = 0;
         int carpet = COLOURS.indexOf("red"), glass = COLOURS.indexOf("light_blue");
+        int[] wares = { 0, 1, 0, 0, 0 }; // spruce roof, spruce timber, produce, red awnings; all roof (no eaves)
         Set<Role> roles = EnumSet.noneOf(Role.class);
         Set<Kind> kinds = EnumSet.allOf(Kind.class);
         List<String> mobs = new ArrayList<>();
@@ -248,6 +268,20 @@ public final class RoomTemplate {
                     else glass = colour;
                     break;
                 }
+                case "eaves":
+                    wares[4] = Integer.parseInt(value);
+                    break;
+                case "roof":
+                case "timber":
+                case "goods":
+                case "awning": {
+                    List<String> names = key.equals("roof") ? ROOFS
+                        : key.equals("timber") ? TIMBERS : key.equals("goods") ? GOODS : AWNINGS;
+                    int index = names.indexOf(value.toLowerCase(Locale.ROOT));
+                    if (index < 0) throw error(source, i, "unknown " + key + " " + value);
+                    wares[key.equals("roof") ? 0 : key.equals("timber") ? 1 : key.equals("goods") ? 2 : 3] = index;
+                    break;
+                }
                 default:
                     throw error(source, i, "unknown key " + key);
             }
@@ -305,6 +339,7 @@ public final class RoomTemplate {
             building,
             carpet,
             glass,
+            wares,
             grid);
     }
 
