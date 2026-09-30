@@ -4,6 +4,13 @@ package naturalexceptions.minecraft.weapon;
 public final class ShardcasterCharge {
 
     public static final int SHOTS_PER_SHARD = 8;
+    /** The most it holds: four shards' worth. */
+    public static final int MAX_CHARGE = 4 * SHOTS_PER_SHARD;
+
+    /** How many shards a reload takes, with {@code charge} loaded and {@code shards} to hand. */
+    public static int shardsToLoad(int charge, int shards) {
+        return Math.max(0, Math.min(shards, (MAX_CHARGE - charge) / SHOTS_PER_SHARD));
+    }
 
     private ShardcasterCharge() {}
 

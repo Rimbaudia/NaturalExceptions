@@ -161,8 +161,7 @@ public final class NaturalExceptions {
             new naturalexceptions.minecraft.event.client.RenderFallingStar());
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
             naturalexceptions.minecraft.weapon.EntityLumeniteBolt.class,
-            new net.minecraft.client.renderer.entity.RenderSnowball(
-                naturalexceptions.minecraft.registry.NEItems.lumeniteShard));
+            new naturalexceptions.minecraft.weapon.client.RenderLumeniteBolt());
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
             naturalexceptions.minecraft.entity.EntitySkyWarden.class,
             new naturalexceptions.minecraft.entity.client.RenderSkyWarden());

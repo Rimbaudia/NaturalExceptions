@@ -6,14 +6,17 @@ import java.util.Set;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.projectile.EntityThrowable;
+import net.minecraft.item.Item;
 import net.minecraft.util.EntityDamageSourceIndirect;
 import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 
+import naturalexceptions.minecraft.registry.NEItems;
+
 /**
  * A Lumenite shard bolt from the Shardcaster: flies straight and fast, passes through up to {@link #PIERCE}
- * creatures, and shatters on stone. Leaves a trail of prismatic sparks.
+ * creatures, and shatters into fragments where it stops. Leaves a pale ribbon of light.
  */
 public final class EntityLumeniteBolt extends EntityThrowable {
 
@@ -41,22 +44,30 @@ public final class EntityLumeniteBolt extends EntityThrowable {
         return 0.0F;
     }
 
+    /** Where the bolt has been, newest first ({x, y, z} each): the client draws its ribbon trail from these. */
+    public final double[][] trail = new double[TRAIL][];
+    public static final int TRAIL = 7;
+
     @Override
     public void onUpdate() {
         super.onUpdate();
         if (worldObj.isRemote) {
-            // Prismatic trail: reddust takes its colour from the motion arguments.
-            float hue = (ticksExisted * 0.09F) % 1.0F;
-            int rgb = java.awt.Color.HSBtoRGB(hue, 0.55F, 1.0F);
-            worldObj.spawnParticle(
-                "reddust",
-                posX,
-                posY,
-                posZ,
-                Math.max(0.01, ((rgb >> 16) & 0xFF) / 255.0),
-                ((rgb >> 8) & 0xFF) / 255.0,
-                (rgb & 0xFF) / 255.0);
-            if (ticksExisted % 2 == 0) worldObj.spawnParticle("fireworksSpark", posX, posY, posZ, 0.0, 0.0, 0.0);
+            System.arraycopy(trail, 0, trail, 1, TRAIL - 1);
+            trail[0] = new double[] { posX, posY, posZ };
+            // A few pale motes behind the ribbon: reddust takes its colour from the motion arguments.
+            if (ticksExisted % 2 == 0) {
+                float hue = 0.5F + 0.08F * (float) Math.sin(ticksExisted * 0.6);
+                int rgb = java.awt.Color.HSBtoRGB(hue, 0.35F, 1.0F);
+                worldObj.spawnParticle(
+                    "reddust",
+                    posX,
+                    posY,
+                    posZ,
+                    Math.max(0.01, ((rgb >> 16) & 0xFF) / 255.0),
+                    ((rgb >> 8) & 0xFF) / 255.0,
+                    (rgb & 0xFF) / 255.0);
+            }
+            if (ticksExisted % 5 == 0) worldObj.spawnParticle("fireworksSpark", posX, posY, posZ, 0.0, 0.0, 0.0);
         } else if (ticksExisted > LIFETIME_TICKS) {
             setDead();
         }
@@ -72,9 +83,11 @@ public final class EntityLumeniteBolt extends EntityThrowable {
                 new EntityDamageSourceIndirect("naturalexceptions.shard", this, getThrower()).setProjectile(),
                 DAMAGE);
             sparkle(4);
+            shatter(6, 0.1);
             if (struck.size() < PIERCE) return;
         }
         sparkle(12);
+        shatter(16, hit.entityHit == null ? 0.2 : 0.12);
         worldObj.playSoundEffect(
             posX,
             posY,
@@ -88,6 +101,35 @@ public final class EntityLumeniteBolt extends EntityThrowable {
     private void sparkle(int count) {
         if (worldObj instanceof WorldServer)
             ((WorldServer) worldObj).func_147487_a("fireworksSpark", posX, posY, posZ, count, 0.15, 0.15, 0.15, 0.08);
+    }
+
+    /** The crystal breaking into its own fragments, which fall and bounce, and a ring of sparks round it. */
+    private void shatter(int count, double speed) {
+        if (!(worldObj instanceof WorldServer)) return;
+        WorldServer world = (WorldServer) worldObj;
+        world.func_147487_a(
+            "iconcrack_" + Item.getIdFromItem(NEItems.lumeniteShard),
+            posX,
+            posY,
+            posZ,
+            count,
+            0.1,
+            0.1,
+            0.1,
+            speed);
+        for (int i = 0; i < 10; i++) {
+            double a = i * Math.PI / 5;
+            world.func_147487_a(
+                "fireworksSpark",
+                posX + Math.cos(a) * 0.3,
+                posY,
+                posZ + Math.sin(a) * 0.3,
+                1,
+                0.0,
+                0.0,
+                0.0,
+                0.02);
+        }
     }
 
     @Override

@@ -46,6 +46,15 @@ final class WeaponsAndCacheTest {
     }
 
     @Test
+    void aReloadFillsUpToFourShards() {
+        assertEquals(4, ShardcasterCharge.shardsToLoad(0, 10), "an empty caster takes four");
+        assertEquals(2, ShardcasterCharge.shardsToLoad(0, 2), "no more than there are");
+        assertEquals(1, ShardcasterCharge.shardsToLoad(ShardcasterCharge.MAX_CHARGE - 9, 5), "only whole shards fit");
+        assertEquals(0, ShardcasterCharge.shardsToLoad(ShardcasterCharge.MAX_CHARGE, 5), "a full one takes none");
+        assertEquals(0, ShardcasterCharge.shardsToLoad(0, 0));
+    }
+
+    @Test
     void skyfallStarAcceleratesOntoItsTarget() {
         assertEquals(0.0, EntitySkyfallStar.progress(0), 1e-9);
         assertEquals(1.0, EntitySkyfallStar.progress(EntitySkyfallStar.FLIGHT_TICKS), 1e-9);
