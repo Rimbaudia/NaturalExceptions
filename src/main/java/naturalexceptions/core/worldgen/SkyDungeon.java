@@ -163,6 +163,8 @@ public final class SkyDungeon {
         BENCH,
         /** A pew; meta: the side its back is on ({@link #NORTH} ..). */
         PEW,
+        /** A wooden chair; meta: the wood (0 oak, 1 spruce, 2 dark oak) times 4, plus the side its back is on. */
+        CHAIR,
         FOUNTAIN,
         ORRERY,
         /** A Stormglass Lantern sending light up a shaft: at the foot of the ladders between levels. */

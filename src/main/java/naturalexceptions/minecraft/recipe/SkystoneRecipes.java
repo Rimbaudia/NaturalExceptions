@@ -94,6 +94,16 @@ public final class SkystoneRecipes {
                 new ItemStack(Blocks.wooden_slab, 1, BlockWoodenTable.PLANKS[wood]),
                 'F',
                 Blocks.fence);
+        if (NEBlocks.chair != null)
+            for (int wood = 0; wood < BlockWoodenTable.PLANKS.length; wood++) GameRegistry.addRecipe(
+                new ItemStack(NEBlocks.chair, 2, wood << 2),
+                "S  ",
+                "PPP",
+                "S S",
+                'P',
+                new ItemStack(Blocks.planks, 1, BlockWoodenTable.PLANKS[wood]),
+                'S',
+                Items.stick);
         Object skystone = NEBlocks.skystoneBricks;
         if (NEBlocks.candelabra != null) GameRegistry.addRecipe(
             new ItemStack(NEBlocks.candelabra),

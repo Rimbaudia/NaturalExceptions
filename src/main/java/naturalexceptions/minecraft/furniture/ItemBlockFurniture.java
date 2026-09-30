@@ -4,7 +4,7 @@ import net.minecraft.block.Block;
 import net.minecraft.item.ItemBlockWithMetadata;
 import net.minecraft.item.ItemStack;
 
-/** Furniture that comes in kinds by metadata (counter goods, table wood, awning colour), each with its own name. */
+/** Furniture that comes in kinds by metadata (counter goods, table and chair wood, awning colour), each with its own name. */
 public final class ItemBlockFurniture extends ItemBlockWithMetadata {
 
     public ItemBlockFurniture(Block block) {
@@ -22,6 +22,9 @@ public final class ItemBlockFurniture extends ItemBlockWithMetadata {
         } else if (field_150939_a instanceof BlockWoodenTable) {
             kinds = BlockWoodenTable.WOODS;
             kind = meta & 3;
+        } else if (field_150939_a instanceof BlockChair) {
+            kinds = BlockWoodenTable.WOODS;
+            kind = meta >> 2 & 3;
         } else if (field_150939_a instanceof BlockMarketAwning) {
             kinds = BlockMarketAwning.COLOURS;
             kind = (meta >> 2) & 3;

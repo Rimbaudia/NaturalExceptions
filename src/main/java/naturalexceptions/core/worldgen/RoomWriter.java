@@ -73,6 +73,8 @@ final class RoomWriter {
                 else if (c == '\u03a8' || c == '\u03c8')
                     d.put(x, wy, z, Block.CANDELABRA, (c == '\u03c8') == ((rotation & 1) == 0) ? 1 : 0);
                 else if (PEWS.indexOf(c) >= 0) d.put(x, wy, z, Block.PEW, (PEWS.indexOf(c) + rotation) & 3);
+                else if (CHAIRS.indexOf(c) >= 0)
+                    d.put(x, wy, z, Block.CHAIR, template.timber << 2 | ((CHAIRS.indexOf(c) + rotation) & 3));
                 else if (c == '\u03c0' || c == '\u03a0')
                     d.put(x, wy, z, Block.BENCH, ((c == '\u03a0' ? 1 : 0) + rotation) & 3);
                 else place(
@@ -123,6 +125,9 @@ final class RoomWriter {
 
     /** Pews with their backs to the north, east, south, west. */
     static final String PEWS = "\u03b1\u03b2\u03b3\u03b4";
+
+    /** Wooden chairs (of the timber's wood) with their backs to the north, east, south, west. */
+    static final String CHAIRS = "\u03ba\u03bb\u03bc\u03bd";
 
     /** Skystone stairs rising to the north, east, south, west; then the same upside down. */
     static final String SKY_STAIRS = "ilmnJUVX";

@@ -7,7 +7,7 @@ import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
 
 /**
- * The unseen thing a player sits on when using a bench or pew. It lasts only while someone sits and the seat
+ * The unseen thing a player sits on when using a bench, pew or chair. It lasts only while someone sits and the seat
  * stands; a seated player heals a heart's half every two seconds while fed (more than three shanks).
  */
 public final class EntitySeat extends Entity {

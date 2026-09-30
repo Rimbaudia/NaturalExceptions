@@ -58,6 +58,7 @@ public final class NEBlocks {
     public static Block brazier;
     public static Block stoneBench;
     public static Block pew;
+    public static Block chair;
     public static Block fountain;
     public static Block orrery;
     public static Block chartTable;
@@ -153,6 +154,7 @@ public final class NEBlocks {
         brazier = new naturalexceptions.minecraft.furniture.BlockBrazier().setCreativeTab(NECreativeTab.INSTANCE);
         stoneBench = new naturalexceptions.minecraft.furniture.BlockBench().setCreativeTab(NECreativeTab.INSTANCE);
         pew = new naturalexceptions.minecraft.furniture.BlockPew().setCreativeTab(NECreativeTab.INSTANCE);
+        chair = new naturalexceptions.minecraft.furniture.BlockChair().setCreativeTab(NECreativeTab.INSTANCE);
         fountain = new naturalexceptions.minecraft.furniture.BlockFountain().setCreativeTab(NECreativeTab.INSTANCE);
         orrery = new naturalexceptions.minecraft.furniture.BlockOrrery().setCreativeTab(NECreativeTab.INSTANCE);
         chartTable = new naturalexceptions.minecraft.furniture.BlockChartTable().setCreativeTab(NECreativeTab.INSTANCE);
@@ -264,6 +266,8 @@ public final class NEBlocks {
             GameRegistry.registerBlock(brazier, "brazier");
             GameRegistry.registerBlock(stoneBench, "stone_bench");
             GameRegistry.registerBlock(pew, "pew");
+            GameRegistry
+                .registerBlock(chair, naturalexceptions.minecraft.furniture.ItemBlockFurniture.class, "wooden_chair");
             GameRegistry.registerBlock(fountain, "fountain");
             GameRegistry.registerBlock(orrery, "orrery");
             GameRegistry.registerBlock(chartTable, "chart_table");

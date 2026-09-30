@@ -535,6 +535,10 @@ final class LandmarkMaterializer {
             case PEW:
                 set(world, x, y, z, orElse(NEBlocks.pew, Blocks.oak_stairs), SIDE_FACING[meta & 3]);
                 break;
+            case CHAIR:
+                if (NEBlocks.chair != null) set(world, x, y, z, NEBlocks.chair, meta & 15);
+                else set(world, x, y, z, Blocks.oak_stairs, 0);
+                break;
             case FOUNTAIN:
                 set(world, x, y, z, orElse(NEBlocks.fountain, Blocks.cauldron), 0);
                 break;
