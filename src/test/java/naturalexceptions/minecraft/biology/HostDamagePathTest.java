@@ -13,9 +13,33 @@ import naturalexceptions.core.biology.PhysicalInteraction;
 final class HostDamagePathTest {
 
     @Test
+    void hitsLandWhereTheyStrikeAndReachEveryPart() {
+        assertEquals(HostDamageMapping.HEAD, HostDamageMapping.region(0.9, 0.0, 0.5), "a high arrow: the head");
+        assertEquals(HostDamageMapping.LEFT_LEG, HostDamageMapping.region(0.2, -0.8, 0.5), "low from the left");
+        assertEquals(HostDamageMapping.RIGHT_LEG, HostDamageMapping.region(0.2, 0.8, 0.5), "low from the right");
+        assertEquals(HostDamageMapping.LEFT_ARM, HostDamageMapping.region(0.6, -0.9, 0.1), "the middle, from the left");
+        assertEquals(
+            HostDamageMapping.RIGHT_ARM,
+            HostDamageMapping.region(0.6, 0.9, 0.1),
+            "the middle, from the right");
+        assertEquals(HostDamageMapping.TORSO, HostDamageMapping.region(0.6, 0.0, 0.9), "the middle, head on");
+        java.util.Set<naturalexceptions.core.id.ResourceId> reached = new java.util.HashSet<>();
+        java.util.Random random = new java.util.Random(7);
+        for (int i = 0; i < 400; i++) {
+            reached.add(HostDamageMapping.region(Double.NaN, Double.NaN, random.nextDouble()));
+            reached
+                .add(HostDamageMapping.region(random.nextDouble(), random.nextDouble() * 2 - 1, random.nextDouble()));
+        }
+        assertEquals(6, reached.size(), "over many hits every part is reached: " + reached);
+        java.util.List<naturalexceptions.core.id.ResourceId> legs = java.util.Arrays
+            .asList(HostDamageMapping.fallRegions());
+        assertTrue(legs.contains(HostDamageMapping.LEFT_LEG) && legs.contains(HostDamageMapping.RIGHT_LEG));
+    }
+
+    @Test
     void damageSourcesMapToCoarsePhysicalMeaning() {
         assertEquals(HostDamageMapping.Category.FALL, HostDamageMapping.categorize(DamageSource.fall));
-        assertEquals(HostDamageMapping.LEFT_LEG, HostDamageMapping.region(HostDamageMapping.Category.FALL));
+        assertEquals(2, HostDamageMapping.fallRegions().length, "a fall lands on both legs");
         assertEquals(HostDamageMapping.Category.THERMAL, HostDamageMapping.categorize(DamageSource.lava));
         assertEquals(HostDamageMapping.Category.THERMAL, HostDamageMapping.categorize(DamageSource.onFire));
         assertEquals(

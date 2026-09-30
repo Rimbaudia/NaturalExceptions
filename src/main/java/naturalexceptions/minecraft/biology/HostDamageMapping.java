@@ -23,8 +23,12 @@ public final class HostDamageMapping {
         UNMODELLED
     }
 
+    public static final ResourceId HEAD = ResourceId.of("naturalexceptions", "head");
     public static final ResourceId TORSO = ResourceId.of("naturalexceptions", "torso");
+    public static final ResourceId LEFT_ARM = ResourceId.of("naturalexceptions", "left_arm");
+    public static final ResourceId RIGHT_ARM = ResourceId.of("naturalexceptions", "right_arm");
     public static final ResourceId LEFT_LEG = ResourceId.of("naturalexceptions", "left_leg");
+    public static final ResourceId RIGHT_LEG = ResourceId.of("naturalexceptions", "right_leg");
 
     private HostDamageMapping() {}
 
@@ -54,7 +58,36 @@ public final class HostDamageMapping {
         return category == Category.THERMAL ? PhysicalInteraction.Type.THERMAL : PhysicalInteraction.Type.IMPACT;
     }
 
-    public static ResourceId region(Category category) {
-        return category == Category.FALL ? LEFT_LEG : TORSO;
+    /**
+     * Where a hit lands. {@code height} is how high on the body it struck (0 the feet, 1 the top of the head) and
+     * {@code side} which side it came from (-1 the body's left, +1 its right), each NaN when not known; {@code roll}
+     * is a random number in [0, 1) for what the geometry leaves open. Known hits land where they strike: high on the
+     * head, low on a leg, in the middle on the torso or, from the side, an arm. Hits from nowhere in particular
+     * (a blast, a burn) land on a part drawn by its size: the torso most often, the head least.
+     */
+    public static ResourceId region(double height, double side, double roll) {
+        if (Double.isNaN(height)) return anyPart(roll);
+        boolean left = Double.isNaN(side) ? roll < 0.5 : side < 0.0;
+        double lateral = Double.isNaN(side) ? 0.0 : Math.abs(side);
+        if (height >= 0.82) return HEAD;
+        if (height < 0.42) return left ? LEFT_LEG : RIGHT_LEG;
+        // The middle: an arm when it comes from the side (and sometimes even from the front), else the torso.
+        boolean arm = lateral > 0.55 ? roll < 0.8 : roll < 0.25;
+        return arm ? (left ? LEFT_ARM : RIGHT_ARM) : TORSO;
+    }
+
+    /** A part drawn by its share of the body. */
+    public static ResourceId anyPart(double roll) {
+        if (roll < 0.40) return TORSO;
+        if (roll < 0.54) return LEFT_ARM;
+        if (roll < 0.68) return RIGHT_ARM;
+        if (roll < 0.81) return LEFT_LEG;
+        if (roll < 0.94) return RIGHT_LEG;
+        return HEAD;
+    }
+
+    /** A fall lands on both legs: the parts that share its energy. */
+    public static ResourceId[] fallRegions() {
+        return new ResourceId[] { LEFT_LEG, RIGHT_LEG };
     }
 }

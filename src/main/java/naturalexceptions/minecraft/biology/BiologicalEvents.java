@@ -89,18 +89,21 @@ public final class BiologicalEvents {
             }
         }
         double before = state.condition();
-        PhysicalInteraction interaction = new PhysicalInteraction(
-            type,
-            HostDamageMapping.region(category),
-            energy,
-            penetration,
-            sharpness,
-            type == PhysicalInteraction.Type.THERMAL ? 500.0 : 20.0);
+        java.util.List<naturalexceptions.core.id.ResourceId> parts = hitParts(category, event.source, target, state);
         java.util.List<VanillaArmorAdapter.EquippedArmor> equippedArmor = VanillaArmorAdapter.capture(target);
         java.util.List<naturalexceptions.core.biology.ArmorLayer> armorLayers = new java.util.ArrayList<>();
         for (VanillaArmorAdapter.EquippedArmor armor : equippedArmor) armorLayers.add(armor.layer());
         long now = target.worldObj.getTotalWorldTime();
-        BiologicalInteractionResolver.apply(state, interaction, now, armorLayers);
+        for (naturalexceptions.core.id.ResourceId part : parts) {
+            PhysicalInteraction interaction = new PhysicalInteraction(
+                type,
+                part,
+                energy / parts.size(),
+                penetration,
+                sharpness,
+                type == PhysicalInteraction.Type.THERMAL ? 500.0 : 20.0);
+            BiologicalInteractionResolver.apply(state, interaction, now, armorLayers);
+        }
         for (VanillaArmorAdapter.EquippedArmor armor : equippedArmor) armor.commit(target);
         // Armor has absorbed and been worn by this hit here; the host armor step must not do it again.
         if (!equippedArmor.isEmpty()) ArmorPathGate.markResolved(target, now);
@@ -113,6 +116,47 @@ public final class BiologicalEvents {
         event.ammount = hitDamage(raw, armourFactor, target.getMaxHealth(), lost);
         rememberDerivedHealth(target, state);
         applyMovement(target, state);
+    }
+
+    /**
+     * The parts of the body a hit reaches: a fall both legs; a blow or a projectile the part at the height and on
+     * the side it struck from; anything else a part drawn by its size. Only parts the body has.
+     */
+    static java.util.List<naturalexceptions.core.id.ResourceId> hitParts(HostDamageMapping.Category category,
+        net.minecraft.util.DamageSource source, EntityLivingBase target, BiologicalState state) {
+        java.util.List<naturalexceptions.core.id.ResourceId> parts = new java.util.ArrayList<>();
+        if (category == HostDamageMapping.Category.FALL) {
+            for (naturalexceptions.core.id.ResourceId leg : HostDamageMapping.fallRegions())
+                if (state.region(leg) != null) parts.add(leg);
+        } else {
+            double height = Double.NaN, side = Double.NaN;
+            Entity strike = source.getSourceOfDamage();
+            if (category == HostDamageMapping.Category.PHYSICAL_HIT && strike != null
+                && strike != target
+                && strike.boundingBox != null
+                && target.boundingBox != null) {
+                boolean thrown = source.isProjectile() || strike != source.getEntity();
+                double top = strike.boundingBox.maxY, bottom = strike.boundingBox.minY;
+                double hitY = thrown ? (top + bottom) / 2.0 : bottom + (top - bottom) * 0.7;
+                double tall = Math.max(0.1, target.boundingBox.maxY - target.boundingBox.minY);
+                height = (hitY - target.boundingBox.minY) / tall + target.getRNG()
+                    .nextGaussian() * 0.12;
+                double dx = strike.posX - target.posX, dz = strike.posZ - target.posZ;
+                double length = Math.sqrt(dx * dx + dz * dz);
+                if (length > 1.0e-3) {
+                    double yaw = Math.toRadians(target.renderYawOffset);
+                    side = (dx * -Math.cos(yaw) + dz * -Math.sin(yaw)) / length; // + towards the body's right
+                }
+            }
+            naturalexceptions.core.id.ResourceId part = HostDamageMapping.region(
+                height,
+                side,
+                target.getRNG()
+                    .nextDouble());
+            parts.add(state.region(part) != null ? part : HostDamageMapping.TORSO);
+        }
+        if (parts.isEmpty()) parts.add(HostDamageMapping.TORSO);
+        return parts;
     }
 
     /** Share of a blow vanilla armour lets through: 4% less per armour point, as in the host's own armour step. */
