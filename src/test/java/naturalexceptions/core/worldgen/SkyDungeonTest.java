@@ -273,27 +273,97 @@ final class SkyDungeonTest {
     }
 
     @Test
+    void nothingInACitadelStandsOnNothing() {
+        for (Sample s : samples()) {
+            if (s.dungeon.kind() != SkyDungeon.Kind.CITADEL) continue;
+            for (Piece p : s.dungeon.pieces()) {
+                boolean fence = p.block == Block.FENCE;
+                boolean step = p.block == Block.SKY_STAIRS && (p.meta & 4) == 0;
+                if (!fence && !step) continue;
+                if (fence && framed(s, p)) continue; // an arm of a crane or a windmill's sail frame
+                assertTrue(
+                    carried(s, p.x, p.y - 1, p.z),
+                    s.name() + ": the " + p.block + " at " + p.x + "," + p.y + "," + p.z + " stands on nothing");
+            }
+        }
+    }
+
+    @Test
+    void gardenFencesHaveTheirGates() {
+        for (Sample s : samples()) {
+            if (s.dungeon.kind() != SkyDungeon.Kind.CITADEL) continue;
+            int cx = s.island.centreX(), cz = s.island.centreZ(), b = s.island.centreY() + 1, gates = 0;
+            for (Piece p : s.dungeon.pieces()) {
+                int ring = Math.max(Math.abs(p.x - cx), Math.abs(p.z - cz));
+                if (ring <= CitadelLayout.ROAD_OUT || ring > CitadelLayout.PLOT_BACK || p.y != b + 1) continue;
+                if (p.block == Block.FENCE_GATE) gates++;
+                if (p.block != Block.AIR) continue;
+                boolean ew = isFence(s, p.x - 1, p.y, p.z) && isFence(s, p.x + 1, p.y, p.z);
+                boolean ns = isFence(s, p.x, p.y, p.z - 1) && isFence(s, p.x, p.y, p.z + 1);
+                Piece under = s.dungeon.at(p.x, p.y - 1, p.z);
+                assertTrue(
+                    !(ew || ns) || under == null || under.block != Block.TILES,
+                    s.name() + ": a gap in a fence with no gate at " + (p.x - cx) + "," + (p.z - cz));
+            }
+            assertTrue(gates > 0, s.name() + ": gardens have gates");
+        }
+    }
+
+    private static boolean isFence(Sample s, int x, int y, int z) {
+        Piece p = s.dungeon.at(x, y, z);
+        return p != null && p.block == Block.FENCE;
+    }
+
+    /** A fence that is part of a frame: joined sideways to other fences, logs or canvas. */
+    private static boolean framed(Sample s, Piece p) {
+        int joined = 0;
+        for (int[] st : new int[][] { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 0, 1 }, { 0, 0, -1 }, { 0, 1, 0 } }) {
+            Piece q = s.dungeon.at(p.x + st[0], p.y + st[1], p.z + st[2]);
+            if (q != null && (q.block == Block.FENCE || q.block == Block.LOG || q.block == Block.WOOL)) joined++;
+        }
+        return joined >= 2;
+    }
+
+    /** Whether a block stands at (x, y, z) to carry what is above: a piece that is not air or water, or rock. */
+    private static boolean carried(Sample s, int x, int y, int z) {
+        Piece p = s.dungeon.at(x, y, z);
+        if (p != null) return p.block != Block.AIR && p.block != Block.WATER;
+        int[] column = s.rock(x, z);
+        return column != null && y >= column[0] && y <= column[1];
+    }
+
+    @Test
     void towersCanBeClimbedToTheWalkAndTheRoof() {
         for (Sample s : samples()) {
             if (s.dungeon.kind() != SkyDungeon.Kind.CITADEL) continue;
             int cx = s.island.centreX(), cz = s.island.centreZ(), b = s.island.centreY() + 1;
-            int c = CitadelLayout.OUTER - 1;
-            int tx = cx + c, tz = cz + c; // the south-east corner tower; its door is at its inner corner
-            Set<Long> reached = new HashSet<>();
-            for (boolean round : new boolean[] { false, true }) {
-                int[] door = CitadelLayout.door(4, 1, 1, round);
-                int ox = tx + door[0] - 1, oz = tz + door[1] - (round ? 0 : 0);
-                if (standable(s, ox, b + 1, oz))
-                    reached.addAll(climb(s, new int[] { ox, b + 1, oz }, tx - 5, tx + 5, tz - 5, tz + 5, b + 40));
+            int oc = CitadelLayout.OUTER - 1, ic = CitadelLayout.INNER - 1;
+            int[][] towers = { { oc, oc, CitadelLayout.OUTER_HEIGHT }, { -oc, -oc, CitadelLayout.OUTER_HEIGHT },
+                { 0, -oc, CitadelLayout.OUTER_HEIGHT }, { -oc, 0, CitadelLayout.OUTER_HEIGHT },
+                { oc, 0, CitadelLayout.OUTER_HEIGHT }, { ic, ic, CitadelLayout.INNER_HEIGHT },
+                { -ic, ic, CitadelLayout.INNER_HEIGHT } };
+            for (int[] t : towers) {
+                int tx = cx + t[0], tz = cz + t[1], walkY = b + t[2] + 1;
+                Set<Long> reached = new HashSet<>();
+                for (boolean round : new boolean[] { false, true }) {
+                    int[] door = CitadelLayout.door(4, Integer.signum(t[0]), Integer.signum(t[1]), round);
+                    for (int[] st : new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                        int ox = tx + door[0] + st[0], oz = tz + door[1] + st[1];
+                        if (Math.abs(ox - tx) <= 4 && Math.abs(oz - tz) <= 4) continue;
+                        if (standable(s, ox, b + 1, oz)) reached
+                            .addAll(climb(s, new int[] { ox, b + 1, oz }, tx - 5, tx + 5, tz - 5, tz + 5, b + 40));
+                    }
+                }
+                boolean walk = false, roof = false;
+                for (long k : reached) {
+                    int y = (int) (k >> 40);
+                    if (y == walkY) walk = true;
+                    if (y >= walkY + 6) roof = true;
+                }
+                String where = s.name() + ": the tower at " + t[0] + "," + t[1];
+                assertTrue(walk, where + ": up its stair to the wall-walk");
+                assertTrue(roof, where + ": and on up to its roof");
             }
-            boolean walk = false, roof = false;
-            for (long k : reached) {
-                int y = (int) (k >> 40);
-                if (y == b + CitadelLayout.OUTER_HEIGHT + 1) walk = true;
-                if (y >= b + CitadelLayout.OUTER_HEIGHT + 7) roof = true;
-            }
-            assertTrue(walk, s.name() + ": up the tower's stair to the wall-walk");
-            assertTrue(roof, s.name() + ": and on up to its roof");
         }
     }
 

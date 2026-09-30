@@ -229,6 +229,9 @@ final class RoomWriter {
             case 'O':
                 d.put(x, y, z, Block.FURNACE, awayFromWall(tx, tz, w, dp));
                 break;
+            case '"':
+                d.put(x, y, z, Block.FURNACE, awayFromWall(tx, tz, w, dp) | 8);
+                break;
             case 'N':
                 d.put(x, y, z, Block.CRAFTING_TABLE);
                 break;

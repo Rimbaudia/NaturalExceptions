@@ -73,6 +73,7 @@ final class CitadelLayout {
         keep();
         square();
         stairsUp(); // last in the town: nothing is paved over the flights
+        hangGates();
         approach();
         outskirts();
         watchtower();
@@ -195,7 +196,8 @@ final class CitadelLayout {
     /** One flight up each side, clear of the gates, streets and towers (which are at the middles and corners). */
     private void flightsFor(int half, int height) {
         int face = half - THICK; // the first row of the bailey, against the wall
-        int from = 9;
+        // Clear of the gates and streets at the middles, and ending two short of the corner towers' doors.
+        int from = Math.min(9, half - 1 - 4 - height - 2);
         flight(from, -face, 1, 0, height); // north wall, rising east
         flight(-face, from, 0, 1, height); // west wall, rising south
         flight(face, -from, 0, -1, height); // east wall, rising north
@@ -262,13 +264,11 @@ final class CitadelLayout {
                 }
             }
         }
-        helix(tx, tz, walk, top);
-        put(tx, b + walk - 1, tz, Block.LAMP);
-        put(tx, b + top - 1, tz, Block.LAMP);
+        int[] door = door(half, outX, outZ, round);
+        helix(tx, tz, walk, top, nearestOnRing(door[0], door[1]));
         // A door from the bailey, on the face towards the middle; a corner tower's two inner faces meet walls, so
         // its door is at the inner corner, where the tower stands clear of them.
-        int[] door = door(half, outX, outZ, round);
-        for (int y = b + 1; y <= b + 2; y++) {
+        for (int y = b + 1; y <= b + 3; y++) {
             put(tx + door[0], y, tz + door[1], Block.AIR);
             // A round tower's wall is two thick on the diagonal: the doorway goes through both.
             if (round && outX != 0 && outZ != 0) put(tx + door[0] + outX, y, tz + door[1], Block.AIR);
@@ -313,20 +313,28 @@ final class CitadelLayout {
 
     /**
      * The stair round a tower: step {@code i} is at the ring's place {@code i % 16}, one higher than the last, rising
-     * from the ground to the roof. The walk floor keeps its ring places except where the stair needs headroom through
-     * it; the roof opens over the last steps (the hatch) and a rail stands round the hatch but for its way out.
+     * from the ground to the roof round a solid core (a newel of masonry with lamps set in its faces). Every step is
+     * carried on stone down to the step a lap below it (three blocks of headroom kept) or to the ground. The walk
+     * floor keeps its outer ring; the roof opens over the last steps, a curb of slabs round the hatch.
      */
-    private void helix(int tx, int tz, int walk, int top) {
-        int[][] ring = helixRing();
+    private void helix(int tx, int tz, int walk, int top, int start) {
+        int[][] ring = rotate(helixRing(), start);
         int steps = top - 1; // the last step's top is one below the roof: step up from it onto the roof
+        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) for (int y = b + 1; y < b + top; y++) {
+            boolean lamp = (dx == 0) != (dz == 0) && (y == b + walk - 1 || y == b + top - 2 || y == b + 3);
+            if (dx == 0 && dz == 0) put(tx, y, tz, Block.PILLAR);
+            else put(tx + dx, y, tz + dz, lamp ? Block.LAMP : Block.SKYSTONE, 0);
+        }
         for (int i = 0; i < steps; i++) {
             int[] at = ring[i % ring.length], next = ring[(i + 1) % ring.length];
             int y = b + 1 + i;
+            for (int under = Math.max(b + 1, y - ring.length + 4); under < y; under++)
+                stone(tx + at[0], under, tz + at[1]);
             put(tx + at[0], y, tz + at[1], Block.SKY_STAIRS, rising(next[0] - at[0], next[1] - at[1]));
             // Headroom over the step: three open blocks, cutting through the walk floor or the roof.
             for (int h = y + 1; h <= y + 3 && h <= b + top; h++) put(tx + at[0], h, tz + at[1], Block.AIR);
         }
-        // The hatch's rail: fences on the roof round the opening, but not ahead of the last step.
+        // The hatch's curb: polished slabs on the roof round the opening, but not ahead of the last step.
         int[] last = ring[(steps - 1) % ring.length], out = ring[steps % ring.length];
         for (int k = steps - 3; k < steps; k++) {
             int[] at = ring[Math.floorMod(k, ring.length)];
@@ -335,10 +343,28 @@ final class CitadelLayout {
                 if (rx == out[0] && rz == out[1]) continue;
                 if (Math.abs(rx) > 3 || Math.abs(rz) > 3) continue;
                 if (isHatch(ring, steps, rx, rz)) continue;
-                put(tx + rx, b + top + 1, tz + rz, Block.FENCE);
+                put(tx + rx, b + top + 1, tz + rz, Block.SKY_SLAB, 2);
             }
         }
         put(tx + last[0], b + top + 1, tz + last[1], Block.AIR);
+    }
+
+    /** The ring's place nearest a tower's ground door: where its stair starts. */
+    static int nearestOnRing(int x, int z) {
+        int[][] ring = helixRing();
+        int best = 0;
+        for (int k = 1; k < ring.length; k++) {
+            int dk = (ring[k][0] - x) * (ring[k][0] - x) + (ring[k][1] - z) * (ring[k][1] - z);
+            int db = (ring[best][0] - x) * (ring[best][0] - x) + (ring[best][1] - z) * (ring[best][1] - z);
+            if (dk < db) best = k;
+        }
+        return best;
+    }
+
+    private static int[][] rotate(int[][] ring, int start) {
+        int[][] out = new int[ring.length][];
+        for (int k = 0; k < ring.length; k++) out[k] = ring[(start + k) % ring.length];
+        return out;
     }
 
     private static boolean isHatch(int[][] ring, int steps, int x, int z) {
@@ -434,12 +460,17 @@ final class CitadelLayout {
                 cz + front,
                 6,
                 true));
-        // The drawbridge over the moat, railed.
+        // The drawbridge over the moat: a plank deck between two log beams, its rails standing on the beams, the
+        // span carried on posts down into the water at both banks.
         for (int v = front + 1; v <= MOAT_OUT + 1; v++) {
             for (int u = -2; u <= 2; u++) gput(side, u, b, v, Block.PLANKS, 1);
-            gput(side, -3, b + 1, v, Block.FENCE, 0);
-            gput(side, 3, b + 1, v, Block.FENCE, 0);
+            for (int u : new int[] { -3, 3 }) {
+                gput(side, u, b, v, Block.LOG, 1);
+                gput(side, u, b + 1, v, Block.FENCE, 0);
+            }
         }
+        for (int v : new int[] { MOAT_IN, MOAT_OUT }) for (int u : new int[] { -3, 3 })
+            for (int y = b - MOAT_DEPTH + 1; y < b; y++) gput(side, u, y, v, Block.LOG, 1);
     }
 
     // --- The town -------------------------------------------------------------------------------------------
@@ -601,6 +632,16 @@ final class CitadelLayout {
         }
     }
 
+    /** The garden gates, set last so that nothing laid out after a garden can take one away. */
+    private final List<int[]> gates = new ArrayList<>();
+
+    private void hangGates() {
+        for (int[] gate : gates) {
+            put(gate[0], b, gate[1], Block.TILES);
+            put(gate[0], b + 1, gate[1], Block.FENCE_GATE, gate[2]);
+        }
+    }
+
     /**
      * A yard between buildings, four deep from the road: a flower bed, a hay store, or a stack of crates and barrels.
      */
@@ -664,8 +705,7 @@ final class CitadelLayout {
         }
         if (kind != 2) {
             int[] gate = plotPoint(side, along, (from + to) / 2 + 1);
-            put(gate[0], b + 1, gate[1], Block.FENCE_GATE, side == 0 || side == 2 ? SkyDungeon.EAST : SkyDungeon.SOUTH);
-            put(gate[0], b, gate[1], Block.TILES);
+            gates.add(new int[] { gate[0], gate[1], side == 0 || side == 2 ? SkyDungeon.EAST : SkyDungeon.SOUTH });
         }
     }
 
@@ -726,17 +766,19 @@ final class CitadelLayout {
     }
 
     /**
-     * A market stall facing south, three wide: a back panel of spruce between log posts, three counters of one kind
-     * of goods set out before it, a striped awning over them hung from the panel, and a barrel or crate at its side.
+     * A market stall facing south, three wide: two spruce posts at the back carrying a beam, three counters of one
+     * kind of goods before it, a striped awning hung from the beam low over the counters, and a barrel or crate at
+     * its side.
      */
     private void stall(int dx, int dz) {
         int goods = random.nextInt(4), colour = random.nextInt(4);
         for (int x = 0; x <= 2; x++) {
-            boolean post = x != 1;
-            for (int y = b + 1; y <= b + 3; y++) put(dx + x, y, dz, post ? Block.LOG : Block.PLANKS, 1);
+            if (x != 1) put(dx + x, b + 1, dz, Block.LOG, 1);
+            else put(dx + x, b + 1, dz, Block.AIR);
+            put(dx + x, b + 2, dz, Block.PLANKS, 1); // the beam
             put(dx + x, b + 1, dz + 1, Block.MARKET_COUNTER, goods);
-            for (int y = b + 2; y <= b + 3; y++) put(dx + x, y, dz + 1, Block.AIR);
-            put(dx + x, b + 3, dz + 1, Block.AWNING, colour << 2 | SkyDungeon.NORTH);
+            put(dx + x, b + 2, dz + 1, Block.AWNING, colour << 2 | SkyDungeon.NORTH);
+            put(dx + x, b + 3, dz + 1, Block.AIR);
         }
         put(dx + 3, b + 1, dz, random.nextBoolean() ? Block.BARREL : Block.CRATE);
     }

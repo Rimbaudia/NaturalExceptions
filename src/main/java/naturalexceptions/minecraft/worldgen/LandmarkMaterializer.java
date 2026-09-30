@@ -373,10 +373,13 @@ final class LandmarkMaterializer {
             case CAULDRON:
                 set(world, x, y, z, Blocks.cauldron, 3);
                 break;
-            case FURNACE:
-                set(world, x, y, z, Blocks.furnace, meta);
-                world.setBlockMetadataWithNotify(x, y, z, meta, 2);
+            case FURNACE: {
+                // A hearth's fire is a furnace set alight with no fuel: it glows and never goes out or spreads.
+                Block furnace = (meta & 8) != 0 ? Blocks.lit_furnace : Blocks.furnace;
+                set(world, x, y, z, furnace, meta & 7);
+                world.setBlockMetadataWithNotify(x, y, z, meta & 7, 2);
                 break;
+            }
             case CRAFTING_TABLE:
                 set(world, x, y, z, Blocks.crafting_table, 0);
                 break;

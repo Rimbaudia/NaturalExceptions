@@ -67,7 +67,7 @@ public final class SkyDungeon {
         FLOWER,
         WINDBLOOM,
         CAULDRON,
-        /** Meta: vanilla facing (2..5). */
+        /** Meta: vanilla facing (2..5), plus 8 for one alight (a hearth's fire). */
         FURNACE,
         CRAFTING_TABLE,
         ANVIL,

@@ -19,6 +19,7 @@ Legend (one character per block):
   a  Sealed Alcove                 T  buried TNT (in the floor)
   W  Warden Seal                   ?  ruined: masonry or air, half and half
   H  ladder (on the nearest wall)  K  cauldron      O  furnace     N  crafting table     A  anvil
+  "  a hearth's fire: a furnace alight (it glows and never goes out)
   |  glass pane                    <  stained glass pane (the "glass:" colour)             E  glass
   o  fence                         ]  fence gate    /  Wooden Table (of the timber wood)
   Y  log (timber)                  *  oak leaves    Z  hay bale
