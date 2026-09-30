@@ -33,6 +33,11 @@ public final class NEBlocks {
     public static Block magmaRock;
     public static Block cloud;
     public static Block skystoneBricks;
+    public static Block skystoneDecor;
+    public static Block skystonePillar;
+    public static Block skystoneStairs;
+    public static Block skystoneSlab;
+    public static Block skystoneDoubleSlab;
     public static Block windbloom;
     public static Block wardedSkystone;
     public static Block vaultGate;
@@ -84,6 +89,15 @@ public final class NEBlocks {
         cloud = new naturalexceptions.minecraft.block.BlockCloud().setCreativeTab(NECreativeTab.INSTANCE);
         skystoneBricks = new naturalexceptions.minecraft.block.BlockSkystoneBricks()
             .setCreativeTab(NECreativeTab.INSTANCE);
+        skystoneDecor = new naturalexceptions.minecraft.block.BlockSkystoneDecor()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        skystonePillar = new naturalexceptions.minecraft.block.BlockSkystonePillar()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        skystoneStairs = new naturalexceptions.minecraft.block.BlockSkystoneStairs(skystoneBricks)
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        skystoneSlab = new naturalexceptions.minecraft.block.BlockSkystoneSlab(false)
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        skystoneDoubleSlab = new naturalexceptions.minecraft.block.BlockSkystoneSlab(true);
         windbloom = new naturalexceptions.minecraft.block.BlockWindbloom().setCreativeTab(NECreativeTab.INSTANCE);
         wardedSkystone = new naturalexceptions.minecraft.block.BlockWardedSkystone();
         vaultGate = new naturalexceptions.minecraft.block.BlockVaultGate();
@@ -147,6 +161,18 @@ public final class NEBlocks {
                 skystoneBricks,
                 naturalexceptions.minecraft.block.ItemBlockSkystoneBricks.class,
                 "skystone_bricks");
+            GameRegistry.registerBlock(
+                skystoneDecor,
+                naturalexceptions.minecraft.block.ItemBlockSkystoneDecor.class,
+                "skystone_decor");
+            GameRegistry.registerBlock(skystonePillar, "skystone_pillar");
+            GameRegistry.registerBlock(skystoneStairs, "skystone_stairs");
+            GameRegistry
+                .registerBlock(skystoneSlab, naturalexceptions.minecraft.block.ItemSkystoneSlab.class, "skystone_slab");
+            GameRegistry.registerBlock(
+                skystoneDoubleSlab,
+                naturalexceptions.minecraft.block.ItemSkystoneSlab.class,
+                "skystone_double_slab");
             GameRegistry.registerBlock(wardedSkystone, "warded_skystone");
             GameRegistry.registerBlock(vaultGate, "vault_gate");
             GameRegistry.registerBlock(triggerStone, "trigger_stone");
@@ -208,6 +234,7 @@ public final class NEBlocks {
         try {
             GameRegistry.addRecipe(new net.minecraft.item.ItemStack(smelterOutlet), "B B", " B ", 'B', refractoryBrick);
             naturalexceptions.minecraft.recipe.TreasureRecipes.register();
+            naturalexceptions.minecraft.recipe.SkystoneRecipes.register();
             if (NEItems.lumeniteShard != null && NEItems.copperIngot != null) GameRegistry.addRecipe(
                 new net.minecraft.item.ItemStack(lumeniteLamp),
                 " S ",
