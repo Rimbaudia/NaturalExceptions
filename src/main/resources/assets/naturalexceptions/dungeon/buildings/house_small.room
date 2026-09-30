@@ -5,6 +5,7 @@ height: 8
 roles: store
 kinds: citadel
 weight: 3
+carpet: brown
 ---
 floor:
 ppppppp
@@ -17,45 +18,45 @@ ppppppp
 ppppppp
 ppppppp
 layer 1:
-Y#####Y
-#uu..N#
-#....O#
-#.....#
-#.....#
-#c..o.#
-#.....#
-#.....#
-Y##D##Y
+0jj9O90
+jbq..Nj
+juq..Kj
+jc....j
+j.....j
+j.4o2.j
+j.qqqBj
+j.qqq[j
+0jjDjj0
 layer 2:
-Y#####Y
-#P....#
+0##jjj0
+#.....#
 #.....#
 |.....|
 #.....#
-|..._.|
-#.....#
-#.....#
-Y|#D#|Y
+|../..|
+#....B#
+#....[#
+0|#D#|0
 layer 3:
-Y##L##Y
+0#####0
 #.....#
 #.....#
+j.....j
+#....d#
+jd....j
 #.....#
 #.....#
-#.....#
-#.....#
-#.....#
-Y#####Y
+0j###j0
 layer 4:
-YPPPPPY
-P.....P
-P.....P
-P.....P
-P.....P
-P.....P
-P.....P
-P.....P
-YPPPPPY
+0jjjjj0
+j.....j
+j.....j
+j.....j
+j.....j
+j.....j
+j.....j
+j.....j
+0jjjjj0
 layer 5:
 2PPPPP4
 2.....4
