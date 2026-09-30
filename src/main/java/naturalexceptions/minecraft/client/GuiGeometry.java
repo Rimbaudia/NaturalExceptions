@@ -22,6 +22,14 @@ public final class GuiGeometry {
         return get(GUI_LEFT, gui, Math.max(0, (gui.width - width(gui)) / 2));
     }
 
+    /** Moves the screen's left edge (its slots and background go with it). */
+    public static void setLeft(GuiContainer gui, int left) {
+        if (GUI_LEFT == null || gui == null) return;
+        try {
+            GUI_LEFT.setInt(gui, left);
+        } catch (IllegalAccessException ignored) {}
+    }
+
     public static int top(GuiContainer gui) {
         return get(GUI_TOP, gui, Math.max(0, (gui.height - height(gui)) / 2));
     }

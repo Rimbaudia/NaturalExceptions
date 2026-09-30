@@ -25,6 +25,7 @@ import naturalexceptions.minecraft.biology.BodyTreatment;
 import naturalexceptions.minecraft.biology.BodyWords;
 import naturalexceptions.minecraft.client.GuiGeometry;
 import naturalexceptions.minecraft.client.GuiTooltips;
+import naturalexceptions.minecraft.gui.client.EffectColumn;
 import naturalexceptions.minecraft.item.ItemBandage;
 import naturalexceptions.minecraft.knowledge.client.InventoryOverlayLayout;
 import naturalexceptions.minecraft.network.NENetwork;
@@ -102,21 +103,25 @@ public final class BodyStatusPanel {
         return naturalexceptions.minecraft.gear.client.InventoryTabs.showsTabs(gui);
     }
 
+    /** Beside the inventory, and left of the potion effects' column when there is one. */
     private static BodyStatusLayout layoutFor(GuiContainer gui) {
-        return BodyStatusLayout
-            .calculate(gui.width, gui.height, GuiGeometry.left(gui), GuiGeometry.top(gui), GuiGeometry.height(gui));
+        int left = GuiGeometry.left(gui) - EffectColumn.width(gui);
+        return BodyStatusLayout.calculate(gui.width, gui.height, left, GuiGeometry.top(gui), GuiGeometry.height(gui));
     }
 
     // --- Events ----------------------------------------------------------------------------------------------
 
     @SubscribeEvent
     public void onDrawPre(GuiScreenEvent.DrawScreenEvent.Pre event) {
+        // The item browser keeps clear of the effects' column, and of this panel when it is open.
+        int effects = EffectColumn.width(event.gui);
         if (!hosts(event.gui)) {
-            InventoryOverlayLayout.reserveLeft(0);
+            InventoryOverlayLayout.reserveLeft(effects);
             return;
         }
         GuiContainer gui = (GuiContainer) event.gui;
-        InventoryOverlayLayout.reserveLeft(open ? layoutFor(gui).reservedLeftWidth(GuiGeometry.left(gui)) : 0);
+        InventoryOverlayLayout
+            .reserveLeft(open ? layoutFor(gui).reservedLeftWidth(GuiGeometry.left(gui)) : effects);
     }
 
     @SubscribeEvent
