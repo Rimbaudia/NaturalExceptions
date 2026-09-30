@@ -449,8 +449,11 @@ final class RoomWriter {
     static int alcoveMeta(String mob) {
         boolean armed = mob.endsWith("+");
         String name = armed ? mob.substring(0, mob.length() - 1) : mob;
-        int kind = name.equals("Skeleton") ? 1 : name.equals("Spider") ? 2 : name.equals("CaveSpider") ? 3 : 0;
-        return kind | (armed ? 4 : 0);
+        int kind = name.equals("Skeleton") ? 1
+            : name.equals("Spider") ? 2
+                : name.equals("CaveSpider") ? 3 : name.equals("Stormwisp") ? 4 : name.equals("Sentinel") ? 5 : 0;
+        // Kinds 4 and up keep their low two bits and set the high bit (8); 4 is the armed bit.
+        return (kind & 3) | (kind >= 4 ? 8 : 0) | (armed ? 4 : 0);
     }
 
     /** Vanilla facing (2 north .. 5 east) pointing away from the nearest wall of a w x d inside. */

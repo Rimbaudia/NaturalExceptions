@@ -3,7 +3,7 @@ size: 2x1
 height: 5
 roles: hall guard store
 weight: 3
-mobs: Zombie Skeleton Zombie+
+mobs: Zombie Stormwisp Sentinel
 carpet: red
 ---
 floor:

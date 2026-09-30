@@ -595,5 +595,5 @@ public final class SkyDungeon {
             for (int y = y0; y <= y1; y++) for (int z = z0; z <= z1; z++) put(x, y, z, Block.AIR);
     }
 
-    static final String[] DEFAULT_MOBS = { "Zombie", "Skeleton", "Spider" };
+    static final String[] DEFAULT_MOBS = { "Zombie", "Skeleton", "Spider", "Stormwisp", "Sentinel" };
 }

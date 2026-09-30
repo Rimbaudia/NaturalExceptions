@@ -3,7 +3,7 @@ size: 1x1
 height: 5
 roles: hall store guard
 weight: 3
-mobs: Skeleton Witch
+mobs: Skeleton Witch Stormwisp
 ---
 floor:
 #########

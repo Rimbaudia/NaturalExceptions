@@ -4,7 +4,7 @@ height: 10
 roles: warden
 kinds: sanctum citadel
 weight: 1
-mobs: Skeleton Zombie+ Skeleton+
+mobs: Sentinel Zombie+ Stormwisp
 pit: empty
 ---
 floor:

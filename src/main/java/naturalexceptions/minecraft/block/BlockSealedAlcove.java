@@ -24,6 +24,14 @@ public final class BlockSealedAlcove extends Block {
     public static final int SPIDER = 2;
     public static final int CAVE_SPIDER = 3;
     public static final int ARMED = 4;
+    /** The sky dungeons' own creatures: kinds 4 and 5, with the high bit set. */
+    public static final int STORMWISP = 4, SENTINEL = 5;
+    static final int HIGH_KIND = 8;
+
+    /** The creature kind in an alcove's meta: the low two bits, and a third from the high bit. */
+    public static int kind(int meta) {
+        return (meta & 3) | ((meta & HIGH_KIND) != 0 ? 4 : 0);
+    }
 
     public BlockSealedAlcove() {
         super(Material.rock);
@@ -41,7 +49,13 @@ public final class BlockSealedAlcove extends Block {
         world.playAuxSFX(2001, x, y, z, Block.getIdFromBlock(world.getBlock(x, y, z)));
         world.setBlockToAir(x, y, z);
         EntityLiving mob;
-        switch (meta & 3) {
+        switch (kind(meta)) {
+            case STORMWISP:
+                mob = new naturalexceptions.minecraft.entity.EntityStormwisp(world);
+                break;
+            case SENTINEL:
+                mob = new naturalexceptions.minecraft.entity.EntitySkystoneSentinel(world);
+                break;
             case SKELETON:
                 mob = new EntitySkeleton(world);
                 mob.setCurrentItemOrArmor(0, new ItemStack(Items.bow));
@@ -57,7 +71,7 @@ public final class BlockSealedAlcove extends Block {
                 mob = new EntityZombie(world);
                 break;
         }
-        if ((meta & ARMED) != 0 && !(mob instanceof EntitySpider)) {
+        if ((meta & ARMED) != 0 && (mob instanceof EntityZombie || mob instanceof EntitySkeleton)) {
             mob.setCurrentItemOrArmor(4, new ItemStack(Items.iron_helmet));
             mob.setCurrentItemOrArmor(3, new ItemStack(Items.iron_chestplate));
             if (mob instanceof EntityZombie) mob.setCurrentItemOrArmor(0, new ItemStack(Items.iron_sword));

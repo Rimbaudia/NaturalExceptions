@@ -554,6 +554,13 @@ final class LandmarkMaterializer {
      * A spawner for a creature by its vanilla name, set slow and sparse; "Zombie+" (and the like) spawns it in iron
      * armour with a weapon, through the spawner's own spawn data.
      */
+    /** The entity name a dungeon's mob list means: vanilla's names as they are, and the sky's own creatures. */
+    static String entityName(String mob) {
+        if (mob.equals("Stormwisp")) return naturalexceptions.NaturalExceptions.MOD_ID + ".stormwisp";
+        if (mob.equals("Sentinel")) return naturalexceptions.NaturalExceptions.MOD_ID + ".skystone_sentinel";
+        return mob;
+    }
+
     private static void spawner(World world, int x, int y, int z, String mob) {
         set(world, x, y, z, Blocks.mob_spawner, 0);
         TileEntity tile = world.getTileEntity(x, y, z);
@@ -562,7 +569,7 @@ final class LandmarkMaterializer {
             .func_145881_a();
         boolean armed = mob.endsWith("+");
         String name = armed ? mob.substring(0, mob.length() - 1) : mob;
-        logic.setEntityName(name);
+        logic.setEntityName(entityName(name));
         net.minecraft.nbt.NBTTagCompound tag = new net.minecraft.nbt.NBTTagCompound();
         logic.writeToNBT(tag);
         // Slow and sparse: a pair every 30 to 60 seconds, never more than three about, only for a player close by.

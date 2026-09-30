@@ -3,7 +3,7 @@ size: 1x1
 height: 5
 roles: guard store
 weight: 2
-mobs: Zombie+ Skeleton+ Zombie
+mobs: Zombie+ Skeleton+ Sentinel
 ---
 floor:
 #########

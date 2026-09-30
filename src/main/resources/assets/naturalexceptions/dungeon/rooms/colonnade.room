@@ -3,7 +3,7 @@ size: 2x2
 height: 5
 roles: hall guard store
 weight: 2
-mobs: Skeleton Zombie Spider
+mobs: Skeleton Stormwisp Spider
 ---
 floor:
 ############################

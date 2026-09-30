@@ -3,7 +3,7 @@ size: 1x1
 height: 5
 roles: guard
 weight: 3
-mobs: Skeleton Zombie Spider Zombie+
+mobs: Skeleton Sentinel Spider Zombie+
 ---
 floor:
 #########

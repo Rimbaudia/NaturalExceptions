@@ -4,7 +4,7 @@ height: 5
 roles: key
 weight: 2
 trapped: true
-mobs: Skeleton Zombie+ Zombie
+mobs: Skeleton Sentinel Stormwisp
 ---
 floor:
 #########

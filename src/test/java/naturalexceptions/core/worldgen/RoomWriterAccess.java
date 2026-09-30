@@ -8,4 +8,8 @@ public final class RoomWriterAccess {
     public static int stairs(char c, int rotation) {
         return RoomWriter.stairs(c, rotation);
     }
+
+    public static int alcoveMeta(String mob) {
+        return RoomWriter.alcoveMeta(mob);
+    }
 }

@@ -249,8 +249,8 @@ public final class EntitySkyWarden extends EntityMob implements IBossDisplayData
             posX + (rand.nextDouble() - 0.5) * width,
             posY + rand.nextDouble() * height,
             posZ + (rand.nextDouble() - 0.5) * width,
-            0.45,
-            0.85,
+            0.75,
+            0.6,
             1.0);
     }
 

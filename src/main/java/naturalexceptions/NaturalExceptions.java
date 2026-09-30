@@ -118,6 +118,22 @@ public final class NaturalExceptions {
             80,
             3,
             true);
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.entity.EntityStormwisp.class,
+            "stormwisp",
+            4,
+            this,
+            64,
+            2,
+            true);
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.entity.EntitySkystoneSentinel.class,
+            "skystone_sentinel",
+            5,
+            this,
+            64,
+            3,
+            true);
         MinecraftForge.EVENT_BUS.register(new NEChunkGenerationHistory());
         cpw.mods.fml.common.network.NetworkRegistry.INSTANCE
             .registerGuiHandler(this, new naturalexceptions.minecraft.gui.NEGuiHandler());
@@ -169,6 +185,12 @@ public final class NaturalExceptions {
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
             naturalexceptions.minecraft.entity.EntitySkyWarden.class,
             new naturalexceptions.minecraft.entity.client.RenderSkyWarden());
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.entity.EntityStormwisp.class,
+            new naturalexceptions.minecraft.entity.client.RenderStormwisp());
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.entity.EntitySkystoneSentinel.class,
+            new naturalexceptions.minecraft.entity.client.RenderSkystoneSentinel());
         cpw.mods.fml.client.registry.RenderingRegistry
             .registerBlockHandler(new naturalexceptions.minecraft.client.model.PartModelRenderer());
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(

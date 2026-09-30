@@ -3,7 +3,7 @@ size: 1x1
 height: 5
 roles: hall guard store
 weight: 3
-mobs: Zombie
+mobs: Zombie Stormwisp
 ---
 floor:
 #########

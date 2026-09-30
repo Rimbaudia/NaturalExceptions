@@ -3,7 +3,7 @@ size: 1x1
 height: 10
 roles: warden
 weight: 1
-mobs: Skeleton Zombie+
+mobs: Sentinel Stormwisp
 ---
 floor:
 #########
