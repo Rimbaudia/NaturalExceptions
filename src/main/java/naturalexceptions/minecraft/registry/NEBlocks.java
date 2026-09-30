@@ -54,6 +54,12 @@ public final class NEBlocks {
     public static Block marketAwning;
     public static Block wallShelf;
     public static Block weaponRack;
+    public static Block candelabra;
+    public static Block brazier;
+    public static Block stoneBench;
+    public static Block pew;
+    public static Block fountain;
+    public static Block orrery;
     public static Block windbloom;
     public static Block wardedSkystone;
     public static Block vaultGate;
@@ -142,6 +148,12 @@ public final class NEBlocks {
             .setCreativeTab(NECreativeTab.INSTANCE);
         wallShelf = new naturalexceptions.minecraft.furniture.BlockWallShelf().setCreativeTab(NECreativeTab.INSTANCE);
         weaponRack = new naturalexceptions.minecraft.furniture.BlockWeaponRack().setCreativeTab(NECreativeTab.INSTANCE);
+        candelabra = new naturalexceptions.minecraft.furniture.BlockCandelabra().setCreativeTab(NECreativeTab.INSTANCE);
+        brazier = new naturalexceptions.minecraft.furniture.BlockBrazier().setCreativeTab(NECreativeTab.INSTANCE);
+        stoneBench = new naturalexceptions.minecraft.furniture.BlockBench().setCreativeTab(NECreativeTab.INSTANCE);
+        pew = new naturalexceptions.minecraft.furniture.BlockPew().setCreativeTab(NECreativeTab.INSTANCE);
+        fountain = new naturalexceptions.minecraft.furniture.BlockFountain().setCreativeTab(NECreativeTab.INSTANCE);
+        orrery = new naturalexceptions.minecraft.furniture.BlockOrrery().setCreativeTab(NECreativeTab.INSTANCE);
         windbloom = new naturalexceptions.minecraft.block.BlockWindbloom().setCreativeTab(NECreativeTab.INSTANCE);
         wardedSkystone = new naturalexceptions.minecraft.block.BlockWardedSkystone();
         vaultGate = new naturalexceptions.minecraft.block.BlockVaultGate();
@@ -246,6 +258,12 @@ public final class NEBlocks {
                 "market_awning");
             GameRegistry.registerBlock(wallShelf, "wall_shelf");
             GameRegistry.registerBlock(weaponRack, "weapon_rack");
+            GameRegistry.registerBlock(candelabra, "candelabra");
+            GameRegistry.registerBlock(brazier, "brazier");
+            GameRegistry.registerBlock(stoneBench, "stone_bench");
+            GameRegistry.registerBlock(pew, "pew");
+            GameRegistry.registerBlock(fountain, "fountain");
+            GameRegistry.registerBlock(orrery, "orrery");
             GameRegistry.registerBlock(wardedSkystone, "warded_skystone");
             GameRegistry.registerBlock(vaultGate, "vault_gate");
             GameRegistry.registerBlock(triggerStone, "trigger_stone");
@@ -284,6 +302,12 @@ public final class NEBlocks {
             GameRegistry.registerTileEntity(
                 naturalexceptions.minecraft.furniture.TileEntityWeaponRack.class,
                 "naturalexceptions_weapon_rack");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.furniture.TileEntityBrazier.class,
+                "naturalexceptions_brazier");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.furniture.TileEntityOrrery.class,
+                "naturalexceptions_orrery");
         } catch (Throwable ignored) {}
         try {
             GameRegistry.registerTileEntity(

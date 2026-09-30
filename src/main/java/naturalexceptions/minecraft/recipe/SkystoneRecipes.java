@@ -94,6 +94,41 @@ public final class SkystoneRecipes {
                 new ItemStack(Blocks.wooden_slab, 1, BlockWoodenTable.PLANKS[wood]),
                 'F',
                 Blocks.fence);
+        Object skystone = NEBlocks.skystoneBricks;
+        if (NEBlocks.candelabra != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.candelabra),
+            "SSS",
+            "GGG",
+            " G ",
+            'S',
+            Items.string,
+            'G',
+            Items.gold_ingot);
+        if (NEBlocks.brazier != null && skystone != null) GameRegistry
+            .addRecipe(new ItemStack(NEBlocks.brazier), "SCS", " S ", "S S", 'S', skystone, 'C', Items.coal);
+        if (NEBlocks.stoneBench != null && NEBlocks.skystoneSlab != null && skystone != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.stoneBench, 2),
+            "LLL",
+            "S S",
+            'L',
+            new ItemStack(NEBlocks.skystoneSlab, 1, OreDictionary.WILDCARD_VALUE),
+            'S',
+            skystone);
+        if (NEBlocks.pew != null)
+            GameRegistry.addRecipe(new ItemStack(NEBlocks.pew, 2), "P  ", "PPP", "T T", 'P', planks, 'T', Items.stick);
+        if (NEBlocks.fountain != null && skystone != null) GameRegistry
+            .addRecipe(new ItemStack(NEBlocks.fountain), "S S", "SWS", "SSS", 'S', skystone, 'W', Items.water_bucket);
+        if (NEBlocks.orrery != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.orrery),
+            " C ",
+            "GGG",
+            " P ",
+            'C',
+            Items.clock,
+            'G',
+            Items.gold_ingot,
+            'P',
+            planks);
         if (NEBlocks.wallShelf != null)
             GameRegistry.addRecipe(new ItemStack(NEBlocks.wallShelf, 3), "SSS", "T T", 'S', slabs, 'T', Items.stick);
         if (NEBlocks.weaponRack != null) GameRegistry

@@ -1,6 +1,7 @@
 altar
 armory
 barracks
+brazier_gallery
 chasm_bridge
 chasm_gale
 cistern
@@ -8,6 +9,7 @@ collapsed_chamber
 colonnade
 crossroads
 crypt
+descent_shrine
 entrance_hall
 flooded_gallery
 forge
@@ -15,9 +17,12 @@ great_hall
 guard_post
 key_sanctum
 key_shrine
+landing
 library
+mast_hall
 pillared_hall
 prison
+rope_store
 secret_cache
 sky_garden
 storeroom
@@ -26,3 +31,4 @@ vault
 warden_chamber
 warden_hall
 warden_hall_small
+well_head

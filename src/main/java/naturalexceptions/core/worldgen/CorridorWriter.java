@@ -242,11 +242,13 @@ final class CorridorWriter {
     }
 
     /**
-     * A shaft between levels at (x, z): a ladder from the lower floor up through the upper floor, walled where it
-     * crosses the rock, and lit by lanterns set in the floor round its mouth and in the ceiling round its foot; a gale
-     * lift adds a Gale Vent at the bottom that carries climbers up.
+     * A shaft between levels at (x, z): a ladder (facing south, on the block to its north) from the lower floor up
+     * through the upper floor, walled where it crosses the rock. Between two levels ({@code centred}) it stands in the
+     * middle of its rooms, which are built round it, and unless a gale lift carries climbers up (a Gale Vent at its
+     * foot) a Stormglass beacon at its foot sends light up it. The way in from the surface stands in its hall's
+     * corner, lit from the ceiling round its foot.
      */
-    void shaft(int x, int z, int lowerFloor, int lowerCeiling, int upperFloor, boolean galeLift) {
+    void shaft(int x, int z, int lowerFloor, int lowerCeiling, int upperFloor, boolean galeLift, boolean centred) {
         for (int y = lowerCeiling; y < upperFloor; y++)
             for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) {
                 if (dx == 0 && dz == 0) continue;
@@ -255,11 +257,8 @@ final class CorridorWriter {
             }
         for (int y = lowerFloor + 1; y <= upperFloor; y++) d.put(x, y, z, Block.LADDER, 3);
         if (galeLift) d.put(x, lowerFloor, z, Block.VENT, RoomWriter.ventMeta(1));
-        // A lit square round the hole, so the way down (and the way up, overhead) shows from across a room: the
-        // shaft stands in its rooms' north-west corner, so the room lies to the east and south of it.
-        for (int[] o : new int[][] { { 1, 0 }, { 0, 1 }, { 1, 1 } }) {
-            d.put(x + o[0], upperFloor, z + o[1], Block.LAMP);
+        else if (centred) d.put(x, lowerFloor, z, Block.BEACON);
+        if (!centred) for (int[] o : new int[][] { { 1, 0 }, { 0, 1 }, { 1, 1 } })
             d.put(x + o[0], lowerCeiling, z + o[1], Block.LAMP);
-        }
     }
 }

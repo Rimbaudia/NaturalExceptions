@@ -134,6 +134,8 @@ public final class NaturalExceptions {
             64,
             3,
             true);
+        cpw.mods.fml.common.registry.EntityRegistry
+            .registerModEntity(naturalexceptions.minecraft.furniture.EntitySeat.class, "seat", 6, this, 32, 20, false);
         MinecraftForge.EVENT_BUS.register(new NEChunkGenerationHistory());
         cpw.mods.fml.common.network.NetworkRegistry.INSTANCE
             .registerGuiHandler(this, new naturalexceptions.minecraft.gui.NEGuiHandler());
@@ -222,6 +224,22 @@ public final class NaturalExceptions {
             .bindTileEntitySpecialRenderer(naturalexceptions.minecraft.furniture.TileEntityWallShelf.class, furniture);
         cpw.mods.fml.client.registry.ClientRegistry
             .bindTileEntitySpecialRenderer(naturalexceptions.minecraft.furniture.TileEntityWeaponRack.class, furniture);
+        cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
+            naturalexceptions.minecraft.furniture.TileEntityOrrery.class,
+            new naturalexceptions.minecraft.furniture.client.RenderOrrery());
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.furniture.EntitySeat.class,
+            new net.minecraft.client.renderer.entity.Render() {
+
+                @Override
+                public void doRender(net.minecraft.entity.Entity entity, double x, double y, double z, float yaw,
+                    float partialTicks) {}
+
+                @Override
+                protected net.minecraft.util.ResourceLocation getEntityTexture(net.minecraft.entity.Entity entity) {
+                    return null;
+                }
+            });
     }
 
     @Mod.EventHandler

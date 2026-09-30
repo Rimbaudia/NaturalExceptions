@@ -327,10 +327,13 @@ public final class BiologicalEvents {
         BiologicalState state = BiologicalProperties.get(player)
             .state();
         long now = player.worldObj.getTotalWorldTime();
+        // Resting on a seat mends wounds twice as fast (and the seat heals hearts itself).
+        boolean seated = player.ridingEntity instanceof naturalexceptions.minecraft.furniture.EntitySeat;
         state.setRecoveryMultiplier(
             naturalexceptions.minecraft.gear.GearMovement.mendingMultiplier(
                 naturalexceptions.minecraft.item.ItemTreasureGear
-                    .worn(player, naturalexceptions.minecraft.gear.Treasure.BAND_OF_MENDING)));
+                    .worn(player, naturalexceptions.minecraft.gear.Treasure.BAND_OF_MENDING))
+                * (seated ? 2.0 : 1.0));
         state.advanceTo(Math.max(state.lastResolvedTick(), now));
         spendExhaustion(player, state);
         state.clearExposureProtection();

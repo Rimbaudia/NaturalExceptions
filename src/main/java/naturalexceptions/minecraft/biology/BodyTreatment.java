@@ -58,6 +58,16 @@ public final class BodyTreatment {
         return stanched;
     }
 
+    /** Water drunk (from a fountain, a barrel's tap): the body's water store tops up. */
+    public static void drink(EntityPlayerMP player, double waterMillilitres) {
+        BiologicalState state = BiologicalProperties.get(player)
+            .state();
+        long now = player.worldObj.getTotalWorldTime();
+        state.advanceTo(Math.max(state.lastResolvedTick(), now));
+        state.replenishHydrationMillilitres(waterMillilitres);
+        BodyStatusSync.sendNow(player, state, now);
+    }
+
     /** Gives the player blood to be made over the next while, and water (an iron tonic). */
     public static void fortify(EntityPlayerMP player, double bloodMillilitres, double waterMillilitres) {
         BiologicalState state = BiologicalProperties.get(player)

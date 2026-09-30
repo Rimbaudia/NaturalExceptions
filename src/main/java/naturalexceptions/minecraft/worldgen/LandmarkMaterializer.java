@@ -514,6 +514,36 @@ final class LandmarkMaterializer {
             case HAY:
                 set(world, x, y, z, Blocks.hay_block, 0);
                 break;
+            case STORMGLASS_CLUSTER:
+                set(world, x, y, z, orElse(NEBlocks.stormglassCluster, Blocks.air), 0);
+                break;
+            case STORMGLASS_VEIN:
+                set(world, x, y, z, orElse(NEBlocks.stormglassVein, Blocks.stone), 0);
+                break;
+            case VINE:
+                set(world, x, y, z, Blocks.vine, VINE_META[meta & 3]);
+                break;
+            case CANDELABRA:
+                set(world, x, y, z, orElse(NEBlocks.candelabra, Blocks.torch), meta & 1);
+                break;
+            case BRAZIER:
+                set(world, x, y, z, orElse(NEBlocks.brazier, Blocks.glowstone), 0);
+                break;
+            case BENCH:
+                set(world, x, y, z, orElse(NEBlocks.stoneBench, Blocks.stone_slab), SIDE_FACING[meta & 3]);
+                break;
+            case PEW:
+                set(world, x, y, z, orElse(NEBlocks.pew, Blocks.oak_stairs), SIDE_FACING[meta & 3]);
+                break;
+            case FOUNTAIN:
+                set(world, x, y, z, orElse(NEBlocks.fountain, Blocks.cauldron), 0);
+                break;
+            case ORRERY:
+                set(world, x, y, z, orElse(NEBlocks.orrery, Blocks.gold_block), 0);
+                break;
+            case BEACON:
+                set(world, x, y, z, orElse(NEBlocks.stormglassLantern, Blocks.glowstone), 1);
+                break;
             case GLASS:
                 set(world, x, y, z, Blocks.glass, 0);
                 break;
@@ -533,6 +563,8 @@ final class LandmarkMaterializer {
 
     /** Vanilla side for a dungeon direction (north, east, south, west): what a shelf's front faces. */
     private static final int[] SIDE_FACING = { 2, 5, 3, 4 };
+    /** Vine meta clinging to the wall on the north, east, south, west. */
+    private static final int[] VINE_META = { 4, 8, 1, 2 };
     /** An awning's wall, as its block counts them (0 north, 1 south, 2 west, 3 east), by dungeon direction. */
     private static final int[] AWNING_WALL = { 0, 3, 1, 2 };
 

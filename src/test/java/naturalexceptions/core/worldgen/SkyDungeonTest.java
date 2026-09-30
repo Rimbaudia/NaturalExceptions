@@ -823,21 +823,34 @@ final class SkyDungeonTest {
     }
 
     @Test
-    void theWaysDownAreLit() {
+    void theWaysDownAreRoomsOfTheirOwn() {
         int shafts = 0;
         for (Sample s : samples()) {
             for (Connection c : s.dungeon.connections()) {
                 if (c.style != Style.SHAFT) continue;
                 Room top = c.a.level < c.b.level ? c.a : c.b, bottom = top == c.a ? c.b : c.a;
-                int x = top.minX, z = top.minZ;
-                Piece hole = s.dungeon.at(x, top.floorY, z);
-                assertTrue(hole != null && hole.block == Block.LADDER, s.name() + ": the shaft's mouth");
-                for (int[] o : new int[][] { { 1, 0 }, { 0, 1 }, { 1, 1 } }) {
-                    Piece floor = s.dungeon.at(x + o[0], top.floorY, z + o[1]);
-                    Piece ceiling = s.dungeon.at(x + o[0], bottom.floorY + bottom.height + 1, z + o[1]);
-                    assertTrue(floor != null && floor.block == Block.LAMP, s.name() + ": lit round the mouth");
-                    assertTrue(ceiling != null && ceiling.block == Block.LAMP, s.name() + ": lit over the foot");
+                String name = s.name() + " shaft at " + top.x + "," + top.z;
+                assertEquals(Role.SHAFT_TOP, top.role, name + ": the room above is a shaft room");
+                assertEquals(Role.SHAFT_FOOT, bottom.role, name + ": and so is the one below");
+                int x = (top.minX + top.maxX) / 2, z = (top.minZ + top.maxZ) / 2;
+                assertEquals(x, (bottom.minX + bottom.maxX) / 2, name + ": one above the other");
+                for (int y = bottom.floorY + 1; y <= top.floorY; y++) {
+                    Piece ladder = s.dungeon.at(x, y, z), back = s.dungeon.at(x, y, z - 1);
+                    assertTrue(ladder != null && ladder.block == Block.LADDER, name + ": ladder all the way, y" + y);
+                    assertTrue(
+                        back != null && back.block != Block.AIR && back.block != Block.LADDER,
+                        name + ": something behind the ladder, y" + y);
                 }
+                Piece foot = s.dungeon.at(x, bottom.floorY, z);
+                assertTrue(foot.block == Block.BEACON || foot.block == Block.VENT, name + ": a beacon or a lift");
+                boolean lit = false;
+                for (int dx = -2; dx <= 2; dx++)
+                    for (int dz = -2; dz <= 2; dz++) for (int y = top.floorY; y <= top.floorY + top.height + 1; y++) {
+                        Piece p = s.dungeon.at(x + dx, y, z + dz);
+                        lit |= p != null
+                            && (p.block == Block.LAMP || p.block == Block.CANDELABRA || p.block == Block.BRAZIER);
+                    }
+                assertTrue(lit, name + ": a light by the hole");
                 shafts++;
             }
         }

@@ -101,7 +101,9 @@ final class SanctumLayout {
             return role == Role.ENTRANCE || role == Role.WARDEN
                 || role == Role.VAULT
                 || role == Role.SECRET
-                || role == Role.KEY;
+                || role == Role.KEY
+                || role == Role.SHAFT_TOP
+                || role == Role.SHAFT_FOOT;
         }
     }
 
@@ -245,6 +247,8 @@ final class SanctumLayout {
         Slot bottom = add(level, i, j, 1, 1, false);
         top.link = true;
         bottom.link = true;
+        top.role = Role.SHAFT_TOP;
+        bottom.role = Role.SHAFT_FOOT;
         Edge shaft = new Edge(top, bottom, i, j, i, j);
         shaft.style = Style.SHAFT;
         connect(shaft);
@@ -688,7 +692,7 @@ final class SanctumLayout {
             if ((t.height > NORMAL_HEIGHT) != slot.tall) continue;
             if (t.trapped && !trapAllowed) continue;
             if (slot.noPits && (t.has(',') || t.has('%') || t.has('T'))) continue;
-            if ((slot.link || slot.role == Role.ENTRANCE) && !cornersOpen(t)) continue;
+            if (slot.role == Role.ENTRANCE && !cornersOpen(t)) continue;
             options.add(t);
             int times = used.getOrDefault(t, 0);
             weights.add(t.weight / (1.0 + 3.0 * times));
@@ -725,6 +729,11 @@ final class SanctumLayout {
         used.merge(pick, 1, Integer::sum);
         if (pick.trapped) trapsOnLevel[slot.level]++;
         // Turn it to fit its footprint; a square room may face any way.
+        // A shaft room is built round a ladder that always faces south: it stands as authored.
+        if (slot.role == Role.SHAFT_TOP || slot.role == Role.SHAFT_FOOT) {
+            slot.rotation = 0;
+            return;
+        }
         List<Integer> turns = new ArrayList<>();
         for (int r = 0; r < 4; r++) if (slot.small || pick.width(r) == slot.maxX() - slot.minX() + 1) turns.add(r);
         slot.rotation = turns.get(random.nextInt(turns.size()));
@@ -831,12 +840,13 @@ final class SanctumLayout {
             if (e.style == Style.SHAFT) {
                 Slot top = e.a.level < e.b.level ? e.a : e.b, bottom = e.other(top);
                 corridors.shaft(
-                    top.minX(),
-                    top.minZ(),
+                    cellX(top.i0),
+                    cellZ(top.j0),
                     bottom.floor(),
                     bottom.floor() + bottom.template.height + 1,
                     top.floor(),
-                    random.nextBoolean());
+                    random.nextBoolean(),
+                    true);
             } else corridor(corridors, e);
             d.connections.add(new SkyDungeon.Connection(e.a.room, e.b.room, e.style, e.trap, e.critical));
         }
@@ -891,7 +901,7 @@ final class SanctumLayout {
         int sx = hall.minX(), sz = hall.minZ();
         if (underKeep()) {
             // Up into the citadel's keep; the citadel sets the dungeon's entrance and surface itself.
-            corridors.shaft(sx, sz, hall.floor(), hall.floor() + hall.template.height + 1, keepFloor, false);
+            corridors.shaft(sx, sz, hall.floor(), hall.floor() + hall.template.height + 1, keepFloor, false, false);
             return;
         }
         int top = island.centreY();
@@ -910,7 +920,7 @@ final class SanctumLayout {
             if (broken > 0) d.put(gx + corners[c][0], gy + 4 - broken, gz + corners[c][1], Block.SKY_SLAB, 0);
         }
         if (whole[0] && whole[1]) for (int dx = -h; dx <= h; dx++) d.polished(gx + dx, gy + 4, gz - h);
-        corridors.shaft(sx, sz, hall.floor(), hall.floor() + hall.template.height + 1, top, false);
+        corridors.shaft(sx, sz, hall.floor(), hall.floor() + hall.template.height + 1, top, false, false);
         d.entrance = new int[] { sx, gy, sz + 2 };
         d.surface = new int[] { gx - h - 1, gz - h - 1, gx + h + 1, gz + h + 1 };
     }

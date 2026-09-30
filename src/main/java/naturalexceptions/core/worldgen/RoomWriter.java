@@ -70,6 +70,11 @@ final class RoomWriter {
                 } else if (c == ']') d.put(x, wy, z, Block.FENCE_GATE, gate(template, rotation, tx, y, tz));
                 else if (c == '(' || c == ')')
                     d.put(x, wy, z, Block.PILLAR, (c == '(') == ((rotation & 1) == 0) ? 4 : 8);
+                else if (c == '\u03a8' || c == '\u03c8')
+                    d.put(x, wy, z, Block.CANDELABRA, (c == '\u03c8') == ((rotation & 1) == 0) ? 1 : 0);
+                else if (PEWS.indexOf(c) >= 0) d.put(x, wy, z, Block.PEW, (PEWS.indexOf(c) + rotation) & 3);
+                else if (c == '\u03c0' || c == '\u03a0')
+                    d.put(x, wy, z, Block.BENCH, ((c == '\u03a0' ? 1 : 0) + rotation) & 3);
                 else place(
                     c,
                     x,
@@ -115,6 +120,9 @@ final class RoomWriter {
         else if (layer >= t.eaves) d.put(x, y, z, Block.SLAB, (t.roof == 1 ? 5 : 1) | half);
         else d.put(x, y, z, Block.SLAB, PLANKS[t.timber] | half);
     }
+
+    /** Pews with their backs to the north, east, south, west. */
+    static final String PEWS = "\u03b1\u03b2\u03b3\u03b4";
 
     /** Skystone stairs rising to the north, east, south, west; then the same upside down. */
     static final String SKY_STAIRS = "ilmnJUVX";
@@ -327,6 +335,21 @@ final class RoomWriter {
                 break;
             case '*':
                 d.put(x, y, z, Block.LEAVES);
+                break;
+            case '\u03c9':
+                d.put(x, y, z, Block.BRAZIER);
+                break;
+            case '\u03c6':
+                d.put(x, y, z, Block.FOUNTAIN);
+                break;
+            case '\u0398':
+                d.put(x, y, z, Block.ORRERY);
+                break;
+            case ';':
+                d.put(x, y, z, Block.STORMGLASS_CLUSTER);
+                break;
+            case '>':
+                d.put(x, y, z, Block.STORMGLASS_VEIN);
                 break;
             default:
                 masonry(x, y, z, layer);

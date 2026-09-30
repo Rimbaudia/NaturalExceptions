@@ -42,7 +42,10 @@ public final class RoomTemplate {
 
     /** What each character in a template means. */
     public static final String LEGEND = ".#LB~=xRIGtfwcCsS^vF%,ghaTW?HKONA|oMQY*12345678_-DpPZeE"
-        + "09jkilmnJUVXyzrbuqd<@/&$+[]()}!{:`'\"\\";
+        + "09jkilmnJUVXyzrbuqd<@/&$+[]()}!{:`'\"\\"
+        // The sky's own furniture and crystal: candelabra (arm along x, z), pews (back N E S W), benches (along x, z),
+        // brazier, fountain, orrery, hanging Stormglass, Stormglass vein.
+        + "\u03a8\u03c8\u03b1\u03b2\u03b3\u03b4\u03c0\u03a0\u03c9\u03c6\u0398;>";
 
     /** Vanilla dye colours by name, for carpets and stained glass. */
     public static final List<String> COLOURS = java.util.Arrays.asList(
@@ -71,7 +74,11 @@ public final class RoomTemplate {
         KEY,
         WARDEN,
         VAULT,
-        SECRET
+        SECRET,
+        /** The room a shaft goes down from: the hole in the middle of its floor, made much of. */
+        SHAFT_TOP,
+        /** The room a shaft comes down into: a mast up its middle with the ladder on its south face. */
+        SHAFT_FOOT
     }
 
     public enum Kind {

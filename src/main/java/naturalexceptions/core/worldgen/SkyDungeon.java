@@ -149,7 +149,24 @@ public final class SkyDungeon {
         /** A wall shelf, stocked; meta: the wall it hangs on ({@link #NORTH} ..). */
         WALL_SHELF,
         /** A weapon rack, with a worn weapon or two; meta: the wall it hangs on ({@link #NORTH} ..). */
-        WEAPON_RACK
+        WEAPON_RACK,
+        /** Stormglass hanging from the block above. */
+        STORMGLASS_CLUSTER,
+        /** Stone seamed with Stormglass. */
+        STORMGLASS_VEIN,
+        /** Vines; meta: the wall they cling to ({@link #NORTH} ..). */
+        VINE,
+        /** A candelabra; meta 0 its arm along x, 1 along z. */
+        CANDELABRA,
+        BRAZIER,
+        /** A Skystone bench; meta: the side its back would be on ({@link #NORTH} ..): north or south runs along x. */
+        BENCH,
+        /** A pew; meta: the side its back is on ({@link #NORTH} ..). */
+        PEW,
+        FOUNTAIN,
+        ORRERY,
+        /** A Stormglass Lantern sending light up a shaft: at the foot of the ladders between levels. */
+        BEACON
     }
 
     /** Directions for beds, torches, trapdoors and fence gates. */
