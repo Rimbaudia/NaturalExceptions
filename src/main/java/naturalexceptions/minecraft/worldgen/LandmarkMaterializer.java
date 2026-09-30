@@ -502,7 +502,12 @@ final class LandmarkMaterializer {
                 else set(world, x, y, z, Blocks.wool, 14);
                 break;
             case DOOR: {
-                // Both halves at once (same column, same chunk); the layout keeps the block above clear for it.
+                // Both halves at once (same column, same chunk); the upper half also has its own piece, so that
+                // whichever is written last, the door stands whole.
+                if ((meta & naturalexceptions.core.worldgen.SkyDungeon.DOOR_TOP) != 0) {
+                    set(world, x, y, z, Blocks.wooden_door, 8);
+                    break;
+                }
                 set(world, x, y, z, Blocks.wooden_door, meta & 3);
                 set(world, x, y + 1, z, Blocks.wooden_door, 8);
                 break;
@@ -543,7 +548,13 @@ final class LandmarkMaterializer {
             case CUTTING_BENCH: {
                 Block[] benches = { NEBlocks.masonsBench, NEBlocks.sawmill, NEBlocks.loom, NEBlocks.pottersWheel,
                     NEBlocks.glassFurnace };
-                set(world, x, y, z, orElse(benches[Math.min(meta, benches.length - 1)], Blocks.crafting_table), 0);
+                set(
+                    world,
+                    x,
+                    y,
+                    z,
+                    orElse(benches[Math.min(meta & 7, benches.length - 1)], Blocks.crafting_table),
+                    SIDE_FACING[(meta >> 3) & 3]);
                 break;
             }
             case TANNING_RACK:
@@ -551,6 +562,9 @@ final class LandmarkMaterializer {
                 break;
             case ARCHERY_BUTT:
                 set(world, x, y, z, orElse(NEBlocks.archeryButt, Blocks.hay_block), SIDE_FACING[meta & 3]);
+                break;
+            case WELL_WINCH:
+                set(world, x, y, z, orElse(NEBlocks.wellWinch, Blocks.fence), meta & 1);
                 break;
             case TRAINING_DUMMY:
                 set(world, x, y, z, orElse(NEBlocks.trainingDummy, Blocks.hay_block), SIDE_FACING[meta & 3]);

@@ -51,17 +51,30 @@ public final class BlockFountain extends BlockParts {
         return out;
     }
 
-    /** What a fountain makes of {@code held}: a water bottle for a glass bottle, a water bucket for a bucket. */
+    /**
+     * What a fountain (or a well) makes of {@code held}: a water bottle for a glass bottle, a water bucket for a
+     * bucket, a full jug for a water jug that is not.
+     */
     public static ItemStack fill(ItemStack held) {
         if (held == null) return null;
         if (held.getItem() == Items.glass_bottle) return new ItemStack(Items.potionitem, 1, 0);
         if (held.getItem() == Items.bucket) return new ItemStack(Items.water_bucket);
+        if (held.getItem() == naturalexceptions.minecraft.registry.NEItems.waterJug && held.getItemDamage() > 0)
+            return new ItemStack(held.getItem(), 1, 0);
         return null;
     }
 
     @Override
     public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side, float hitX,
         float hitY, float hitZ) {
+        return serve(world, x, y, z, player);
+    }
+
+    /**
+     * Water for whoever uses a fountain or a well at (x, y, z): what they hold filled, or a drink from their cupped
+     * hands if they hold nothing. False if what they hold takes no water (so it is used as it would be anyway).
+     */
+    public static boolean serve(World world, int x, int y, int z, EntityPlayer player) {
         ItemStack held = player.getHeldItem();
         ItemStack filled = fill(held);
         if (held != null && filled == null) return false;

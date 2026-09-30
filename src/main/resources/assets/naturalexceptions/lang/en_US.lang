@@ -117,6 +117,7 @@ tile.glassFurnace.name=Glassblower's Furnace
 tile.tanningRack.name=Tanning Rack
 tile.archeryButt.name=Archery Butt
 tile.trainingDummy.name=Training Dummy
+tile.wellWinch.name=Well Winch
 item.waterJug.name=Water Jug
 item.masonsChisel.name=Mason's Chisel
 container.naturalexceptions.hoist=Hoist

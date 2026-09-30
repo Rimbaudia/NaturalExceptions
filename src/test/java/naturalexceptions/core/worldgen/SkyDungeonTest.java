@@ -135,6 +135,7 @@ final class SkyDungeonTest {
             if (piece != null) {
                 switch (piece.block) {
                     case AIR:
+                    case DOOR: // it opens
                     case LADDER:
                     case WATER:
                     case TALL_GRASS:
@@ -336,6 +337,18 @@ final class SkyDungeonTest {
                     s.dungeon.features()
                         .contains(district),
                     s.name() + ": the town has its " + district);
+    }
+
+    @Test
+    void everyDoorIsWholeWithItsUpperHalfAboveIt() {
+        for (Sample s : samples()) for (Piece p : s.dungeon.pieces()) {
+            if (p.block != Block.DOOR || p.meta == SkyDungeon.DOOR_TOP) continue;
+            Piece above = s.dungeon.at(p.x, p.y + 1, p.z);
+            assertTrue(
+                above != null && above.block == Block.DOOR && above.meta == SkyDungeon.DOOR_TOP,
+                s.name() + ": a door at " + p.x + "," + p.y + "," + p.z + " has " + (above == null ? "nothing" : above.block)
+                    + " over it");
+        }
     }
 
     @Test

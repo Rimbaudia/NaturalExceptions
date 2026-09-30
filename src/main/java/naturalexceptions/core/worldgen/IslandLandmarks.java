@@ -120,7 +120,7 @@ final class IslandLandmarks {
                 put(x, y, z, post ? Block.LOG : wall ? Block.PLANKS : Block.AIR, post || wall ? 1 : 0);
             put(x, g + 4, z, Block.SLAB, 1);
         }
-        put(x1 - 1, g + 1, z0 + 1, Block.CUTTING_BENCH, bench);
+        put(x1 - 1, g + 1, z0 + 1, Block.CUTTING_BENCH, bench | SkyDungeon.WEST << 3); // facing out of the shed
         put(x1 - 1, g + 1, z0 + 2, Block.CHEST, 0, loot, null);
         put(x1 - 1, g + 1, z0 + 3, Block.BARREL, 1);
         put(x0 + 2, g + 1, z0 + 1, bench == 0 ? Block.ANVIL : Block.CRATE);

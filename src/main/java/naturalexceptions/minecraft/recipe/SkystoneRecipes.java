@@ -218,6 +218,19 @@ public final class SkystoneRecipes {
             Blocks.hay_block,
             'L',
             logs);
+        if (NEBlocks.wellWinch != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.wellWinch),
+            "PLP",
+            "S S",
+            " B ",
+            'P',
+            planks,
+            'L',
+            logs,
+            'S',
+            Items.string,
+            'B',
+            Items.bucket);
         if (NEBlocks.hoistBasket != null) GameRegistry
             .addRecipe(new ItemStack(NEBlocks.hoistBasket), " I ", "P P", "PPP", 'I', Items.iron_ingot, 'P', planks);
         if (naturalexceptions.minecraft.registry.NEItems.masonsChisel != null) GameRegistry.addRecipe(

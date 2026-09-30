@@ -84,7 +84,7 @@ public final class SkyDungeon {
         STAIRS,
         /** Wooden slab; meta: vanilla wooden slab meta (0 oak, 1 spruce, 5 dark oak), plus 8 for the top half. */
         SLAB,
-        /** A wooden door's lower half; meta: vanilla door facing (0..3). The upper half is written with it. */
+        /** A wooden door: meta the way its lower half faces (0..3), or {@link #DOOR_TOP} for its upper half. */
         DOOR,
         /** Planks; meta 0 oak, 1 spruce. */
         PLANKS,
@@ -175,7 +175,10 @@ public final class SkyDungeon {
         ROCK,
         /** A quarry's working face: meta 0 a seam ready to cut, 1 worked. */
         SEAM,
-        /** A working bench; meta 0 a Mason's Bench, 1 a Sawmill, 2 a Loom, 3 a Potter's Wheel, 4 a Glassblower's Furnace. */
+        /**
+         * A working bench; meta: its kind (0 a Mason's Bench, 1 a Sawmill, 2 a Loom, 3 a Potter's Wheel, 4 a
+         * Glassblower's Furnace), plus 8 times the way its front faces ({@link #NORTH} ..).
+         */
         CUTTING_BENCH,
         /** A quarry hoist's end; meta 0 its windlass (at the top), 1 its basket (at the foot). */
         HOIST,
@@ -190,8 +193,13 @@ public final class SkyDungeon {
         /** An archery butt; meta: the way its face looks ({@link #NORTH} ..). */
         ARCHERY_BUTT,
         /** A training dummy; meta: the way he faces ({@link #NORTH} ..). */
-        TRAINING_DUMMY
+        TRAINING_DUMMY,
+        /** A well's winch; meta 0 its drum along x, 1 along z. */
+        WELL_WINCH
     }
+
+    /** A door piece's meta for its upper half (the lower half's meta is the way it faces). */
+    public static final int DOOR_TOP = 8;
 
     /** Directions for beds, torches, trapdoors and fence gates. */
     public static final int NORTH = 0, EAST = 1, SOUTH = 2, WEST = 3;

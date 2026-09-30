@@ -921,15 +921,19 @@ final class CitadelLayout {
             put(u + 3, b + 1, v, random.nextBoolean() ? Block.BARREL : Block.CRATE);
         }
 
-        /** A little well: a kerbed basin of water three across, a winch post each side under a slab roof. */
+        /**
+         * A little well: a kerbed shaft of water, a spruce post standing on the kerb each side, the Well Winch
+         * between them over the water, and a slab roof on the posts.
+         */
         void well(int u, int v) {
             for (int a = -1; a <= 1; a++) for (int e = -1; e <= 1; e++) {
                 boolean kerb = a != 0 || e != 0;
                 put(u + a, b - 3, v + e, Block.POLISHED);
                 for (int y = b - 2; y <= b; y++) put(u + a, y, v + e, kerb ? Block.POLISHED : Block.WATER);
-                if (kerb) put(u + a, b + 1, v + e, Block.SKY_SLAB, 2);
+                if (kerb) put(u + a, b + 1, v + e, e == 0 ? Block.POLISHED : Block.SKY_SLAB, 2);
             }
-            for (int s : new int[] { -1, 1 }) for (int y = b + 2; y <= b + 3; y++) put(u + s, y, v, Block.FENCE);
+            for (int s : new int[] { -1, 1 }) for (int y = b + 2; y <= b + 3; y++) put(u + s, y, v, Block.LOG, 1);
+            put(u, b + 3, v, Block.WELL_WINCH, 0); // the posts stand along x, whichever corner the well is in
             for (int a = -1; a <= 1; a++) put(u + a, b + 4, v, Block.SLAB, 1);
         }
     }
@@ -1139,7 +1143,10 @@ final class CitadelLayout {
         }
         for (int x = -1; x <= 1; x++)
             for (int z = -1; z <= 1; z++) for (int y = b - 2; y <= b; y++) put(x, y, wz + z, Block.WATER);
-        for (int s : new int[] { -2, 2 }) for (int y = b + 2; y <= b + 3; y++) put(s, y, wz, Block.FENCE);
+        // Spruce posts on the kerb, a beam from each to the winch over the middle, a slab roof over all.
+        for (int s : new int[] { -2, 2 }) for (int y = b + 2; y <= b + 3; y++) put(s, y, wz, Block.LOG, 1);
+        for (int s : new int[] { -1, 1 }) put(s, b + 3, wz, Block.LOG, 1 | 16);
+        put(0, b + 3, wz, Block.WELL_WINCH, 0);
         for (int x = -2; x <= 2; x++) put(x, b + 4, wz, Block.SLAB, 1);
         for (int x : new int[] { -5, 5 }) for (int z = wz - 1; z <= wz + 1; z++)
             put(x, b + 1, z, Block.BENCH, x < 0 ? SkyDungeon.WEST : SkyDungeon.EAST); // backs to the square's sides

@@ -73,7 +73,12 @@ final class RoomWriter {
                 else if (c == '\u03a8' || c == '\u03c8')
                     d.put(x, wy, z, Block.CANDELABRA, (c == '\u03c8') == ((rotation & 1) == 0) ? 1 : 0);
                 else if (PEWS.indexOf(c) >= 0) d.put(x, wy, z, Block.PEW, (PEWS.indexOf(c) + rotation) & 3);
-                else if (BENCHES.indexOf(c) >= 0) d.put(x, wy, z, Block.CUTTING_BENCH, BENCHES.indexOf(c));
+                else if (BENCHES.indexOf(c) >= 0) {
+                    // Its working front away from the wall beside it.
+                    int wall = nearestSolid(template, rotation, tx, y, tz);
+                    int front = wall < 0 ? SkyDungeon.SOUTH : (wall + 2) & 3;
+                    d.put(x, wy, z, Block.CUTTING_BENCH, BENCHES.indexOf(c) | front << 3);
+                }
                 else if (c == '\u03c4') {
                     int wall = nearestSolid(template, rotation, tx, y, tz);
                     d.put(x, wy, z, Block.TANNING_RACK, wall < 0 ? SkyDungeon.SOUTH : (wall + 2) & 3);
@@ -401,7 +406,10 @@ final class RoomWriter {
         int facing;
         if (wallAlongX) facing = tz >= dp / 2 ? 1 : 3;
         else facing = tx >= w / 2 ? 0 : 2;
-        d.put(x, wy, z, Block.DOOR, facing); // its upper half is placed with it, so nothing is written above
+        d.put(x, wy, z, Block.DOOR, facing);
+        // Its upper half as a piece of its own, so that nothing cleared there before (a street paved, the ground
+        // levelled) is left standing in it to knock the door down.
+        d.put(x, wy + 1, z, Block.DOOR, SkyDungeon.DOOR_TOP);
     }
 
     private static boolean solid(char c) {

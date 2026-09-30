@@ -109,10 +109,26 @@ final class DistrictBlocksTest {
     }
 
     @Test
+    void aWellFillsAJugThatIsNotFull() {
+        ItemStack empty = new ItemStack(NEItems.waterJug, 1, ItemWaterJug.DRINKS);
+        ItemStack filled = BlockFountain.fill(empty);
+        assertEquals(ItemWaterJug.DRINKS, ItemWaterJug.drinksLeft(filled), "full again");
+        assertEquals(null, BlockFountain.fill(new ItemStack(NEItems.waterJug, 1, 0)), "a full jug takes no more");
+    }
+
+    @Test
+    void aGlassFurnaceTurnsToFaceTheWayItWasSet() {
+        BlockCuttingBench furnace = (BlockCuttingBench) NEBlocks.glassFurnace;
+        double[] north = furnace.parts(2)[5], south = furnace.parts(3)[5];
+        assertTrue(north[2] < 0.1 && south[5] > 0.9, "its glory hole on the side it faces");
+    }
+
+    @Test
     void theDistrictsPiecesCanBeMade() {
         Item[] pieces = { Item.getItemFromBlock(NEBlocks.loom), Item.getItemFromBlock(NEBlocks.pottersWheel),
             Item.getItemFromBlock(NEBlocks.glassFurnace), Item.getItemFromBlock(NEBlocks.tanningRack),
-            Item.getItemFromBlock(NEBlocks.archeryButt), Item.getItemFromBlock(NEBlocks.trainingDummy) };
+            Item.getItemFromBlock(NEBlocks.archeryButt), Item.getItemFromBlock(NEBlocks.trainingDummy),
+            Item.getItemFromBlock(NEBlocks.wellWinch) };
         for (Item piece : pieces) {
             boolean found = false;
             for (Object entry : CraftingManager.getInstance()

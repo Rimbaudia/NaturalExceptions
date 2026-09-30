@@ -14,6 +14,7 @@ import net.minecraft.world.World;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import naturalexceptions.NaturalExceptions;
+import naturalexceptions.minecraft.block.PartModel;
 import naturalexceptions.minecraft.gui.NEGuiHandler;
 import naturalexceptions.minecraft.registry.NEBlocks;
 
@@ -38,8 +39,19 @@ public final class BlockCuttingBench extends BlockParts {
         { 0.0, 1.0, 0.35, 1.0, 1.1, 0.65 }, { 0.1, 0.25, 0.45, 0.9, 1.0, 0.55 }, { 0.1, 0.5, 0.1, 0.9, 0.6, 0.25 } };
     private static final double[][] POTTER = { { 0.1, 0.0, 0.1, 0.9, 0.5, 0.9 }, { 0.45, 0.5, 0.45, 0.55, 0.75, 0.55 },
         { 0.2, 0.75, 0.2, 0.8, 0.8125, 0.8 }, { 0.35, 0.8125, 0.35, 0.65, 1.1, 0.65 } };
-    private static final double[][] GLASS = { { 0.0, 0.0, 0.0, 1.0, 0.875, 1.0 }, { 0.3, 0.875, 0.3, 0.7, 1.3, 0.7 },
-        { 0.8, 0.875, 0.45, 1.1, 0.95, 0.55 } };
+    /**
+     * The glassblower's furnace, its mouth to the north (-z) as authored: a stone plinth, the firebrick body and its
+     * narrower shoulder, the flue with an iron band, the glowing glory hole under a stone lintel, a blowpipe laid on
+     * the ledge with a gather of hot glass at its end, and the flue's iron cap.
+     */
+    private static final double[][] GLASS = { { 0.0, 0.0, 0.0, 1.0, 0.125, 1.0 },
+        { 0.0625, 0.125, 0.0625, 0.9375, 0.6875, 0.9375 }, { 0.1875, 0.6875, 0.1875, 0.8125, 0.875, 0.8125 },
+        { 0.375, 0.875, 0.375, 0.625, 1.25, 0.625 }, { 0.34, 1.0, 0.34, 0.66, 1.06, 0.66 },
+        { 0.3125, 0.25, 0.0, 0.6875, 0.5625, 0.0625 }, { 0.1, 0.6875, 0.08, 0.16, 0.74, 0.92 },
+        { 0.08, 0.67, 0.0, 0.18, 0.77, 0.1 }, { 0.25, 0.5625, 0.0, 0.75, 0.625, 0.0625 },
+        { 0.34, 1.25, 0.34, 0.66, 1.3125, 0.66 } };
+    /** Which parts of the glass furnace glow: the mouth and the gather. */
+    private static final int MOUTH = 5, GATHER = 7;
     private static final double[][][] MODELS = { MASON, SAW, LOOM, POTTER, GLASS };
 
     /** Each kind's name, as a block and on its screen. */
@@ -74,23 +86,38 @@ public final class BlockCuttingBench extends BlockParts {
     public double[][] parts(int metadata) {
         double[][] src = MODELS[kind.ordinal()];
         double[][] out = new double[src.length][];
-        for (int i = 0; i < src.length; i++) out[i] = src[i].clone();
+        int facing = metadata < 2 || metadata > 5 ? 2 : metadata; // the side its working front faces
+        for (int i = 0; i < src.length; i++) out[i] = PartModel.rotate(src[i], facing);
         return out;
     }
 
-    @Override
-    public int inventoryMetadata() {
-        return 0;
-    }
 
     @Override
     @SideOnly(Side.CLIENT)
-    public void registerBlockIcons(IIconRegister register) {}
+    public void registerBlockIcons(IIconRegister register) {
+        if (kind.fired()) mouth = register.registerIcon("naturalexceptions:glass_furnace_mouth");
+    }
+
+    @SideOnly(Side.CLIENT)
+    private IIcon mouth;
+
+    @Override
+    public int inventoryMetadata() {
+        return 3; // its front towards you
+    }
+
+    @Override
+    public void onBlockPlacedBy(World world, int x, int y, int z, net.minecraft.entity.EntityLivingBase placer,
+        net.minecraft.item.ItemStack stack) {
+        world.setBlockMetadataWithNotify(x, y, z, BlockPantryShelf.facingTowards(placer), 2);
+    }
 
     @Override
     @SideOnly(Side.CLIENT)
     public IIcon getIcon(int side, int meta) {
-        if (kind == CuttingRecipes.Kind.GLASS) return Blocks.brick_block.getIcon(side, 0);
+        if (kind == CuttingRecipes.Kind.GLASS)
+            return NEBlocks.refractoryBrick != null ? NEBlocks.refractoryBrick.getIcon(side, 0)
+                : Blocks.brick_block.getIcon(side, 0);
         if (kind != CuttingRecipes.Kind.MASON) return Blocks.planks.getIcon(side, 1);
         return NEBlocks.skystoneDecor != null ? NEBlocks.skystoneDecor.getIcon(side, 2)
             : Blocks.stonebrick.getIcon(side, 0);
@@ -107,7 +134,9 @@ public final class BlockCuttingBench extends BlockParts {
             return getIcon(1, 0);
         }
         if (kind == CuttingRecipes.Kind.GLASS) {
-            if (index == 2) return Blocks.iron_block.getIcon(2, 0);
+            if (index == MOUTH || index == GATHER) return mouth != null ? mouth : Blocks.lava.getIcon(1, 0);
+            if (index == 0 || index == 8) return Blocks.stonebrick.getIcon(1, 0);
+            if (index == 4 || index == 6 || index == 9) return Blocks.iron_block.getIcon(2, 0);
             return getIcon(1, 0);
         }
         if (kind == CuttingRecipes.Kind.SAW) {
@@ -150,14 +179,25 @@ public final class BlockCuttingBench extends BlockParts {
     @SideOnly(Side.CLIENT)
     public void randomDisplayTick(World world, int x, int y, int z, Random random) {
         TileEntity tile = world.getTileEntity(x, y, z);
+        if (kind.fired()) {
+            // Smoke from the flue; now and then a flame licking out of the glory hole.
+            world.spawnParticle("smoke", x + 0.5, y + 1.3, z + 0.5, 0.0, 0.04, 0.0);
+            if (random.nextInt(3) == 0) {
+                double[] m = PartModel.rotate(GLASS[MOUTH], Math.max(2, world.getBlockMetadata(x, y, z)));
+                world.spawnParticle(
+                    "flame",
+                    x + (m[0] + m[3]) / 2,
+                    y + (m[1] + m[4]) / 2,
+                    z + (m[2] + m[5]) / 2,
+                    0.0,
+                    0.01,
+                    0.0);
+            }
+            return;
+        }
         if (!(tile instanceof TileEntityCuttingBench) || ((TileEntityCuttingBench) tile).getStackInSlot(0) == null)
             return;
         // Dust from the work waiting on it: stone chips, or sawdust.
-        if (kind.fired()) {
-            world.spawnParticle("smoke", x + 0.5, y + 1.35, z + 0.5, 0.0, 0.05, 0.0);
-            world.spawnParticle("flame", x + 0.5, y + 0.4, z + 0.02, 0.0, 0.0, 0.0);
-            return;
-        }
         world.spawnParticle(
             kind == CuttingRecipes.Kind.SAW ? "townaura" : "snowshovel",
             x + 0.3 + random.nextDouble() * 0.4,
