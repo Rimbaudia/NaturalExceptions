@@ -446,14 +446,21 @@ final class LandmarkMaterializer {
             case CROP:
                 set(world, x, y, z, meta == 1 ? Blocks.carrots : meta == 2 ? Blocks.potatoes : Blocks.wheat, 7);
                 break;
-            case CRATE:
+            case CRATE: {
                 set(world, x, y, z, orElse(NEBlocks.crate, Blocks.chest), 0);
+                TileEntity tile = world.getTileEntity(x, y, z);
+                if (tile instanceof net.minecraft.inventory.IInventory)
+                    Wares.stockCrate((net.minecraft.inventory.IInventory) tile, wareSeed(x, y, z));
                 break;
+            }
             case BARREL: {
                 set(world, x, y, z, orElse(NEBlocks.barrel, Blocks.cauldron), 0);
                 TileEntity tile = world.getTileEntity(x, y, z);
-                if (meta == 1 && tile instanceof naturalexceptions.minecraft.furniture.TileEntityBarrel)
-                    while (((naturalexceptions.minecraft.furniture.TileEntityBarrel) tile).pourWater()) {}
+                if (tile instanceof naturalexceptions.minecraft.furniture.TileEntityBarrel) {
+                    naturalexceptions.minecraft.furniture.TileEntityBarrel barrel = (naturalexceptions.minecraft.furniture.TileEntityBarrel) tile;
+                    if (meta == 1) while (barrel.pourWater()) {}
+                    else barrel.insert(Wares.barrelStore(wareSeed(x, y, z)));
+                }
                 break;
             }
             case PANTRY_SHELF: {

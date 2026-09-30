@@ -32,6 +32,41 @@ public final class Wares {
     private static final Object[][] RACK = { { Items.wooden_sword, 1, 1 }, { Items.stone_sword, 1, 1 },
         { Items.bow, 1, 1 }, { Items.stone_axe, 1, 1 }, { Items.wooden_axe, 1, 1 } };
 
+    private static final Object[][] CRATE = { { Items.arrow, 8, 24 }, { Items.string, 3, 8 }, { Items.flint, 2, 6 },
+        { Items.coal, 3, 10 }, { Blocks.torch, 4, 12 }, { Items.leather, 1, 4 }, { Blocks.wool, 2, 5 },
+        { Items.bread, 2, 5 }, { Items.potato, 3, 8 }, { Items.wheat, 4, 10 }, { Items.feather, 2, 8 },
+        { Items.paper, 2, 6 }, { Items.bone, 2, 6 }, { Items.iron_ingot, 1, 3 } };
+    /** Now and then a crate holds something of the mod's own: {item supplier index, least, most}. */
+    private static final int[][] CRATE_EXTRAS = { { 0, 1, 2 }, { 1, 1, 3 }, { 2, 1, 3 } };
+    private static final Object[][] BARREL = { { Items.apple, 12, 32 }, { Items.carrot, 16, 40 },
+        { Items.potato, 16, 40 }, { Items.sugar, 8, 24 }, { Items.wheat_seeds, 16, 48 }, { Items.wheat, 12, 32 } };
+
+    /** A crate's supplies: three to six kinds, and one time in four a bandage, copper or Stormglass besides. */
+    public static void stockCrate(IInventory crate, long seed) {
+        Random random = new Random(seed ^ 0x9E3779B9L);
+        fill(crate, CRATE, 3 + random.nextInt(4), seed);
+        if (random.nextInt(4) != 0) return;
+        int[] extra = CRATE_EXTRAS[random.nextInt(CRATE_EXTRAS.length)];
+        Item item = extra[0] == 0 ? naturalexceptions.minecraft.registry.NEItems.bandage
+            : extra[0] == 1 ? naturalexceptions.minecraft.registry.NEItems.copperIngot
+                : naturalexceptions.minecraft.registry.NEItems.stormglassShard;
+        if (item == null) return;
+        for (int slot = 0; slot < crate.getSizeInventory(); slot++) if (crate.getStackInSlot(slot) == null) {
+            crate.setInventorySlotContents(
+                slot,
+                new ItemStack(item, extra[1] + random.nextInt(extra[2] - extra[1] + 1)));
+            return;
+        }
+    }
+
+    /** A dry barrel's store: one kind of produce, by the dozen. */
+    public static ItemStack barrelStore(long seed) {
+        Random random = new Random(seed ^ 0x7F4A7C15L);
+        Object[] ware = BARREL[random.nextInt(BARREL.length)];
+        int least = (Integer) ware[1], most = (Integer) ware[2];
+        return new ItemStack((Item) ware[0], least + random.nextInt(most - least + 1));
+    }
+
     /** A shelf's odds and ends: none to two. */
     public static void stockShelf(IInventory shelf, long seed) {
         fill(shelf, SHELF, new Random(seed).nextInt(3), seed);
