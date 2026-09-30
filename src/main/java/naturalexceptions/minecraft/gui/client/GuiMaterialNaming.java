@@ -17,6 +17,7 @@ import naturalexceptions.core.material.MaterialRef;
 import naturalexceptions.minecraft.gui.ContainerMaterialNaming;
 import naturalexceptions.minecraft.item.MaterialNamingTarget;
 import naturalexceptions.minecraft.knowledge.PlayerKnowledgeProperties;
+import naturalexceptions.minecraft.knowledge.client.InventoryBrowserOverlay;
 import naturalexceptions.minecraft.network.NENetwork;
 import naturalexceptions.minecraft.network.PacketApplyAlloyName;
 
@@ -78,8 +79,14 @@ public class GuiMaterialNaming extends GuiContainer {
         Keyboard.enableRepeatEvents(false);
     }
 
+    public boolean isNameFieldFocused() {
+        return nameField != null && nameField.getVisible() && nameField.isFocused();
+    }
+
     @Override
     protected void keyTyped(char typedChar, int keyCode) {
+        if (InventoryBrowserOverlay.isSearchFocused()
+            && InventoryBrowserOverlay.handleContainerKeyTyped(this, typedChar, keyCode)) return;
         if (this.nameField.textboxKeyTyped(typedChar, keyCode)) {
             return;
         }
@@ -109,7 +116,7 @@ public class GuiMaterialNaming extends GuiContainer {
         if (!entered.isEmpty() && materialRef != null
             && MaterialNamingTarget.canOpenNaming(container.getSampleStack())) {
             NENetwork.CHANNEL.sendToServer(new PacketApplyAlloyName(materialRef, entered));
-            this.mc.thePlayer.closeScreen();
+            // The server closes the dialog after applying the queued rename.
         }
     }
 

@@ -174,7 +174,10 @@ public final class AlloyNamingUIAndSemanticsTest {
                 .requiredMass(BuiltinMaterials.IRON_PROPERTIES),
             ManufacturingState.AS_CAST);
         ItemStack compStack = ItemGenericComponent.createStack(comp);
-        assertTrue(compStack.getDisplayName().endsWith("Pick Head"), "material, then the shape: " + compStack.getDisplayName());
+        assertTrue(
+            compStack.getDisplayName()
+                .endsWith("Pick Head"),
+            "material, then the shape: " + compStack.getDisplayName());
 
         // Assembly name
         ComponentInstance handle = new ComponentInstance(
@@ -186,7 +189,10 @@ public final class AlloyNamingUIAndSemanticsTest {
             ManufacturingState.FINISHED);
         AssemblyGraph graph = AssemblyGraph.ofTool(comp, handle);
         ItemStack toolStack = ItemGenericAssembly.createStack(graph);
-        assertTrue(toolStack.getDisplayName().endsWith("Pickaxe"), "material, then the shape: " + toolStack.getDisplayName());
+        assertTrue(
+            toolStack.getDisplayName()
+                .endsWith("Pickaxe"),
+            "material, then the shape: " + toolStack.getDisplayName());
 
         // Material Sample stack
         ItemStack sampleStack = ItemMaterialSample.createStack(ref, key);
@@ -216,7 +222,11 @@ public final class AlloyNamingUIAndSemanticsTest {
         List<String> tooltip = new ArrayList<>();
         ((ItemFoundryLadle) NEItems.foundryLadle).addInformation(ladle, null, tooltip, false);
 
-        assertTrue(tooltip.stream().anyMatch(line -> line.contains("Metal: ") && line.toLowerCase().contains("material")));
+        assertTrue(
+            tooltip.stream()
+                .anyMatch(
+                    line -> line.contains("Metal: ") && line.toLowerCase()
+                        .contains("material")));
         assertFalse(
             tooltip.stream()
                 .anyMatch(line -> line.contains(ref.asString()) || line.contains("Fe70Cu30")));
@@ -240,12 +250,19 @@ public final class AlloyNamingUIAndSemanticsTest {
             ManufacturingState.FINISHED);
         ItemStack pickaxe = ItemGenericAssembly.createStack(AssemblyGraph.ofTool(copperHead, ironHandle));
 
-        assertTrue(pickaxe.getDisplayName().endsWith("Pickaxe"), "material, then the shape: " + pickaxe.getDisplayName());
+        assertTrue(
+            pickaxe.getDisplayName()
+                .endsWith("Pickaxe"),
+            "material, then the shape: " + pickaxe.getDisplayName());
 
         List<String> tooltip = new ArrayList<>();
         ((ItemGenericAssembly) NEItems.genericAssembly).addInformation(pickaxe, null, tooltip, false);
-        assertTrue(tooltip.stream().anyMatch(line -> line.contains("Handle: ") && line.contains("material")));
-        assertFalse(tooltip.stream().anyMatch(line -> line.contains("Handle: ") && line.contains("Iron")));
+        assertTrue(
+            tooltip.stream()
+                .anyMatch(line -> line.contains("Handle: ") && line.contains("material")));
+        assertFalse(
+            tooltip.stream()
+                .anyMatch(line -> line.contains("Handle: ") && line.contains("Iron")));
     }
 
     @Test
@@ -439,6 +456,7 @@ public final class AlloyNamingUIAndSemanticsTest {
                 TestNamingPlayer player = (TestNamingPlayer) unsafe.allocateInstance(TestNamingPlayer.class);
                 player.sneaking = sneaking;
                 player.alive = true;
+                player.inventory = new net.minecraft.entity.player.InventoryPlayer(player);
                 return player;
             } catch (Exception e) {
                 throw new RuntimeException("Failed to allocate TestNamingPlayer", e);
@@ -789,4 +807,47 @@ public final class AlloyNamingUIAndSemanticsTest {
         intruder.heldItem = alloyStack;
         assertFalse(container.canInteractWith(intruder));
     }
+
+    @Test
+    void namingContainerResolvesEveryHeldSlotAfterRightClickCopiesTheStack() {
+        TestNamingPlayer player = TestNamingPlayer.create(true);
+        ItemStack stack = ItemMaterialSample.createStack(BuiltinMaterials.BRONZE.ref());
+        ContainerMaterialNaming container = new ContainerMaterialNaming(player, stack);
+        assertEquals(36, container.inventorySlots.size());
+        for (int index = 0; index < 36; index++) {
+            player.inventory.setInventorySlotContents(index, stack.copy());
+            net.minecraft.inventory.Slot slot = container.getSlotFromInventory(player.inventory, index);
+            assertNotNull(slot, "Inventory slot " + index + " must be synchronized");
+            assertTrue(slot.getStack() == player.inventory.getStackInSlot(index));
+            assertTrue(slot.xDisplayPosition < 0 && slot.yDisplayPosition < 0);
+        }
+        for (int hotbar = 0; hotbar < 9; hotbar++) {
+            player.inventory.currentItem = hotbar;
+            player.inventory.mainInventory[hotbar] = player.inventory.getCurrentItem()
+                .copy();
+            net.minecraft.inventory.Slot slot = container.getSlotFromInventory(player.inventory, hotbar);
+            container.detectAndSendChanges();
+            assertTrue(slot.getStack() == player.inventory.getCurrentItem());
+            assertTrue(slot.slotNumber >= 0);
+        }
+    }
+
+    @Test
+    void namingContainerCannotMoveOrDropInventoryItems() {
+        TestNamingPlayer player = TestNamingPlayer.create(true);
+        ItemStack stack = ItemMaterialSample.createStack(BuiltinMaterials.BRONZE.ref());
+        player.inventory.setInventorySlotContents(0, stack);
+        ContainerMaterialNaming container = new ContainerMaterialNaming(player, stack);
+        net.minecraft.inventory.Slot slot = container.getSlotFromInventory(player.inventory, 0);
+        assertNotNull(slot);
+        for (int mode = 0; mode <= 6; mode++) {
+            assertNull(container.slotClick(slot.slotNumber, 0, mode, player));
+            assertTrue(player.inventory.getStackInSlot(0) == stack);
+            assertNull(player.inventory.getItemStack());
+        }
+        assertNull(container.transferStackInSlot(player, slot.slotNumber));
+        assertFalse(slot.canTakeStack(player));
+        assertFalse(slot.isItemValid(stack));
+    }
+
 }

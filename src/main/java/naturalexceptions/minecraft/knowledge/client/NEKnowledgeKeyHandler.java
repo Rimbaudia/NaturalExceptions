@@ -129,7 +129,7 @@ public final class NEKnowledgeKeyHandler {
 
         if (mc.currentScreen instanceof net.minecraft.client.gui.inventory.GuiContainer
             && !InventoryBrowserOverlay.mayRunGlobalKeybinds()) {
-            // The overlay search/subview owns keyboard input; keep edge state in sync
+            // A text field or overlay subview owns input; keep edge state in sync
             // so a held key cannot fire immediately when focus changes.
             wasRecipeKeyDown = rDown;
             wasUsageKeyDown = uDown;

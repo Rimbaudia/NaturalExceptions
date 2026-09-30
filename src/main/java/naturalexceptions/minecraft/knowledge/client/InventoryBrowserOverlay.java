@@ -9,6 +9,7 @@ import java.util.Map;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.gui.inventory.GuiContainerCreative;
@@ -27,12 +28,14 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.InputEvent;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import naturalexceptions.minecraft.gui.client.GuiMaterialNaming;
 import naturalexceptions.minecraft.knowledge.recipe.CraftingGridSlot;
 import naturalexceptions.minecraft.knowledge.recipe.GameItemRegistry;
 import naturalexceptions.minecraft.knowledge.recipe.RecipeCategory;
 import naturalexceptions.minecraft.knowledge.recipe.RecipeDisplayType;
 import naturalexceptions.minecraft.knowledge.recipe.UniversalRecipe;
 import naturalexceptions.minecraft.knowledge.recipe.UniversalRecipeRegistry;
+import naturalexceptions.minecraft.mixin.GuiContainerCreativeAccessor;
 
 /** JEI-like item and quick recipe overlay drawn over any normal container GUI. */
 @SideOnly(Side.CLIENT)
@@ -187,6 +190,9 @@ public final class InventoryBrowserOverlay {
     public static boolean handleContainerMouseClick(GuiContainer gui, int x, int y, int button) {
         InventoryBrowserOverlay overlay = INSTANCE;
         if (gui == null || gui != overlay.lastContainer || overlay.lastLayout == null) return false;
+        if (button >= 0
+            && (!overlay.lastLayout.isPanelVisible() || !overlay.userEnabled || !overlay.panelContains(x, y)))
+            overlay.searchFocused = false;
         if (!overlay.lastLayout.isPanelVisible() || !overlay.userEnabled) {
             if (tabbed(gui)) return false;
             int toggleY = toggleY(gui, overlay.lastLayout);
@@ -309,6 +315,8 @@ public final class InventoryBrowserOverlay {
             // Search owns printable keys and command keys alike, including R/U/K/E.
             return true;
         }
+        // Vanilla creative search (and naming text) must see keys before R/U interception.
+        if (hasFocusedContainerText(gui)) return false;
         if (keyCode == Keyboard.KEY_E
             && Minecraft.getMinecraft().gameSettings.keyBindInventory.getKeyCode() == keyCode) {
             overlay.searchFocused = false;
@@ -324,11 +332,23 @@ public final class InventoryBrowserOverlay {
         return false;
     }
 
-    /** Search and an active recipe subview take priority over global NE shortcuts. */
+    private static boolean hasFocusedContainerText(GuiScreen gui) {
+        if (gui instanceof GuiContainerCreativeAccessor) {
+            GuiTextField field = ((GuiContainerCreativeAccessor) gui).naturalexceptions$getSearchField();
+            return field != null && field.getVisible() && field.isFocused();
+        }
+        return gui instanceof GuiMaterialNaming && ((GuiMaterialNaming) gui).isNameFieldFocused();
+    }
+
+    /** Text fields and an active recipe subview take priority over global NE shortcuts. */
     public static boolean mayRunGlobalKeybinds() {
         InventoryBrowserOverlay overlay = INSTANCE;
-        return InventoryOverlayInput
-            .mayRunGlobalShortcut(overlay.searchFocused, overlay.showingRecipes || overlay.showingUsages);
+        Minecraft mc = Minecraft.getMinecraft();
+        GuiScreen gui = mc == null ? null : mc.currentScreen;
+        boolean currentOverlay = gui != null && gui == overlay.lastContainer;
+        return InventoryOverlayInput.mayRunGlobalShortcut(
+            (currentOverlay && overlay.searchFocused) || hasFocusedContainerText(gui),
+            currentOverlay && (overlay.showingRecipes || overlay.showingUsages));
     }
 
     public static boolean isSearchFocused() {

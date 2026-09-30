@@ -9,10 +9,10 @@ import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import io.netty.buffer.ByteBuf;
+import naturalexceptions.core.knowledge.KnowledgeSubjectRef;
 import naturalexceptions.core.material.MaterialRef;
 import naturalexceptions.minecraft.gui.ContainerMaterialNaming;
 import naturalexceptions.minecraft.item.MaterialNamingTarget;
-import naturalexceptions.core.knowledge.KnowledgeSubjectRef;
 import naturalexceptions.minecraft.knowledge.PlayerKnowledgeProperties;
 
 /**
@@ -26,7 +26,8 @@ public class PacketApplyAlloyName implements IMessage {
     public PacketApplyAlloyName() {}
 
     public PacketApplyAlloyName(MaterialRef ref, String customName) {
-        this.subjectString = ref != null ? KnowledgeSubjectRef.material(ref).asString() : "";
+        this.subjectString = ref != null ? KnowledgeSubjectRef.material(ref)
+            .asString() : "";
         this.customName = customName != null ? customName.trim() : "";
     }
 
@@ -55,9 +56,12 @@ public class PacketApplyAlloyName implements IMessage {
             }
             final String rawName = message.customName;
             final String rawSubject = message.subjectString;
-            // SimpleImpl handlers may run on Netty. Validate the live container and mutate player data on the world thread.
+            // SimpleImpl handlers may run on Netty. Validate the live container and mutate player data on the world
+            // thread.
             naturalexceptions.minecraft.knowledge.KnowledgeServerTasks.submit(new Runnable() {
-                @Override public void run() {
+
+                @Override
+                public void run() {
                     if (player.worldObj == null) return;
                     String trimmedName = rawName.trim();
                     if (trimmedName.isEmpty() || !(player.openContainer instanceof ContainerMaterialNaming)
@@ -71,10 +75,14 @@ public class PacketApplyAlloyName implements IMessage {
                         MaterialRef heldRef = MaterialNamingTarget.getMaterialRef(held);
                         if (requested == null || !requested.equals(heldRef)) return;
                         PlayerKnowledgeProperties props = PlayerKnowledgeProperties.get(player);
-                        props.knowledge().setAlias(subject, trimmedName);
+                        props.knowledge()
+                            .setAlias(subject, trimmedName);
                         NENetwork.CHANNEL.sendTo(new PacketKnowledgeSnapshot(props), player);
-                        player.addChatMessage(new ChatComponentText("\u00a7a[Metallurgy] Registered custom alloy name: \u00a7f"
-                            + trimmedName + " \u00a77(personal name)"));
+                        player.closeScreen();
+                        player.addChatMessage(
+                            new ChatComponentText(
+                                "\u00a7a[Metallurgy] Registered custom alloy name: \u00a7f" + trimmedName
+                                    + " \u00a77(personal name)"));
                     } catch (IllegalArgumentException ignored) {
                         // Reject malformed material identities without renaming an unrelated held item.
                     }
