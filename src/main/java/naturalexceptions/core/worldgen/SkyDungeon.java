@@ -323,8 +323,10 @@ public final class SkyDungeon {
     final List<String> features = new ArrayList<>();
     final List<Connection> connections = new ArrayList<>();
     int[] entrance;
-    /** {minX, minZ, maxX, maxZ} of what stands on the island's surface. */
-    int[] surface;
+    /** {minX, minZ, maxX, maxZ} of each thing standing on the island's surface (the town, a farm, the road ...). */
+    final List<int[]> surfaces = new ArrayList<>();
+    /** {minX, minZ, maxX, maxZ} of each landmark's site out on a citadel's island (not the town or the road). */
+    final List<int[]> sites = new ArrayList<>();
     private volatile Map<Long, int[]> byChunk;
 
     private SkyDungeon(SkyIslands field, SkyIslands.Island island, Kind kind) {
@@ -449,7 +451,8 @@ public final class SkyDungeon {
 
     /** Whether the dungeon stands on this column of the island's surface (no plants or trees there). */
     public boolean coversSurface(int x, int z) {
-        return surface != null && x >= surface[0] && x <= surface[2] && z >= surface[1] && z <= surface[3];
+        for (int[] s : surfaces) if (x >= s[0] && x <= s[2] && z >= s[1] && z <= s[3]) return true;
+        return false;
     }
 
     public Piece at(int x, int y, int z) {

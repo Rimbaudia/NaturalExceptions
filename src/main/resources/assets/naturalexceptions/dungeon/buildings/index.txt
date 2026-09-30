@@ -2,6 +2,9 @@ house_small
 house_timber
 house_corner
 house_tall
+row_house
+cottage
+merchant_house
 barracks
 smithy
 chapel

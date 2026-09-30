@@ -988,6 +988,6 @@ final class SanctumLayout {
         if (whole[0] && whole[1]) for (int dx = -h; dx <= h; dx++) d.polished(gx + dx, gy + 4, gz - h);
         corridors.shaft(sx, sz, hall.floor(), hall.floor() + hall.template.height + 1, top, false, false);
         d.entrance = new int[] { sx, gy, sz + 2 };
-        d.surface = new int[] { gx - h - 1, gz - h - 1, gx + h + 1, gz + h + 1 };
+        d.surfaces.add(new int[] { gx - h - 1, gz - h - 1, gx + h + 1, gz + h + 1 });
     }
 }

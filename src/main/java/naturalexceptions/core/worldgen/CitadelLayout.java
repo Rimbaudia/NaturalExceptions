@@ -33,13 +33,18 @@ final class CitadelLayout {
 
     /** The level number of the citadel's own rooms (the catacomb's levels count from 0 downwards). */
     static final int SURFACE = -1;
-    static final int OUTER = 53, OUTER_HEIGHT = 8;
-    static final int INNER = 24, INNER_HEIGHT = 10;
+    static final int OUTER = 80, OUTER_HEIGHT = 8;
+    static final int INNER = 36, INNER_HEIGHT = 10;
     static final int THICK = 3;
-    static final int MOAT_IN = 55, MOAT_OUT = 59, MOAT_DEPTH = 4;
-    static final int ROAD_IN = 25, ROAD_OUT = 28;
-    /** Plots run from the ring road back to 46; the lane behind them, along the outer wall, is four wide. */
-    static final int PLOT_FRONT = 30, PLOT_BACK = 46;
+    static final int MOAT_IN = 82, MOAT_OUT = 86, MOAT_DEPTH = 4;
+    static final int ROAD_IN = 37, ROAD_OUT = 40;
+    /** Plots run from the ring road back to 58. */
+    static final int PLOT_FRONT = 42, PLOT_BACK = 58;
+    /**
+     * Behind them a back street, and a second row of plots facing it back to 73; the lane behind those, along the
+     * outer wall, is four wide.
+     */
+    static final int BACK_STREET = 59, BACK_FRONT = 62, BACK_BACK = 73;
 
     private final SkyDungeon d;
     private final Random random;
@@ -74,16 +79,18 @@ final class CitadelLayout {
         square();
         stairsUp(); // last in the town: nothing is paved over the flights
         hangGates();
+        sites = new CitadelSites(this::ground);
+        int town = MOAT_OUT + 1;
+        sites.reserve("town", -town, -town, town, town);
         approach();
         outskirts();
-        watchtower();
 
         // Under the keep: the catacomb, levels of it, with the Sky Key, the Sky Warden and the vault.
         new SanctumLayout(d, b).build();
 
         d.entrance = new int[] { cx, groundAt(0, MOAT_OUT + 4) + 1, cz + MOAT_OUT + 4 };
-        int reach = (int) Math.min(radius - 4, 84);
-        d.surface = new int[] { cx - reach, cz - reach, cx + reach, cz + reach };
+        d.surfaces.add(new int[] { cx - town - 1, cz - town - 1, cx + town + 1, cz + town + 1 });
+        claimSurfaces();
     }
 
     // --- Helpers --------------------------------------------------------------------------------------------
@@ -553,24 +560,79 @@ final class CitadelLayout {
             for (int[] segment : new int[][] { { -ROAD_OUT, -4 }, { 4, ROAD_OUT } }) {
                 int at = segment[0];
                 while (at <= segment[1]) {
-                    RoomTemplate t = nextBuilding(deck, segment[1] - at + 1);
+                    RoomTemplate t = nextBuilding(deck, segment[1] - at + 1, PLOT_BACK - PLOT_FRONT + 1);
                     if (t == null) {
-                        yard(side, at, segment[1]);
+                        yard(side, at, segment[1], PLOT_FRONT);
                         break;
                     }
-                    place(side, at, t);
+                    place(side, at, t, PLOT_FRONT, PLOT_BACK);
                     int gap = 2 + random.nextInt(2);
-                    if (gap >= 3) yard(side, at + t.width(), Math.min(segment[1], at + t.width() + gap - 1));
+                    if (gap >= 3)
+                        yard(side, at + t.width(), Math.min(segment[1], at + t.width() + gap - 1), PLOT_FRONT);
                     at += t.width() + gap;
                 }
             }
         }
+        backStreets();
     }
 
-    private RoomTemplate nextBuilding(List<String> deck, int room) {
+    /** The houses of the back row, the small workshops among them, and what is left for kitchen gardens. */
+    private static final String[] BACK_ROW = { "row_house", "cottage", "merchant_house", "house_small",
+        "house_timber", "house_corner", "house_tall", "bakery" };
+
+    /**
+     * Behind the plots on the ring road, a back street on every side, and a second row of plots facing it: houses
+     * and a merchant's shop or two, with kitchen gardens between them (about two plots in five), so that the row is
+     * lived in and never a solid wall of fronts.
+     */
+    private void backStreets() {
+        int reach = ROAD_OUT + 2; // through to the corners
+        for (int t = -reach; t <= reach; t++) for (int depth = BACK_STREET; depth < BACK_FRONT; depth++) {
+            pave(t, -depth);
+            pave(t, depth);
+            pave(depth, t);
+            pave(-depth, t);
+        }
+        int deep = BACK_BACK - BACK_FRONT + 1;
+        for (int side = 0; side < 4; side++) {
+            for (int[] segment : new int[][] { { -ROAD_OUT, -4 }, { 4, ROAD_OUT } }) {
+                int at = segment[0];
+                while (at <= segment[1]) {
+                    int room = segment[1] - at + 1;
+                    if (random.nextInt(5) < 2 && room >= 6) {
+                        int width = Math.min(room, 6 + random.nextInt(3));
+                        garden(side, at, width, 1, BACK_FRONT, BACK_BACK, random.nextInt(4) == 0 ? 1 : 0);
+                        at += width + 1;
+                        continue;
+                    }
+                    RoomTemplate t = null;
+                    for (int tries = 0; tries < 8 && t == null; tries++) {
+                        RoomTemplate c = TemplateLibrary.building(BACK_ROW[random.nextInt(BACK_ROW.length)]);
+                        if (c.width() <= room && c.depth() <= deep) t = c;
+                    }
+                    if (t == null) {
+                        yard(side, at, segment[1], BACK_FRONT);
+                        break;
+                    }
+                    place(side, at, t, BACK_FRONT, BACK_BACK);
+                    at += t.width() + 1 + random.nextInt(2);
+                }
+            }
+        }
+        // Lamp posts down the back streets, on the edge by the back row, never before a door or a gate.
+        for (int side = 0; side < 4; side++) for (int a = -ROAD_OUT + 6; a <= ROAD_OUT - 6; a += 10) {
+            if (Math.abs(a) <= 4) continue;
+            int[] at = plotPoint(side, a, 0, BACK_FRONT), before = plotPoint(side, a, 1, BACK_FRONT);
+            SkyDungeon.Piece p = d.at(cx + before[0], b + 1, cz + before[1]);
+            if (p != null && (p.block == Block.DOOR || p.block == Block.FENCE_GATE)) continue;
+            lampPost(at[0], at[1]);
+        }
+    }
+
+    private RoomTemplate nextBuilding(List<String> deck, int room, int deep) {
         for (int i = 0; i < deck.size(); i++) {
             RoomTemplate t = TemplateLibrary.building(deck.get(i));
-            if (t.width() <= room && t.depth() <= PLOT_BACK - PLOT_FRONT + 1) {
+            if (t.width() <= room && t.depth() <= deep) {
                 deck.remove(i);
                 return t;
             }
@@ -585,29 +647,33 @@ final class CitadelLayout {
         return null;
     }
 
-    /** A building on side (0 north .. 3 west) starting {@code along} blocks along it, facing the ring road. */
-    private void place(int side, int along, RoomTemplate t) {
+    /**
+     * A building on side (0 north .. 3 west) starting {@code along} blocks along it, facing the middle, its front on
+     * the row starting {@code front} out (the ring road's plots, or the back row's); its garden behind it to
+     * {@code back}.
+     */
+    private void place(int side, int along, RoomTemplate t, int front, int back) {
         int w = t.width(), dp = t.depth();
         int rotation, minX, minZ;
         switch (side) {
             case 0: // north side, front south
                 rotation = 0;
                 minX = along;
-                minZ = -PLOT_FRONT - dp + 1;
+                minZ = -front - dp + 1;
                 break;
             case 1: // east side, front west
                 rotation = 1;
-                minX = PLOT_FRONT;
+                minX = front;
                 minZ = along;
                 break;
             case 2: // south side, front north
                 rotation = 2;
                 minX = along;
-                minZ = PLOT_FRONT;
+                minZ = front;
                 break;
             default: // west side, front east
                 rotation = 3;
-                minX = -PLOT_FRONT - dp + 1;
+                minX = -front - dp + 1;
                 minZ = along;
                 break;
         }
@@ -616,39 +682,26 @@ final class CitadelLayout {
         Role role = t.roles.iterator()
             .next();
         new RoomWriter(d).write(t, rotation, cx + minX, cz + minZ, b, role, false);
-        garden(side, along, w, dp + 1);
+        garden(side, along, w, dp + 1, front, back, -1);
         // A short paved path from its door to the road.
-        int mid = along + w / 2;
-        switch (side) {
-            case 0:
-                pave(mid, -PLOT_FRONT + 1);
-                break;
-            case 1:
-                pave(PLOT_FRONT - 1, mid);
-                break;
-            case 2:
-                pave(mid, PLOT_FRONT - 1);
-                break;
-            default:
-                pave(-PLOT_FRONT + 1, mid);
-                break;
-        }
+        int[] path = plotPoint(side, along + w / 2, 0, front);
+        pave(path[0], path[1]);
     }
 
     /**
      * The citadel offset of a place on a plot: {@code a} along side (0 north .. 3 west), {@code depth} back from the
      * road.
      */
-    private static int[] plotPoint(int side, int a, int depth) {
+    private static int[] plotPoint(int side, int a, int depth, int front) {
         switch (side) {
             case 0:
-                return new int[] { a, -PLOT_FRONT + 1 - depth };
+                return new int[] { a, -front + 1 - depth };
             case 1:
-                return new int[] { PLOT_FRONT - 1 + depth, a };
+                return new int[] { front - 1 + depth, a };
             case 2:
-                return new int[] { a, PLOT_FRONT - 1 + depth };
+                return new int[] { a, front - 1 + depth };
             default:
-                return new int[] { -PLOT_FRONT + 1 - depth, a };
+                return new int[] { -front + 1 - depth, a };
         }
     }
 
@@ -665,11 +718,11 @@ final class CitadelLayout {
     /**
      * A yard between buildings, four deep from the road: a flower bed, a hay store, or a stack of crates and barrels.
      */
-    private void yard(int side, int from, int to) {
+    private void yard(int side, int from, int to, int front) {
         if (to - from < 1) return;
         int kind = random.nextInt(3);
         for (int a = from; a <= to; a++) for (int depth = 1; depth <= 4; depth++) {
-            int[] p = plotPoint(side, a, depth);
+            int[] p = plotPoint(side, a, depth, front);
             int dx = p[0], dz = p[1];
             double r = d.noise.unit(cx + dx, cz + dz, 61);
             if (kind == 0) {
@@ -689,17 +742,19 @@ final class CitadelLayout {
     /**
      * Behind a building, the rest of its plot: a fenced kitchen garden of crops watered by a channel down its middle,
      * or a flower garden, or (behind the big buildings) a paved court with barrels and crates; a gate on the side.
+     * {@code kind} chooses (0 kitchen, 1 flowers, 2 court), or -1 to go by the width.
      */
-    private void garden(int side, int along, int width, int from) {
-        int to = PLOT_BACK - PLOT_FRONT + 1;
+    private void garden(int side, int along, int width, int from, int front, int back, int kind) {
+        int to = back - front + 1;
         if (to - from < 3 || width < 4) return;
-        int kind = width >= 13 ? 2 : random.nextInt(4) == 0 ? 1 : 0;
+        if (kind < 0) kind = width >= 13 ? 2 : random.nextInt(4) == 0 ? 1 : 0;
         int crop = random.nextInt(3);
         int mid = (from + to) / 2;
         for (int a = along; a < along + width; a++) for (int depth = from; depth <= to; depth++) {
-            int[] p = plotPoint(side, a, depth);
+            int[] p = plotPoint(side, a, depth, front);
             int dx = p[0], dz = p[1];
-            boolean edge = a == along || a == along + width - 1 || depth == to;
+            // A garden of its own on the back row is fenced along the street too; one behind a house has the house.
+            boolean edge = a == along || a == along + width - 1 || depth == to || depth == 1 && from == 1;
             if (kind == 2) {
                 pave(dx, dz);
                 double r = d.noise.unit(cx + dx, cz + dz, 67);
@@ -723,8 +778,11 @@ final class CitadelLayout {
                 put(dx, b + 1, dz, Block.CROP, crop);
             }
         }
-        if (kind != 2) {
-            int[] gate = plotPoint(side, along, (from + to) / 2 + 1);
+        if (kind != 2 && from == 1) {
+            int[] gate = plotPoint(side, along + width / 2, 1, front); // its gate on the street
+            gates.add(new int[] { gate[0], gate[1], side == 0 || side == 2 ? SkyDungeon.SOUTH : SkyDungeon.EAST });
+        } else if (kind != 2) {
+            int[] gate = plotPoint(side, along, (from + to) / 2 + 1, front);
             gates.add(new int[] { gate[0], gate[1], side == 0 || side == 2 ? SkyDungeon.EAST : SkyDungeon.SOUTH });
         }
     }
@@ -813,7 +871,11 @@ final class CitadelLayout {
         d.rooms.add(new Room(cx, b, cz, Role.HALL, keep.name, SURFACE, cx - 9, cx + 9, cz - 9, cz + 9, 10, false));
     }
 
-    /** Before the keep: a square with a well, benches facing it and lamp posts; lawns round the keep's sides. */
+    /**
+     * Before the keep: a square with a well, benches facing it and lamp posts. Round the keep's other sides, the
+     * lord's garden: a gravel walk round the keep, and beyond it a parterre of flower beds edged in low box hedges,
+     * gravel paths between them, benches on the walk; open lawn along the inner wall, where its stairs go up.
+     */
     private void square() {
         int inside = INNER - THICK - 1;
         int z0 = 13, z1 = inside;
@@ -821,11 +883,33 @@ final class CitadelLayout {
             if (inSquare(dx, dz, 12)) continue;
             if (inSquare(dx - (INNER - 1), dz, 0) || inSquare(dx, dz, inside) && dz >= z0) continue;
             if (Math.abs(dx) >= inside - 4 && Math.abs(dz) >= inside - 4) continue; // corner towers
-            put(dx, b, dz, Block.GRASS);
+            boolean eastPath = dx >= 13 && Math.abs(dz) <= 2;
+            int ring = Math.max(Math.abs(dx), Math.abs(dz));
             double r = d.noise.unit(cx + dx, cz + dz, 63);
-            if (r < 0.12) put(dx, b + 1, dz, Block.WINDBLOOM);
-            else if (r < 0.25) put(dx, b + 1, dz, Block.TALL_GRASS);
+            if (eastPath) continue;
+            if (ring == 15 || ring == 16) {
+                put(dx, b, dz, Block.GRAVEL); // the walk round the keep
+                continue;
+            }
+            put(dx, b, dz, Block.GRASS);
+            if (ring >= 18 && ring <= 27) {
+                int u = Math.floorMod(dx, 5), v = Math.floorMod(dz, 5);
+                if (u == 0 || v == 0) put(dx, b, dz, Block.GRAVEL); // the paths between the beds
+                else if (u == 1 || u == 4 || v == 1 || v == 4) put(dx, b + 1, dz, Block.LEAVES); // box hedge
+                else if (r < 0.5) put(dx, b + 1, dz, Block.WINDBLOOM);
+                else put(dx, b + 1, dz, Block.FLOWER, r < 0.75 ? 0 : 1);
+            } else if (ring > 27) {
+                if (r < 0.08) put(dx, b + 1, dz, Block.WINDBLOOM);
+                else if (r < 0.16) put(dx, b + 1, dz, Block.TALL_GRASS);
+            }
         }
+        // Benches on the walk's outer edge looking in at the keep, lamps at its corners.
+        for (int k : new int[] { -6, 6 }) {
+            put(k, b + 1, -17, Block.BENCH, SkyDungeon.NORTH);
+            put(-17, b + 1, k, Block.BENCH, SkyDungeon.WEST);
+            put(17, b + 1, k, Block.BENCH, SkyDungeon.EAST);
+        }
+        for (int[] c : new int[][] { { -14, -14 }, { 14, -14 }, { -14, 11 }, { 14, 11 } }) lampPost(c[0], c[1]);
         for (int dx = -inside; dx <= inside; dx++) for (int dz = z0; dz <= z1; dz++) {
             if (Math.abs(dx) >= inside - 4 && dz >= inside - 4) continue;
             pave(dx, dz);
@@ -841,7 +925,8 @@ final class CitadelLayout {
             for (int z = -1; z <= 1; z++) for (int y = b - 2; y <= b; y++) put(x, y, wz + z, Block.WATER);
         for (int s : new int[] { -2, 2 }) for (int y = b + 2; y <= b + 3; y++) put(s, y, wz, Block.FENCE);
         for (int x = -2; x <= 2; x++) put(x, b + 4, wz, Block.SLAB, 1);
-        for (int x : new int[] { -6, -5, 5, 6 }) put(x, b + 1, wz, Block.STAIRS, rising(x > 0 ? 1 : -1, 0));
+        for (int x : new int[] { -5, 5 }) for (int z = wz - 1; z <= wz + 1; z++)
+            put(x, b + 1, z, Block.BENCH, x < 0 ? SkyDungeon.WEST : SkyDungeon.EAST); // backs to the square's sides
         for (int x : new int[] { -9, 9 }) lampPost(x, wz);
     }
 
@@ -871,7 +956,9 @@ final class CitadelLayout {
             end = t;
         }
         pier(end, last);
-        building("guardhouse", 6, MOAT_OUT + 8, "guardhouse");
+        sites.reserve("causeway", -4, MOAT_OUT + 2, 8, end + 11); // the road, and the pier with its crane
+        if (building("guardhouse", 6, MOAT_OUT + 8, "guardhouse"))
+            sites.reserve("guardhouse", 4, MOAT_OUT + 6, 16, MOAT_OUT + 8 + 11 + 4);
     }
 
     private void paveAt(int dx, int dz, int ground) {
@@ -958,9 +1045,16 @@ final class CitadelLayout {
      */
     private boolean building(String name, int minX, int minZ, String feature) {
         RoomTemplate t = TemplateLibrary.building(name);
-        int maxX = minX + t.width() - 1, maxZ = minZ + t.depth() - 1;
-        int g = ground(minX - 2, minZ - 2, maxX + 2, maxZ + 4);
+        int g = ground(minX - 2, minZ - 2, minX + t.width() + 1, minZ + t.depth() + 3);
         if (g < 0) return false;
+        building(name, minX, minZ, feature, g);
+        return true;
+    }
+
+    /** An authored building out on the island at (minX, minZ), facing south, set on ground {@code g}. */
+    private void building(String name, int minX, int minZ, String feature, int g) {
+        RoomTemplate t = TemplateLibrary.building(name);
+        int maxX = minX + t.width() - 1, maxZ = minZ + t.depth() - 1;
         level(minX - 2, minZ - 2, maxX + 2, maxZ + 4, g);
         for (int x = minX; x <= maxX; x++) for (int z = minZ; z <= maxZ; z++) put(x, g - 1, z, Block.SKYSLATE, 0);
         new RoomWriter(d).write(
@@ -975,17 +1069,10 @@ final class CitadelLayout {
         paveAt((minX + maxX) / 2, maxZ + 1, g);
         paveAt((minX + maxX) / 2, maxZ + 2, g);
         if (feature != null) d.features.add(feature);
-        lastGround = g;
-        return true;
     }
 
-    /** The ground the last outside building was set on. */
-    private int lastGround;
-
-    /** A fenced field of one crop on tilled soil, watered by a channel down its middle, with a gate. */
-    private boolean field(int x0, int z0, int w, int dp) {
-        int g = ground(x0, z0, x0 + w - 1, z0 + dp - 1);
-        if (g < 0) return false;
+    /** A fenced field of one crop on tilled soil at ground {@code g}, watered by a channel down its middle. */
+    private void field(int x0, int z0, int w, int dp, int g) {
         int crop = random.nextInt(3);
         level(x0, z0, x0 + w - 1, z0 + dp - 1, g);
         int mid = x0 + w / 2;
@@ -1001,37 +1088,65 @@ final class CitadelLayout {
             }
         }
         put(mid + 1, g + 1, z0 + dp - 1, Block.FENCE_GATE, SkyDungeon.SOUTH);
-        return true;
+    }
+
+    /** Where the citadel's lands are laid out; made with the approach, which claims the road first. */
+    private CitadelSites sites;
+
+    /** The ring the countryside's working lands keep to, and how far out the rim's landmarks may go. */
+    private int near() {
+        return MOAT_OUT + 12;
+    }
+
+    private int far() {
+        return (int) (radius * 0.8);
     }
 
     /**
-     * The citadel's lands between the moat and the rim: a farmstead to the west, a windmill and a barn with a field
-     * to the east, a walled graveyard with its chapel to the north, a quarry south-west of the causeway and an
-     * orchard south-east of it, a pasture south of the farmstead. Each goes only where the island is there to take it.
+     * The citadel's lands between the moat and the rim, each on its own site (see {@link CitadelSites}): a farmstead
+     * to the west, a windmill farm to the east, the graveyard to the north, a pasture to the north-west, an orchard
+     * to the south-east, and a ruined watchtower out towards the north-eastern rim. Each goes only where the island
+     * will take it; what stands on the island is then kept clear of its wild growth.
      */
     private void outskirts() {
-        int far = MOAT_OUT + 4;
-        // West: the farmstead.
-        int wx = -far - 24;
-        if (building("farmhouse", wx, -14, null)) {
-            building("barn", wx + 12, -14, null);
-            field(wx, 1, 10, 12);
-            field(wx + 12, 4, 11, 12);
-            for (int k = 0; k < 4; k++) put(wx + 23, lastGround + 1, -12 + k, Block.HAY);
-            d.features.add("farmstead");
+        int near = near(), far = far();
+        CitadelSites.Site s;
+        if ((s = sites.fit("farmstead", 28, 33, 160, 200, near, near + 40, false)) != null) farmstead(s);
+        if ((s = sites.fit("windmill", 29, 25, -25, 25, near, near + 40, false)) != null) windmillFarm(s);
+        if ((s = sites.fit("graveyard", 23, 21, 250, 290, near, near + 30, false)) != null) graveyard(s);
+        if ((s = sites.fit("pasture", 21, 17, 205, 245, near, near + 50, false)) != null) pasture(s);
+        if ((s = sites.fit("orchard", 23, 19, 35, 70, near, near + 40, false)) != null) orchard(s);
+        if ((s = sites.fit("watchtower", 15, 15, 290, 340, near + 30, far, true)) != null) watchtower(s);
+    }
+
+    /** Every site's ground, with the road and the town, counts as the citadel's: nothing wild grows there. */
+    private void claimSurfaces() {
+        for (CitadelSites.Site s : sites.sites) {
+            d.surfaces.add(new int[] { cx + s.x0 - 2, cz + s.z0 - 2, cx + s.x1 + 2, cz + s.z1 + 2 });
+            if (s.ground >= 0) d.sites.add(new int[] { cx + s.x0, cz + s.z0, cx + s.x1, cz + s.z1 });
         }
-        // East: the windmill, a field, a barn.
-        if (building("windmill", far + 2, -22, "windmill")) {
-            sails(far + 2, -22, lastGround);
-            field(far + 1, -10, 11, 11);
-        }
-        building("barn", far + 1, 4, "barn");
-        // North: the graveyard. North-west: a pasture.
-        graveyard(-10, -far - 18);
-        pasture(-far - 24, 20);
-        // South: a quarry west of the causeway, an orchard east of it.
-        quarry(-26, far + 6);
-        orchard(20, far + 3);
+    }
+
+    /** The farmstead: the farmhouse and its barn side by side, a field before each, hay stacked by the barn. */
+    private void farmstead(CitadelSites.Site s) {
+        int g = s.ground, wx = s.x0 + 2, wz = s.z0 + 2;
+        level(s.x0, s.z0, s.x1, s.z1, g);
+        building("farmhouse", wx, wz, null, g);
+        building("barn", wx + 12, wz, null, g);
+        field(wx, wz + 15, 10, 12, g);
+        field(wx + 12, wz + 19, 11, 12, g);
+        for (int k = 0; k < 4; k++) put(wx + 23, g + 1, wz + 2 + k, Block.HAY);
+        d.features.add("farmstead");
+    }
+
+    /** The windmill with its sails turned to the south, its field below it, and a barn for the harvest. */
+    private void windmillFarm(CitadelSites.Site s) {
+        int g = s.ground, wx = s.x0 + 2, wz = s.z0 + 2;
+        level(s.x0, s.z0, s.x1, s.z1, g);
+        building("windmill", wx, wz, "windmill", g);
+        sails(wx, wz, g);
+        field(wx - 1, wz + 12, 11, 11, g);
+        building("barn", wx + 14, wz, "barn", g);
     }
 
     /** A windmill's sails on its south face at the cap: four lattice arms of fence with white canvas. */
@@ -1057,13 +1172,11 @@ final class CitadelLayout {
      * A graveyard: a low Skyslate wall with a gate, rows of carved headstones with flowers before them, a gravel
      * path, lamp posts, and the mortuary chapel at the back.
      */
-    private void graveyard(int x0, int z0) {
-        int w = 21, dp = 19;
-        int g = ground(x0 - 1, z0 - 1, x0 + w, z0 + dp);
-        if (g < 0) return;
+    private void graveyard(CitadelSites.Site s) {
+        int w = 21, dp = 19, x0 = s.x0 + 1, z0 = s.z0 + 1, g = s.ground;
         level(x0 - 1, z0 - 1, x0 + w, z0 + dp, g);
         int gate = x0 + w / 2;
-        building("mortuary_chapel", gate - 3, z0 + 1, null); // first: its levelled margin must not cut the wall
+        building("mortuary_chapel", gate - 3, z0 + 1, null, g); // first: its levelled margin must not cut the wall
         for (int x = x0; x < x0 + w; x++) for (int z = z0; z < z0 + dp; z++) {
             boolean edge = x == x0 || x == x0 + w - 1 || z == z0 || z == z0 + dp - 1;
             if (edge && !(z == z0 + dp - 1 && Math.abs(x - gate) <= 1)) {
@@ -1085,39 +1198,9 @@ final class CitadelLayout {
         d.features.add("graveyard");
     }
 
-    /**
-     * A quarry: a pit cut in stepped terraces into the island, cut Skystone stacked by its lip, a crane over it,
-     * crates and barrels of tools.
-     */
-    private void quarry(int x0, int z0) {
-        int size = 13;
-        int g = ground(x0 - 2, z0 - 2, x0 + size + 2, z0 + size + 1);
-        if (g < 0) return;
-        level(x0 - 2, z0 - 2, x0 + size + 2, z0 + size + 1, g);
-        for (int x = x0; x < x0 + size; x++) for (int z = z0; z < z0 + size; z++) {
-            int in = Math.min(Math.min(x - x0, x0 + size - 1 - x), Math.min(z - z0, z0 + size - 1 - z));
-            int depth = Math.min(4, in); // one step down per block in from the lip
-            for (int y = g - depth + 1; y <= g; y++) put(x, y, z, Block.AIR);
-            if (depth > 0 && d.noise.unit(cx + x, cz + z, 70) < 0.08) put(x, g - depth + 1, z, Block.SKYSTONE, 1);
-        }
-        for (int x = x0 + size + 1; x <= x0 + size + 2; x++) for (int z = z0 + 1; z <= z0 + 3; z++) {
-            put(x, g + 1, z, Block.SKYSTONE, 0);
-            if (z != z0 + 3) put(x, g + 2, z, Block.SKYSTONE, 0);
-        }
-        for (int y = g + 1; y <= g + 7; y++) put(x0 - 1, y, z0 + 6, Block.LOG, 1);
-        for (int k = 0; k <= 4; k++) put(x0 + k, g + 7, z0 + 6, Block.FENCE);
-        for (int y = g + 3; y <= g + 6; y++) put(x0 + 4, y, z0 + 6, Block.IRON_BARS);
-        put(x0 - 1, g + 1, z0 + 8, Block.CRATE);
-        put(x0 - 1, g + 1, z0 + 9, Block.BARREL, 1);
-        put(x0 - 1, g + 2, z0 + 8, Block.CRATE);
-        d.features.add("quarry");
-    }
-
     /** An orchard: rows of small trees on grass inside a fence, a gate, crates for the picking. */
-    private void orchard(int x0, int z0) {
-        int w = 23, dp = 19;
-        int g = ground(x0, z0, x0 + w - 1, z0 + dp - 1);
-        if (g < 0) return;
+    private void orchard(CitadelSites.Site s) {
+        int w = 23, dp = 19, x0 = s.x0, z0 = s.z0, g = s.ground;
         level(x0, z0, x0 + w - 1, z0 + dp - 1, g);
         for (int x = x0; x < x0 + w; x++) for (int z = z0; z < z0 + dp; z++) {
             boolean edge = x == x0 || x == x0 + w - 1 || z == z0 || z == z0 + dp - 1;
@@ -1132,10 +1215,8 @@ final class CitadelLayout {
     }
 
     /** A pasture: a fenced meadow with a gate, a lean-to shelter of spruce, hay and water barrels. */
-    private void pasture(int x0, int z0) {
-        int w = 21, dp = 17;
-        int g = ground(x0, z0, x0 + w - 1, z0 + dp - 1);
-        if (g < 0) return;
+    private void pasture(CitadelSites.Site s) {
+        int w = 21, dp = 17, x0 = s.x0, z0 = s.z0, g = s.ground;
         level(x0, z0, x0 + w - 1, z0 + dp - 1, g);
         for (int x = x0; x < x0 + w; x++) for (int z = z0; z < z0 + dp; z++) {
             boolean edge = x == x0 || x == x0 + w - 1 || z == z0 || z == z0 + dp - 1;
@@ -1168,13 +1249,9 @@ final class CitadelLayout {
     }
 
     /** A ruined watchtower out on the island: a broken round shell, rubble round its foot, a ladder to a lookout. */
-    private void watchtower() {
-        double angle = Math.PI * (1.62 + 0.23 * random.nextDouble()); // north-east, clear of the graveyard
-        int r = (int) (radius * 0.72);
-        int tx = cx + (int) Math.round(Math.cos(angle) * r), tz = cz + (int) Math.round(Math.sin(angle) * r);
-        int[] column = d.field.column(d.island, tx, tz);
-        if (column == null) return;
-        int ground = column[1];
+    private void watchtower(CitadelSites.Site s) {
+        level(s.x0, s.z0, s.x1, s.z1, s.ground);
+        int tx = cx + (s.x0 + s.x1) / 2, tz = cz + (s.z0 + s.z1) / 2, ground = s.ground;
         for (int x = -3; x <= 3; x++) for (int z = -3; z <= 3; z++) {
             int rr = x * x + z * z;
             if (rr > 12) continue;
@@ -1199,5 +1276,6 @@ final class CitadelLayout {
             }
         }
         for (int y = ground + 1; y <= ground + 2; y++) d.put(tx, y, tz + 3, Block.AIR);
+        d.features.add("watchtower");
     }
 }

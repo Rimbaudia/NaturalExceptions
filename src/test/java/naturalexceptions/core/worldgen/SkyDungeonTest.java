@@ -290,8 +290,26 @@ final class SkyDungeonTest {
                 }
             assertTrue(
                 s.dungeon.features()
-                    .size() >= 3,
+                    .size() >= 7,
                 s.name() + ": lands outside the walls: " + s.dungeon.features());
+            // Each landmark on its own ground: apart from the others, clear of the moat and of the road to the gate.
+            int town = CitadelLayout.MOAT_OUT + 8;
+            List<int[]> sites = s.dungeon.sites;
+            for (int i = 0; i < sites.size(); i++) {
+                int[] a = sites.get(i);
+                assertTrue(
+                    a[2] <= cx - town || a[0] >= cx + town || a[3] <= cz - town || a[1] >= cz + town,
+                    s.name() + ": a landmark by the moat at " + (a[0] - cx) + "," + (a[1] - cz));
+                assertTrue(
+                    a[1] <= cz || a[2] < cx - 8 || a[0] > cx + 8,
+                    s.name() + ": a landmark on the road at " + (a[0] - cx) + "," + (a[1] - cz));
+                for (int j = i + 1; j < sites.size(); j++) {
+                    int[] o = sites.get(j);
+                    assertTrue(
+                        a[0] > o[2] + 4 || o[0] > a[2] + 4 || a[1] > o[3] + 4 || o[1] > a[3] + 4,
+                        s.name() + ": two landmarks on top of each other at " + (a[0] - cx) + "," + (a[1] - cz));
+                }
+            }
         }
         assertTrue(citadels >= 3, "enough citadels to judge: " + citadels);
     }
@@ -757,7 +775,7 @@ final class SkyDungeonTest {
      * room, never up or down. {@code blocked} cells count as walls.
      */
     private static boolean walksTo(Sample s, int tx, int tz, Set<Long> blocked) {
-        int b = s.island.centreY() + 1, cx = s.island.centreX(), cz = s.island.centreZ(), r = 70;
+        int b = s.island.centreY() + 1, cx = s.island.centreX(), cz = s.island.centreZ(), r = CitadelLayout.MOAT_OUT + 4;
         int[] start = { cx, b + 1, cz + CitadelLayout.MOAT_OUT }; // on the drawbridge
         Set<Long> seen = new HashSet<>();
         ArrayDeque<int[]> queue = new ArrayDeque<>();

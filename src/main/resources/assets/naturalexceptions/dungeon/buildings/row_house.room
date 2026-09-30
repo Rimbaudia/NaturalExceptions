@@ -1,0 +1,188 @@
+name: row_house
+type: building
+footprint: 7x10
+height: 14
+roles: store
+kinds: citadel
+weight: 3
+carpet: orange
+roof: spruce
+timber: oak
+eaves: 9
+---
+floor:
+ppppppp
+ppppppp
+ppppppp
+ppppppp
+ppppppp
+ppppppp
+ppppppp
+ppppppp
+ppppppp
+ppppppp
+layer 1:
+QQQQQQQ
+QNQ"Q.Q
+Q:....Q
+Q.....Q
+Q.....Q
+Qν/...Q
+Q.....Q
+Q!...1Q
+Q.....Q
+QQQDQQQ
+layer 2:
+Q#####Q
+#.yjy.#
+#.....#
+#.....#
+|.....|
+#.....#
+#....1#
+#.....#
+#.....#
+Q|#D#|Q
+layer 3:
+Q#####Q
+#..Q..#
+#.....#
+#.....#
+jd....j
+#....1#
+#.....#
+#.....#
+#.....#
+Qj###jQ
+layer 4:
+Q#####Q
+#..Q..#
+#.....#
+#.....#
+#....1#
+#.....#
+#.....#
+#.....#
+#.....#
+Q#####Q
+layer 5:
+YppYppY
+pPPQPPp
+pPPPPPp
+YPPPP1Y
+pPPPP.p
+pPPPP.p
+YPPPP.Y
+pPPPP.p
+pPPPPPp
+YppYppY
+layer 6:
+YppYppY
+pbcQ..p
+pu....p
+Y.qq..Y
+p.qqo.p
+p.qqo.p
+Y...o.Y
+pν/.o.p
+p.....p
+YppYppY
+layer 7:
+YppYppY
+p..Q..p
+p.....p
+Y.....Y
+|.....|
+p.....p
+Y.....Y
+p.....p
+p.[...p
+Ypp|ppY
+layer 8:
+YYYYYYY
+Y..Q..Y
+Y.....Y
+Y.....Y
+Yd....Y
+Y.....Y
+Y.....Y
+Y.....Y
+Y.....Y
+YYYYYYY
+layer 9:
+2PPPPP4
+2PPQPP4
+2PPPPP4
+2PPPPP4
+2PPPPP4
+2PPPPP4
+2PPPPP4
+2PPPPP4
+2PPPPP4
+2PPPPP4
+layer 10:
+.2PPP4.
+.2.Q.4.
+.2...4.
+.2...4.
+.2...4.
+.2...4.
+.2...4.
+.2...4.
+.2...4.
+.2PPP4.
+layer 11:
+..2P4..
+..2Q4..
+..2.4..
+..2.4..
+..2.4..
+..2.4..
+..2.4..
+..2.4..
+..2.4..
+..2P4..
+layer 12:
+...P...
+...Q...
+...P...
+...P...
+...P...
+...P...
+...P...
+...P...
+...P...
+...P...
+layer 13:
+.......
+...Q...
+.......
+.......
+.......
+.......
+.......
+.......
+.......
+.......
+layer 14:
+.......
+...Q...
+.......
+.......
+.......
+.......
+.......
+.......
+.......
+.......
+ceiling:
+.......
+.......
+.......
+.......
+.......
+.......
+.......
+.......
+.......
+.......
