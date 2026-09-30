@@ -21,6 +21,7 @@ import naturalexceptions.minecraft.registry.NEItems;
  * <li>Dungeon storerooms: mineshaft or stronghold loot and supplies (Stormglass among them); one in twelve holds a
  * spare Sky Key and one in twenty a treasure.</li>
  * <li>Key room: the Sky Key and a little stronghold loot.</li>
+ * <li>Entrance hall: a Surveyor's Chart of the dungeon, torches and bread.</li>
  * <li>The vault: one treasure, always; and beside it a chest of temple and stronghold riches.</li>
  * </ul>
  * Every roll comes from the chest's own seed, so a chest's contents are the same every time.
@@ -32,7 +33,9 @@ public final class SkyCacheLoot {
         STORE,
         KEY,
         VAULT_TREASURE,
-        VAULT_RICH
+        VAULT_RICH,
+        /** The entrance hall's: a Surveyor's Chart, torches and bread. */
+        CHART
     }
 
     /** Chance that a dungeon storeroom chest also holds a treasure. */
@@ -73,6 +76,16 @@ public final class SkyCacheLoot {
                 vanilla(chest, random, ChestGenHooks.STRONGHOLD_CORRIDOR);
                 if (NEItems.skyKey != null)
                     chest.setInventorySlotContents(TREASURE_SLOT, new ItemStack(NEItems.skyKey));
+                break;
+            case CHART:
+                put(
+                    chest,
+                    random,
+                    net.minecraft.item.Item.getItemFromBlock(net.minecraft.init.Blocks.torch),
+                    6 + random.nextInt(6));
+                put(chest, random, net.minecraft.init.Items.bread, 2 + random.nextInt(3));
+                if (NEItems.surveyorsChart != null)
+                    chest.setInventorySlotContents(TREASURE_SLOT, new ItemStack(NEItems.surveyorsChart));
                 break;
             case VAULT_TREASURE:
                 vanilla(chest, random, ChestGenHooks.STRONGHOLD_CROSSING);

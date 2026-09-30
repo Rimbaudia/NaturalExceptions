@@ -544,6 +544,9 @@ final class LandmarkMaterializer {
             case BEACON:
                 set(world, x, y, z, orElse(NEBlocks.stormglassLantern, Blocks.glowstone), 1);
                 break;
+            case CHART_TABLE:
+                set(world, x, y, z, orElse(NEBlocks.chartTable, Blocks.crafting_table), 0);
+                break;
             case GLASS:
                 set(world, x, y, z, Blocks.glass, 0);
                 break;
@@ -649,6 +652,8 @@ final class LandmarkMaterializer {
         switch (loot) {
             case KEY:
                 return SkyCacheLoot.Tier.KEY;
+            case CHART:
+                return SkyCacheLoot.Tier.CHART;
             case VAULT_TREASURE:
                 return SkyCacheLoot.Tier.VAULT_TREASURE;
             case VAULT_RICH:

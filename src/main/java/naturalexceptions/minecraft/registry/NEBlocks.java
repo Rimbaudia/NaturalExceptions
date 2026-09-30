@@ -60,6 +60,7 @@ public final class NEBlocks {
     public static Block pew;
     public static Block fountain;
     public static Block orrery;
+    public static Block chartTable;
     public static Block windbloom;
     public static Block wardedSkystone;
     public static Block vaultGate;
@@ -154,6 +155,7 @@ public final class NEBlocks {
         pew = new naturalexceptions.minecraft.furniture.BlockPew().setCreativeTab(NECreativeTab.INSTANCE);
         fountain = new naturalexceptions.minecraft.furniture.BlockFountain().setCreativeTab(NECreativeTab.INSTANCE);
         orrery = new naturalexceptions.minecraft.furniture.BlockOrrery().setCreativeTab(NECreativeTab.INSTANCE);
+        chartTable = new naturalexceptions.minecraft.furniture.BlockChartTable().setCreativeTab(NECreativeTab.INSTANCE);
         windbloom = new naturalexceptions.minecraft.block.BlockWindbloom().setCreativeTab(NECreativeTab.INSTANCE);
         wardedSkystone = new naturalexceptions.minecraft.block.BlockWardedSkystone();
         vaultGate = new naturalexceptions.minecraft.block.BlockVaultGate();
@@ -264,6 +266,7 @@ public final class NEBlocks {
             GameRegistry.registerBlock(pew, "pew");
             GameRegistry.registerBlock(fountain, "fountain");
             GameRegistry.registerBlock(orrery, "orrery");
+            GameRegistry.registerBlock(chartTable, "chart_table");
             GameRegistry.registerBlock(wardedSkystone, "warded_skystone");
             GameRegistry.registerBlock(vaultGate, "vault_gate");
             GameRegistry.registerBlock(triggerStone, "trigger_stone");

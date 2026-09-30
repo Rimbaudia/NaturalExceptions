@@ -165,6 +165,7 @@ public final class NaturalExceptions {
                 .register(cues);
             naturalexceptions.minecraft.knowledge.client.NEKnowledgeKeyHandler.register();
             naturalexceptions.minecraft.biology.client.BodyStatusPanel.register();
+            naturalexceptions.minecraft.worldgen.client.GuiDungeonChart.Opener.register();
             naturalexceptions.minecraft.gui.client.EffectColumn.register();
             naturalexceptions.minecraft.gear.client.InventoryTabs.register();
             naturalexceptions.minecraft.gear.client.GearRenderer.register();

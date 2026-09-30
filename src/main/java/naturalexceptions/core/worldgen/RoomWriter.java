@@ -145,8 +145,10 @@ final class RoomWriter {
                 else masonry(x, y, z, layer);
                 break;
             case 'L':
-                // On a forgotten level a third of the lamps have gone dark.
-                if (d.theme == SkyDungeon.Theme.FORGOTTEN && d.noise.unit3(x, y, z, 72) < 0.33) masonry(x, y, z, layer);
+                // On a forgotten level a third of the lamps have gone dark (never by a shaft: the way on stays lit).
+                if (d.theme == SkyDungeon.Theme.FORGOTTEN && role != RoomTemplate.Role.SHAFT_TOP
+                    && role != RoomTemplate.Role.SHAFT_FOOT
+                    && d.noise.unit3(x, y, z, 72) < 0.33) masonry(x, y, z, layer);
                 else d.put(x, y, z, Block.LAMP);
                 break;
             case 'B':
@@ -347,6 +349,9 @@ final class RoomWriter {
             case '\u0398':
                 d.put(x, y, z, Block.ORRERY);
                 break;
+            case '\u03a3':
+                d.put(x, y, z, Block.CHART_TABLE);
+                break;
             case '\u03be':
                 d.put(x, y, z, Block.STORMGLASS_CLUSTER);
                 break;
@@ -452,6 +457,9 @@ final class RoomWriter {
                 break;
             case KEY:
                 loot = primary ? Loot.KEY : null;
+                break;
+            case ENTRANCE:
+                loot = primary ? Loot.CHART : null;
                 break;
             case VAULT:
                 loot = primary ? Loot.VAULT_TREASURE : Loot.VAULT_RICH;

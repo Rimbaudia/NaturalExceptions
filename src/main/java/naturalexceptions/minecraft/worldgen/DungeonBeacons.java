@@ -27,6 +27,9 @@ public final class DungeonBeacons {
     public static final class Beacon {
 
         public final int[] gate, chest;
+        /** The dungeon itself, and its name for keeping what a player has walked of it. */
+        public SkyDungeon dungeon;
+        public String name;
 
         Beacon(int[] gate, int[] chest) {
             this.gate = gate;
@@ -77,6 +80,10 @@ public final class DungeonBeacons {
         if (BEACONS.containsKey(key)) return BEACONS.get(key);
         SkyDungeon dungeon = SkyDungeon.of(islands, island);
         Beacon beacon = dungeon == null ? null : locate(dungeon);
+        if (beacon != null) {
+            beacon.dungeon = dungeon;
+            beacon.name = key;
+        }
         BEACONS.put(key, beacon);
         return beacon;
     }
@@ -129,16 +136,47 @@ public final class DungeonBeacons {
     @SubscribeEvent
     public void onPlayerTick(TickEvent.PlayerTickEvent event) {
         EntityPlayer player = event.player;
-        if (event.phase != TickEvent.Phase.END || player.worldObj.isRemote
-            || (player.worldObj.getTotalWorldTime() + player.getEntityId()) % CHIME_TICKS != 0) return;
+        if (event.phase != TickEvent.Phase.END || player.worldObj.isRemote) return;
+        long tick = player.worldObj.getTotalWorldTime() + player.getEntityId();
+        if (tick % 20 != 0) return;
         Beacon beacon = nearest(player.worldObj, player.posX, player.posZ);
         if (beacon == null) return;
+        // The room the player stands in goes on their chart.
+        int room = DungeonChart.roomAt(beacon.dungeon, player.posX, player.posY, player.posZ);
+        if (room >= 0) DungeonChart.visit(charts(player), beacon.name, room);
+        if (tick % CHIME_TICKS != 0) return;
         int[] c = beacon.chest;
         if (player.getDistanceSq(c[0] + 0.5, c[1] + 0.5, c[2] + 0.5) > CHIME_RANGE * CHIME_RANGE) return;
         if (!holdsKey(player.worldObj.getTileEntity(c[0], c[1], c[2]))) return;
         player.worldObj.playSoundEffect(c[0] + 0.5, c[1] + 0.5, c[2] + 0.5, "note.pling", 0.7F, 1.4F);
         if (player.worldObj instanceof WorldServer) ((WorldServer) player.worldObj)
             .func_147487_a("witchMagic", c[0] + 0.5, c[1] + 1.1, c[2] + 0.5, 8, 0.25, 0.3, 0.25, 0.02);
+    }
+
+    /** Where a player's charts are kept: with the data that outlives death. */
+    static net.minecraft.nbt.NBTTagCompound charts(EntityPlayer player) {
+        net.minecraft.nbt.NBTTagCompound data = player.getEntityData();
+        net.minecraft.nbt.NBTTagCompound persisted = data.getCompoundTag(EntityPlayer.PERSISTED_NBT_TAG);
+        data.setTag(EntityPlayer.PERSISTED_NBT_TAG, persisted);
+        net.minecraft.nbt.NBTTagCompound charts = persisted.getCompoundTag("naturalexceptions.charts");
+        persisted.setTag("naturalexceptions.charts", charts);
+        return charts;
+    }
+
+    /** Shows the player the chart of the dungeon they are in or near; false if none is near. */
+    public static boolean showChart(net.minecraft.entity.player.EntityPlayerMP player) {
+        Beacon beacon = nearest(player.worldObj, player.posX, player.posZ);
+        if (beacon == null) return false;
+        DungeonChart chart = DungeonChart.of(
+            beacon.dungeon,
+            DungeonChart.visited(charts(player), beacon.name),
+            player.posX,
+            player.posY,
+            player.posZ,
+            player.rotationYaw);
+        naturalexceptions.minecraft.network.NENetwork.CHANNEL
+            .sendTo(new naturalexceptions.minecraft.network.PacketDungeonChart(chart), player);
+        return true;
     }
 
     private static boolean holdsKey(TileEntity tile) {

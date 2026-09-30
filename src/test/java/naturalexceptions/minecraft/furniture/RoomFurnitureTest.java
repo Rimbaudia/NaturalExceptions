@@ -31,7 +31,7 @@ final class RoomFurnitureTest {
     @Test
     void everyPieceCanBeMade() {
         for (Block block : new Block[] { NEBlocks.candelabra, NEBlocks.brazier, NEBlocks.stoneBench, NEBlocks.pew,
-            NEBlocks.fountain, NEBlocks.orrery }) {
+            NEBlocks.fountain, NEBlocks.orrery, NEBlocks.chartTable }) {
             boolean found = false;
             for (Object entry : CraftingManager.getInstance()
                 .getRecipeList()) {

@@ -443,6 +443,7 @@ final class SkyDungeonTest {
             String name = s.name();
             SkyDungeon dungeon = s.dungeon;
             assertEquals(1, chests(dungeon, SkyDungeon.Loot.KEY).size(), name + ": one key");
+            assertEquals(1, chests(dungeon, SkyDungeon.Loot.CHART).size(), name + ": a chart in the entrance");
             assertEquals(1, chests(dungeon, SkyDungeon.Loot.VAULT_TREASURE).size(), name + ": one treasure");
             int keyGates = 0, wardenGates = 0;
             for (Piece p : dungeon.pieces()) if (p.block == Block.GATE) {

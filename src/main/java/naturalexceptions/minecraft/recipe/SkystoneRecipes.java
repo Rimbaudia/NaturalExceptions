@@ -129,6 +129,23 @@ public final class SkystoneRecipes {
             Items.gold_ingot,
             'P',
             planks);
+        if (NEBlocks.chartTable != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.chartTable),
+            " M ",
+            "SSS",
+            "F F",
+            'M',
+            Items.map,
+            'S',
+            slabs,
+            'F',
+            Blocks.fence);
+        if (naturalexceptions.minecraft.registry.NEItems.surveyorsChart != null
+            && naturalexceptions.minecraft.registry.NEItems.stormglassShard != null)
+            GameRegistry.addShapelessRecipe(
+                new ItemStack(naturalexceptions.minecraft.registry.NEItems.surveyorsChart),
+                Items.map,
+                naturalexceptions.minecraft.registry.NEItems.stormglassShard);
         if (NEBlocks.wallShelf != null)
             GameRegistry.addRecipe(new ItemStack(NEBlocks.wallShelf, 3), "SSS", "T T", 'S', slabs, 'T', Items.stick);
         if (NEBlocks.weaponRack != null) GameRegistry

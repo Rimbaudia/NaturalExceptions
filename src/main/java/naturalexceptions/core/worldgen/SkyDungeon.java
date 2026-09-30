@@ -166,7 +166,9 @@ public final class SkyDungeon {
         FOUNTAIN,
         ORRERY,
         /** A Stormglass Lantern sending light up a shaft: at the foot of the ladders between levels. */
-        BEACON
+        BEACON,
+        /** A surveyor's desk, where the dungeon's chart can be read and copied. */
+        CHART_TABLE
     }
 
     /** Directions for beds, torches, trapdoors and fence gates. */
@@ -189,7 +191,9 @@ public final class SkyDungeon {
         STORE,
         KEY,
         VAULT_TREASURE,
-        VAULT_RICH
+        VAULT_RICH,
+        /** The entrance hall's chest: a Surveyor's Chart of the dungeon, and a few supplies. */
+        CHART
     }
 
     /** How a corridor looks. */
