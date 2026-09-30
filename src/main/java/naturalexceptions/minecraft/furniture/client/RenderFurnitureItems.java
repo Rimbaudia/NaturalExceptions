@@ -1,5 +1,6 @@
 package naturalexceptions.minecraft.furniture.client;
 
+import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
@@ -33,6 +34,18 @@ public final class RenderFurnitureItems extends TileEntitySpecialRenderer {
     public void renderTileEntityAt(TileEntity tile, double x, double y, double z, float partialTicks) {
         if (!(tile instanceof TileEntityStorage)) return;
         TileEntityStorage storage = (TileEntityStorage) tile;
+        // Lit by the air the goods sit in (above a counter or table, before a shelf's face), not by the inside of
+        // the solid block, which is dark.
+        int lx = tile.xCoord, ly = tile.yCoord, lz = tile.zCoord;
+        if (tile instanceof TileEntityPantryShelf) {
+            int facing = tile.getBlockMetadata();
+            lz += facing == 2 ? -1 : facing == 3 ? 1 : 0;
+            lx += facing == 4 ? -1 : facing == 5 ? 1 : 0;
+        } else ly += 1;
+        int light = tile.getWorldObj() != null ? tile.getWorldObj()
+            .getLightBrightnessForSkyBlocks(lx, ly, lz, 0) : 15728880;
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, light % 65536, light / 65536);
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         if (tile instanceof TileEntityWoodenTable) {
             for (int i = 0; i < TABLE.length; i++)
                 draw(storage, i, x + TABLE[i][0], y + 1.0, z + TABLE[i][1], 0.55F, 0.0F);

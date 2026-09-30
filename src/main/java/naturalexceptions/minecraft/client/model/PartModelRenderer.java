@@ -65,7 +65,7 @@ public final class PartModelRenderer implements ISimpleBlockRenderingHandler {
         double[][] parts = model.parts(meta);
         for (int i = 0; i < parts.length; i++) {
             double[] b = parts[i];
-            IIcon icon = model.partIcon(i, meta);
+            IIcon icon = model.partIcon(i, metadata); // the item's own kind: an awning's colour, a table's wood
             renderer.setRenderBounds(b[0], b[1], b[2], b[3], b[4], b[5]);
             for (int side = 0; side < 6; side++) {
                 tess.startDrawingQuads();

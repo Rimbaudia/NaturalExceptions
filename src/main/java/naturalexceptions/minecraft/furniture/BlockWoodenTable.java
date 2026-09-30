@@ -19,7 +19,7 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
 /**
- * A wooden table (meta 0 oak, 1 spruce, 2 dark oak): a board on a turned post. Set things on it and take them up by
+ * A wooden table (meta 0 oak, 1 spruce, 2 dark oak): a board on four slim legs. Set things on it and take them up by
  * hand, four at most; a hungry player with an empty hand eats what food is on it, a proper meal ({@link Meals}).
  */
 public final class BlockWoodenTable extends BlockParts {
@@ -28,8 +28,10 @@ public final class BlockWoodenTable extends BlockParts {
     public static final int[] PLANKS = { 0, 1, 5 };
     public static final String[] WOODS = { "oak", "spruce", "darkOak" };
 
+    /** A board on four slim legs. */
     private static final double[][] PARTS = { { 0.0, 0.875, 0.0, 1.0, 1.0, 1.0 },
-        { 0.375, 0.125, 0.375, 0.625, 0.875, 0.625 }, { 0.1875, 0.0, 0.1875, 0.8125, 0.125, 0.8125 } };
+        { 0.0625, 0.0, 0.0625, 0.1875, 0.875, 0.1875 }, { 0.8125, 0.0, 0.0625, 0.9375, 0.875, 0.1875 },
+        { 0.0625, 0.0, 0.8125, 0.1875, 0.875, 0.9375 }, { 0.8125, 0.0, 0.8125, 0.9375, 0.875, 0.9375 } };
 
     public BlockWoodenTable() {
         super(Material.wood);
@@ -61,7 +63,7 @@ public final class BlockWoodenTable extends BlockParts {
     @Override
     @SideOnly(Side.CLIENT)
     public IIcon partIcon(int index, int metadata) {
-        return index == 1 ? Blocks.log.getIcon(2, metadata == 1 ? 1 : 0) : getIcon(1, metadata);
+        return index > 0 ? Blocks.log.getIcon(2, metadata == 1 ? 1 : 0) : getIcon(1, metadata);
     }
 
     @Override
