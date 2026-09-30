@@ -125,6 +125,9 @@ final class SkyDungeonTest {
                     case FLOWER:
                     case WINDBLOOM:
                     case COBWEB:
+                    case CARPET:
+                    case TORCH:
+                    case PRESSURE_PLATE:
                         return true;
                     case GATE:
                         return piece.meta == SkyDungeon.WARDEN_BOUND ? wardenGateOpen : keyGateOpen;
@@ -210,6 +213,53 @@ final class SkyDungeonTest {
         List<Piece> out = new ArrayList<>();
         for (Piece p : dungeon.pieces()) if (p.block == Block.CHEST && p.loot == loot) out.add(p);
         return out;
+    }
+
+    @Test
+    void floorsWallsAndCeilingsAreDifferentStone() {
+        for (Sample s : samples()) {
+            for (Room room : s.dungeon.rooms()) {
+                // Authored catacomb rooms; the vault is warded all round.
+                if (room.template == null || room.level < 0 || room.role == Role.VAULT) continue;
+                int floorBricks = 0, ceilingBricks = 0, tiles = 0, polished = 0;
+                for (int x = room.minX; x <= room.maxX; x++) for (int z = room.minZ; z <= room.maxZ; z++) {
+                    Piece f = s.dungeon.at(x, room.floorY, z), c = s.dungeon.at(x, room.floorY + room.height + 1, z);
+                    if (f != null && f.block == Block.SKYSTONE) floorBricks++;
+                    if (f != null && f.block == Block.TILES) tiles++;
+                    if (c != null && c.block == Block.SKYSTONE) ceilingBricks++;
+                    if (c != null && c.block == Block.POLISHED) polished++;
+                }
+                String where = s.name() + " " + room.template;
+                assertEquals(0, floorBricks, where + ": no wall bricks in the floor");
+                assertEquals(0, ceilingBricks, where + ": no wall bricks in the ceiling");
+                assertTrue(tiles > 0 && polished > 0, where + ": a tiled floor, a polished ceiling");
+            }
+            if (s.dungeon.kind() == SkyDungeon.Kind.CITADEL) {
+                int cx = s.island.centreX(), cz = s.island.centreZ(), b = s.island.centreY() + 1;
+                Piece street = s.dungeon.at(cx, b, cz + CitadelLayout.ROAD_OUT + 2);
+                assertNotNull(street, s.name() + ": the south street");
+                assertEquals(Block.TILES, street.block, s.name() + ": the streets are paved with tiles");
+            }
+        }
+    }
+
+    @Test
+    void everyBedHasBothHalves() {
+        int beds = 0;
+        int[][] step = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
+        for (Sample s : samples()) {
+            for (Piece p : s.dungeon.pieces()) {
+                if (p.block != Block.BED) continue;
+                boolean head = (p.meta & 8) != 0;
+                int dir = p.meta & 3, sign = head ? -1 : 1;
+                Piece other = s.dungeon.at(p.x + sign * step[dir][0], p.y, p.z + sign * step[dir][1]);
+                assertNotNull(other, s.name() + ": a bed half alone at " + p.x + "," + p.y + "," + p.z);
+                assertEquals(Block.BED, other.block, s.name() + ": a bed's other half");
+                assertEquals(dir | (head ? 0 : 8), other.meta, s.name() + ": both halves face the same way");
+                if (!head) beds++;
+            }
+        }
+        assertTrue(beds > 0, "beds turn up");
     }
 
     @Test
@@ -498,7 +548,7 @@ final class SkyDungeonTest {
                 if (p.block == Block.QUARTZ) quartz++;
                 if (p.block == Block.FURNACE) furnaces++;
                 if (p.block == Block.WINDBLOOM) windbloom++;
-                if (p.block == Block.SKYSTONE && p.y == s.island.centreY() + 2) walls++;
+                if (SkyDungeon.masonry(p.block) && p.y == s.island.centreY() + 2) walls++;
             }
             assertEquals(1, seals, s.name() + ": one Warden");
             Connection vault = null;
@@ -539,6 +589,8 @@ final class SkyDungeonTest {
     private static boolean open(Sample s, int x, int y, int z) {
         Piece p = s.dungeon.at(x, y, z);
         if (p != null) return p.block == Block.AIR || p.block == Block.DOOR
+            || p.block == Block.CARPET
+            || p.block == Block.TORCH
             || p.block == Block.TALL_GRASS
             || p.block == Block.FLOWER
             || p.block == Block.WINDBLOOM;
@@ -572,14 +624,14 @@ final class SkyDungeonTest {
                         Piece p = s.dungeon.at(c[0], y, c[1]);
                         boolean inTower = Math.abs(c[0] - cx) <= 5 || Math.abs(c[1] - cz) <= 5;
                         assertTrue(
-                            inTower || p != null && p.block == Block.SKYSTONE,
+                            inTower || p != null && SkyDungeon.masonry(p.block),
                             s.name() + ": a solid wall at " + c[0] + "," + c[1]);
                     }
                 }
             }
             int stairs = 0;
-            for (Piece p : s.dungeon.pieces())
-                if (p.block == Block.STAIRS && p.y > b && p.y <= b + CitadelLayout.INNER_HEIGHT) stairs++;
+            for (Piece p : s.dungeon.pieces()) if ((p.block == Block.STAIRS || p.block == Block.SKY_STAIRS) && p.y > b
+                && p.y <= b + CitadelLayout.INNER_HEIGHT) stairs++;
             assertTrue(
                 stairs >= 8 * 8,
                 s.name() + ": stairs up onto both walls on every side, and in the towers: " + stairs);

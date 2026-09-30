@@ -60,8 +60,6 @@ public final class SkyDungeon {
         GATE,
         BOOKSHELF,
         COBWEB,
-        /** Meta 0 cobblestone, 1 gravel, 2 mossy cobblestone. */
-        RUBBLE,
         IRON_BARS,
         GRASS,
         TALL_GRASS,
@@ -89,8 +87,47 @@ public final class SkyDungeon {
         /** Wool; meta: vanilla colour. */
         WOOL,
         HAY,
-        GLASS
+        GLASS,
+        GRAVEL,
+        /** Skystone Tiles, the floors; meta 1 cracked. */
+        TILES,
+        /** Polished Skystone: ceilings, plinths, sills. */
+        POLISHED,
+        /** Chiseled Skystone: keystones, altar faces, lamp surrounds. */
+        CHISELED,
+        /** Skystone Pillar; meta: vanilla pillar axis (0 upright, 4 along x, 8 along z). */
+        PILLAR,
+        /** Skystone Brick Stairs; meta as {@link #STAIRS}. */
+        SKY_STAIRS,
+        /** Skystone slab; meta 0 brick, 1 tile, 2 polished; plus 8 for the top half. */
+        SKY_SLAB,
+        /** Half a bed; meta: the way from its foot to its head ({@link #NORTH} ..), plus 8 for the head. */
+        BED,
+        /** Carpet; meta: vanilla colour. */
+        CARPET,
+        /** Torch; meta: the wall it hangs on ({@link #NORTH} ..), or {@link #STANDING}. */
+        TORCH,
+        /** Flower pot; meta: which plant ({@link #POT_PLANTS}). */
+        FLOWER_POT,
+        /** Trapdoor, closed, in the top half of its block (a shelf); meta: the wall it is hinged to. */
+        TRAPDOOR,
+        /** Fence gate, closed; meta: the way it faces ({@link #NORTH} ..). */
+        FENCE_GATE,
+        /** Wooden pressure plate (a table's top, on a fence). */
+        PRESSURE_PLATE,
+        BREWING_STAND,
+        ENCHANTING_TABLE,
+        JUKEBOX,
+        /** Stained glass pane; meta: vanilla colour. */
+        STAINED_GLASS_PANE
     }
+
+    /** Directions for beds, torches, trapdoors and fence gates. */
+    public static final int NORTH = 0, EAST = 1, SOUTH = 2, WEST = 3;
+    /** Torch meta: standing on the floor. */
+    public static final int STANDING = 4;
+    /** What a flower pot holds, by meta: poppy, dandelion, fern, oak sapling, blue orchid, allium. */
+    public static final int POT_PLANTS = 6;
 
     /** Dispenser meta flag: loaded with fire charges. */
     public static final int FIRE = 8;
@@ -465,17 +502,54 @@ public final class SkyDungeon {
     }
 
     /** Skystone, weathered by hash: mostly whole bricks, some cracked, some mossy. */
+    /** Wall masonry: Skystone Bricks, now and then cracked or mossy. */
     void stone(int x, int y, int z) {
         double roll = noise.unit3(x, y, z, 1);
-        put(x, y, z, Block.SKYSTONE, roll < 0.15 ? 1 : roll < 0.27 ? 2 : 0);
+        put(x, y, z, Block.SKYSTONE, roll < 0.12 ? 1 : roll < 0.2 ? 2 : 0);
     }
 
-    /** A hollow box: its shell in stone (or warded). */
+    /** A floor: Skystone Tiles, one in ten cracked. */
+    void floorTile(int x, int y, int z) {
+        put(x, y, z, Block.TILES, noise.unit3(x, y, z, 2) < 0.1 ? 1 : 0);
+    }
+
+    /** A ceiling, plinth or sill: Polished Skystone. */
+    void polished(int x, int y, int z) {
+        put(x, y, z, Block.POLISHED);
+    }
+
+    /** An upright Skystone Pillar. */
+    void pillar(int x, int y, int z) {
+        put(x, y, z, Block.PILLAR);
+    }
+
+    /** Whether this block is dungeon masonry (walls, floors, ceilings, trim): what a wall may be built of. */
+    public static boolean masonry(Block block) {
+        switch (block) {
+            case SKYSTONE:
+            case TILES:
+            case POLISHED:
+            case CHISELED:
+            case PILLAR:
+            case WARDED:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * A hollow box: floor tiles below, a polished ceiling above, and brick walls standing on a polished plinth; or
+     * all warded.
+     */
     void shell(int x0, int y0, int z0, int x1, int y1, int z1, boolean warded) {
         for (int x = x0; x <= x1; x++) for (int y = y0; y <= y1; y++) for (int z = z0; z <= z1; z++) {
             boolean edge = x == x0 || x == x1 || y == y0 || y == y1 || z == z0 || z == z1;
             if (!edge) continue;
             if (warded) put(x, y, z, Block.WARDED);
+            else if (y == y0) floorTile(x, y, z);
+            else if (y == y1) polished(x, y, z);
+            else if (y == y0 + 1) polished(x, y, z);
             else stone(x, y, z);
         }
     }

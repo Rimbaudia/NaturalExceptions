@@ -217,7 +217,9 @@ final class LandmarkMaterializer {
                 set(world, x, y, z, Blocks.glass_pane, 0);
                 break;
             case CHEST:
-                chest(world, x, y, z, tierOf(piece.loot), island);
+                // A chest with no loot is furniture: a barracks footlocker, a cupboard.
+                if (piece.loot == null) set(world, x, y, z, Blocks.chest, 0);
+                else chest(world, x, y, z, tierOf(piece.loot), island);
                 break;
             case SPAWNER:
                 spawner(world, x, y, z, piece.mob);
@@ -271,14 +273,87 @@ final class LandmarkMaterializer {
             case COBWEB:
                 set(world, x, y, z, Blocks.web, 0);
                 break;
-            case RUBBLE:
-                set(
+            case GRAVEL:
+                set(world, x, y, z, Blocks.gravel, 0);
+                break;
+            case TILES:
+                if (NEBlocks.skystoneDecor != null) set(world, x, y, z, NEBlocks.skystoneDecor, meta & 1);
+                else set(world, x, y, z, Blocks.stonebrick, (meta & 1) != 0 ? 2 : 0);
+                break;
+            case POLISHED:
+                if (NEBlocks.skystoneDecor != null) set(
                     world,
                     x,
                     y,
                     z,
-                    meta == 1 ? Blocks.gravel : meta == 2 ? Blocks.mossy_cobblestone : Blocks.cobblestone,
-                    0);
+                    NEBlocks.skystoneDecor,
+                    naturalexceptions.minecraft.block.BlockSkystoneDecor.POLISHED);
+                else set(world, x, y, z, Blocks.double_stone_slab, 8);
+                break;
+            case CHISELED:
+                if (NEBlocks.skystoneDecor != null) set(
+                    world,
+                    x,
+                    y,
+                    z,
+                    NEBlocks.skystoneDecor,
+                    naturalexceptions.minecraft.block.BlockSkystoneDecor.CHISELED);
+                else set(world, x, y, z, Blocks.stonebrick, 3);
+                break;
+            case PILLAR:
+                if (NEBlocks.skystonePillar != null) set(world, x, y, z, NEBlocks.skystonePillar, meta & 12);
+                else set(world, x, y, z, Blocks.quartz_block, 2);
+                break;
+            case SKY_STAIRS:
+                set(world, x, y, z, orElse(NEBlocks.skystoneStairs, Blocks.stone_brick_stairs), meta & 7);
+                break;
+            case SKY_SLAB:
+                if (NEBlocks.skystoneSlab != null) set(world, x, y, z, NEBlocks.skystoneSlab, meta & 15);
+                else set(world, x, y, z, Blocks.stone_slab, 5 | (meta & 8));
+                break;
+            case BED: {
+                // Each half on its own (the two may fall in different chunks); vanilla faces 0 south .. 3 east.
+                int facing = VANILLA_FACING[meta & 3];
+                set(world, x, y, z, Blocks.bed, facing | (meta & 8));
+                break;
+            }
+            case CARPET:
+                set(world, x, y, z, Blocks.carpet, meta & 15);
+                break;
+            case TORCH:
+                set(world, x, y, z, Blocks.torch, TORCH_META[Math.min(meta, 4)]);
+                break;
+            case FLOWER_POT: {
+                set(world, x, y, z, Blocks.flower_pot, 0);
+                TileEntity tile = world.getTileEntity(x, y, z);
+                if (tile instanceof net.minecraft.tileentity.TileEntityFlowerPot) {
+                    Object[] plant = POT_PLANTS[meta % POT_PLANTS.length];
+                    ((net.minecraft.tileentity.TileEntityFlowerPot) tile)
+                        .func_145964_a(net.minecraft.item.Item.getItemFromBlock((Block) plant[0]), (Integer) plant[1]);
+                    tile.markDirty();
+                }
+                break;
+            }
+            case TRAPDOOR:
+                set(world, x, y, z, Blocks.trapdoor, TRAPDOOR_META[meta & 3] | 8);
+                break;
+            case FENCE_GATE:
+                set(world, x, y, z, Blocks.fence_gate, VANILLA_FACING[meta & 3]);
+                break;
+            case PRESSURE_PLATE:
+                set(world, x, y, z, Blocks.wooden_pressure_plate, 0);
+                break;
+            case BREWING_STAND:
+                set(world, x, y, z, Blocks.brewing_stand, 0);
+                break;
+            case ENCHANTING_TABLE:
+                set(world, x, y, z, Blocks.enchanting_table, 0);
+                break;
+            case JUKEBOX:
+                set(world, x, y, z, Blocks.jukebox, 0);
+                break;
+            case STAINED_GLASS_PANE:
+                set(world, x, y, z, Blocks.stained_glass_pane, meta & 15);
                 break;
             case IRON_BARS:
                 set(world, x, y, z, Blocks.iron_bars, 0);
@@ -350,6 +425,16 @@ final class LandmarkMaterializer {
                 break;
         }
     }
+
+    /** Vanilla facing for a dungeon direction (north, east, south, west): beds and fence gates. */
+    private static final int[] VANILLA_FACING = { 2, 3, 0, 1 };
+    /** Torch meta hanging on the wall to the north, east, south, west, or standing. */
+    private static final int[] TORCH_META = { 3, 2, 4, 1, 5 };
+    /** Trapdoor meta hinged on the wall to the north, east, south, west. */
+    private static final int[] TRAPDOOR_META = { 1, 2, 0, 3 };
+    /** A flower pot's plant by meta: poppy, dandelion, fern, oak sapling, blue orchid, allium. */
+    private static final Object[][] POT_PLANTS = { { Blocks.red_flower, 0 }, { Blocks.yellow_flower, 0 },
+        { Blocks.tallgrass, 2 }, { Blocks.sapling, 0 }, { Blocks.red_flower, 1 }, { Blocks.red_flower, 2 } };
 
     private static void set(World world, int x, int y, int z, Block block, int meta) {
         world.setBlock(x, y, z, block, meta, 2);

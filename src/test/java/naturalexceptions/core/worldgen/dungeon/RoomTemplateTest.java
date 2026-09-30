@@ -34,7 +34,7 @@ final class RoomTemplateTest {
         for (int r = 0; r < 4; r++) {
             int count = 0;
             for (int x = 0; x < hall.width(r); x++)
-                for (int z = 0; z < hall.depth(r); z++) if (hall.at(x, 1, z, r) == 'Q') count++;
+                for (int z = 0; z < hall.depth(r); z++) if (hall.at(x, 1, z, r) == '0') count++;
             assertEquals(14, count, "the same pillars whichever way it faces");
         }
         RoomTemplate library = TemplateLibrary.named("library");
@@ -70,7 +70,7 @@ final class RoomTemplateTest {
     }
 
     private static boolean open(char c) {
-        return c == '.' || c == 't' || c == 'f' || c == 'w' || c == 'H';
+        return c == '.' || c == 't' || c == 'f' || c == 'w' || c == 'H' || c == 'q';
     }
 
     @Test

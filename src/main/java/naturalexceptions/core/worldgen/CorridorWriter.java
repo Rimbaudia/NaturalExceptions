@@ -44,22 +44,33 @@ final class CorridorWriter {
         this.across = centre;
         if (trap != Trap.NONE) style = Style.PLAIN;
         int high = style == Style.ARCHED ? 4 : 3;
+        boolean dressed = style != Style.CRAMPED && style != Style.SECRET && style != Style.SHAFT;
         for (int t = t0; t <= t1; t++) {
+            // Pillar pairs every four blocks, clear of the ends, where the corridor is built rather than hewn.
+            boolean bay = dressed && (t - t0) % 4 == 2 && t < t1 - 1;
             for (int a = -2; a <= 2; a++) for (int y = floor; y <= floor + high + 1; y++) {
-                boolean edge = Math.abs(a) == 2 || y == floor || y == floor + high + 1;
-                if (edge) stone(t, a, y);
-                else put(t, a, y, Block.AIR);
+                boolean wall = Math.abs(a) == 2;
+                if (y == floor) floorTile(t, a, y);
+                else if (y == floor + high + 1) put(t, a, y, Block.POLISHED);
+                else if (!wall) put(t, a, y, Block.AIR);
+                else if (bay) {
+                    if (style == Style.VAULT || style == Style.GATED) put(t, a, y, Block.CHISELED);
+                    else put(t, a, y, Block.PILLAR);
+                } else if (y == floor + 1 && dressed) put(t, a, y, Block.POLISHED);
+                else stone(t, a, y);
+            }
+            if (bay) {
+                // A beam across the ceiling between the pair, or an arch in the tall corridors.
+                for (int a = -1; a <= 1; a++) put(t, a, floor + high + 1, Block.PILLAR, alongX ? 8 : 4);
+                if (style == Style.ARCHED) {
+                    put(t, -1, floor + high, Block.SKY_STAIRS, towardsMinusA() | 4);
+                    put(t, 1, floor + high, Block.SKY_STAIRS, towardsPlusA() | 4);
+                }
             }
         }
         int mid = (t0 + t1) / 2;
         boolean lit = true;
         switch (style) {
-            case ARCHED:
-                for (int t = t0; t <= t1; t++) if ((t - t0) % 3 == 1) {
-                    put(t, -1, floor + high, Block.QUARTZ);
-                    put(t, 1, floor + high, Block.QUARTZ);
-                }
-                break;
             case CRAMPED:
             case SECRET:
                 for (int t = t0 + 1; t <= t1 - 1; t++) {
@@ -73,7 +84,10 @@ final class CorridorWriter {
                 lit = false;
                 break;
             case BRIDGE:
-                for (int t = t0 + 2; t <= t1 - 2; t++) for (int a : new int[] { -1, 1 }) pit(t, a, floor, true);
+                for (int t = t0 + 2; t <= t1 - 2; t++) {
+                    for (int a : new int[] { -1, 1 }) pit(t, a, floor, true);
+                    put(t, 0, floor, Block.POLISHED); // the deck
+                }
                 for (int a : new int[] { -1, 1 }) for (int y = floor - RoomWriter.PIT_DEPTH - 1; y < floor; y++) {
                     stone(t0 + 1, a, y);
                     stone(t1 - 1, a, y);
@@ -82,15 +96,18 @@ final class CorridorWriter {
             case FLOODED:
                 for (int t = t0 + 1; t <= t1 - 1; t++) for (int a = -1; a <= 1; a++) {
                     put(t, a, floor, Block.WATER);
-                    stone(t, a, floor - 1);
+                    put(t, a, floor - 1, Block.POLISHED); // the channel's bed
                 }
                 break;
             case COLLAPSED:
                 for (int t = t0 + 1; t <= t1 - 1; t++) for (int a : new int[] { -1, 1 }) {
+                    // Fallen masonry along the walls: whole bricks with slabs broken off on top, or just the slabs.
                     double roll = d.noise.unit(t * 3 + a, across, 32);
-                    if (roll < 0.45) put(t, a, floor + 1, Block.RUBBLE, (int) (roll * 6.6) % 3);
-                    if (roll < 0.15) put(t, a, floor + 2, Block.RUBBLE, 0);
-                    if (roll > 0.85) put(t, a, floor + 3, Block.COBWEB);
+                    if (roll < 0.15) {
+                        put(t, a, floor + 1, Block.SKYSTONE, 1);
+                        put(t, a, floor + 2, Block.SKY_SLAB, 0);
+                    } else if (roll < 0.4) put(t, a, floor + 1, Block.SKY_SLAB, 0);
+                    if (roll > 0.92) put(t, a, floor + 3, Block.COBWEB);
                 }
                 lit = d.noise.unit(mid, across, 33) < 0.5;
                 break;
@@ -108,6 +125,20 @@ final class CorridorWriter {
         if (lava) put(t, a, floor - RoomWriter.PIT_DEPTH, Block.LAVA);
         stone(t, a, floor - RoomWriter.PIT_DEPTH - 1);
         for (int y = floor - RoomWriter.PIT_DEPTH - 1; y < floor; y++) stone(t, a < 0 ? -2 : 2, y);
+    }
+
+    private void floorTile(int t, int a, int y) {
+        if (alongX) d.floorTile(t, y, across + a);
+        else d.floorTile(across + a, y, t);
+    }
+
+    /** Vanilla stairs meta whose high back is towards -a, and towards +a (an arch's springers). */
+    private int towardsMinusA() {
+        return alongX ? 3 : 1;
+    }
+
+    private int towardsPlusA() {
+        return alongX ? 2 : 0;
     }
 
     /** Facing (vanilla side) that points across the corridor towards +a, and towards -a. */
@@ -201,6 +232,13 @@ final class CorridorWriter {
             if (narrow && (a != 0 || y == floor + 3)) continue;
             put(t, a, y, fill, meta);
         }
+        if (narrow) return; // a secret way stays plain wall round its loose patch
+        // A framed doorway: pillar jambs either side and a carved keystone over it.
+        for (int y = floor + 1; y <= floor + 3; y++) {
+            put(t, -2, y, Block.PILLAR);
+            put(t, 2, y, Block.PILLAR);
+        }
+        put(t, 0, floor + 4, Block.CHISELED);
     }
 
     /**
@@ -208,8 +246,12 @@ final class CorridorWriter {
      * crosses the rock; a gale lift adds a Gale Vent at the bottom that carries climbers up.
      */
     void shaft(int x, int z, int lowerFloor, int lowerCeiling, int upperFloor, boolean galeLift) {
-        for (int y = lowerCeiling; y < upperFloor; y++) for (int dx = -1; dx <= 1; dx++)
-            for (int dz = -1; dz <= 1; dz++) if (dx != 0 || dz != 0) d.stone(x + dx, y, z + dz);
+        for (int y = lowerCeiling; y < upperFloor; y++)
+            for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) {
+                if (dx == 0 && dz == 0) continue;
+                if (y == lowerCeiling) d.polished(x + dx, y, z + dz); // where it comes through a ceiling
+                else d.stone(x + dx, y, z + dz);
+            }
         for (int y = lowerFloor + 1; y <= upperFloor; y++) d.put(x, y, z, Block.LADDER, 3);
         if (galeLift) d.put(x, lowerFloor, z, Block.VENT, RoomWriter.ventMeta(1));
     }

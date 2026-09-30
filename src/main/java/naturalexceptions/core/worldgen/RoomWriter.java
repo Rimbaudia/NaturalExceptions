@@ -52,22 +52,58 @@ final class RoomWriter {
                 boolean shellLayer = y == 0 || y == h + 1;
                 if (c == 'D') door(template, rotation, tx, y, tz, x, wy, z);
                 else if (c >= '1' && c <= '8') d.put(x, wy, z, Block.STAIRS, stairs(c, rotation));
-                else place(c, x, wy, z, tx, tz, w, dp, shellLayer && !template.building, warded, template, role);
+                else if (SKY_STAIRS.indexOf(c) >= 0)
+                    d.put(x, wy, z, Block.SKY_STAIRS, stairs((char) ('1' + SKY_STAIRS.indexOf(c)), rotation));
+                else if (c == 'b' || c == 'u') bed(template, rotation, tx, y, tz, x, wy, z, c == 'b');
+                else if (c == 'd') d.put(x, wy, z, Block.TORCH, torch(template, rotation, tx, y, tz));
+                else if (c == '[') {
+                    int hinge = nearestSolid(template, rotation, tx, y, tz);
+                    if (hinge < 0)
+                        throw new IllegalStateException(template.name + ": a trapdoor with no wall to hang on");
+                    d.put(x, wy, z, Block.TRAPDOOR, hinge);
+                } else if (c == ']') d.put(x, wy, z, Block.FENCE_GATE, gate(template, rotation, tx, y, tz));
+                else if (c == '(' || c == ')')
+                    d.put(x, wy, z, Block.PILLAR, (c == '(') == ((rotation & 1) == 0) ? 4 : 8);
+                else place(
+                    c,
+                    x,
+                    wy,
+                    z,
+                    tx,
+                    tz,
+                    w,
+                    dp,
+                    shellLayer && !template.building,
+                    warded,
+                    template,
+                    role,
+                    y == 0 ? LAYER_FLOOR : y == h + 1 ? LAYER_CEILING : LAYER_WALL);
                 if (y == 0 && (c == ',' || c == '%')) pits.add(new int[] { x, z });
             }
         }
         if (!pits.isEmpty()) dig(pits, floor, template.pit, minX, minZ, w, dp);
     }
 
+    private static final int LAYER_FLOOR = 0, LAYER_WALL = 1, LAYER_CEILING = 2;
+    /** Skystone stairs rising to the north, east, south, west; then the same upside down. */
+    static final String SKY_STAIRS = "ilmnJUVX";
+
+    /** Masonry for '#' and the like: tiles in a floor, polished in a ceiling, bricks between. */
+    private void masonry(int x, int y, int z, int layer) {
+        if (layer == LAYER_FLOOR) d.floorTile(x, y, z);
+        else if (layer == LAYER_CEILING) d.polished(x, y, z);
+        else d.stone(x, y, z);
+    }
+
     private void place(char c, int x, int y, int z, int tx, int tz, int w, int dp, boolean shellLayer, boolean warded,
-        RoomTemplate template, RoomTemplate.Role role) {
+        RoomTemplate template, RoomTemplate.Role role, int layer) {
         switch (c) {
             case '.':
                 d.put(x, y, z, Block.AIR);
                 break;
             case '#':
                 if (warded && shellLayer) d.put(x, y, z, Block.WARDED);
-                else d.stone(x, y, z);
+                else masonry(x, y, z, layer);
                 break;
             case 'L':
                 d.put(x, y, z, Block.LAMP);
@@ -77,17 +113,17 @@ final class RoomWriter {
                 break;
             case '~':
                 d.put(x, y, z, Block.WATER);
-                if (shellLayer) d.stone(x, y - 1, z);
+                if (shellLayer) d.polished(x, y - 1, z); // a basin's bottom (and the ceiling of what lies below)
                 break;
             case '=':
                 d.put(x, y, z, Block.LAVA);
-                if (shellLayer) d.stone(x, y - 1, z);
+                if (shellLayer) d.polished(x, y - 1, z);
                 break;
             case 'x':
                 d.put(x, y, z, Block.COBWEB);
                 break;
             case 'R':
-                d.put(x, y, z, Block.RUBBLE, (int) (d.noise.unit3(x, y, z, 21) * 3));
+                d.put(x, y, z, Block.SKYSTONE, 1);
                 break;
             case 'I':
                 d.put(x, y, z, Block.IRON_BARS);
@@ -142,14 +178,14 @@ final class RoomWriter {
                 d.put(x, y, z, Block.ALCOVE, alcoveMeta(mob(template, x + y, z)));
                 break;
             case 'T':
-                d.stone(x, y, z);
+                masonry(x, y, z, layer);
                 d.put(x, y - 1, z, Block.TNT);
                 break;
             case 'W':
                 d.put(x, y, z, Block.SEAL);
                 break;
             case '?':
-                if (d.noise.unit3(x, y, z, 23) < 0.5) d.stone(x, y, z);
+                if (d.noise.unit3(x, y, z, 23) < 0.5) masonry(x, y, z, layer);
                 else d.put(x, y, z, Block.AIR);
                 break;
             case 'H':
@@ -174,7 +210,7 @@ final class RoomWriter {
                 d.put(x, y, z, Block.FENCE);
                 break;
             case 'M':
-                d.put(x, y, z, Block.RUBBLE, 2);
+                d.put(x, y, z, Block.SKYSTONE, 2);
                 break;
             case 'Q':
                 d.put(x, y, z, Block.QUARTZ);
@@ -197,8 +233,50 @@ final class RoomWriter {
             case 'P':
                 d.put(x, y, z, Block.PLANKS, 1);
                 break;
-            case 'u':
-                d.put(x, y, z, Block.WOOL, 11);
+            case '0':
+                d.pillar(x, y, z);
+                break;
+            case '9':
+                d.put(x, y, z, Block.CHISELED);
+                break;
+            case 'j':
+                d.polished(x, y, z);
+                break;
+            case 'k':
+                d.floorTile(x, y, z);
+                break;
+            case 'y':
+                d.put(x, y, z, Block.SKY_SLAB, 2);
+                break;
+            case 'z':
+                d.put(x, y, z, Block.SKY_SLAB, 2 | 8);
+                break;
+            case 'r':
+                d.put(x, y, z, Block.SKY_SLAB, 0);
+                break;
+            case 'q':
+                d.put(x, y, z, Block.CARPET, template.carpet);
+                break;
+            case '<':
+                d.put(x, y, z, Block.STAINED_GLASS_PANE, template.glass);
+                break;
+            case '@':
+                d.put(x, y, z, Block.FLOWER_POT, (int) (d.noise.unit3(x, y, z, 27) * SkyDungeon.POT_PLANTS));
+                break;
+            case '/':
+                d.put(x, y, z, Block.PRESSURE_PLATE);
+                break;
+            case '&':
+                d.put(x, y, z, Block.BREWING_STAND);
+                break;
+            case '$':
+                d.put(x, y, z, Block.ENCHANTING_TABLE);
+                break;
+            case '+':
+                d.put(x, y, z, Block.JUKEBOX);
+                break;
+            case '}':
+                d.put(x, y, z, Block.CHEST); // furniture, empty
                 break;
             case 'Z':
                 d.put(x, y, z, Block.HAY);
@@ -210,7 +288,7 @@ final class RoomWriter {
                 d.put(x, y, z, Block.LEAVES);
                 break;
             default:
-                d.stone(x, y, z);
+                masonry(x, y, z, layer);
                 break;
         }
     }
@@ -245,6 +323,57 @@ final class RoomWriter {
 
     private static boolean solid(char c) {
         return c != '.' && c != 'D' && c != 't' && c != 'f' && c != 'w' && c != ',';
+    }
+
+    /** Solid enough to hang a torch or a trapdoor on: masonry, planks, logs, shelves. */
+    private static boolean wall(char c) {
+        return "#09jkRMQYepPBE".indexOf(c) >= 0;
+    }
+
+    /** Steps (north, east, south, west) as (dx, dz). */
+    private static final int[][] STEP = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
+
+    /** The character one step away, or the room's wall ('#') past the edge of a room (a building has no shell). */
+    private static char beside(RoomTemplate t, int rotation, int tx, int y, int tz, int dir) {
+        int nx = tx + STEP[dir][0], nz = tz + STEP[dir][1];
+        if (nx < 0 || nz < 0 || nx >= t.width(rotation) || nz >= t.depth(rotation)) return t.building ? '.' : '#';
+        return t.at(nx, y, nz, rotation);
+    }
+
+    /** The first direction (north, east, south, west) with a wall beside, or -1. */
+    private static int nearestSolid(RoomTemplate t, int rotation, int tx, int y, int tz) {
+        for (int dir = 0; dir < 4; dir++) if (wall(beside(t, rotation, tx, y, tz, dir))) return dir;
+        return -1;
+    }
+
+    /** A torch hangs on a wall beside it, or stands on the floor. */
+    private static int torch(RoomTemplate t, int rotation, int tx, int y, int tz) {
+        int dir = nearestSolid(t, rotation, tx, y, tz);
+        return dir < 0 ? SkyDungeon.STANDING : dir;
+    }
+
+    /** A fence gate faces across its fence line: north-south when the fence runs east-west. */
+    private static int gate(RoomTemplate t, int rotation, int tx, int y, int tz) {
+        char e = beside(t, rotation, tx, y, tz, SkyDungeon.EAST), w = beside(t, rotation, tx, y, tz, SkyDungeon.WEST);
+        boolean lineAlongX = e == 'o' || w == 'o' || wall(e) && wall(w);
+        return lineAlongX ? SkyDungeon.SOUTH : SkyDungeon.EAST;
+    }
+
+    /**
+     * Half a bed: 'b' its head (against the wall), 'u' its foot, side by side. Both halves carry the way from foot to
+     * head; the head adds 8.
+     */
+    private void bed(RoomTemplate t, int rotation, int tx, int y, int tz, int x, int wy, int z, boolean head) {
+        char other = head ? 'u' : 'b';
+        int found = -1;
+        for (int dir = 0; dir < 4; dir++) {
+            if (beside(t, rotation, tx, y, tz, dir) != other) continue;
+            if (found >= 0) throw new IllegalStateException(t.name + ": a bed half with two partners");
+            found = dir;
+        }
+        if (found < 0) throw new IllegalStateException(t.name + ": a bed without its other half");
+        if (head) d.put(x, wy, z, Block.BED, ((found + 2) & 3) | 8);
+        else d.put(x, wy, z, Block.BED, found);
     }
 
     /** 'c' is the room's chest (whose loot the role decides); 'C' the second one, if the role has one. */

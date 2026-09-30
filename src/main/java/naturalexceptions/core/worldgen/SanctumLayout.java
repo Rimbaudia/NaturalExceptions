@@ -898,7 +898,7 @@ final class SanctumLayout {
         int gx = sx + 2, gz = sz + 2, gy = top + 1;
         int h = SkyDungeon.GATEWAY_HALF;
         for (int dx = -h; dx <= h; dx++) for (int dz = -h; dz <= h; dz++) {
-            d.stone(gx + dx, gy - 1, gz + dz);
+            d.floorTile(gx + dx, gy - 1, gz + dz);
             for (int dy = 0; dy <= 5; dy++) d.put(gx + dx, gy + dy, gz + dz, Block.AIR);
         }
         int[][] corners = { { -h, -h }, { h, -h }, { -h, h }, { h, h } };
@@ -906,9 +906,10 @@ final class SanctumLayout {
         for (int c = 0; c < 4; c++) {
             int broken = (int) (d.noise.unit(gx + c, gz, 10) * 3);
             whole[c] = broken == 0;
-            for (int dy = 0; dy < 4 - broken; dy++) d.stone(gx + corners[c][0], gy + dy, gz + corners[c][1]);
+            for (int dy = 0; dy < 4 - broken; dy++) d.pillar(gx + corners[c][0], gy + dy, gz + corners[c][1]);
+            if (broken > 0) d.put(gx + corners[c][0], gy + 4 - broken, gz + corners[c][1], Block.SKY_SLAB, 0);
         }
-        if (whole[0] && whole[1]) for (int dx = -h; dx <= h; dx++) d.stone(gx + dx, gy + 4, gz - h);
+        if (whole[0] && whole[1]) for (int dx = -h; dx <= h; dx++) d.polished(gx + dx, gy + 4, gz - h);
         corridors.shaft(sx, sz, hall.floor(), hall.floor() + hall.template.height + 1, top, false);
         d.entrance = new int[] { sx, gy, sz + 2 };
         d.surface = new int[] { gx - h - 1, gz - h - 1, gx + h + 1, gz + h + 1 };

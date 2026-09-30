@@ -37,7 +37,7 @@ final class BuildingTemplateTest {
                     boolean opening = low == 'D' && high == 'D' || low == '.' && high == '.';
                     if (!opening || z != front && t.at(x, 1, front, 0) != '.') continue;
                     char inside = t.at(x, 1, z - 1, 0);
-                    door |= inside == '.' || inside == 'D';
+                    door |= inside == '.' || inside == 'D' || inside == 'q'; // carpet is floor
                 }
             }
             assertTrue(door, t + " can be walked into from the front");

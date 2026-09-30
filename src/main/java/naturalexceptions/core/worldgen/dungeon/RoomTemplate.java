@@ -23,6 +23,8 @@ import java.util.Set;
  * trapped: true           ; holds trap devices (counts against the dungeon's trap budget)
  * type: building          ; a building on a citadel's surface: the file draws its own walls and roof
  * footprint: 9x11         ; a building's size in blocks, walls included (x by z); its front (door) is south
+ * carpet: red             ; the colour of its carpets (q)
+ * glass: light_blue       ; the colour of its stained glass panes (&lt;)
  * ---
  * floor:                  ; then one row per z (north first), one character per x (west first)
  * layer 1-3:              ; the open layers, from 1 (standing on the floor) up to height
@@ -34,7 +36,27 @@ import java.util.Set;
 public final class RoomTemplate {
 
     /** What each character in a template means. */
-    public static final String LEGEND = ".#LB~=xRIGtfwcCsS^vF%,ghaTW?HKONA|oMQY*12345678_-DpPuZeE";
+    public static final String LEGEND = ".#LB~=xRIGtfwcCsS^vF%,ghaTW?HKONA|oMQY*12345678_-DpPZeE"
+        + "09jkilmnJUVXyzrbuqd<@/&$+[]()}";
+
+    /** Vanilla dye colours by name, for carpets and stained glass. */
+    public static final List<String> COLOURS = java.util.Arrays.asList(
+        "white",
+        "orange",
+        "magenta",
+        "light_blue",
+        "yellow",
+        "lime",
+        "pink",
+        "gray",
+        "light_gray",
+        "cyan",
+        "purple",
+        "blue",
+        "brown",
+        "green",
+        "red",
+        "black");
 
     public enum Role {
         ENTRANCE,
@@ -65,12 +87,14 @@ public final class RoomTemplate {
     public final boolean trapped;
     /** A surface building: the file holds its walls and roof, its layers start at the ground floor. */
     public final boolean building;
+    /** Vanilla colours of its carpets and stained glass. */
+    public final int carpet, glass;
     /** [y][z][x]: y 0 is the floor, 1..height the open layers, height + 1 the ceiling. */
     private final char[][][] grid;
 
     private RoomTemplate(String name, int cellsX, int cellsZ, boolean small, int height, Set<Role> roles,
-        Set<Kind> kinds, int weight, List<String> mobs, String pit, boolean trapped, boolean building,
-        char[][][] grid) {
+        Set<Kind> kinds, int weight, List<String> mobs, String pit, boolean trapped, boolean building, int carpet,
+        int glass, char[][][] grid) {
         this.name = name;
         this.cellsX = cellsX;
         this.cellsZ = cellsZ;
@@ -83,6 +107,8 @@ public final class RoomTemplate {
         this.pit = pit;
         this.trapped = trapped;
         this.building = building;
+        this.carpet = carpet;
+        this.glass = glass;
         this.grid = grid;
     }
 
@@ -151,6 +177,7 @@ public final class RoomTemplate {
         int cellsX = 1, cellsZ = 1, height = 5, weight = 1;
         boolean small = false, trapped = false, building = false;
         int footprintX = 0, footprintZ = 0;
+        int carpet = COLOURS.indexOf("red"), glass = COLOURS.indexOf("light_blue");
         Set<Role> roles = EnumSet.noneOf(Role.class);
         Set<Kind> kinds = EnumSet.allOf(Kind.class);
         List<String> mobs = new ArrayList<>();
@@ -213,6 +240,14 @@ public final class RoomTemplate {
                     footprintZ = Integer.parseInt(parts[1].trim());
                     break;
                 }
+                case "carpet":
+                case "glass": {
+                    int colour = COLOURS.indexOf(value.toLowerCase(Locale.ROOT));
+                    if (colour < 0) throw error(source, i, "unknown colour " + value);
+                    if (key.equals("carpet")) carpet = colour;
+                    else glass = colour;
+                    break;
+                }
                 default:
                     throw error(source, i, "unknown key " + key);
             }
@@ -268,6 +303,8 @@ public final class RoomTemplate {
             pit,
             trapped,
             building,
+            carpet,
+            glass,
             grid);
     }
 

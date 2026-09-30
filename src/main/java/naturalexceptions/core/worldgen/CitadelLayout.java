@@ -142,17 +142,32 @@ final class CitadelLayout {
         }
     }
 
-    /** A curtain wall, three thick, with a parapet and merlons on its outer edge; the wall-walk is its top. */
+    /**
+     * A curtain wall, three thick: a polished plinth along both faces, pillar buttresses every six blocks on its
+     * outer face, a tiled wall-walk on top, and a parapet with merlons capped in polished slabs on its outer edge.
+     */
     private void wall(int half, int height) {
         for (int dx = -half; dx <= half; dx++) for (int dz = -half; dz <= half; dz++) {
             if (!inRing(dx, dz, half)) continue;
-            stone(dx, b - 1, dz);
-            for (int y = b; y <= b + height; y++) stone(dx, y, dz);
             boolean outerEdge = !inSquare(dx, dz, half - 1);
-            if (outerEdge) {
-                stone(dx, b + height + 1, dz);
-                if ((dx + dz) % 2 == 0) stone(dx, b + height + 2, dz);
+            boolean innerEdge = inSquare(dx, dz, half - THICK + 1);
+            int along = Math.abs(dx) == half ? dz : dx;
+            boolean buttress = outerEdge && Math.floorMod(along, 6) == 3;
+            stone(dx, b - 1, dz);
+            stone(dx, b, dz);
+            for (int y = b + 1; y < b + height; y++) {
+                if (buttress) put(dx, y, dz, Block.PILLAR);
+                else if (y == b + 1 && (outerEdge || innerEdge)) put(dx, y, dz, Block.POLISHED);
+                else stone(dx, y, dz);
             }
+            if (outerEdge) {
+                stone(dx, b + height, dz);
+                stone(dx, b + height + 1, dz);
+                if ((dx + dz) % 2 == 0) {
+                    stone(dx, b + height + 2, dz);
+                    put(dx, b + height + 3, dz, Block.SKY_SLAB, 2);
+                }
+            } else d.floorTile(cx + dx, b + height, cz + dz);
         }
     }
 
@@ -177,7 +192,7 @@ final class CitadelLayout {
         for (int i = 0; i < height; i++) {
             int x = dx + sx * i, z = dz + sz * i;
             for (int y = b + 1; y < b + 1 + i; y++) stone(x, y, z);
-            put(x, b + 1 + i, z, Block.STAIRS, rising(sx, sz));
+            put(x, b + 1 + i, z, Block.SKY_STAIRS, rising(sx, sz));
             for (int y = b + 2 + i; y <= b + 4 + i; y++) put(x, y, z, Block.AIR);
         }
     }
@@ -208,17 +223,25 @@ final class CitadelLayout {
             if (round && rr > half * half + 2) continue;
             boolean rim = round ? rr > (half - 1) * (half - 1) + 1 : Math.abs(dx) == half || Math.abs(dz) == half;
             int x = tx + dx, z = tz + dz;
+            boolean corner = !round && Math.abs(dx) == half && Math.abs(dz) == half;
             stone(x, b - 1, z);
-            stone(x, b, z);
+            if (rim) stone(x, b, z);
+            else d.floorTile(cx + x, b, cz + z);
             for (int y = b + 1; y < b + top; y++) {
-                if (rim) stone(x, y, z);
-                else put(x, y, z, Block.AIR);
+                if (!rim) put(x, y, z, Block.AIR);
+                else if (corner) put(x, y, z, Block.PILLAR);
+                else if (y == b + 1 || y == b + walk) put(x, y, z, Block.POLISHED); // plinth, string course
+                else stone(x, y, z);
             }
             if (!rim) put(x, b + walk, z, Block.PLANKS, 1);
-            stone(x, b + top, z);
+            if (rim) put(x, b + top, z, Block.POLISHED);
+            else d.floorTile(cx + x, b + top, cz + z);
             if (rim) {
                 stone(x, b + top + 1, z);
-                if ((dx + dz) % 2 == 0) stone(x, b + top + 2, z);
+                if ((dx + dz) % 2 == 0) {
+                    stone(x, b + top + 2, z);
+                    put(x, b + top + 3, z, Block.SKY_SLAB, 2);
+                }
             }
         }
         // Stairs: ground to the walk floor up one inner side, walk to roof up the other.
@@ -227,14 +250,14 @@ final class CitadelLayout {
         for (int i = 0; i < walk && i < 2 * half - 3; i++) {
             int z = tz - (half - 2) + i;
             for (int y = b + 1; y < b + 1 + i; y++) stone(sx, y, z);
-            put(sx, b + 1 + i, z, Block.STAIRS, rising(0, 1));
+            put(sx, b + 1 + i, z, Block.SKY_STAIRS, rising(0, 1));
             for (int y = b + 2 + i; y <= b + walk; y++) put(sx, y, z, Block.AIR);
         }
         int rx = tx - side * (half - 2);
         for (int i = 0; i < top - walk - 1 && i < 2 * half - 3; i++) {
             int z = tz + (half - 2) - i;
             for (int y = b + walk + 1; y < b + walk + 1 + i; y++) stone(rx, y, z);
-            put(rx, b + walk + 1 + i, z, Block.STAIRS, rising(0, -1));
+            put(rx, b + walk + 1 + i, z, Block.SKY_STAIRS, rising(0, -1));
             for (int y = b + walk + 2 + i; y <= b + top; y++) put(rx, y, z, Block.AIR);
         }
         put(tx, b + walk - 1, tz, Block.LAMP);
@@ -299,12 +322,24 @@ final class CitadelLayout {
             }
             if (rim && (u + v) % 2 == 0) gstone(side, u, b + walk + 5, v);
         }
-        for (int u = -2; u <= 2; u++) for (int v = back; v <= front; v++) gput(side, u, b, v, Block.SKYSTONE, 0);
+        for (int u = -2; u <= 2; u++) for (int v = back; v <= front; v++) gput(side, u, b, v, Block.TILES, 0);
+        // Each mouth framed: pillar jambs, springers of an arch, and a carved keystone.
+        for (int v : new int[] { back, front }) {
+            for (int y = b + 1; y <= b + 6; y++) {
+                gput(side, -3, y, v, Block.PILLAR, 0);
+                gput(side, 3, y, v, Block.PILLAR, 0);
+            }
+            gput(side, 0, b + 7, v, Block.CHISELED, 0);
+        }
+        for (int v = back; v <= front; v++) {
+            gput(side, -2, b + 6, v, Block.SKY_STAIRS, (side == 0 ? 1 : 3) | 4);
+            gput(side, 2, b + 6, v, Block.SKY_STAIRS, (side == 0 ? 0 : 2) | 4);
+        }
         // Murder holes over the passage.
         for (int v = back + 2; v <= front - 2; v += 2)
             for (int y = b + 7; y <= b + walk; y++) gput(side, 0, y, v, Block.AIR, 0);
         // The raised portcullis hanging in the outer mouth.
-        for (int u = -2; u <= 2; u++) gput(side, u, b + 6, front, Block.IRON_BARS, 0);
+        for (int u = -1; u <= 1; u++) gput(side, u, b + 6, front, Block.IRON_BARS, 0);
         // Doors from the wall-walk into the guard room on either side.
         for (int s : new int[] { -1, 1 })
             for (int y = b + walk + 1; y <= b + walk + 2; y++) gput(side, s * flank, y, half - 1, Block.AIR, 0);
@@ -345,9 +380,7 @@ final class CitadelLayout {
     // --- The town -------------------------------------------------------------------------------------------
 
     private void pave(int dx, int dz) {
-        double r = d.noise.unit(cx + dx, cz + dz, 60);
-        if (r < 0.12) put(dx, b, dz, Block.RUBBLE, 1);
-        else put(dx, b, dz, Block.SKYSTONE, r < 0.3 ? 1 : 0);
+        d.floorTile(cx + dx, b, cz + dz);
         for (int y = b + 1; y <= b + 3; y++) put(dx, y, dz, Block.AIR);
     }
 
@@ -544,11 +577,11 @@ final class CitadelLayout {
                             else put(dx, b + 1, dz, Block.FLOWER, r < 0.92 ? 0 : 1);
                         }
                         break;
-                    case 2: // market: a paved square with stalls under blue awnings
+                    case 2: // market: a paved square with stalls under striped awnings
                         pave(dx, dz);
                         break;
                     default: // training yard: packed gravel, straw targets on posts
-                        put(dx, b, dz, Block.RUBBLE, 1);
+                        put(dx, b, dz, Block.GRAVEL);
                         if ((a - lo) % 5 == 2 && (e - lo) % 6 == 3) {
                             put(dx, b + 1, dz, Block.FENCE);
                             put(dx, b + 2, dz, Block.HAY);
@@ -571,12 +604,12 @@ final class CitadelLayout {
         }
     }
 
-    /** A market stall: four posts, a counter, a blue awning. */
+    /** A market stall: four posts, a counter, a striped awning. */
     private void stall(int dx, int dz) {
         for (int x = 0; x <= 2; x++) for (int z = 0; z <= 2; z++) {
             boolean post = (x == 0 || x == 2) && (z == 0 || z == 2);
             if (post) for (int y = b + 1; y <= b + 2; y++) put(dx + x, y, dz + z, Block.FENCE);
-            put(dx + x, b + 3, dz + z, Block.WOOL, 11);
+            put(dx + x, b + 3, dz + z, Block.WOOL, x == 1 ? 0 : 14); // a striped awning
         }
         put(dx + 1, b + 1, dz + 2, Block.SLAB, 8);
         if (random.nextInt(3) == 0) d.put(cx + dx + 1, b + 1, cz + dz, Block.CHEST, 0, Loot.STORE, null);
@@ -612,8 +645,9 @@ final class CitadelLayout {
         for (int dz = -2; dz <= 2; dz++) for (int dx = 13; dx <= inside; dx++) pave(dx, dz); // to the east gate
         int wz = (z0 + z1) / 2;
         for (int x = -2; x <= 2; x++) for (int z = -2; z <= 2; z++) {
-            for (int y = b - 3; y <= b; y++) stone(x, y, wz + z);
-            if (Math.abs(x) == 2 || Math.abs(z) == 2) stone(x, b + 1, wz + z);
+            put(x, b - 3, wz + z, Block.POLISHED); // its floor (the catacomb's ceiling may be just below)
+            for (int y = b - 2; y <= b; y++) stone(x, y, wz + z);
+            if (Math.abs(x) == 2 || Math.abs(z) == 2) put(x, b + 1, wz + z, Block.POLISHED);
         }
         for (int x = -1; x <= 1; x++)
             for (int z = -1; z <= 1; z++) for (int y = b - 2; y <= b; y++) put(x, y, wz + z, Block.WATER);
@@ -674,7 +708,10 @@ final class CitadelLayout {
         for (int k = 0; k < 12; k++) {
             int x = (int) ((d.noise.unit(tx + k, tz, 65) - 0.5) * 14),
                 z = (int) ((d.noise.unit(tx, tz + k, 66) - 0.5) * 14);
-            if (x * x + z * z > 13) d.put(tx + x, ground + 1, tz + z, Block.RUBBLE, k % 3);
+            if (x * x + z * z > 13) {
+                if (k % 3 == 0) d.put(tx + x, ground + 1, tz + z, Block.SKYSTONE, 1);
+                else d.put(tx + x, ground + 1, tz + z, Block.SKY_SLAB, 0);
+            }
         }
         for (int y = ground + 1; y <= ground + 2; y++) d.put(tx, y, tz + 3, Block.AIR);
     }
