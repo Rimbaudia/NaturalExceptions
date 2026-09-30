@@ -45,6 +45,19 @@ final class BuildingTemplateTest {
     }
 
     @Test
+    void fireplacesStandInsideNotInTheOuterWalls() {
+        for (RoomTemplate t : TemplateLibrary.buildings()) {
+            for (int y = 1; y <= t.height; y++)
+                for (int x = 0; x < t.width(); x++) for (int z = 0; z < t.depth(); z++) {
+                    boolean face = x == 0 || z == 0 || x == t.width() - 1 || z == t.depth() - 1;
+                    if (face) assertTrue(
+                        t.at(x, y, z, 0) != 'O',
+                        t + ": a furnace in its outer wall at " + x + "," + y + "," + z);
+                }
+        }
+    }
+
+    @Test
     void stairsTurnWithTheBuilding() {
         // '1' rises to the north: vanilla meta 3; a quarter turn clockwise makes it rise to the east (meta 0).
         assertEquals(3, naturalexceptions.core.worldgen.RoomWriterAccess.stairs('1', 0));

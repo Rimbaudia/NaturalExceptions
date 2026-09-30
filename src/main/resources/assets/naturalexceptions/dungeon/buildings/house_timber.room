@@ -1,0 +1,152 @@
+name: house_timber
+type: building
+footprint: 7x9
+height: 12
+roles: store
+kinds: citadel
+weight: 2
+carpet: green
+roof: dark_oak
+timber: dark_oak
+eaves: 7
+---
+floor:
+ppppppp
+ppppppp
+ppppppp
+ppppppp
+ppppppp
+ppppppp
+ppppppp
+ppppppp
+ppppppp
+layer 1:
+QQQQQQQ
+QN.9O9Q
+QK....Q
+Q.....Q
+Q.....Q
+Q4/2..Q
+Q.....Q
+Q:..!1Q
+QQQDQQQ
+layer 2:
+Q#####Q
+#..j#j#
+#.....#
+#.....#
+#.....#
+|.....|
+#....1#
+#.....#
+Q|#D#|Q
+layer 3:
+Q#####Q
+#...#.#
+#.....#
+#.....#
+#.....#
+jd...1j
+#.....#
+#.....#
+Qj###jQ
+layer 4:
+YppYppY
+pPPP#Pp
+pPPPPPp
+YPPPPPY
+pPPPPPp
+p.....p
+Y.....Y
+p.....p
+YppYppY
+layer 5:
+YppYppY
+p.b.#.p
+p.uq..p
+Yc.q..Y
+poooo.p
+p.....p
+Y.....Y
+p.....p
+YppYppY
+layer 6:
+YYYYYYY
+Y...#.Y
+|.....|
+Y.....Y
+Y.....Y
+Y.....Y
+Y.....Y
+Y.....Y
+YYYYYYY
+layer 7:
+2PPPPP4
+2...#.4
+2.....4
+2d....4
+2.....4
+2.....4
+2.....4
+2.....4
+2PPPPP4
+layer 8:
+.2PPP4.
+.2..#4.
+.2...4.
+.2...4.
+.2...4.
+.2...4.
+.2...4.
+.2...4.
+.2PPP4.
+layer 9:
+..2P4..
+..2.#..
+..2.4..
+..2.4..
+..2.4..
+..2.4..
+..2.4..
+..2.4..
+..2P4..
+layer 10:
+...P...
+...P#..
+...P...
+...P...
+...P...
+...P...
+...P...
+...P...
+...P...
+layer 11:
+.......
+....#..
+.......
+.......
+.......
+.......
+.......
+.......
+.......
+layer 12:
+.......
+.......
+.......
+.......
+.......
+.......
+.......
+.......
+.......
+ceiling:
+.......
+.......
+.......
+.......
+.......
+.......
+.......
+.......
+.......

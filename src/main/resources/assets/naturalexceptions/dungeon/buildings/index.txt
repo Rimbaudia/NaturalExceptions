@@ -1,4 +1,6 @@
 house_small
+house_timber
+house_corner
 house_tall
 barracks
 smithy
@@ -8,4 +10,12 @@ cistern_house
 library_tower
 cloister
 granary
+tavern
+bakery
+market_hall
+guardhouse
+farmhouse
+barn
+windmill
+mortuary_chapel
 grand_keep

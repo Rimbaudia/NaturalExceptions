@@ -1,11 +1,14 @@
 name: house_small
 type: building
 footprint: 7x9
-height: 8
+height: 10
 roles: store
 kinds: citadel
 weight: 3
 carpet: brown
+roof: spruce
+timber: spruce
+eaves: 5
 ---
 floor:
 ppppppp
@@ -18,48 +21,48 @@ ppppppp
 ppppppp
 ppppppp
 layer 1:
-0jj9O90
-jbq..Nj
-juq..Kj
-jc....j
-j.....j
-j.4o2.j
-j.qqqBj
-j.qqq[j
-0jjDjj0
+QQQQQQQ
+Qbq9O9Q
+Quq...Q
+Qc...NQ
+Q....KQ
+Q.4/.:Q
+Q.qqq.Q
+QBqqq!Q
+QQQDQQQ
 layer 2:
-0##jjj0
-#.....#
+Q#####Q
+#..j#j#
 #.....#
 |.....|
 #.....#
-|../..|
-#....B#
-#....[#
-0|#D#|0
+|.....|
+#.....#
+#B....#
+Q|#D#|Q
 layer 3:
-0#####0
-#.....#
+Q#####Q
+#...#.#
 #.....#
 j.....j
-#....d#
+#.....#
 jd....j
+#....d#
 #.....#
-#.....#
-0j###j0
+Qj###jQ
 layer 4:
-0jjjjj0
+QjjjjjQ
+j...#.j
 j.....j
 j.....j
 j.....j
 j.....j
 j.....j
 j.....j
-j.....j
-0jjjjj0
+QjjjjjQ
 layer 5:
 2PPPPP4
-2.....4
+2...#.4
 2.....4
 2.....4
 2.....4
@@ -69,7 +72,7 @@ layer 5:
 2PPPPP4
 layer 6:
 .2PPP4.
-.2...4.
+.2..#4.
 .2...4.
 .2...4.
 .2...4.
@@ -79,7 +82,7 @@ layer 6:
 .2PPP4.
 layer 7:
 ..2P4..
-..2.4..
+..2.#..
 ..2.4..
 ..2.4..
 ..2.4..
@@ -89,6 +92,7 @@ layer 7:
 ..2P4..
 layer 8:
 ...P...
+...P#..
 ...P...
 ...P...
 ...P...
@@ -96,7 +100,26 @@ layer 8:
 ...P...
 ...P...
 ...P...
-...P...
+layer 9:
+.......
+....#..
+.......
+.......
+.......
+.......
+.......
+.......
+.......
+layer 10:
+.......
+.......
+.......
+.......
+.......
+.......
+.......
+.......
+.......
 ceiling:
 .......
 .......
