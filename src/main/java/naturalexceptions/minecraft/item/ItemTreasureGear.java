@@ -34,6 +34,41 @@ public final class ItemTreasureGear extends Item implements IWearable {
         return treasure.kind();
     }
 
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    private net.minecraft.util.IIcon trim;
+
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public void registerIcons(net.minecraft.client.renderer.texture.IIconRegister register) {
+        super.registerIcons(register);
+        if (treasure == Treasure.GLIDER_CLOAK) trim = register.registerIcon("naturalexceptions:glider_cloak_trim");
+    }
+
+    /** A Glider Cloak is drawn in two passes: its canvas in the colour of its wool, then its trim. */
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public boolean requiresMultipleRenderPasses() {
+        return treasure == Treasure.GLIDER_CLOAK;
+    }
+
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public net.minecraft.util.IIcon getIconFromDamageForRenderPass(int damage, int pass) {
+        return pass == 1 && trim != null ? trim : itemIcon;
+    }
+
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public int getColorFromItemStack(ItemStack stack, int pass) {
+        return treasure == Treasure.GLIDER_CLOAK && pass == 0 ? GliderCloaks.rgb(GliderCloaks.colour(stack)) : 0xFFFFFF;
+    }
+
+    @Override
+    public String getItemStackDisplayName(ItemStack stack) {
+        String name = super.getItemStackDisplayName(stack);
+        return treasure == Treasure.GLIDER_CLOAK ? GliderCloaks.NAMES[GliderCloaks.colour(stack)] + " " + name : name;
+    }
+
     @Override
     public EnumRarity getRarity(ItemStack stack) {
         return treasure.relic() ? EnumRarity.epic : EnumRarity.rare;

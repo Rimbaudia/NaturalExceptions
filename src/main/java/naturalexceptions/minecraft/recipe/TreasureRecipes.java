@@ -29,8 +29,9 @@ public final class TreasureRecipes {
         // A bottled cloud; a cloak that catches the wind on Windbloom petals.
         if (NEBlocks.cloud != null)
             add(Treasure.CLOUD_FLASK, " C ", "CBC", " L ", 'C', NEBlocks.cloud, 'B', Items.glass_bottle, 'L', shard);
-        if (NEBlocks.windbloom != null)
-            add(Treasure.GLIDER_CLOAK, "WLW", "FWF", "W W", 'W', anyWool, 'L', Items.leather, 'F', NEBlocks.windbloom);
+        Item cloakItem = NEItems.TREASURES.get(Treasure.GLIDER_CLOAK);
+        if (NEBlocks.windbloom != null && cloakItem != null)
+            GameRegistry.addRecipe(new RecipeGliderCloak(cloakItem, Item.getItemFromBlock(NEBlocks.windbloom)));
         if (NEItems.windbloomTea != null && NEBlocks.windbloom != null) GameRegistry.addShapelessRecipe(
             new ItemStack(NEItems.windbloomTea),
             Items.potionitem,
@@ -68,8 +69,7 @@ public final class TreasureRecipes {
             Item flask = NEItems.TREASURES.get(Treasure.CLOUD_FLASK),
                 cloak = NEItems.TREASURES.get(Treasure.GLIDER_CLOAK);
             if (flask != null) GameRegistry.addShapelessRecipe(new ItemStack(flask), core, Items.glass_bottle);
-            if (cloak != null)
-                GameRegistry.addShapelessRecipe(new ItemStack(cloak), core, Items.leather, anyWool, anyWool);
+            if (cloak != null) GameRegistry.addRecipe(new RecipeGliderCloak.FromCore(cloak, core));
         }
         // Skyfall is forged from a fallen star, not from Lumenite.
         if (NEItems.skyfall != null && NEItems.materialSample != null) GameRegistry.addRecipe(new RecipeSkyfall());

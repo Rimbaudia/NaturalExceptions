@@ -73,6 +73,52 @@ final class TreasureRecipesTest {
         assertTrue(usedInShapeless(NEItems.TREASURES.get(Treasure.GLIDER_CLOAK), NEItems.galeCore));
     }
 
+    /** A crafting grid of nine, filled row by row (null for an empty place). */
+    private static net.minecraft.inventory.InventoryCrafting grid(net.minecraft.item.ItemStack... cells) {
+        net.minecraft.inventory.Container none = new net.minecraft.inventory.Container() {
+
+            @Override
+            public boolean canInteractWith(net.minecraft.entity.player.EntityPlayer player) {
+                return false;
+            }
+        };
+        net.minecraft.inventory.InventoryCrafting grid = new net.minecraft.inventory.InventoryCrafting(none, 3, 3);
+        for (int i = 0; i < cells.length; i++) grid.setInventorySlotContents(i, cells[i]);
+        return grid;
+    }
+
+    private static net.minecraft.item.ItemStack craft(net.minecraft.inventory.InventoryCrafting grid) {
+        return CraftingManager.getInstance()
+            .findMatchingRecipe(grid, null);
+    }
+
+    @Test
+    void theGliderCloakTakesAnyWoolAndItsColour() {
+        net.minecraft.item.ItemStack leather = new net.minecraft.item.ItemStack(net.minecraft.init.Items.leather);
+        net.minecraft.item.ItemStack windbloom = new net.minecraft.item.ItemStack(NEBlocks.windbloom);
+        Item cloak = NEItems.TREASURES.get(Treasure.GLIDER_CLOAK);
+        for (int[] wools : new int[][] { { 0, 0, 0, 0, 0 }, { 14, 14, 14, 14, 14 }, { 15, 15, 15, 15, 15 },
+            { 11, 0, 11, 11, 0 } }) {
+            net.minecraft.item.ItemStack[] w = new net.minecraft.item.ItemStack[5];
+            for (int k = 0; k < 5; k++)
+                w[k] = new net.minecraft.item.ItemStack(net.minecraft.init.Blocks.wool, 1, wools[k]);
+            net.minecraft.item.ItemStack made = craft(
+                grid(w[0], leather, w[1], windbloom, w[2], windbloom, w[3], null, w[4]));
+            org.junit.jupiter.api.Assertions.assertNotNull(made, "a cloak from wool " + wools[0]);
+            org.junit.jupiter.api.Assertions.assertEquals(cloak, made.getItem());
+            int most = wools[0] == 11 ? 11 : wools[0];
+            org.junit.jupiter.api.Assertions.assertEquals(
+                most,
+                naturalexceptions.minecraft.item.GliderCloaks.colour(made),
+                "the colour most of its wool is");
+        }
+        net.minecraft.item.ItemStack core = new net.minecraft.item.ItemStack(NEItems.galeCore);
+        net.minecraft.item.ItemStack red = new net.minecraft.item.ItemStack(net.minecraft.init.Blocks.wool, 1, 14);
+        net.minecraft.item.ItemStack made = craft(grid(core, leather, red, red, null, null, null, null, null));
+        org.junit.jupiter.api.Assertions.assertNotNull(made, "the Gale Core cloak");
+        org.junit.jupiter.api.Assertions.assertEquals(14, naturalexceptions.minecraft.item.GliderCloaks.colour(made));
+    }
+
     private static boolean usedInShapeless(Item output, Item ingredient) {
         for (Object entry : CraftingManager.getInstance()
             .getRecipeList()) {

@@ -69,12 +69,17 @@ public final class GearEvents {
             new PacketGearAppearance(
                 target.getEntityId(),
                 PlayerGear.get(target)
-                    .get(GearSlot.FACE)),
+                    .get(GearSlot.FACE),
+                PlayerGear.get(target)
+                    .get(GearSlot.BACK)),
             (EntityPlayerMP) event.entityPlayer);
     }
 
     static void broadcastAppearance(EntityPlayerMP player, PlayerGear gear) {
-        PacketGearAppearance packet = new PacketGearAppearance(player.getEntityId(), gear.get(GearSlot.FACE));
+        PacketGearAppearance packet = new PacketGearAppearance(
+            player.getEntityId(),
+            gear.get(GearSlot.FACE),
+            gear.get(GearSlot.BACK));
         NENetwork.CHANNEL.sendTo(packet, player);
         if (player.worldObj instanceof WorldServer) {
             for (Object watcher : ((WorldServer) player.worldObj).getEntityTracker()

@@ -188,7 +188,8 @@ public final class PlayerGear implements IExtendedEntityProperties, IInventory {
 
     private void markDirty(int index) {
         ownerDirty = true;
-        if (GearSlot.byIndex(index) == GearSlot.FACE) appearanceDirty = true;
+        if (GearSlot.byIndex(index) == GearSlot.FACE || GearSlot.byIndex(index) == GearSlot.BACK)
+            appearanceDirty = true;
     }
 
     @Override

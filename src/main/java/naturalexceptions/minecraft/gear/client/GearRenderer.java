@@ -17,7 +17,10 @@ import cpw.mods.fml.relauncher.SideOnly;
 import naturalexceptions.minecraft.item.ItemExposureMask;
 import naturalexceptions.minecraft.network.PacketGearAppearance;
 
-/** Draws worn gear on players in the world. For now: the filter mask over mouth and nose, tied behind the head. */
+/**
+ * Draws worn gear on players in the world: the filter mask over mouth and nose, tied behind the head, and a Glider
+ * Cloak hanging from the shoulders in the colour of its wool, spreading out when its wearer falls or glides.
+ */
 @SideOnly(Side.CLIENT)
 public final class GearRenderer {
 
@@ -38,6 +41,11 @@ public final class GearRenderer {
     public void onSpecials(RenderPlayerEvent.Specials.Post event) {
         EntityPlayer player = event.entityPlayer;
         if (player == null || player.isInvisible()) return;
+        ItemStack back = PacketGearAppearance.CLIENT_BACKS.get(player.getEntityId());
+        if (back != null && back.getItem() instanceof naturalexceptions.minecraft.item.ItemTreasureGear
+            && ((naturalexceptions.minecraft.item.ItemTreasureGear) back.getItem()).treasure()
+                == naturalexceptions.minecraft.gear.Treasure.GLIDER_CLOAK)
+            cloak(event, player, naturalexceptions.minecraft.item.GliderCloaks.colour(back));
         ItemStack face = PacketGearAppearance.CLIENT_FACES.get(player.getEntityId());
         if (face == null || !(face.getItem() instanceof ItemExposureMask)) return;
         GL11.glPushMatrix();
@@ -50,10 +58,43 @@ public final class GearRenderer {
         GL11.glPopMatrix();
     }
 
+    /**
+     * The cloak: a sheet of the wool it was sewn from, ten pixels wide and sixteen long, hung from the shoulders
+     * behind the body; it lifts away from the back as its wearer falls, and spreads nearly flat when gliding.
+     */
+    private static void cloak(RenderPlayerEvent.Specials.Post event, EntityPlayer player, int wool) {
+        net.minecraft.util.IIcon icon = net.minecraft.init.Blocks.wool.getIcon(0, wool);
+        float falling = player.onGround ? 0.0F : (float) Math.max(0.0, Math.min(1.0, -player.motionY * 2.5));
+        float lift = 6.0F + 64.0F * falling;
+        GL11.glPushMatrix();
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+        event.renderer.modelBipedMain.bipedBody.postRender(PIXEL);
+        GL11.glTranslatef(0.0F, 0.0F, 2.2F * PIXEL);
+        GL11.glRotatef(lift, 1.0F, 0.0F, 0.0F);
+        net.minecraft.client.Minecraft.getMinecraft()
+            .getTextureManager()
+            .bindTexture(net.minecraft.client.renderer.texture.TextureMap.locationBlocksTexture);
+        GL11.glDisable(GL11.GL_CULL_FACE);
+        net.minecraft.client.renderer.Tessellator t = net.minecraft.client.renderer.Tessellator.instance;
+        float x0 = -5 * PIXEL, x1 = 5 * PIXEL, y1 = 16 * PIXEL, z = 0.0F;
+        t.startDrawingQuads();
+        t.setNormal(0.0F, 0.0F, 1.0F);
+        t.addVertexWithUV(x0, 0.0F, z, icon.getMinU(), icon.getMinV());
+        t.addVertexWithUV(x0, y1, z, icon.getMinU(), icon.getMaxV());
+        t.addVertexWithUV(x1, y1, z, icon.getMaxU(), icon.getMaxV());
+        t.addVertexWithUV(x1, 0.0F, z, icon.getMaxU(), icon.getMinV());
+        t.draw();
+        GL11.glEnable(GL11.GL_CULL_FACE);
+        GL11.glPopMatrix();
+    }
+
     /** Entity ids are reused between worlds; forget faces when the client's world goes away. */
     @SubscribeEvent
     public void onWorldUnload(WorldEvent.Unload event) {
-        if (event.world != null && event.world.isRemote) PacketGearAppearance.CLIENT_FACES.clear();
+        if (event.world != null && event.world.isRemote) {
+            PacketGearAppearance.CLIENT_FACES.clear();
+            PacketGearAppearance.CLIENT_BACKS.clear();
+        }
     }
 
     /** A cloth pad over the lower face and a strap around the head, in head-model units. */
