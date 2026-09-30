@@ -110,6 +110,48 @@ public final class SkystoneRecipes {
                 'S',
                 Items.stick);
         Object skystone = NEBlocks.skystoneBricks;
+        // The quarry's tools: the Mason's Bench, the hoist's windlass and basket, the Sawmill, the chisel.
+        if (NEBlocks.masonsBench != null && skystone != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.masonsBench),
+            "BBB",
+            " I ",
+            "B B",
+            'B',
+            skystone,
+            'I',
+            Items.iron_ingot);
+        if (NEBlocks.sawmill != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.sawmill),
+            " I ",
+            "PLP",
+            "P P",
+            'I',
+            Items.iron_ingot,
+            'P',
+            planks,
+            'L',
+            new ItemStack(Blocks.log, 1, OreDictionary.WILDCARD_VALUE));
+        if (NEBlocks.hoistWindlass != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.hoistWindlass),
+            "SSS",
+            "PLP",
+            "P P",
+            'S',
+            Items.string,
+            'P',
+            planks,
+            'L',
+            new ItemStack(Blocks.log, 1, OreDictionary.WILDCARD_VALUE));
+        if (NEBlocks.hoistBasket != null) GameRegistry
+            .addRecipe(new ItemStack(NEBlocks.hoistBasket), " I ", "P P", "PPP", 'I', Items.iron_ingot, 'P', planks);
+        if (naturalexceptions.minecraft.registry.NEItems.masonsChisel != null) GameRegistry.addRecipe(
+            new ItemStack(naturalexceptions.minecraft.registry.NEItems.masonsChisel),
+            "I",
+            "S",
+            'I',
+            Items.iron_ingot,
+            'S',
+            Items.stick);
         if (NEBlocks.candelabra != null) GameRegistry.addRecipe(
             new ItemStack(NEBlocks.candelabra),
             "SSS",

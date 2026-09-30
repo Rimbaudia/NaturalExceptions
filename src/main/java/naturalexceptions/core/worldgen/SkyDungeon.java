@@ -172,7 +172,13 @@ public final class SkyDungeon {
         /** A surveyor's desk, where the dungeon's chart can be read and copied. */
         CHART_TABLE,
         /** Natural rock of a dungeon's island: meta 0 Skystone, 1 cobblestone. */
-        ROCK
+        ROCK,
+        /** A quarry's working face: meta 0 a seam ready to cut, 1 worked. */
+        SEAM,
+        /** A cutting bench; meta 0 a Mason's Bench, 1 a Sawmill. */
+        CUTTING_BENCH,
+        /** A quarry hoist's end; meta 0 its windlass (at the top), 1 its basket (at the foot). */
+        HOIST
     }
 
     /** Directions for beds, torches, trapdoors and fence gates. */
@@ -197,7 +203,9 @@ public final class SkyDungeon {
         VAULT_TREASURE,
         VAULT_RICH,
         /** The entrance hall's chest: a Surveyor's Chart of the dungeon, and a few supplies. */
-        CHART
+        CHART,
+        /** A quarry's tool chest: a Mason's Chisel, a pick, rope and bread. */
+        QUARRY
     }
 
     /** How a corridor looks. */

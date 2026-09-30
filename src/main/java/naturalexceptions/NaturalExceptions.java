@@ -136,6 +136,14 @@ public final class NaturalExceptions {
             true);
         cpw.mods.fml.common.registry.EntityRegistry
             .registerModEntity(naturalexceptions.minecraft.furniture.EntitySeat.class, "seat", 6, this, 32, 20, false);
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.furniture.EntityHoistHook.class,
+            "hoist_hook",
+            7,
+            this,
+            64,
+            1,
+            true);
         MinecraftForge.EVENT_BUS.register(new NEChunkGenerationHistory());
         cpw.mods.fml.common.network.NetworkRegistry.INSTANCE
             .registerGuiHandler(this, new naturalexceptions.minecraft.gui.NEGuiHandler());
@@ -230,6 +238,19 @@ public final class NaturalExceptions {
             new naturalexceptions.minecraft.furniture.client.RenderOrrery());
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
             naturalexceptions.minecraft.furniture.EntitySeat.class,
+            new net.minecraft.client.renderer.entity.Render() {
+
+                @Override
+                public void doRender(net.minecraft.entity.Entity entity, double x, double y, double z, float yaw,
+                    float partialTicks) {}
+
+                @Override
+                protected net.minecraft.util.ResourceLocation getEntityTexture(net.minecraft.entity.Entity entity) {
+                    return null;
+                }
+            });
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.furniture.EntityHoistHook.class,
             new net.minecraft.client.renderer.entity.Render() {
 
                 @Override

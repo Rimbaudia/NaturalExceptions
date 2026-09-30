@@ -537,6 +537,15 @@ final class LandmarkMaterializer {
             case PEW:
                 set(world, x, y, z, orElse(NEBlocks.pew, Blocks.oak_stairs), SIDE_FACING[meta & 3]);
                 break;
+            case SEAM:
+                set(world, x, y, z, orElse(NEBlocks.skystoneSeam, Blocks.stone), meta & 1);
+                break;
+            case CUTTING_BENCH:
+                set(world, x, y, z, orElse(meta == 1 ? NEBlocks.sawmill : NEBlocks.masonsBench, Blocks.crafting_table), 0);
+                break;
+            case HOIST:
+                set(world, x, y, z, orElse(meta == 1 ? NEBlocks.hoistBasket : NEBlocks.hoistWindlass, Blocks.planks), 0);
+                break;
             case ROCK:
                 if (meta == 1) set(world, x, y, z, Blocks.cobblestone, 0);
                 else set(world, x, y, z, orElse(NEBlocks.skystoneRock, Blocks.stone), 0);
@@ -560,10 +569,13 @@ final class LandmarkMaterializer {
             case GLASS:
                 set(world, x, y, z, Blocks.glass, 0);
                 break;
-            case LOG:
-                if (meta == 5) set(world, x, y, z, Blocks.log2, 1); // dark oak
-                else set(world, x, y, z, Blocks.log, meta & 3);
+            case LOG: {
+                // Meta: the wood (0 oak, 1 spruce, 5 dark oak), plus 16 lying along x or 32 along z.
+                int axis = (meta & 16) != 0 ? 4 : (meta & 32) != 0 ? 8 : 0, wood = meta & 15;
+                if (wood == 5) set(world, x, y, z, Blocks.log2, 1 | axis); // dark oak
+                else set(world, x, y, z, Blocks.log, (wood & 3) | axis);
                 break;
+            }
             case LEAVES:
                 set(world, x, y, z, Blocks.leaves, 4); // placed, not grown: never decays
                 break;
@@ -664,6 +676,8 @@ final class LandmarkMaterializer {
                 return SkyCacheLoot.Tier.KEY;
             case CHART:
                 return SkyCacheLoot.Tier.CHART;
+            case QUARRY:
+                return SkyCacheLoot.Tier.QUARRY;
             case VAULT_TREASURE:
                 return SkyCacheLoot.Tier.VAULT_TREASURE;
             case VAULT_RICH:

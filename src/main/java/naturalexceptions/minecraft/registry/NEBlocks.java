@@ -60,6 +60,11 @@ public final class NEBlocks {
     public static Block stoneBench;
     public static Block pew;
     public static Block chair;
+    public static Block skystoneSeam;
+    public static Block masonsBench;
+    public static Block sawmill;
+    public static Block hoistWindlass;
+    public static Block hoistBasket;
     public static Block fountain;
     public static Block orrery;
     public static Block chartTable;
@@ -157,6 +162,13 @@ public final class NEBlocks {
         stoneBench = new naturalexceptions.minecraft.furniture.BlockBench().setCreativeTab(NECreativeTab.INSTANCE);
         pew = new naturalexceptions.minecraft.furniture.BlockPew().setCreativeTab(NECreativeTab.INSTANCE);
         chair = new naturalexceptions.minecraft.furniture.BlockChair().setCreativeTab(NECreativeTab.INSTANCE);
+        skystoneSeam = new naturalexceptions.minecraft.block.BlockSkystoneSeam().setCreativeTab(NECreativeTab.INSTANCE);
+        masonsBench = new naturalexceptions.minecraft.furniture.BlockCuttingBench(
+            naturalexceptions.minecraft.furniture.CuttingRecipes.Kind.MASON).setCreativeTab(NECreativeTab.INSTANCE);
+        sawmill = new naturalexceptions.minecraft.furniture.BlockCuttingBench(
+            naturalexceptions.minecraft.furniture.CuttingRecipes.Kind.SAW).setCreativeTab(NECreativeTab.INSTANCE);
+        hoistWindlass = new naturalexceptions.minecraft.furniture.BlockHoist(true).setCreativeTab(NECreativeTab.INSTANCE);
+        hoistBasket = new naturalexceptions.minecraft.furniture.BlockHoist(false).setCreativeTab(NECreativeTab.INSTANCE);
         fountain = new naturalexceptions.minecraft.furniture.BlockFountain().setCreativeTab(NECreativeTab.INSTANCE);
         orrery = new naturalexceptions.minecraft.furniture.BlockOrrery().setCreativeTab(NECreativeTab.INSTANCE);
         chartTable = new naturalexceptions.minecraft.furniture.BlockChartTable().setCreativeTab(NECreativeTab.INSTANCE);
@@ -271,6 +283,11 @@ public final class NEBlocks {
             GameRegistry.registerBlock(pew, "pew");
             GameRegistry
                 .registerBlock(chair, naturalexceptions.minecraft.furniture.ItemBlockFurniture.class, "wooden_chair");
+            GameRegistry.registerBlock(skystoneSeam, "skystone_seam");
+            GameRegistry.registerBlock(masonsBench, "masons_bench");
+            GameRegistry.registerBlock(sawmill, "sawmill");
+            GameRegistry.registerBlock(hoistWindlass, "hoist_windlass");
+            GameRegistry.registerBlock(hoistBasket, "hoist_basket");
             GameRegistry.registerBlock(fountain, "fountain");
             GameRegistry.registerBlock(orrery, "orrery");
             GameRegistry.registerBlock(chartTable, "chart_table");
@@ -318,6 +335,12 @@ public final class NEBlocks {
             GameRegistry.registerTileEntity(
                 naturalexceptions.minecraft.furniture.TileEntityOrrery.class,
                 "naturalexceptions_orrery");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.furniture.TileEntityCuttingBench.class,
+                "naturalexceptions_cutting_bench");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.furniture.TileEntityHoist.class,
+                "naturalexceptions_hoist");
         } catch (Throwable ignored) {}
         try {
             GameRegistry.registerTileEntity(

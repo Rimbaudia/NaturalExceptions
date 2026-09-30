@@ -18,6 +18,8 @@ public final class NEGuiHandler implements IGuiHandler {
     public static final int GUI_GEAR = 4;
     /** A crate, pantry shelf or market counter. */
     public static final int GUI_STORAGE = 5;
+    /** A Mason's Bench or a Sawmill. */
+    public static final int GUI_CUTTING = 6;
     public static final int GUI_ALLOY_NAMING = GUI_MATERIAL_NAMING;
 
     @Override
@@ -29,6 +31,13 @@ public final class NEGuiHandler implements IGuiHandler {
                 return new naturalexceptions.minecraft.furniture.ContainerStorage(
                     player.inventory,
                     (naturalexceptions.minecraft.furniture.TileEntityStorage) te);
+        }
+        if (ID == GUI_CUTTING) {
+            TileEntity te = world.getTileEntity(x, y, z);
+            if (te instanceof naturalexceptions.minecraft.furniture.TileEntityCuttingBench)
+                return new naturalexceptions.minecraft.furniture.ContainerCutting(
+                    player.inventory,
+                    (naturalexceptions.minecraft.furniture.TileEntityCuttingBench) te);
         }
         if (ID == GUI_STARTER_SMELTER) {
             TileEntity te = world.getTileEntity(x, y, z);
@@ -66,6 +75,13 @@ public final class NEGuiHandler implements IGuiHandler {
                 return new naturalexceptions.minecraft.furniture.client.GuiStorage(
                     player.inventory,
                     (naturalexceptions.minecraft.furniture.TileEntityStorage) te);
+        }
+        if (ID == GUI_CUTTING) {
+            TileEntity te = world.getTileEntity(x, y, z);
+            if (te instanceof naturalexceptions.minecraft.furniture.TileEntityCuttingBench)
+                return new naturalexceptions.minecraft.furniture.client.GuiCutting(
+                    player.inventory,
+                    (naturalexceptions.minecraft.furniture.TileEntityCuttingBench) te);
         }
         if (ID == GUI_STARTER_SMELTER) {
             TileEntity te = world.getTileEntity(x, y, z);

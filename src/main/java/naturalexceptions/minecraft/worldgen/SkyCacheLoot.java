@@ -35,7 +35,9 @@ public final class SkyCacheLoot {
         VAULT_TREASURE,
         VAULT_RICH,
         /** The entrance hall's: a Surveyor's Chart, torches and bread. */
-        CHART
+        CHART,
+        /** A quarry's tool chest: a Mason's Chisel, a worn pick, string, torches and bread. */
+        QUARRY
     }
 
     /** Chance that a dungeon storeroom chest also holds a treasure. */
@@ -86,6 +88,20 @@ public final class SkyCacheLoot {
                 put(chest, random, net.minecraft.init.Items.bread, 2 + random.nextInt(3));
                 if (NEItems.surveyorsChart != null)
                     chest.setInventorySlotContents(TREASURE_SLOT, new ItemStack(NEItems.surveyorsChart));
+                break;
+            case QUARRY:
+                if (NEItems.masonsChisel != null)
+                    chest.setInventorySlotContents(TREASURE_SLOT, new ItemStack(NEItems.masonsChisel));
+                ItemStack pick = new ItemStack(net.minecraft.init.Items.iron_pickaxe);
+                pick.setItemDamage(60 + random.nextInt(120));
+                chest.setInventorySlotContents(TREASURE_SLOT - 1, pick);
+                put(chest, random, net.minecraft.init.Items.string, 3 + random.nextInt(6));
+                put(
+                    chest,
+                    random,
+                    net.minecraft.item.Item.getItemFromBlock(net.minecraft.init.Blocks.torch),
+                    8 + random.nextInt(8));
+                put(chest, random, net.minecraft.init.Items.bread, 2 + random.nextInt(3));
                 break;
             case VAULT_TREASURE:
                 vanilla(chest, random, ChestGenHooks.STRONGHOLD_CROSSING);

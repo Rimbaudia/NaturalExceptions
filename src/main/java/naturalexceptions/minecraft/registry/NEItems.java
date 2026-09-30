@@ -27,6 +27,7 @@ public final class NEItems {
     public static naturalexceptions.minecraft.item.ItemStormglassShard stormglassShard;
     public static naturalexceptions.minecraft.item.ItemDungeonEgg dungeonEgg;
     public static naturalexceptions.minecraft.item.ItemSurveyorsChart surveyorsChart;
+    public static naturalexceptions.minecraft.item.ItemMasonsChisel masonsChisel;
     public static naturalexceptions.minecraft.weapon.ItemSkyfall skyfall;
     public static naturalexceptions.minecraft.weapon.ItemShardcaster shardcaster;
     public static naturalexceptions.minecraft.item.ItemWindbloomTea windbloomTea;
@@ -185,6 +186,8 @@ public final class NEItems {
         dungeonEgg.setCreativeTab(NECreativeTab.INSTANCE);
         surveyorsChart = new naturalexceptions.minecraft.item.ItemSurveyorsChart();
         surveyorsChart.setCreativeTab(NECreativeTab.INSTANCE);
+        masonsChisel = new naturalexceptions.minecraft.item.ItemMasonsChisel();
+        masonsChisel.setCreativeTab(NECreativeTab.INSTANCE);
         skyfall = new naturalexceptions.minecraft.weapon.ItemSkyfall();
         skyfall.setCreativeTab(NECreativeTab.INSTANCE);
         shardcaster = new naturalexceptions.minecraft.weapon.ItemShardcaster();
@@ -225,6 +228,7 @@ public final class NEItems {
             GameRegistry.registerItem(stormglassShard, "stormglass_shard");
             GameRegistry.registerItem(dungeonEgg, "dungeon_egg");
             GameRegistry.registerItem(surveyorsChart, "surveyors_chart");
+            GameRegistry.registerItem(masonsChisel, "masons_chisel");
             GameRegistry.registerItem(skyfall, "skyfall");
             GameRegistry.registerItem(shardcaster, "shardcaster");
             GameRegistry.registerItem(windbloomTea, "windbloom_tea");

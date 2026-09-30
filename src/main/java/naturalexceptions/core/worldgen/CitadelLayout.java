@@ -103,6 +103,10 @@ final class CitadelLayout {
         d.put(cx + dx, y, cz + dz, block);
     }
 
+    private void put(int dx, int y, int dz, Block block, int meta, Loot loot, String mob) {
+        d.put(cx + dx, y, cz + dz, block, meta, loot, mob);
+    }
+
     private void stone(int dx, int y, int dz) {
         d.stone(cx + dx, y, cz + dz);
     }
@@ -1117,6 +1121,105 @@ final class CitadelLayout {
         if ((s = sites.fit("pasture", 21, 17, 205, 245, near, near + 50, false)) != null) pasture(s);
         if ((s = sites.fit("orchard", 23, 19, 35, 70, near, near + 40, false)) != null) orchard(s);
         if ((s = sites.fit("watchtower", 15, 15, 290, 340, near + 30, far, true)) != null) watchtower(s);
+        if ((s = sites.fit("quarry", 33, 29, 110, 155, near + 40, far, true)) != null) quarry(s);
+    }
+
+    /**
+     * The Skystone quarry, out towards the south-western rim: a pit cut in four benches, each three deep and two
+     * in from the last, down to a floor twelve below the land; Skystone faces with working seams on them (they
+     * open again after they are cut); a timber stair down the south face to the floor; a derrick at the east lip,
+     * its boom out over the pit and its chain down to the hoist's basket on the floor, the windlass at its foot; and
+     * a yard: cut stone stacked on pallets, a spoil heap, and an open shed with the Mason's Bench and the tools.
+     */
+    private void quarry(CitadelSites.Site s) {
+        int g = s.ground;
+        level(s.x0, s.z0, s.x1, s.z1, g);
+        int px = s.x0 + 1, pz = s.z0 + 1, pw = 23, pd = 19, zc = pz + pd / 2;
+        // The pit: each column cut to the floor of its bench, rock under it and in every face it opens.
+        int[][] floor = new int[pw][pd];
+        for (int i = 0; i < pw; i++) for (int k = 0; k < pd; k++) {
+            int inset = Math.min(Math.min(i, pw - 1 - i), Math.min(k, pd - 1 - k));
+            floor[i][k] = g - 3 * (Math.min(3, inset / 2) + 1);
+        }
+        for (int i = 0; i < pw; i++) for (int k = 0; k < pd; k++) {
+            int x = px + i, z = pz + k, f = floor[i][k];
+            for (int y = f + 1; y <= g; y++) put(x, y, z, Block.AIR);
+            double r = d.noise.unit(cx + x, cz + z, 73);
+            put(x, f, z, r < 0.1 ? Block.GRAVEL : Block.ROCK);
+            put(x, f - 1, z, Block.ROCK);
+            for (int[] n : new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                int ni = i + n[0], nk = k + n[1];
+                boolean inPit = ni >= 0 && ni < pw && nk >= 0 && nk < pd;
+                int top = inPit ? floor[ni][nk] : g - 2; // the land's top two blocks stay soil
+                for (int y = f + 1; y <= top; y++) put(x + n[0], y, z + n[1], Block.ROCK);
+            }
+        }
+        // Working seams: a stretch along the north face of each of the three lower benches, one on the west.
+        for (int bench = 0; bench < 3; bench++) {
+            int z = pz + 2 * bench + 1, stand = g - 3 * (bench + 2) + 1;
+            for (int x = px + 8; x <= px + 14; x++) for (int y = stand; y <= stand + 1; y++) put(x, y, z, Block.SEAM);
+        }
+        for (int z = pz + 7; z <= pz + 11; z++) for (int y = g - 8; y <= g - 7; y++) put(px + 3, y, z, Block.SEAM);
+        // The stair down the south face, two wide, on rock built up from the benches it crosses.
+        for (int step = 0; step < 12; step++) {
+            int z = pz + pd - 1 - step, y = g - 1 - step;
+            for (int x = px + 10; x <= px + 11; x++) {
+                for (int under = floor[x - px][z - pz] + 1; under < y; under++) put(x, under, z, Block.ROCK);
+                put(x, y, z, Block.STAIRS, rising(0, 1)); // spruce, rising towards the lip
+                for (int h = y + 1; h <= y + 3 && h <= g; h++) put(x, h, z, Block.AIR);
+            }
+        }
+        // The derrick: its mast at the east lip on a cobbled footing, the boom out over the floor, the chain down to
+        // the basket; a guy line back to a stake; the windlass at the mast's foot.
+        int mx = px + pw + 1, bx = px + 14;
+        put(mx, g, zc, Block.ROCK, 1);
+        for (int y = g + 1; y <= g + 11; y++) put(mx, y, zc, Block.LOG, 1);
+        for (int x = bx; x < mx; x++) put(x, g + 11, zc, Block.LOG, 1 | 16);
+        for (int y = g - 8; y <= g + 10; y++) put(bx, y, zc, Block.IRON_BARS);
+        put(bx, g - 11, zc, Block.HOIST, 1);
+        put(mx, g + 1, zc + 1, Block.HOIST, 0);
+        put(mx + 3, g + 1, zc, Block.LOG, 1);
+        for (int y = g + 2; y <= g + 11; y++) put(mx + 3, y, zc, Block.FENCE);
+        for (int x = mx + 1; x <= mx + 2; x++) put(x, g + 11, zc, Block.FENCE);
+        lampPost(mx, zc - 4, g);
+        // The yard: pallets of cut stone, the spoil heap, the shed.
+        int yard = pz + pd + 2;
+        for (int p = 0; p < 4; p++) {
+            int x0 = s.x0 + 3 + p * 3;
+            for (int x = x0; x <= x0 + 1; x++) for (int z = yard; z <= yard + 1; z++) {
+                put(x, g + 1, z, Block.SLAB, 1);
+                put(x, g + 2, z, Block.SKYSTONE, 0);
+                if ((x + z + p) % 2 == 0) put(x, g + 3, z, Block.SKYSTONE, 0);
+            }
+        }
+        for (int x = s.x0 + 17; x <= s.x0 + 22; x++) for (int z = yard; z <= Math.min(s.z1, yard + 4); z++) {
+            int dx = x - (s.x0 + 19), dz = z - (yard + 2);
+            if (dx * dx + dz * dz <= 6) put(x, g + 1, z, Block.GRAVEL);
+            if (dx * dx + dz * dz <= 1) put(x, g + 2, z, Block.GRAVEL);
+        }
+        shed(s.x0 + 26, yard - 1, g);
+        d.features.add("quarry");
+    }
+
+    /**
+     * The quarry's shed at (x0, z0), open to the west: log posts, plank walls on its other three sides, a slab roof;
+     * inside, the Mason's Bench, the tool chest, a water barrel and an anvil for dressing the picks.
+     */
+    private void shed(int x0, int z0, int g) {
+        int x1 = x0 + 5, z1 = z0 + 4;
+        for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) {
+            put(x, g, z, Block.PLANKS, 1);
+            boolean post = (x == x0 || x == x1) && (z == z0 || z == z1);
+            boolean wall = x == x1 || z == z0 || z == z1;
+            for (int y = g + 1; y <= g + 3; y++) put(x, y, z, post ? Block.LOG : wall ? Block.PLANKS : Block.AIR,
+                post ? 1 : wall ? 1 : 0);
+            put(x, g + 4, z, Block.SLAB, 1);
+        }
+        put(x1 - 1, g + 1, z0 + 1, Block.CUTTING_BENCH, 0);
+        put(x1 - 1, g + 1, z0 + 2, Block.CHEST, 0, Loot.QUARRY, null);
+        put(x1 - 1, g + 1, z0 + 3, Block.BARREL, 1);
+        put(x0 + 2, g + 1, z0 + 1, Block.ANVIL);
+        put(x0 + 2, g + 3, z0 + 3, Block.LAMP);
     }
 
     /** Every site's ground, with the road and the town, counts as the citadel's: nothing wild grows there. */

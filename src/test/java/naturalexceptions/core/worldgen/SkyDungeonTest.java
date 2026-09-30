@@ -269,7 +269,7 @@ final class SkyDungeonTest {
 
     @Test
     void citadelsHaveAWetMoatAClearWallLaneAndLandsOutside() {
-        int citadels = 0;
+        int citadels = 0, quarries = 0;
         for (Sample s : samples()) {
             if (s.dungeon.kind() != SkyDungeon.Kind.CITADEL) continue;
             citadels++;
@@ -292,6 +292,15 @@ final class SkyDungeonTest {
                 s.dungeon.features()
                     .size() >= 7,
                 s.name() + ": lands outside the walls: " + s.dungeon.features());
+            // The quarry is out towards the rim, never by the gate.
+            if (s.dungeon.features()
+                .contains("quarry")) {
+                quarries++;
+                for (Piece p : s.dungeon.pieces()) if (p.block == Block.SEAM) {
+                    double far = Math.hypot(p.x - cx, p.z - cz);
+                    assertTrue(far >= CitadelLayout.MOAT_OUT + 20, s.name() + ": a quarry face by the town: " + far);
+                }
+            }
             // Each landmark on its own ground: apart from the others, clear of the moat and of the road to the gate.
             int town = CitadelLayout.MOAT_OUT + 8;
             List<int[]> sites = s.dungeon.sites;
@@ -312,6 +321,7 @@ final class SkyDungeonTest {
             }
         }
         assertTrue(citadels >= 3, "enough citadels to judge: " + citadels);
+        assertTrue(quarries * 2 >= citadels, "most citadels have their quarry: " + quarries + " of " + citadels);
     }
 
     @Test
