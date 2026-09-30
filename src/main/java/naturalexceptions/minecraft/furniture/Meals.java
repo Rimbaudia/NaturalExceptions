@@ -32,7 +32,11 @@ public final class Meals {
         net.minecraftforge.event.ForgeEventFactory.onItemUseFinish(player, one, 0, left);
         BiologicalProperties.get(player)
             .state()
-            .replenishEnergyJoules(Math.max(1, nourishment) * 200_000.0 * BONUS);
+            .replenishEnergyJoules(
+                Math.max(1, nourishment) * BiologicalProperties.get(player)
+                    .state()
+                    .physiology()
+                    .energyPerHungerPoint() * BONUS);
         world.playSoundAtEntity(player, "random.burp", 0.5F, world.rand.nextFloat() * 0.1F + 0.9F);
     }
 }

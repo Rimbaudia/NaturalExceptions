@@ -114,6 +114,27 @@ public final class HostDamageMapping {
         return new double[] { Math.max(0.0, Math.min(1.0, height)), Math.max(-1.0, Math.min(1.0, side)) };
     }
 
+    /**
+     * Whether a hit cuts: {piercing (1) or slicing (0), sharpness, penetration}, or null for a blunt blow. Arrows and
+     * other missiles pierce; swords and axes cut, whoever holds them; spiders, wolves, cats and silverfish bite.
+     */
+    public static double[] cutting(DamageSource source) {
+        if (source == null) return null;
+        if (source.isProjectile()) return new double[] { 1.0, 0.8, 0.3 };
+        net.minecraft.entity.Entity attacker = source.getEntity();
+        if (attacker instanceof net.minecraft.entity.EntityLivingBase && source.getSourceOfDamage() == attacker) {
+            net.minecraft.item.ItemStack held = ((net.minecraft.entity.EntityLivingBase) attacker).getHeldItem();
+            if (held != null && (held.getItem() instanceof net.minecraft.item.ItemSword
+                || held.getItem() instanceof net.minecraft.item.ItemAxe)) return new double[] { 0.0, 0.8, 0.1 };
+            if (attacker instanceof net.minecraft.entity.monster.EntitySpider
+                || attacker instanceof net.minecraft.entity.passive.EntityWolf
+                || attacker instanceof net.minecraft.entity.passive.EntityOcelot
+                || attacker instanceof net.minecraft.entity.monster.EntitySilverfish)
+                return new double[] { 0.0, 0.45, 0.0 };
+        }
+        return null;
+    }
+
     /** A part drawn by its share of the body. */
     public static ResourceId anyPart(double roll) {
         if (roll < 0.40) return TORSO;

@@ -69,9 +69,19 @@ public final class BiologicalEvents {
         if (state == null) return;
         float raw = event.ammount;
         PhysicalInteraction.Type type = HostDamageMapping.interactionType(category);
-        double energy = Math.max(1.0, raw * 55.0);
+        double energy = Math.max(1.0, raw * 25.0);
         double sharpness = 0.0, penetration = 0.0;
         Entity sourceEntity = event.source.getEntity();
+        if (category == HostDamageMapping.Category.PHYSICAL_HIT) {
+            // What cuts: arrows and other missiles pierce, blades cut whoever swings them, teeth and claws bite.
+            double[] cut = HostDamageMapping.cutting(event.source);
+            if (cut != null) {
+                type = cut[0] > 0.5 ? PhysicalInteraction.Type.PENETRATION : PhysicalInteraction.Type.CUT;
+                sharpness = cut[1];
+                penetration = cut[2];
+                energy = Math.max(1.0, raw * 35.0);
+            }
+        }
         if (category == HostDamageMapping.Category.PHYSICAL_HIT && sourceEntity instanceof EntityPlayer) {
             net.minecraft.item.ItemStack stack = ((EntityPlayer) sourceEntity).getHeldItem();
             if (stack != null && stack.getItem() instanceof ItemGenericAssembly) {
@@ -314,6 +324,7 @@ public final class BiologicalEvents {
                 naturalexceptions.minecraft.item.ItemTreasureGear
                     .worn(player, naturalexceptions.minecraft.gear.Treasure.BAND_OF_MENDING)));
         state.advanceTo(Math.max(state.lastResolvedTick(), now));
+        spendExhaustion(player, state);
         state.clearExposureProtection();
         if (naturalexceptions.minecraft.item.ItemExposureMask.isWornBy(player)) state.addExposureProtection(
             new naturalexceptions.core.biology.ExposureProtection(
@@ -354,15 +365,51 @@ public final class BiologicalEvents {
 
     @SubscribeEvent
     public void onFood(PlayerUseItemEvent.Finish event) {
-        if (event == null || event.entityPlayer == null
-            || event.entityPlayer.worldObj.isRemote
-            || event.item == null
-            || !(event.item.getItem() instanceof ItemFood)) return;
+        if (event == null || event.entityPlayer == null || event.entityPlayer.worldObj.isRemote || event.item == null)
+            return;
         BiologicalState state = BiologicalProperties.get(event.entityPlayer)
             .state();
-        int nourishment = ((ItemFood) event.item.getItem()).func_150905_g(event.item);
-        state.replenishEnergyJoules(Math.max(1, nourishment) * 200_000.0);
-        state.replenishHydrationMillilitres(Math.max(1, nourishment) * 35.0);
+        net.minecraft.item.Item item = event.item.getItem();
+        if (item instanceof ItemFood) {
+            // Each point of a food's nourishment is a point of the hunger bar, as in vanilla.
+            int nourishment = ((ItemFood) item).func_150905_g(event.item);
+            state.replenishEnergyJoules(
+                Math.max(1, nourishment) * state.physiology()
+                    .energyPerHungerPoint());
+            state.replenishHydrationMillilitres(Math.max(1, nourishment) * 35.0);
+        }
+        double drink = drinkMillilitres(event.item);
+        if (drink > 0.0) state.replenishHydrationMillilitres(drink);
+    }
+
+    /** Water from a drink: a water bottle 250 mL, milk 500 mL. */
+    static double drinkMillilitres(net.minecraft.item.ItemStack stack) {
+        if (stack == null) return 0.0;
+        if (stack.getItem() == net.minecraft.init.Items.potionitem && stack.getItemDamage() == 0) return 250.0;
+        if (stack.getItem() == net.minecraft.init.Items.milk_bucket) return 500.0;
+        return 0.0;
+    }
+
+    /**
+     * Work done since last time (vanilla's exhaustion from walking, running, jumping, fighting and healing) spent
+     * from the body's stores: four exhaustion cost a hunger point of energy and 40 mL of water. The exhaustion is
+     * then cleared so vanilla does not spend it again on the bar (which is drawn from the body's energy).
+     */
+    static void spendExhaustion(EntityPlayer player, BiologicalState state) {
+        net.minecraft.nbt.NBTTagCompound food = new net.minecraft.nbt.NBTTagCompound();
+        player.getFoodStats()
+            .writeNBT(food);
+        float exhaustion = food.getFloat("foodExhaustionLevel");
+        if (exhaustion <= 0.0F) return;
+        double points = exhaustion / 4.0;
+        state.spend(
+            points * state.physiology()
+                .energyPerHungerPoint(),
+            points * 40.0);
+        food.setFloat("foodExhaustionLevel", 0.0F);
+        food.setFloat("foodSaturationLevel", 0.0F);
+        player.getFoodStats()
+            .readNBT(food);
     }
 
     @SubscribeEvent

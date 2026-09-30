@@ -61,11 +61,20 @@ final class BodyWordsAndTreatmentTest {
     }
 
     @Test
+    void blowsAreNamedByHowBadTheyAre() {
+        assertEquals("Bruised", BodyWords.structural(0.1F, false));
+        assertEquals("Badly bruised", BodyWords.structural(0.35F, false));
+        assertEquals("Cracked", BodyWords.structural(0.6F, false));
+        assertEquals("Broken", BodyWords.structural(0.8F, false));
+        assertEquals("Broken", BodyWords.structural(0.2F, true), "where the bone really is broken");
+    }
+
+    @Test
     void injuriesReadAsPlainWords() {
         BiologicalState state = body();
         state.addInjury(injury("cut", BiologicalInjury.Kind.CUT, LEFT_ARM, 0.6, 2.0));
         state.addInjury(injury("burn", BiologicalInjury.Kind.BURN, LEFT_ARM, 0.3, 0.0));
-        state.addInjury(injury("bone", BiologicalInjury.Kind.STRUCTURAL, RIGHT_LEG, 0.7, 0.0));
+        state.addInjury(injury("bone", BiologicalInjury.Kind.STRUCTURAL, RIGHT_LEG, 0.8, 0.0));
         BodyStatusSnapshot snapshot = BodyStatusSnapshot.from(state);
 
         assertEquals(
