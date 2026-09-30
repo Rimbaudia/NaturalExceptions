@@ -15,10 +15,10 @@ import net.minecraft.world.WorldServer;
 import naturalexceptions.minecraft.registry.NEItems;
 
 /**
- * A Lumenite shard bolt from the Shardcaster: flies straight and fast, passes through up to {@link #PIERCE}
- * creatures, and shatters into fragments where it stops. Leaves a pale ribbon of light.
+ * A Stormglass shard bolt from the Shardcaster: flies straight and fast, passes through up to {@link #PIERCE}
+ * creatures, and shatters into fragments where it stops. Leaves a pale violet ribbon, crackling.
  */
-public final class EntityLumeniteBolt extends EntityThrowable {
+public final class EntityStormglassBolt extends EntityThrowable {
 
     public static final float DAMAGE = 4.0F;
     static final int PIERCE = 3;
@@ -26,11 +26,11 @@ public final class EntityLumeniteBolt extends EntityThrowable {
 
     private final Set<Integer> struck = new HashSet<>();
 
-    public EntityLumeniteBolt(World world) {
+    public EntityStormglassBolt(World world) {
         super(world);
     }
 
-    public EntityLumeniteBolt(World world, EntityLivingBase shooter) {
+    public EntityStormglassBolt(World world, EntityLivingBase shooter) {
         super(world, shooter);
     }
 
@@ -56,8 +56,8 @@ public final class EntityLumeniteBolt extends EntityThrowable {
             trail[0] = new double[] { posX, posY, posZ };
             // A few pale motes behind the ribbon: reddust takes its colour from the motion arguments.
             if (ticksExisted % 2 == 0) {
-                float hue = 0.5F + 0.08F * (float) Math.sin(ticksExisted * 0.6);
-                int rgb = java.awt.Color.HSBtoRGB(hue, 0.35F, 1.0F);
+                float hue = 0.76F + 0.04F * (float) Math.sin(ticksExisted * 0.6);
+                int rgb = java.awt.Color.HSBtoRGB(hue, 0.4F, 1.0F);
                 worldObj.spawnParticle(
                     "reddust",
                     posX,
@@ -108,7 +108,7 @@ public final class EntityLumeniteBolt extends EntityThrowable {
         if (!(worldObj instanceof WorldServer)) return;
         WorldServer world = (WorldServer) worldObj;
         world.func_147487_a(
-            "iconcrack_" + Item.getIdFromItem(NEItems.lumeniteShard),
+            "iconcrack_" + Item.getIdFromItem(NEItems.stormglassShard),
             posX,
             posY,
             posZ,

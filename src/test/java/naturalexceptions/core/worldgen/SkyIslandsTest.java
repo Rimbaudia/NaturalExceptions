@@ -159,4 +159,37 @@ final class SkyIslandsTest {
             assertTrue(seen, tier + " island is seen by the chunk over its middle");
         }
     }
+
+    @Test
+    void stormglassHangsUnderTheBigIslandsOnly() {
+        SkyIslands field = new SkyIslands(SEED);
+        int columns = 0, hanging = 0, veins = 0, rock = 0;
+        for (SkyIslands.Island island : islandsIn(field, 11)) {
+            int r = (int) island.radius();
+            for (int x = island.centreX() - r; x <= island.centreX() + r; x += 2) {
+                for (int z = island.centreZ() - r; z <= island.centreZ() + r; z += 2) {
+                    int[] column = field.column(island, x, z);
+                    if (column == null) continue;
+                    int length = field.stormglassHang(island, x, z);
+                    assertTrue(length >= 0 && length <= 3, "a point is one to three blocks long");
+                    if (island.tier() == SkyIslands.Tier.SMALL) {
+                        assertEquals(0, length, "small islands grow none");
+                        continue;
+                    }
+                    columns++;
+                    if (length > 0) hanging++;
+                    for (int y = column[0]; y <= column[1]; y++) {
+                        rock++;
+                        if (field.stormglassVein(x, y, z, column[0])) {
+                            veins++;
+                            assertTrue(y < column[0] + SkyIslands.STORMGLASS_DEPTH, "veins lie near the underside");
+                        }
+                    }
+                }
+            }
+        }
+        double share = hanging / (double) columns;
+        assertTrue(share > 0.02 && share < 0.06, "about one column in twenty-five: " + share);
+        assertTrue(veins > 0 && veins < rock / 20, "veins turn up but are rare: " + veins + " of " + rock);
+    }
 }

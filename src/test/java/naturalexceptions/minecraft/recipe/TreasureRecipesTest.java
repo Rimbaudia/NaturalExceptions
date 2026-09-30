@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.CraftingManager;
 import net.minecraft.item.crafting.IRecipe;
 
@@ -17,7 +18,9 @@ import naturalexceptions.minecraft.gear.Treasure;
 import naturalexceptions.minecraft.registry.NEBlocks;
 import naturalexceptions.minecraft.registry.NEItems;
 
-/** Every treasure and weapon can be crafted, not only found; and so can the Lumenite Lamp. */
+/**
+ * Every treasure and weapon can be crafted, not only found; and so can the Lumenite Lamp and the Stormglass Lantern.
+ */
 final class TreasureRecipesTest {
 
     @BeforeAll
@@ -44,10 +47,27 @@ final class TreasureRecipesTest {
         items.add(NEItems.skyfall);
         items.add(NEItems.shardcaster);
         items.add(Item.getItemFromBlock(NEBlocks.lumeniteLamp));
+        items.add(Item.getItemFromBlock(NEBlocks.stormglassLantern));
         items.add(NEItems.windbloomTea);
         items.add(Item.getItemFromBlock(NEBlocks.skystoneBricks));
         items.add(Item.getItemFromBlock(NEBlocks.galeVent));
         for (Item item : items) assertTrue(craftable(item), item.getUnlocalizedName() + " has a crafting recipe");
+    }
+
+    @Test
+    void skyTreasuresAreMadeWithStormglassNotLumenite() {
+        for (Object entry : CraftingManager.getInstance()
+            .getRecipeList()) {
+            IRecipe recipe = (IRecipe) entry;
+            ItemStack out = recipe.getRecipeOutput();
+            if (out == null || out.getItem() != NEItems.shardcaster && !NEItems.TREASURES.containsValue(out.getItem()))
+                continue;
+            if (!(recipe instanceof net.minecraft.item.crafting.ShapedRecipes)) continue;
+            for (ItemStack input : ((net.minecraft.item.crafting.ShapedRecipes) recipe).recipeItems) assertTrue(
+                input == null || input.getItem() != NEItems.lumeniteShard,
+                out.getItem()
+                    .getUnlocalizedName() + " is a sky treasure: no Lumenite in it");
+        }
     }
 
     @Test

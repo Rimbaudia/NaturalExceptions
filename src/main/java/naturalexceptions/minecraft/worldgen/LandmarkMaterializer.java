@@ -60,6 +60,18 @@ final class LandmarkMaterializer {
                     }
                 }
             }
+            // 2b. Stormglass hanging in points from the underside, where nothing (no cloud) is in the way.
+            if (NEBlocks.stormglassCluster != null) for (int x = x0; x < x0 + 16; x++) {
+                for (int z = z0; z < z0 + 16; z++) {
+                    int length = field.stormglassHang(island, x, z);
+                    int[] column = length > 0 ? field.column(island, x, z) : null;
+                    if (column == null) continue;
+                    for (int y = column[0] - 1; y >= column[0] - length && world.isAirBlock(x, y, z); y--) {
+                        world.setBlock(x, y, z, NEBlocks.stormglassCluster, 0, 2);
+                        placed++;
+                    }
+                }
+            }
             // 3. The waterfall: its lip is a source that starts flowing over the edge once the chunk is live.
             int[] lip = field.waterfallLip(island);
             if (lip != null && insideChunk(lip[0], lip[1], x0, z0, 0)) {
@@ -109,6 +121,7 @@ final class LandmarkMaterializer {
             }
         }
         if (y >= column[1] - 3 && !rocky) return Blocks.dirt;
+        if (NEBlocks.stormglassVein != null && field.stormglassVein(x, y, z, column[0])) return NEBlocks.stormglassVein;
         double roll = field.blockRoll(x, y, z, 11);
         if (roll < COAL) return Blocks.coal_ore;
         if (roll < COAL + IRON) return Blocks.iron_ore;
@@ -208,7 +221,7 @@ final class LandmarkMaterializer {
                 set(world, x, y, z, orElse(NEBlocks.wardedSkystone, Blocks.bedrock), 0);
                 break;
             case LAMP:
-                set(world, x, y, z, orElse(NEBlocks.lumeniteLamp, Blocks.glowstone), 0);
+                set(world, x, y, z, orElse(NEBlocks.stormglassLantern, Blocks.glowstone), 0);
                 break;
             case LADDER:
                 set(world, x, y, z, Blocks.ladder, meta);

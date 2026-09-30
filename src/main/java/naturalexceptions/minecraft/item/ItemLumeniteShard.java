@@ -8,7 +8,7 @@ import net.minecraft.item.ItemStack;
 
 import naturalexceptions.core.metallurgy.VesselState;
 
-/** A shard of Lumenite: light without fire, a smelting flux, and the charge of a Shardcaster. */
+/** A shard of Lumenite, from the deep grottos: light without fire, and a smelting flux. */
 public final class ItemLumeniteShard extends Item {
 
     public ItemLumeniteShard() {

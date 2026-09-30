@@ -17,8 +17,9 @@ import naturalexceptions.minecraft.registry.NEItems;
  * What sky chests hold. Mostly ordinary Minecraft loot (from the vanilla chest tables, so other mods' additions
  * appear too) with a few useful supplies; the treasures (five wearables, two weapons) are rare:
  * <ul>
- * <li>Island caches: vanilla dungeon loot, sometimes bandages or copper. Never a treasure.</li>
- * <li>Dungeon storerooms: mineshaft or stronghold loot and supplies; one in twenty holds a treasure.</li>
+ * <li>Island caches: vanilla dungeon loot, sometimes bandages, copper or Stormglass. Never a treasure.</li>
+ * <li>Dungeon storerooms: mineshaft or stronghold loot and supplies (Stormglass among them); one in twelve holds a
+ * spare Sky Key and one in twenty a treasure.</li>
  * <li>Key room: the Sky Key and a little stronghold loot.</li>
  * <li>The vault: one treasure, always; and beside it a chest of temple and stronghold riches.</li>
  * </ul>
@@ -36,6 +37,8 @@ public final class SkyCacheLoot {
 
     /** Chance that a dungeon storeroom chest also holds a treasure. */
     public static final double STORE_TREASURE_CHANCE = 0.05;
+    /** Chance that a dungeon storeroom chest holds a spare Sky Key (any key opens any Warden's gate). */
+    public static final double STORE_KEY_CHANCE = 0.08;
     /** The slot a treasure goes in: the middle of the chest. */
     static final int TREASURE_SLOT = 13;
 
@@ -53,6 +56,7 @@ public final class SkyCacheLoot {
                 vanilla(chest, random, ChestGenHooks.DUNGEON_CHEST);
                 if (random.nextInt(10) < 3) put(chest, random, NEItems.bandage, 1 + random.nextInt(2));
                 if (random.nextInt(10) < 3) put(chest, random, NEItems.copperIngot, 2 + random.nextInt(3));
+                if (random.nextInt(10) < 2) put(chest, random, NEItems.stormglassShard, 1 + random.nextInt(3));
                 break;
             case STORE:
                 vanilla(
@@ -60,7 +64,9 @@ public final class SkyCacheLoot {
                     random,
                     random.nextBoolean() ? ChestGenHooks.MINESHAFT_CORRIDOR : ChestGenHooks.STRONGHOLD_CORRIDOR);
                 if (random.nextInt(10) < 4) put(chest, random, NEItems.bandage, 2 + random.nextInt(3));
-                if (random.nextInt(10) < 3) put(chest, random, NEItems.lumeniteShard, 2 + random.nextInt(4));
+                if (random.nextInt(10) < 3) put(chest, random, NEItems.stormglassShard, 2 + random.nextInt(4));
+                if (random.nextDouble() < STORE_KEY_CHANCE && NEItems.skyKey != null)
+                    put(chest, random, NEItems.skyKey, 1);
                 if (random.nextDouble() < STORE_TREASURE_CHANCE) treasure(chest, random);
                 break;
             case KEY:

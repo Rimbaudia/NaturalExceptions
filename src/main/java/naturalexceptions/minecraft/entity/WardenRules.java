@@ -26,7 +26,7 @@ public final class WardenRules {
     public static final double SLAM_PUSH = 1.6;
     public static final double SLAM_LIFT = 0.55;
 
-    /** In phase two, a fan of Lumenite bolts at players further than this, every so often. */
+    /** In phase two, a fan of Stormglass bolts at players further than this, every so often. */
     public static final double FAN_MIN_RANGE = 6.0;
     public static final int FAN_INTERVAL = 70;
     public static final int FAN_WINDUP = 15;
@@ -75,7 +75,7 @@ public final class WardenRules {
         return null;
     }
 
-    /** Counts of the guaranteed drops: {lumenite, skystone, gold, diamonds, gale cores}. */
+    /** Counts of the guaranteed drops: {stormglass, skystone, gold, diamonds, gale cores}. */
     public static int[] guaranteed(Random random) {
         return new int[] { 12 + random.nextInt(9), 8 + random.nextInt(9), 3 + random.nextInt(4), 1 + random.nextInt(3),
             1 + random.nextInt(2) };

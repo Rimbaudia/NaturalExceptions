@@ -32,13 +32,13 @@ import naturalexceptions.minecraft.block.BlockSealedAlcove;
 import naturalexceptions.minecraft.gear.Treasure;
 import naturalexceptions.minecraft.registry.NEBlocks;
 import naturalexceptions.minecraft.registry.NEItems;
-import naturalexceptions.minecraft.weapon.EntityLumeniteBolt;
+import naturalexceptions.minecraft.weapon.EntityStormglassBolt;
 import naturalexceptions.minecraft.worldgen.SkyCacheLoot;
 
 /**
- * The Sky Warden: a guardian of Skystone and Lumenite left to keep a sky dungeon's vault. Slow and heavy; its danger
+ * The Sky Warden: a guardian of Skystone and Stormglass left to keep a sky dungeon's vault. Slow and heavy; its danger
  * is wind. Every eight seconds it raises its fists and, a second later, a Gale Slam throws everyone near it back
- * (towards the pits of its hall). Below half health it comes Unbound: faster, firing fans of Lumenite bolts at anyone
+ * (towards the pits of its hall). Below half health it comes Unbound: faster, firing fans of Stormglass bolts at anyone
  * keeping their distance, and it breaks open the hall's alcoves. Its big attacks are always telegraphed.
  */
 public final class EntitySkyWarden extends EntityMob implements IBossDisplayData {
@@ -201,7 +201,7 @@ public final class EntitySkyWarden extends EntityMob implements IBossDisplayData
         }
     }
 
-    /** A fan of Lumenite bolts at a target keeping its distance. */
+    /** A fan of Stormglass bolts at a target keeping its distance. */
     private void fan(EntityLivingBase target) {
         double dx = target.posX - posX, dy = target.posY + target.getEyeHeight() * 0.7 - (posY + height * 0.75),
             dz = target.posZ - posZ;
@@ -209,7 +209,7 @@ public final class EntitySkyWarden extends EntityMob implements IBossDisplayData
         for (int i = 0; i < WardenRules.FAN_BOLTS; i++) {
             double angle = Math.toRadians((i - (WardenRules.FAN_BOLTS - 1) / 2.0) * WardenRules.FAN_SPREAD_DEGREES);
             double rx = dx * Math.cos(angle) - dz * Math.sin(angle), rz = dx * Math.sin(angle) + dz * Math.cos(angle);
-            EntityLumeniteBolt bolt = new EntityLumeniteBolt(worldObj, this);
+            EntityStormglassBolt bolt = new EntityStormglassBolt(worldObj, this);
             bolt.setPosition(posX, posY + height * 0.75, posZ);
             bolt.setThrowableHeading(rx, dy + flat * 0.02, rz, 1.8F, 1.0F);
             worldObj.spawnEntityInWorld(bolt);
@@ -327,7 +327,7 @@ public final class EntitySkyWarden extends EntityMob implements IBossDisplayData
     public static List<ItemStack> drops(Random random) {
         List<ItemStack> drops = new java.util.ArrayList<>();
         int[] counts = WardenRules.guaranteed(random);
-        add(drops, NEItems.lumeniteShard, counts[0]);
+        add(drops, NEItems.stormglassShard, counts[0]);
         add(drops, Item.getItemFromBlock(NEBlocks.skystoneBricks), counts[1]);
         add(drops, Items.gold_ingot, counts[2]);
         add(drops, Items.diamond, counts[3]);

@@ -19,7 +19,7 @@ import cpw.mods.fml.relauncher.SideOnly;
 import naturalexceptions.minecraft.registry.NEItems;
 
 /**
- * A copper wand with a Lumenite crystal clawed at its tip. Fires piercing shard bolts; one shard loads
+ * A copper wand with a Stormglass crystal clawed at its tip. Fires piercing shard bolts; one shard loads
  * {@value ShardcasterCharge#SHOTS_PER_SHARD}, and it holds up to {@value ShardcasterCharge#MAX_CHARGE}. Sneak and
  * right-click to load shards from the inventory; fired empty, it loads one by itself. The crystal glows while it is
  * loaded and flares as it fires.
@@ -58,18 +58,18 @@ public final class ItemShardcaster extends Item {
             return stack;
         }
         if (now - tag.getLong(KEY_LAST_SHOT) < SHOT_GAP_TICKS) return stack;
-        boolean hasShard = free || NEItems.lumeniteShard != null && player.inventory.hasItem(NEItems.lumeniteShard);
+        boolean hasShard = free || NEItems.stormglassShard != null && player.inventory.hasItem(NEItems.stormglassShard);
         int[] result = ShardcasterCharge.fire(free ? Math.max(1, charge(stack)) : charge(stack), hasShard);
         if (result == null) {
             world.playSoundAtEntity(player, "random.click", 0.5F, 0.6F);
             fizzle(world, player);
-            player.addChatComponentMessage(new ChatComponentText("§7The crystal is dark: no Lumenite Shards."));
+            player.addChatComponentMessage(new ChatComponentText("§7The crystal is dark: no Stormglass Shards."));
             return stack;
         }
-        if (result[1] > 0 && !free) player.inventory.consumeInventoryItem(NEItems.lumeniteShard);
+        if (result[1] > 0 && !free) player.inventory.consumeInventoryItem(NEItems.stormglassShard);
         tag.setInteger(KEY_CHARGE, free ? charge(stack) : result[0]);
         tag.setLong(KEY_LAST_SHOT, now);
-        EntityLumeniteBolt bolt = new EntityLumeniteBolt(world, player);
+        EntityStormglassBolt bolt = new EntityStormglassBolt(world, player);
         world.spawnEntityInWorld(bolt);
         muzzle(world, player);
         world.playSoundAtEntity(
@@ -85,16 +85,16 @@ public final class ItemShardcaster extends Item {
     private static void reload(ItemStack stack, EntityPlayer player) {
         int shards = 0;
         for (ItemStack slot : player.inventory.mainInventory)
-            if (slot != null && slot.getItem() == NEItems.lumeniteShard) shards += slot.stackSize;
+            if (slot != null && slot.getItem() == NEItems.stormglassShard) shards += slot.stackSize;
         int load = ShardcasterCharge.shardsToLoad(charge(stack), shards);
         if (load == 0) {
             player.addChatComponentMessage(
                 new ChatComponentText(
                     charge(stack) >= ShardcasterCharge.MAX_CHARGE ? "§7The crystal is full."
-                        : "§7No Lumenite Shards to load."));
+                        : "§7No Stormglass Shards to load."));
             return;
         }
-        for (int i = 0; i < load; i++) player.inventory.consumeInventoryItem(NEItems.lumeniteShard);
+        for (int i = 0; i < load; i++) player.inventory.consumeInventoryItem(NEItems.stormglassShard);
         int charge = charge(stack) + load * ShardcasterCharge.SHOTS_PER_SHARD;
         stack.getTagCompound()
             .setInteger(KEY_CHARGE, charge);
@@ -174,8 +174,8 @@ public final class ItemShardcaster extends Item {
     @Override
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public void addInformation(ItemStack stack, EntityPlayer player, List lines, boolean advanced) {
-        lines.add("§7Fires Lumenite bolts that pierce up to three foes.");
-        lines.add("§7One Lumenite Shard loads " + ShardcasterCharge.SHOTS_PER_SHARD + " bolts.");
+        lines.add("§7Fires Stormglass bolts that pierce up to three foes.");
+        lines.add("§7One Stormglass Shard loads " + ShardcasterCharge.SHOTS_PER_SHARD + " bolts.");
         lines.add("§7Sneak and use to load shards; empty, it loads one itself.");
         lines.add("§bLoaded: " + charge(stack) + " / " + ShardcasterCharge.MAX_CHARGE);
     }

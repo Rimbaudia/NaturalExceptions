@@ -13,7 +13,7 @@ import naturalexceptions.minecraft.registry.NEItems;
 
 /**
  * Crafting for the sky-cache treasures, so a player who has not found a cache can still make them. Each recipe
- * uses what the item is made of: a bottled cloud needs feathers and Lumenite's light, and a sword that calls
+ * uses what the item is made of: a bottled cloud needs feathers and Stormglass, and a sword that calls
  * stars is forged from a fallen star's crust and heart ({@link RecipeSkyfall}).
  */
 public final class TreasureRecipes {
@@ -21,7 +21,7 @@ public final class TreasureRecipes {
     private TreasureRecipes() {}
 
     public static void register() {
-        Item shard = NEItems.lumeniteShard;
+        Item shard = NEItems.stormglassShard;
         Item copper = NEItems.copperIngot;
         if (shard == null || copper == null) return;
         ItemStack anyWool = new ItemStack(Blocks.wool, 1, OreDictionary.WILDCARD_VALUE);
@@ -77,7 +77,7 @@ public final class TreasureRecipes {
             if (flask != null) GameRegistry.addShapelessRecipe(new ItemStack(flask), core, Items.glass_bottle);
             if (cloak != null) GameRegistry.addRecipe(new RecipeGliderCloak.FromCore(cloak, core));
         }
-        // Skyfall is forged from a fallen star, not from Lumenite.
+        // Skyfall is forged from a fallen star, not from Stormglass.
         if (NEItems.skyfall != null && NEItems.materialSample != null) GameRegistry.addRecipe(new RecipeSkyfall());
         if (NEItems.shardcaster != null)
             GameRegistry.addRecipe(new ItemStack(NEItems.shardcaster), " LL", " CL", "C  ", 'L', shard, 'C', copper);

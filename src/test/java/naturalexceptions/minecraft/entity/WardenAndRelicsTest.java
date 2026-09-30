@@ -65,7 +65,7 @@ final class WardenAndRelicsTest {
         Set<Item> pool = new HashSet<>(SkyCacheLoot.treasures());
         for (int i = 0; i < rounds; i++) {
             List<ItemStack> drops = EntitySkyWarden.drops(random);
-            int relicCount = 0, cores = 0, diamonds = 0, lumenite = 0;
+            int relicCount = 0, cores = 0, diamonds = 0, stormglass = 0;
             for (ItemStack stack : drops) {
                 Item item = stack.getItem();
                 if (relics.contains(item)) {
@@ -77,10 +77,10 @@ final class WardenAndRelicsTest {
                 if (pool.contains(item)) treasures++;
                 if (item == NEItems.galeCore) cores += stack.stackSize;
                 if (item == Items.diamond) diamonds += stack.stackSize;
-                if (item == NEItems.lumeniteShard) lumenite += stack.stackSize;
+                if (item == NEItems.stormglassShard) stormglass += stack.stackSize;
             }
             assertEquals(1, relicCount, "one relic every time");
-            assertTrue(cores >= 1 && cores <= 2 && diamonds >= 1 && lumenite >= 12);
+            assertTrue(cores >= 1 && cores <= 2 && diamonds >= 1 && stormglass >= 12);
         }
         assertTrue(mauls > rounds * 0.11 && mauls < rounds * 0.19, "the maul is the rarest: " + mauls);
         assertTrue(wearables.get(Treasure.WARDENS_VISOR) > mauls && wearables.get(Treasure.AEGIS_SIGIL) > mauls);

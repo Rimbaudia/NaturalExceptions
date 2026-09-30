@@ -1,6 +1,6 @@
 package naturalexceptions.minecraft.weapon;
 
-/** The Shardcaster's ammunition rule: each Lumenite shard loaded gives {@link #SHOTS_PER_SHARD} bolts. */
+/** The Shardcaster's ammunition rule: each Stormglass shard loaded gives {@link #SHOTS_PER_SHARD} bolts. */
 public final class ShardcasterCharge {
 
     public static final int SHOTS_PER_SHARD = 8;

@@ -30,6 +30,9 @@ public final class NEBlocks {
     public static Block lumeniteOre;
     public static Block lumeniteCluster;
     public static Block lumeniteLamp;
+    public static Block stormglassCluster;
+    public static Block stormglassVein;
+    public static Block stormglassLantern;
     public static Block magmaRock;
     public static Block cloud;
     public static Block skystoneBricks;
@@ -98,6 +101,12 @@ public final class NEBlocks {
         lumeniteCluster = new naturalexceptions.minecraft.block.BlockLumeniteCluster()
             .setCreativeTab(NECreativeTab.INSTANCE);
         lumeniteLamp = new naturalexceptions.minecraft.block.BlockLumeniteLamp().setCreativeTab(NECreativeTab.INSTANCE);
+        stormglassCluster = new naturalexceptions.minecraft.block.BlockStormglassCluster()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        stormglassVein = new naturalexceptions.minecraft.block.BlockStormglassVein()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        stormglassLantern = new naturalexceptions.minecraft.block.BlockStormglassLantern()
+            .setCreativeTab(NECreativeTab.INSTANCE);
         magmaRock = new naturalexceptions.minecraft.block.BlockMagmaRock().setCreativeTab(NECreativeTab.INSTANCE);
         cloud = new naturalexceptions.minecraft.block.BlockCloud().setCreativeTab(NECreativeTab.INSTANCE);
         skystoneBricks = new naturalexceptions.minecraft.block.BlockSkystoneBricks()
@@ -190,6 +199,9 @@ public final class NEBlocks {
             GameRegistry.registerBlock(lumeniteOre, "lumenite_ore");
             GameRegistry.registerBlock(lumeniteCluster, "lumenite_cluster");
             GameRegistry.registerBlock(lumeniteLamp, "lumenite_lamp");
+            GameRegistry.registerBlock(stormglassCluster, "stormglass_cluster");
+            GameRegistry.registerBlock(stormglassVein, "stormglass_vein");
+            GameRegistry.registerBlock(stormglassLantern, "stormglass_lantern");
             GameRegistry.registerBlock(magmaRock, "magma_rock");
             GameRegistry.registerBlock(cloud, "cloud");
             GameRegistry.registerBlock(
@@ -328,6 +340,17 @@ public final class NEBlocks {
                 NEItems.lumeniteShard,
                 'C',
                 NEItems.copperIngot);
+            if (NEItems.stormglassShard != null) GameRegistry.addRecipe(
+                new net.minecraft.item.ItemStack(stormglassLantern, 2),
+                "BSB",
+                "SGS",
+                "BSB",
+                'B',
+                skystoneBricks,
+                'S',
+                NEItems.stormglassShard,
+                'G',
+                net.minecraft.init.Blocks.glass);
             GameRegistry
                 .addRecipe(new net.minecraft.item.ItemStack(starterSmelter), "BBB", "B B", "BBB", 'B', refractoryBrick);
             GameRegistry.addRecipe(new net.minecraft.item.ItemStack(castingTable), "BBB", "B B", 'B', refractoryBrick);

@@ -459,6 +459,26 @@ public final class SkyIslands {
         return dungeon != null && dungeon.coversSurface(x, z);
     }
 
+    /** Share of a medium or grand island's underside columns a Stormglass point hangs from. */
+    public static final double STORMGLASS_HANG = 0.04;
+    /** Share of the rock within {@link #STORMGLASS_DEPTH} blocks of an island's underside that is Stormglass vein. */
+    public static final double STORMGLASS_VEIN = 0.05;
+    public static final int STORMGLASS_DEPTH = 3;
+
+    /**
+     * How long a point of Stormglass hangs under this column of an island: 0 for none, else 1 to 3 blocks. Storms
+     * break on the big islands, so small ones grow none.
+     */
+    public int stormglassHang(Island island, int x, int z) {
+        if (island.tier == Tier.SMALL || noise.unit3(x, 0, z, 61) >= STORMGLASS_HANG) return 0;
+        return 1 + (int) (noise.unit3(x, 1, z, 62) * 3);
+    }
+
+    /** Whether the rock at (x, y, z), in a column whose underside is {@code bottom}, is a Stormglass vein. */
+    public boolean stormglassVein(int x, int y, int z, int bottom) {
+        return y < bottom + STORMGLASS_DEPTH && noise.unit3(x, y, z, 63) < STORMGLASS_VEIN;
+    }
+
     /** A deterministic value in [0, 1) for one block of an island (ore veins, loot). */
     public double blockRoll(int x, int y, int z, long lane) {
         return noise.unit3(x, y, z, lane);
