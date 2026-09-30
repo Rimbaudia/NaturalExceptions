@@ -234,11 +234,17 @@ public final class NaturalExceptions {
         cpw.mods.fml.client.registry.ClientRegistry
             .bindTileEntitySpecialRenderer(naturalexceptions.minecraft.furniture.TileEntityWeaponRack.class, furniture);
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
+            naturalexceptions.minecraft.furniture.TileEntityTanningRack.class,
+            furniture);
+        cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
             naturalexceptions.minecraft.furniture.TileEntityOrrery.class,
             new naturalexceptions.minecraft.furniture.client.RenderOrrery());
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
             naturalexceptions.minecraft.furniture.TileEntityLighthouseLamp.class,
             new naturalexceptions.minecraft.furniture.client.RenderLighthouseLamp());
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.furniture.EntityFloatingNumber.class,
+            new naturalexceptions.minecraft.furniture.client.RenderFloatingNumber());
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
             naturalexceptions.minecraft.furniture.EntitySeat.class,
             new net.minecraft.client.renderer.entity.Render() {

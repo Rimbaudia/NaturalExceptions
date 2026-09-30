@@ -175,7 +175,7 @@ public final class SkyDungeon {
         ROCK,
         /** A quarry's working face: meta 0 a seam ready to cut, 1 worked. */
         SEAM,
-        /** A cutting bench; meta 0 a Mason's Bench, 1 a Sawmill. */
+        /** A working bench; meta 0 a Mason's Bench, 1 a Sawmill, 2 a Loom, 3 a Potter's Wheel, 4 a Glassblower's Furnace. */
         CUTTING_BENCH,
         /** A quarry hoist's end; meta 0 its windlass (at the top), 1 its basket (at the foot). */
         HOIST,
@@ -184,7 +184,13 @@ public final class SkyDungeon {
         /** Stormcrystal; meta 1 a spire's crown. */
         STORMCRYSTAL,
         /** A Lighthouse Lamp. */
-        LIGHTHOUSE_LAMP
+        LIGHTHOUSE_LAMP,
+        /** A tanning rack; meta: the way it faces ({@link #NORTH} ..). */
+        TANNING_RACK,
+        /** An archery butt; meta: the way its face looks ({@link #NORTH} ..). */
+        ARCHERY_BUTT,
+        /** A training dummy; meta: the way he faces ({@link #NORTH} ..). */
+        TRAINING_DUMMY
     }
 
     /** Directions for beds, torches, trapdoors and fence gates. */

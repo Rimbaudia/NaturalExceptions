@@ -7,6 +7,12 @@ cottage
 merchant_house
 woodcutters_hut
 cloudwrights_hut
+weavers_shop
+potters_shop
+tannery
+glassworks
+manor_house
+manor_hall
 barracks
 smithy
 chapel

@@ -79,6 +79,10 @@ public final class RenderFurnitureItems extends TileEntitySpecialRenderer {
         } else if (tile instanceof TileEntityWallShelf) {
             for (int i = 0; i < 3; i++)
                 standing(storage.getStackInSlot(i), x, y, z, meta, 0.2 + 0.3 * i, 0.5625, 0.28, 0.3F, 0.2F, false);
+        } else if (tile instanceof naturalexceptions.minecraft.furniture.TileEntityTanningRack) {
+            // Stretched across the frame, in its middle, a third each.
+            for (int i = 0; i < 3; i++)
+                standing(storage.getStackInSlot(i), x, y, z, meta, 0.2 + 0.3 * i, 0.35, 0.5, 0.55F, 0.3F, false);
         } else if (tile instanceof TileEntityWeaponRack) {
             for (int i = 0; i < 3; i++)
                 // A third of the rack each, a little further out each, so no two share a plane.

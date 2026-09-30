@@ -330,6 +330,12 @@ final class SkyDungeonTest {
                 .contains(places[i])) seen[i]++;
         for (int i = 0; i < places.length; i++)
             assertTrue(seen[i] * 3 >= citadels, "the " + places[i] + " is found on the islands: " + seen[i]);
+        for (Sample s : samples()) if (s.dungeon.kind() == SkyDungeon.Kind.CITADEL)
+            for (String district : new String[] { "market plaza", "tourney ground", "artisans' quarter", "manor quarter" })
+                assertTrue(
+                    s.dungeon.features()
+                        .contains(district),
+                    s.name() + ": the town has its " + district);
     }
 
     @Test

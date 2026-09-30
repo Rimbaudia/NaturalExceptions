@@ -14,15 +14,25 @@ import naturalexceptions.minecraft.block.BlockSkystoneSlab;
 import naturalexceptions.minecraft.registry.NEBlocks;
 
 /**
- * What a cutting bench makes, one piece at a time with none of the crafting grid's waste: a Mason's Bench dresses
- * Skystone, a Sawmill cuts logs. Each recipe takes {@code count} of an input and gives its output.
+ * What a working bench makes, one piece at a time with none of the crafting grid's waste: a Mason's Bench dresses
+ * Skystone, a Sawmill cuts logs, a Loom weaves wool, a Potter's Wheel throws clay, a Glassblower's Furnace blows sand
+ * (with fuel). Each recipe takes {@code count} of an input and gives its output.
  */
 public final class CuttingRecipes {
 
     /** The kinds of bench. */
     public enum Kind {
+
         MASON,
-        SAW
+        SAW,
+        LOOM,
+        POTTER,
+        /** Needs fuel as well: see {@link TileEntityCuttingBench#heat}. */
+        GLASS;
+
+        public boolean fired() {
+            return this == GLASS;
+        }
     }
 
     public static final class Recipe {
@@ -73,15 +83,30 @@ public final class CuttingRecipes {
         return false;
     }
 
-    private static List<Recipe> mason, saw;
+    private static final java.util.Map<Kind, List<Recipe>> TABLES = new java.util.EnumMap<>(Kind.class);
 
-    static List<Recipe> all(Kind kind) {
-        if (kind == Kind.MASON) {
-            if (mason == null) mason = masonry();
-            return mason;
+    static synchronized List<Recipe> all(Kind kind) {
+        List<Recipe> table = TABLES.get(kind);
+        if (table != null) return table;
+        switch (kind) {
+            case MASON:
+                table = masonry();
+                break;
+            case SAW:
+                table = sawing();
+                break;
+            case LOOM:
+                table = weaving();
+                break;
+            case POTTER:
+                table = pottery();
+                break;
+            default:
+                table = glassblowing();
+                break;
         }
-        if (saw == null) saw = sawing();
-        return saw;
+        TABLES.put(kind, table);
+        return table;
     }
 
     /** Skystone (the rock) or whole Skystone Bricks, dressed into every Skystone piece, one for one. */
@@ -107,6 +132,42 @@ public final class CuttingRecipes {
             if (piece.getItem() == Item.getItemFromBlock(bricks) && piece.getItemDamage() == 0) continue;
             out.add(new Recipe(Item.getItemFromBlock(bricks), 0, 1, piece));
         }
+        return out;
+    }
+
+    /** Wool of any colour into carpet of its colour, dressings for wounds, or back into string. */
+    private static List<Recipe> weaving() {
+        List<Recipe> out = new ArrayList<>();
+        Item wool = Item.getItemFromBlock(Blocks.wool);
+        for (int colour = 0; colour < 16; colour++) {
+            out.add(new Recipe(wool, colour, 1, new ItemStack(Blocks.carpet, 2, colour)));
+            if (naturalexceptions.minecraft.registry.NEItems.bandage != null)
+                out.add(new Recipe(wool, colour, 1, new ItemStack(naturalexceptions.minecraft.registry.NEItems.bandage, 3)));
+            out.add(new Recipe(wool, colour, 1, new ItemStack(Items.string, 4)));
+        }
+        return out;
+    }
+
+    /** A block of clay (or four balls of it) thrown into a water jug or flower pots. */
+    private static List<Recipe> pottery() {
+        List<Recipe> out = new ArrayList<>();
+        Item jug = naturalexceptions.minecraft.registry.NEItems.waterJug;
+        Item[] clays = { Item.getItemFromBlock(Blocks.clay), Items.clay_ball };
+        int[] counts = { 1, 4 };
+        for (int i = 0; i < clays.length; i++) {
+            if (jug != null) out.add(new Recipe(clays[i], -1, counts[i], new ItemStack(jug, 1, jug.getMaxDamage())));
+            out.add(new Recipe(clays[i], -1, counts[i], new ItemStack(Items.flower_pot, 2)));
+        }
+        return out;
+    }
+
+    /** Sand blown into glass, more panes and bottles than the grid gets from it. */
+    private static List<Recipe> glassblowing() {
+        List<Recipe> out = new ArrayList<>();
+        Item sand = Item.getItemFromBlock(Blocks.sand);
+        out.add(new Recipe(sand, -1, 1, new ItemStack(Blocks.glass, 1)));
+        out.add(new Recipe(sand, -1, 1, new ItemStack(Blocks.glass_pane, 4)));
+        out.add(new Recipe(sand, -1, 1, new ItemStack(Items.glass_bottle, 2)));
         return out;
     }
 

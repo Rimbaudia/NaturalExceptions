@@ -540,8 +540,20 @@ final class LandmarkMaterializer {
             case SEAM:
                 set(world, x, y, z, orElse(NEBlocks.skystoneSeam, Blocks.stone), meta & 1);
                 break;
-            case CUTTING_BENCH:
-                set(world, x, y, z, orElse(meta == 1 ? NEBlocks.sawmill : NEBlocks.masonsBench, Blocks.crafting_table), 0);
+            case CUTTING_BENCH: {
+                Block[] benches = { NEBlocks.masonsBench, NEBlocks.sawmill, NEBlocks.loom, NEBlocks.pottersWheel,
+                    NEBlocks.glassFurnace };
+                set(world, x, y, z, orElse(benches[Math.min(meta, benches.length - 1)], Blocks.crafting_table), 0);
+                break;
+            }
+            case TANNING_RACK:
+                set(world, x, y, z, orElse(NEBlocks.tanningRack, Blocks.fence), SIDE_FACING[meta & 3]);
+                break;
+            case ARCHERY_BUTT:
+                set(world, x, y, z, orElse(NEBlocks.archeryButt, Blocks.hay_block), SIDE_FACING[meta & 3]);
+                break;
+            case TRAINING_DUMMY:
+                set(world, x, y, z, orElse(NEBlocks.trainingDummy, Blocks.hay_block), SIDE_FACING[meta & 3]);
                 break;
             case HOIST:
                 set(world, x, y, z, orElse(meta == 1 ? NEBlocks.hoistBasket : NEBlocks.hoistWindlass, Blocks.planks), 0);

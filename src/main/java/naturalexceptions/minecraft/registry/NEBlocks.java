@@ -68,6 +68,12 @@ public final class NEBlocks {
     public static Block cloudCondenser;
     public static Block stormcrystal;
     public static Block lighthouseLamp;
+    public static Block loom;
+    public static Block pottersWheel;
+    public static Block glassFurnace;
+    public static Block tanningRack;
+    public static Block archeryButt;
+    public static Block trainingDummy;
     public static Block fountain;
     public static Block orrery;
     public static Block chartTable;
@@ -176,6 +182,16 @@ public final class NEBlocks {
             .setCreativeTab(NECreativeTab.INSTANCE);
         stormcrystal = new naturalexceptions.minecraft.block.BlockStormcrystal().setCreativeTab(NECreativeTab.INSTANCE);
         lighthouseLamp = new naturalexceptions.minecraft.furniture.BlockLighthouseLamp()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        loom = new naturalexceptions.minecraft.furniture.BlockCuttingBench(
+            naturalexceptions.minecraft.furniture.CuttingRecipes.Kind.LOOM).setCreativeTab(NECreativeTab.INSTANCE);
+        pottersWheel = new naturalexceptions.minecraft.furniture.BlockCuttingBench(
+            naturalexceptions.minecraft.furniture.CuttingRecipes.Kind.POTTER).setCreativeTab(NECreativeTab.INSTANCE);
+        glassFurnace = new naturalexceptions.minecraft.furniture.BlockCuttingBench(
+            naturalexceptions.minecraft.furniture.CuttingRecipes.Kind.GLASS).setCreativeTab(NECreativeTab.INSTANCE);
+        tanningRack = new naturalexceptions.minecraft.furniture.BlockTanningRack().setCreativeTab(NECreativeTab.INSTANCE);
+        archeryButt = new naturalexceptions.minecraft.furniture.BlockArcheryButt().setCreativeTab(NECreativeTab.INSTANCE);
+        trainingDummy = new naturalexceptions.minecraft.furniture.BlockTrainingDummy()
             .setCreativeTab(NECreativeTab.INSTANCE);
         fountain = new naturalexceptions.minecraft.furniture.BlockFountain().setCreativeTab(NECreativeTab.INSTANCE);
         orrery = new naturalexceptions.minecraft.furniture.BlockOrrery().setCreativeTab(NECreativeTab.INSTANCE);
@@ -299,6 +315,12 @@ public final class NEBlocks {
             GameRegistry.registerBlock(cloudCondenser, "cloud_condenser");
             GameRegistry.registerBlock(stormcrystal, "stormcrystal");
             GameRegistry.registerBlock(lighthouseLamp, "lighthouse_lamp");
+            GameRegistry.registerBlock(loom, "loom");
+            GameRegistry.registerBlock(pottersWheel, "potters_wheel");
+            GameRegistry.registerBlock(glassFurnace, "glass_furnace");
+            GameRegistry.registerBlock(tanningRack, "tanning_rack");
+            GameRegistry.registerBlock(archeryButt, "archery_butt");
+            GameRegistry.registerBlock(trainingDummy, "training_dummy");
             GameRegistry.registerBlock(fountain, "fountain");
             GameRegistry.registerBlock(orrery, "orrery");
             GameRegistry.registerBlock(chartTable, "chart_table");
@@ -355,6 +377,9 @@ public final class NEBlocks {
             GameRegistry.registerTileEntity(
                 naturalexceptions.minecraft.furniture.TileEntityLighthouseLamp.class,
                 "naturalexceptions_lighthouse_lamp");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.furniture.TileEntityTanningRack.class,
+                "naturalexceptions_tanning_rack");
         } catch (Throwable ignored) {}
         try {
             GameRegistry.registerTileEntity(

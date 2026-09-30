@@ -794,78 +794,287 @@ final class CitadelLayout {
         }
     }
 
-    /** The four corners of the town: an orchard, a herb garden of Windbloom, a market and a training yard. */
+    // --- The districts in the town's four corners -------------------------------------------------------------
+
+    /**
+     * The four corners of the town, one district each, in an order of the town's own: the market plaza, the tourney
+     * ground, the artisans' quarter and the manor quarter. Each is laid out once as for the south-east corner (its
+     * inner corner towards the keep, the corner tower at its far corner) and mirrored into its own.
+     */
     private void corners() {
-        int lo = ROAD_OUT + 3, hi = OUTER - THICK - 2;
         List<Integer> kinds = new ArrayList<>();
         Collections.addAll(kinds, 0, 1, 2, 3);
         Collections.shuffle(kinds, random);
         int[][] signs = { { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } };
         for (int c = 0; c < 4; c++) {
-            int sx = signs[c][0], sz = signs[c][1];
-            int kind = kinds.get(c);
-            for (int a = lo; a <= hi; a++) for (int e = lo; e <= hi; e++) {
-                int dx = sx * a, dz = sz * e;
-                if (inSquare(dx - sx * (OUTER - 1), dz - sz * (OUTER - 1), 5)) continue; // the corner tower
-                double r = d.noise.unit(cx + dx, cz + dz, 62);
-                switch (kind) {
-                    case 0: // orchard: a grid of small trees on grass
-                        put(dx, b, dz, Block.GRASS);
-                        if ((a - lo) % 5 == 2 && (e - lo) % 5 == 2) tree(dx, dz);
-                        else if (r < 0.2) put(dx, b + 1, dz, Block.TALL_GRASS);
-                        break;
-                    case 1: // herb garden: rows of Windbloom with paths between
-                        if ((e - lo) % 3 == 0) pave(dx, dz);
-                        else {
-                            put(dx, b, dz, Block.GRASS);
-                            if (r < 0.85) put(dx, b + 1, dz, Block.WINDBLOOM);
-                            else put(dx, b + 1, dz, Block.FLOWER, r < 0.92 ? 0 : 1);
-                        }
-                        break;
-                    case 2: // market: a paved square with stalls under striped awnings
-                        pave(dx, dz);
-                        break;
-                    default: // training yard: packed gravel, straw dummies on posts, barrels of water at the edge
-                        put(dx, b, dz, Block.GRAVEL);
-                        if ((a - lo) % 5 == 2 && (e - lo) % 6 == 3) {
-                            put(dx, b + 1, dz, Block.FENCE);
-                            put(dx, b + 2, dz, Block.HAY);
-                            put(dx, b + 3, dz, Block.FENCE);
-                        } else if ((a == lo || e == lo) && r < 0.15) put(dx, b + 1, dz, Block.BARREL, 1);
-                        break;
-                }
+            District at = new District(signs[c][0], signs[c][1]);
+            // In from the ring road's corner.
+            for (int k = ROAD_OUT + 1; k < ROAD_OUT + 3; k++) for (int w = 0; w < 3; w++) {
+                pave(at.sx * (k + w), at.sz * k);
+                pave(at.sx * k, at.sz * (k + w));
             }
-            if (kind == 2) for (int a = lo + 1; a + 3 <= hi; a += 5) for (int e = lo + 1; e + 2 <= hi; e += 5) {
-                int dx = sx > 0 ? a : -a - 3, dz = sz > 0 ? e : -e - 2;
-                if (!inSquare(dx + 1 - sx * (OUTER - 1), dz + 1 - sz * (OUTER - 1), 7)) stall(dx, dz);
+            switch (kinds.get(c)) {
+                case 0:
+                    market(at);
+                    break;
+                case 1:
+                    tourney(at);
+                    break;
+                case 2:
+                    artisans(at);
+                    break;
+                default:
+                    manors(at);
+                    break;
             }
-        }
-    }
-
-    private void tree(int dx, int dz) {
-        for (int y = b + 1; y <= b + 3; y++) put(dx, y, dz, Block.LOG);
-        for (int x = -1; x <= 1; x++) for (int z = -1; z <= 1; z++) for (int y = b + 3; y <= b + 5; y++) {
-            if (x == 0 && z == 0 && y == b + 3) continue;
-            if (Math.abs(x) + Math.abs(z) + Math.abs(y - (b + 4)) <= 2) put(dx + x, y, dz + z, Block.LEAVES);
         }
     }
 
     /**
-     * A market stall facing south, three wide: two spruce posts at the back carrying a beam, three counters of one
-     * kind of goods before it, a striped awning hung from the beam low over the counters, and a barrel or crate at
-     * its side.
+     * A corner district's frame: local (u, v) run from its inner corner (0, 0), by the ring road, to its far corner
+     * ({@link #SIZE} - 1 each way), by the corner tower; and the way a local direction lies in the town.
      */
-    private void stall(int dx, int dz) {
-        int goods = random.nextInt(4), colour = random.nextInt(4);
-        for (int x = 0; x <= 2; x++) {
-            if (x != 1) put(dx + x, b + 1, dz, Block.LOG, 1);
-            else put(dx + x, b + 1, dz, Block.AIR);
-            put(dx + x, b + 2, dz, Block.PLANKS, 1); // the beam
-            put(dx + x, b + 1, dz + 1, Block.MARKET_COUNTER, goods);
-            put(dx + x, b + 2, dz + 1, Block.AWNING, colour << 2 | SkyDungeon.NORTH);
-            put(dx + x, b + 3, dz + 1, Block.AIR);
+    private final class District {
+
+        static final int SIZE = OUTER - THICK - 2 - (ROAD_OUT + 3) + 1;
+        final int sx, sz;
+
+        District(int sx, int sz) {
+            this.sx = sx;
+            this.sz = sz;
         }
-        put(dx + 3, b + 1, dz, random.nextBoolean() ? Block.BARREL : Block.CRATE);
+
+        int dx(int u) {
+            return sx * (ROAD_OUT + 3 + u);
+        }
+
+        int dz(int v) {
+            return sz * (ROAD_OUT + 3 + v);
+        }
+
+        /** The far corner, under the corner tower: kept clear. */
+        boolean tower(int u, int v) {
+            return u >= SIZE - 5 && v >= SIZE - 5;
+        }
+
+        /** A local direction ({@link SkyDungeon#NORTH} ..) as it lies in the town. */
+        int facing(int f) {
+            if (sx < 0 && (f == SkyDungeon.EAST || f == SkyDungeon.WEST)) return f ^ 2;
+            if (sz < 0 && (f == SkyDungeon.NORTH || f == SkyDungeon.SOUTH)) return f ^ 2;
+            return f;
+        }
+
+        void put(int u, int y, int v, Block block, int meta) {
+            CitadelLayout.this.put(dx(u), y, dz(v), block, meta);
+        }
+
+        void put(int u, int y, int v, Block block) {
+            CitadelLayout.this.put(dx(u), y, dz(v), block);
+        }
+
+        void pave(int u, int v) {
+            CitadelLayout.this.pave(dx(u), dz(v));
+        }
+
+        /**
+         * An authored building on the local rectangle from (u0, v0), its front towards local {@code front}; a paved
+         * step before its door.
+         */
+        void building(String name, int u0, int v0, int front) {
+            RoomTemplate t = TemplateLibrary.building(name);
+            int f = facing(front);
+            int rotation = f == SkyDungeon.SOUTH ? 0 : f == SkyDungeon.WEST ? 1 : f == SkyDungeon.NORTH ? 2 : 3;
+            int w = t.width(rotation), d = t.depth(rotation);
+            int x0 = Math.min(dx(u0), dx(u0 + w - 1)), z0 = Math.min(dz(v0), dz(v0 + d - 1));
+            for (int x = x0; x < x0 + w; x++) for (int z = z0; z < z0 + d; z++) stone(x, b - 1, z);
+            new RoomWriter(CitadelLayout.this.d).write(
+                t,
+                rotation,
+                cx + x0,
+                cz + z0,
+                b,
+                t.roles.iterator()
+                    .next(),
+                false);
+            int mu = u0 + w / 2, mv = v0 + d / 2;
+            int[] step = front == SkyDungeon.SOUTH ? new int[] { mu, v0 + d } : front == SkyDungeon.NORTH
+                ? new int[] { mu, v0 - 1 } : front == SkyDungeon.EAST ? new int[] { u0 + w, mv } : new int[] { u0 - 1, mv };
+            pave(step[0], step[1]);
+        }
+
+        /**
+         * A market stall at local (u, v), three wide and facing local {@code front} (north or south): posts and a
+         * beam at the back, three counters of one kind of goods before it under a striped awning, a barrel or crate
+         * at its side.
+         */
+        void stall(int u, int v, int front) {
+            int goods = random.nextInt(4), colour = random.nextInt(4);
+            int ahead = front == SkyDungeon.SOUTH ? 1 : -1;
+            int hangs = facing(front == SkyDungeon.SOUTH ? SkyDungeon.NORTH : SkyDungeon.SOUTH);
+            for (int k = 0; k <= 2; k++) {
+                put(u + k, b + 1, v, k != 1 ? Block.LOG : Block.AIR, 1);
+                put(u + k, b + 2, v, Block.PLANKS, 1);
+                put(u + k, b + 1, v + ahead, Block.MARKET_COUNTER, goods);
+                put(u + k, b + 2, v + ahead, Block.AWNING, colour << 2 | hangs);
+                put(u + k, b + 3, v + ahead, Block.AIR);
+            }
+            put(u + 3, b + 1, v, random.nextBoolean() ? Block.BARREL : Block.CRATE);
+        }
+
+        /** A little well: a kerbed basin of water three across, a winch post each side under a slab roof. */
+        void well(int u, int v) {
+            for (int a = -1; a <= 1; a++) for (int e = -1; e <= 1; e++) {
+                boolean kerb = a != 0 || e != 0;
+                put(u + a, b - 3, v + e, Block.POLISHED);
+                for (int y = b - 2; y <= b; y++) put(u + a, y, v + e, kerb ? Block.POLISHED : Block.WATER);
+                if (kerb) put(u + a, b + 1, v + e, Block.SKY_SLAB, 2);
+            }
+            for (int s : new int[] { -1, 1 }) for (int y = b + 2; y <= b + 3; y++) put(u + s, y, v, Block.FENCE);
+            for (int a = -1; a <= 1; a++) put(u + a, b + 4, v, Block.SLAB, 1);
+        }
+    }
+
+    /**
+     * The market plaza: all paved, a great fountain in the middle (a basin seven across round a pillar with the
+     * fountain on it), stalls in two rows facing it, benches round it, a well, lamps.
+     */
+    private void market(District at) {
+        int n = District.SIZE, m = n / 2;
+        for (int u = 0; u < n; u++) for (int v = 0; v < n; v++) if (!at.tower(u, v)) at.pave(u, v);
+        for (int a = -3; a <= 3; a++) for (int e = -3; e <= 3; e++) {
+            int u = m + a, v = m + e;
+            if (Math.max(Math.abs(a), Math.abs(e)) == 3) {
+                at.put(u, b, v, Block.POLISHED);
+                at.put(u, b + 1, v, Block.SKY_SLAB, 2);
+            } else if (a == 0 && e == 0) {
+                at.put(u, b, v, Block.PILLAR);
+                at.put(u, b + 1, v, Block.PILLAR);
+                at.put(u, b + 2, v, Block.FOUNTAIN);
+            } else {
+                at.put(u, b - 1, v, Block.POLISHED);
+                at.put(u, b, v, Block.WATER);
+            }
+        }
+        for (int k = -1; k <= 1; k++) {
+            at.put(m - 5, b + 1, m + k, Block.BENCH, at.facing(SkyDungeon.WEST));
+            at.put(m + 5, b + 1, m + k, Block.BENCH, at.facing(SkyDungeon.EAST));
+            at.put(m + k, b + 1, m - 5, Block.BENCH, at.facing(SkyDungeon.NORTH));
+            at.put(m + k, b + 1, m + 5, Block.BENCH, at.facing(SkyDungeon.SOUTH));
+        }
+        for (int u : new int[] { 2, 7, 21, 25 }) at.stall(u, 4, SkyDungeon.SOUTH);
+        for (int u : new int[] { 2, 7, 12, 17, 22 }) at.stall(u, n - 6, SkyDungeon.NORTH);
+        at.well(n - 5, m - 6);
+        for (int[] p : new int[][] { { m - 5, m - 5 }, { m + 5, m - 5 }, { m - 5, m + 5 }, { m + 5, m + 5 } })
+            lampPost(at.dx(p[0]), at.dz(p[1]));
+        d.features.add("market plaza");
+    }
+
+    /**
+     * The tourney ground: the lists (a fenced jousting run with its tilt barrier, banners on the posts, stands of
+     * benches along it); an archery range, its butts at the far end before a backstop of straw; a practice yard of
+     * training dummies, weapon racks on a wall and water barrels.
+     */
+    private void tourney(District at) {
+        int n = District.SIZE;
+        for (int u = 0; u < n; u++) for (int v = 0; v < n; v++) {
+            if (at.tower(u, v)) continue;
+            at.put(u, b, v, v >= 13 && u >= 16 ? Block.GRAVEL : Block.GRASS);
+        }
+        // The lists, with gates at both ends and the tilt down the middle.
+        for (int u = 2; u <= n - 3; u++) for (int v = 3; v <= 11; v++) {
+            boolean edge = u == 2 || u == n - 3 || v == 3 || v == 11;
+            if (edge) at.put(u, b + 1, v, Block.FENCE);
+            if (v == 7 && u >= 5 && u <= n - 6) at.put(u, b + 1, v, Block.FENCE);
+            if (v == 3 && u % 4 == 0 && u > 2 && u < n - 3) {
+                at.put(u, b + 2, v, Block.FENCE);
+                at.put(u, b + 3, v, Block.WOOL, (u / 4) % 2 == 0 ? 14 : 11); // red and blue banners
+            }
+        }
+        at.put(2, b + 1, 5, Block.FENCE_GATE, at.facing(SkyDungeon.EAST));
+        at.put(n - 3, b + 1, 9, Block.FENCE_GATE, at.facing(SkyDungeon.EAST));
+        // The stands along its inner side, two rows, the back one raised; a gap for the way in from the north.
+        for (int u = 3; u <= n - 4; u++) {
+            if (u >= 14 && u <= 19) continue;
+            at.put(u, b + 1, 2, Block.BENCH, at.facing(SkyDungeon.NORTH));
+            at.put(u, b + 1, 1, Block.PLANKS, 1);
+            at.put(u, b + 2, 1, Block.BENCH, at.facing(SkyDungeon.NORTH));
+        }
+        // The archery range: a shooting line of gravel, the butts at the far end facing it, straw behind them.
+        for (int u = 1; u <= 13; u++) at.put(u, b, 16, Block.GRAVEL);
+        for (int u = 2; u <= 13; u++) {
+            at.put(u, b + 1, n - 2, Block.HAY);
+            at.put(u, b + 2, n - 2, Block.HAY);
+        }
+        for (int u = 3; u <= 12; u += 3) at.put(u, b + 1, n - 3, Block.ARCHERY_BUTT, at.facing(SkyDungeon.NORTH));
+        // The practice yard: dummies in two rows, a wall of weapon racks, water.
+        for (int u = 18; u <= 24; u += 3)
+            for (int v : new int[] { 18, 22 }) at.put(u, b + 1, v, Block.TRAINING_DUMMY, at.facing(SkyDungeon.NORTH));
+        for (int u = 17; u <= 25; u++) for (int y = b + 1; y <= b + 2; y++) at.put(u, y, n - 5, Block.PLANKS, 1);
+        for (int u = 18; u <= 24; u += 2)
+            at.put(u, b + 2, n - 6, Block.WEAPON_RACK, at.facing(SkyDungeon.SOUTH));
+        at.put(16, b + 1, 14, Block.BARREL, 1);
+        at.put(26, b + 1, 14, Block.BARREL, 1);
+        lampPost(at.dx(15), at.dz(13));
+        d.features.add("tourney ground");
+    }
+
+    /**
+     * The artisans' quarter: the weaver's, the potter's, the tannery and the glassworks round a paved square with a
+     * well, each shop's front on the square.
+     */
+    private void artisans(District at) {
+        int n = District.SIZE, m = n / 2;
+        for (int u = 0; u < n; u++) for (int v = 0; v < n; v++) if (!at.tower(u, v)) at.pave(u, v);
+        at.building("weavers_shop", 1, 1, SkyDungeon.SOUTH);
+        at.building("potters_shop", n - 10, 1, SkyDungeon.SOUTH);
+        at.building("tannery", 1, n - 10, SkyDungeon.NORTH);
+        at.building("glassworks", n - 10, m - 4, SkyDungeon.WEST);
+        at.well(m, m);
+        for (int k = -1; k <= 1; k++) {
+            at.put(m - 4, b + 1, m + k, Block.BENCH, at.facing(SkyDungeon.WEST));
+            at.put(m + k, b + 1, m + 4, Block.BENCH, at.facing(SkyDungeon.SOUTH));
+        }
+        for (int[] p : new int[][] { { m - 5, m - 5 }, { m + 5, m + 5 }, { m - 5, m + 5 } })
+            lampPost(at.dx(p[0]), at.dz(p[1]));
+        d.features.add("artisans' quarter");
+    }
+
+    /**
+     * The manor quarter: two manor houses side by side facing a lane, and behind the lane a walled garden (low box
+     * hedges, gravel walks, beds of flowers, a fountain, benches) beside the manors' stables.
+     */
+    private void manors(District at) {
+        int n = District.SIZE;
+        for (int u = 0; u < n; u++) for (int v = 0; v < n; v++) {
+            if (at.tower(u, v)) continue;
+            if (v >= 14 && v <= 16) at.pave(u, v); // the lane
+            else at.put(u, b, v, Block.GRASS);
+        }
+        at.building("manor_house", 1, 0, SkyDungeon.SOUTH);
+        at.building("manor_hall", n - 14, 0, SkyDungeon.SOUTH);
+        // The walled garden, its gate on the lane.
+        int g0 = 1, g1 = 15, h0 = 18, h1 = n - 2;
+        for (int u = g0; u <= g1; u++) for (int v = h0; v <= h1; v++) {
+            boolean edge = u == g0 || u == g1 || v == h0 || v == h1;
+            if (edge) {
+                if (!(v == h0 && u >= 7 && u <= 9)) {
+                    at.put(u, b + 1, v, Block.SKYSLATE, 0);
+                    at.put(u, b + 2, v, Block.SKYSLATE_SLAB, 0);
+                }
+                continue;
+            }
+            int a = u - g0, e = v - h0;
+            if (a % 4 == 0 || e % 4 == 0) at.put(u, b, v, Block.GRAVEL);
+            else if (a % 4 == 1 || a % 4 == 3 || e % 4 == 1 || e % 4 == 3) at.put(u, b + 1, v, Block.LEAVES);
+            else at.put(u, b + 1, v, Block.FLOWER, (a + e) % 2);
+        }
+        for (int v = h0; v <= h0 + 1; v++) for (int u = 7; u <= 9; u++) at.put(u, b, v, Block.GRAVEL);
+        at.put(8, b + 1, (h0 + h1) / 2, Block.FOUNTAIN);
+        at.put(7, b + 1, h1 - 2, Block.BENCH, at.facing(SkyDungeon.SOUTH));
+        at.put(9, b + 1, h1 - 2, Block.BENCH, at.facing(SkyDungeon.SOUTH));
+        at.building("stables", n - 12, 17, SkyDungeon.WEST);
+        for (int[] p : new int[][] { { 16, 13 }, { 16, 17 } }) lampPost(at.dx(p[0]), at.dz(p[1]));
+        d.features.add("manor quarter");
     }
 
     // --- The keep and its square ----------------------------------------------------------------------------

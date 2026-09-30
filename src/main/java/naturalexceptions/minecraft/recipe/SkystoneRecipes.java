@@ -166,6 +166,58 @@ public final class SkystoneRecipes {
                 shard,
                 'L',
                 NEBlocks.stormglassLantern);
+        // The artisans' benches and the tourney ground's pieces.
+        ItemStack logs = new ItemStack(Blocks.log, 1, OreDictionary.WILDCARD_VALUE);
+        if (NEBlocks.loom != null) GameRegistry
+            .addRecipe(new ItemStack(NEBlocks.loom), "PPP", "SWS", "P P", 'P', planks, 'S', Items.string, 'W', Blocks.wool);
+        if (NEBlocks.pottersWheel != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.pottersWheel),
+            " S ",
+            " I ",
+            "PPP",
+            'S',
+            Blocks.stone_slab,
+            'I',
+            Items.iron_ingot,
+            'P',
+            planks);
+        if (NEBlocks.glassFurnace != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.glassFurnace),
+            "BIB",
+            "BFB",
+            "BBB",
+            'B',
+            Blocks.brick_block,
+            'I',
+            Items.iron_ingot,
+            'F',
+            Blocks.furnace);
+        if (NEBlocks.tanningRack != null)
+            GameRegistry.addRecipe(new ItemStack(NEBlocks.tanningRack), "LSL", "L L", "LSL", 'L', Items.stick, 'S', Items.string);
+        if (NEBlocks.archeryButt != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.archeryButt),
+            "WHW",
+            "HDH",
+            "WHW",
+            'W',
+            Items.wheat,
+            'H',
+            Blocks.hay_block,
+            'D',
+            new ItemStack(Items.dye, 1, 1));
+        if (NEBlocks.trainingDummy != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.trainingDummy),
+            " W ",
+            "SHS",
+            " L ",
+            'W',
+            Blocks.wool,
+            'S',
+            Items.stick,
+            'H',
+            Blocks.hay_block,
+            'L',
+            logs);
         if (NEBlocks.hoistBasket != null) GameRegistry
             .addRecipe(new ItemStack(NEBlocks.hoistBasket), " I ", "P P", "PPP", 'I', Items.iron_ingot, 'P', planks);
         if (naturalexceptions.minecraft.registry.NEItems.masonsChisel != null) GameRegistry.addRecipe(

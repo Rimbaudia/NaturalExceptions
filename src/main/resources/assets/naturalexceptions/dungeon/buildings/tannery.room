@@ -1,0 +1,132 @@
+name: tannery
+type: building
+footprint: 9x9
+height: 10
+roles: store
+kinds: citadel
+weight: 1
+carpet: brown
+roof: spruce
+timber: spruce
+eaves: 5
+---
+floor:
+ppppppppp
+ppppppppp
+ppppppppp
+ppppppppp
+ppppppppp
+ppppppppp
+ppppppppp
+ppppppppp
+ppppppppp
+layer 1:
+QQQQQQQQQ
+Q.τ.τ.τ.Q
+Q.......Q
+Qτ.....τQ
+Q.......Q
+QK.....KQ
+Q!.....!Q
+Q......cQ
+QQQQDQQQQ
+layer 2:
+Q#######Q
+#.......#
+|.......|
+#.......#
+#.......#
+#.......#
+#.......#
+#.......#
+Q#|#D#|#Q
+layer 3:
+Q#######Q
+#.......#
+j.......j
+#.......#
+#d.....d#
+#.......#
+#.......#
+#.......#
+Q#j###j#Q
+layer 4:
+QjjjjjjjQ
+j.......j
+j.......j
+j.......j
+j.......j
+j.......j
+j.......j
+j.......j
+QjjjjjjjQ
+layer 5:
+2PPPPPPP4
+2PPPPPPP4
+2PPPPPPP4
+2PPPPPPP4
+2PPPPPPP4
+2PPPPPPP4
+2PPPPPPP4
+2PPPPPPP4
+2PPPPPPP4
+layer 6:
+.2PPPPP4.
+.2.....4.
+.2.....4.
+.2.....4.
+.2.....4.
+.2.....4.
+.2.....4.
+.2.....4.
+.2PPPPP4.
+layer 7:
+..2PPP4..
+..2...4..
+..2...4..
+..2...4..
+..2...4..
+..2...4..
+..2...4..
+..2...4..
+..2PPP4..
+layer 8:
+...2P4...
+...2.4...
+...2.4...
+...2.4...
+...2.4...
+...2.4...
+...2.4...
+...2.4...
+...2P4...
+layer 9:
+....P....
+....P....
+....P....
+....P....
+....P....
+....P....
+....P....
+....P....
+....P....
+layer 10:
+.........
+.........
+.........
+.........
+.........
+.........
+.........
+.........
+.........
+ceiling:
+.........
+.........
+.........
+.........
+.........
+.........
+.........
+.........
+.........

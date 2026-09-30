@@ -46,7 +46,9 @@ public final class RoomTemplate {
         // The sky's own furniture and crystal: candelabra (arm along x, z), pews (back N E S W), benches (along x, z),
         // brazier, fountain, orrery, hanging Stormglass, Stormglass vein; wooden chairs (back N E S W).
         + "\u03a8\u03c8\u03b1\u03b2\u03b3\u03b4\u03c0\u03a0\u03c9\u03c6\u0398\u03be>\u03a3"
-        + "\u03ba\u03bb\u03bc\u03bd";
+        + "\u03ba\u03bb\u03bc\u03bd"
+        // Working benches (Mason's, Sawmill, Loom, Potter's Wheel, Glassblower's Furnace); a tanning rack.
+        + "\u03b9\u03b6\u03b5\u03b7\u03b8\u03c4";
 
     /** Vanilla dye colours by name, for carpets and stained glass. */
     public static final List<String> COLOURS = java.util.Arrays.asList(

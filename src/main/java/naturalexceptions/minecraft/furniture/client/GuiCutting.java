@@ -45,13 +45,11 @@ public final class GuiCutting extends GuiContainer {
         for (int row = 17; row < 70; row++) drawTexturedModalRect(x, y + row, 0, 10, xSize, 1); // plain panel
         drawTexturedModalRect(x, y + 70, 0, 126, xSize, 96);
         int slotU = 7, slotV = 17;
-        drawTexturedModalRect(
-            x + ContainerCutting.INPUT_X - 1,
-            y + ContainerCutting.INPUT_Y - 1,
-            slotU,
-            slotV,
-            18,
-            18);
+        ContainerCutting container = (ContainerCutting) inventorySlots;
+        int inputY = container.fired() ? ContainerCutting.FIRED_INPUT_Y : ContainerCutting.INPUT_Y;
+        drawTexturedModalRect(x + ContainerCutting.INPUT_X - 1, y + inputY - 1, slotU, slotV, 18, 18);
+        if (container.fired())
+            drawTexturedModalRect(x + ContainerCutting.INPUT_X - 1, y + ContainerCutting.FUEL_Y - 1, slotU, slotV, 18, 18);
         for (int i = 0; i < ContainerCutting.CHOICES; i++) drawTexturedModalRect(
             x + ContainerCutting.CHOICE_X - 1 + (i % ContainerCutting.ACROSS) * 18,
             y + ContainerCutting.CHOICE_Y - 1 + (i / ContainerCutting.ACROSS) * 18,
@@ -62,5 +60,7 @@ public final class GuiCutting extends GuiContainer {
         mc.getTextureManager()
             .bindTexture(FURNACE);
         drawTexturedModalRect(x + 49, y + 34, 176, 14, 24, 17); // the arrow, full
+        if (container.fired() && container.hot()) // the fire, between the piece and its fuel
+            drawTexturedModalRect(x + ContainerCutting.INPUT_X + 1, y + 37, 176, 0, 14, 14);
     }
 }

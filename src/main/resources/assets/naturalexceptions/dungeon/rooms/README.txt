@@ -45,6 +45,7 @@ Furnishings:
 The sky's own (Greek letters, as the ASCII ones are all taken; ';' starts a comment):
   Ψ ψ  candelabra, its arm along x / along z          ω  brazier            φ  fountain       Θ  orrery
   κ λ μ ν  wooden chair (of the timber) with its back to the north, east, south, west
+  ι ζ ε η θ  Mason's Bench, Sawmill, Loom, Potter's Wheel, Glassblower's Furnace      τ  tanning rack (faces out)
   α β γ δ  pew with its back to the north, east, south, west       π Π  Skystone bench along x / along z
   ξ  Stormglass hanging from the block above          >  Stormglass vein
 
