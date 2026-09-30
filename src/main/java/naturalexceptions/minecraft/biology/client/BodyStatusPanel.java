@@ -137,8 +137,32 @@ public final class BodyStatusPanel {
             GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
             List<String> tooltip = draw(gui, layout, event.mouseX, event.mouseY);
             if (tooltip != null && !tooltip.isEmpty()) GuiTooltips.draw(gui, tooltip, event.mouseX, event.mouseY);
+            else if (!layout.panelContains(event.mouseX, event.mouseY))
+                redrawItemTooltip(gui, event.mouseX, event.mouseY);
         } finally {
             GL11.glPopAttrib();
+        }
+    }
+
+    /**
+     * The screen drew its item tooltip before the panel was drawn over it; draw the tooltip of the item under the
+     * mouse again, on top, so the panel never hides it.
+     */
+    @SuppressWarnings("unchecked")
+    private static void redrawItemTooltip(GuiContainer gui, int mouseX, int mouseY) {
+        if (gui.mc.thePlayer == null || gui.mc.thePlayer.inventory.getItemStack() != null) return;
+        int left = GuiGeometry.left(gui), top = GuiGeometry.top(gui);
+        for (net.minecraft.inventory.Slot slot : (List<net.minecraft.inventory.Slot>) gui.inventorySlots.inventorySlots) {
+            int x = left + slot.xDisplayPosition, y = top + slot.yDisplayPosition;
+            if (mouseX < x - 1 || mouseX >= x + 17 || mouseY < y - 1 || mouseY >= y + 17) continue;
+            ItemStack stack = slot.getStack();
+            if (stack == null || !slot.func_111238_b()) return;
+            List<String> raw = stack.getTooltip(gui.mc.thePlayer, gui.mc.gameSettings.advancedItemTooltips);
+            List<String> lines = new java.util.ArrayList<>();
+            for (int i = 0; i < raw.size(); i++)
+                lines.add(i == 0 ? stack.getRarity().rarityColor + raw.get(i) : "\u00a77" + raw.get(i));
+            GuiTooltips.draw(gui, lines, mouseX, mouseY);
+            return;
         }
     }
 
@@ -321,6 +345,16 @@ public final class BodyStatusPanel {
                 urgent ? WARN_TEXT : GUI_TEXT);
             addWrapped(font, lines, -1, BodyWords.healing(injury), width, MUTED_TEXT);
         }
+        boolean bleeding = false;
+        for (BodyStatusSnapshot.Injury injury : body.injuries())
+            bleeding |= injury.bleeding() > 0.05F && injury.treatment() <= 0.0F;
+        if (bleeding) addWrapped(
+            font,
+            lines,
+            -1,
+            "Styptic Salve slows the bleeding; a dressing closes the wound; Iron Tonic makes blood back.",
+            width,
+            MUTED_TEXT);
         for (BodyStatusSnapshot.Exposure exposure : body.exposures()) {
             String level = BodyWords.level(exposure);
             boolean urgent = "severe".equals(level) || "moderate".equals(level);
