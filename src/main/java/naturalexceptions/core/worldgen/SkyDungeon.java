@@ -170,7 +170,9 @@ public final class SkyDungeon {
         /** A Stormglass Lantern sending light up a shaft: at the foot of the ladders between levels. */
         BEACON,
         /** A surveyor's desk, where the dungeon's chart can be read and copied. */
-        CHART_TABLE
+        CHART_TABLE,
+        /** Natural rock of a dungeon's island: meta 0 Skystone, 1 cobblestone. */
+        ROCK
     }
 
     /** Directions for beds, torches, trapdoors and fence gates. */

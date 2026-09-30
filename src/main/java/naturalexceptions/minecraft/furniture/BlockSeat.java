@@ -20,8 +20,13 @@ abstract class BlockSeat extends BlockParts {
         super(material);
     }
 
-    /** The boxes with the back (if any) to the north (-z). */
+    /** The boxes with the back (if any) to the north (-z); the first is the seat board. */
     abstract double[][] authored();
+
+    /** How high the top of the seat board is above the block's floor. */
+    double seatTop() {
+        return authored()[0][4];
+    }
 
     @Override
     public double[][] parts(int metadata) {
@@ -53,7 +58,7 @@ abstract class BlockSeat extends BlockParts {
             EntitySeat.class,
             net.minecraft.util.AxisAlignedBB.getBoundingBox(x, y, z, x + 1, y + 1, z + 1));
         if (!taken.isEmpty()) return true;
-        EntitySeat seat = new EntitySeat(world, x, y, z);
+        EntitySeat seat = new EntitySeat(world, x, y, z, seatTop());
         world.spawnEntityInWorld(seat);
         player.mountEntity(seat);
         return true;

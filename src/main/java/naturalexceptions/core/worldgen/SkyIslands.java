@@ -17,10 +17,11 @@ public final class SkyIslands {
         /** Every few hundred blocks: lakes, groves, meadows and crags; sometimes a hidden cache. */
         MEDIUM(384, 0.40, 14.0, 24.0, 26.0, 135, 175, 36, 0.30),
         /**
-         * A few per few thousand blocks: each holds a sky dungeon. A sanctum's island is 60 to 70 blocks across the
-         * radius, a citadel's a huge 100 to 112 (see {@link #GRAND_SANCTUM_RADIUS}).
+         * A few per few thousand blocks: each holds a sky dungeon. A sanctum's island is 100 to 110 blocks across the
+         * radius, a citadel's a vast 200 to 220 (see {@link #GRAND_SANCTUM_RADIUS}). The margin keeps even the
+         * largest (its ragged edge reaching 1.18 radii) clear of its neighbours.
          */
-        GRAND(1536, 0.50, 60.0, 112.0, 72.0, 176, 190, 170, 0.0);
+        GRAND(1536, 0.50, 100.0, 220.0, 72.0, 176, 190, 290, 0.0);
 
         final int cell;
         final double presence;
@@ -59,10 +60,10 @@ public final class SkyIslands {
     public static final int MIN_CENTRE_Y = 130;
     public static final int MAX_CENTRE_Y = 190;
     public static final double MIN_RADIUS = 5.0;
-    public static final double MAX_RADIUS = 112.0;
+    public static final double MAX_RADIUS = 220.0;
     /** Radius ranges of the two kinds of dungeon island. */
-    public static final double[] GRAND_SANCTUM_RADIUS = { 60.0, 70.0 };
-    public static final double[] GRAND_CITADEL_RADIUS = { 100.0, 112.0 };
+    public static final double[] GRAND_SANCTUM_RADIUS = { 100.0, 110.0 };
+    public static final double[] GRAND_CITADEL_RADIUS = { 200.0, 220.0 };
 
     public static final class Island {
 
@@ -172,6 +173,8 @@ public final class SkyIslands {
         int span = tier.cell - 2 * tier.margin;
         int x = (int) (cellX * tier.cell + tier.margin + noise.unit(cellX, cellZ, t + 2) * span);
         int z = (int) (cellZ * tier.cell + tier.margin + noise.unit(cellX, cellZ, t + 3) * span);
+        // A lesser island never stands within a dungeon island's reach: it would grow into its rock and its town.
+        if (tier != Tier.GRAND && nearGrand(x, z, tier.maxRadius * 1.18 * CLOUD_RIM_OUTER)) return null;
         int y = tier.minY + (int) (noise.unit(cellX, cellZ, t + 4) * (tier.maxY - tier.minY + 1));
         // Grand islands on their own grid: offset their cell ids to keep hashes apart from the others.
         long idX = tier == Tier.MEDIUM ? cellX : cellX + (tier.ordinal() + 1) * 0x10000000L;
@@ -187,6 +190,20 @@ public final class SkyIslands {
         if (tier == Tier.GRAND && kind == Kind.CRAG) kind = Kind.GROVE;
         boolean cache = noise.unit(cellX, cellZ, t + 8) < tier.cacheChance;
         return new Island(tier, idX, cellZ, x, y, z, radius, thickness, kind, cache);
+    }
+
+    /** Whether a grand island's reach (its ragged edge and cloud rim, plus {@code pad}) covers (x, z). */
+    private boolean nearGrand(int x, int z, double pad) {
+        Tier g = Tier.GRAND;
+        long gx = Math.floorDiv(x, g.cell), gz = Math.floorDiv(z, g.cell);
+        for (long cx = gx - 1; cx <= gx + 1; cx++) for (long cz = gz - 1; cz <= gz + 1; cz++) {
+            Island grand = atCell(g, cx, cz);
+            if (grand == null) continue;
+            double reach = grand.radius * 1.18 * CLOUD_RIM_OUTER + pad;
+            double dx = x - grand.centreX, dz = z - grand.centreZ;
+            if (dx * dx + dz * dz < reach * reach) return true;
+        }
+        return false;
     }
 
     /** Islands of every tier that may reach any column in the box [minX, maxX] x [minZ, maxZ]. */

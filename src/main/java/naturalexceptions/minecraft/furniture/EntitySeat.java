@@ -12,8 +12,13 @@ import net.minecraft.world.World;
  */
 public final class EntitySeat extends Entity {
 
-    /** How high above the block's floor the sitter's seat is. */
-    static final double HEIGHT = 0.1;
+    /**
+     * How far below the top of the seat board the seat entity sits. A rider is set at the seat's height plus its
+     * own offset (a player's eye height less half a block), so a player's feet come half a block below the seat;
+     * sitting, the thighs lie forward from the hip, their underside about 0.625 above the feet. With the seat this
+     * much under the board, the thighs rest on it.
+     */
+    static final double SIT = 0.125;
     public static final int HEAL_TICKS = 40;
 
     public EntitySeat(World world) {
@@ -22,9 +27,9 @@ public final class EntitySeat extends Entity {
         noClip = true;
     }
 
-    EntitySeat(World world, int x, int y, int z) {
+    EntitySeat(World world, int x, int y, int z, double seatTop) {
         this(world);
-        setPosition(x + 0.5, y + HEIGHT, z + 0.5);
+        setPosition(x + 0.5, y + seatTop - SIT, z + 0.5);
     }
 
     @Override

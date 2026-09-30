@@ -35,6 +35,7 @@ public final class NEBlocks {
     public static Block stormglassLantern;
     public static Block magmaRock;
     public static Block cloud;
+    public static Block skystoneRock;
     public static Block skystoneBricks;
     public static Block skystoneDecor;
     public static Block skystonePillar;
@@ -117,6 +118,7 @@ public final class NEBlocks {
             .setCreativeTab(NECreativeTab.INSTANCE);
         magmaRock = new naturalexceptions.minecraft.block.BlockMagmaRock().setCreativeTab(NECreativeTab.INSTANCE);
         cloud = new naturalexceptions.minecraft.block.BlockCloud().setCreativeTab(NECreativeTab.INSTANCE);
+        skystoneRock = new naturalexceptions.minecraft.block.BlockSkystoneRock().setCreativeTab(NECreativeTab.INSTANCE);
         skystoneBricks = new naturalexceptions.minecraft.block.BlockSkystoneBricks()
             .setCreativeTab(NECreativeTab.INSTANCE);
         skystoneDecor = new naturalexceptions.minecraft.block.BlockSkystoneDecor()
@@ -220,6 +222,7 @@ public final class NEBlocks {
             GameRegistry.registerBlock(stormglassLantern, "stormglass_lantern");
             GameRegistry.registerBlock(magmaRock, "magma_rock");
             GameRegistry.registerBlock(cloud, "cloud");
+            GameRegistry.registerBlock(skystoneRock, "skystone");
             GameRegistry.registerBlock(
                 skystoneBricks,
                 naturalexceptions.minecraft.block.ItemBlockSkystoneBricks.class,

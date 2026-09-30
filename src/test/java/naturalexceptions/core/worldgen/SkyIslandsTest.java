@@ -40,6 +40,30 @@ final class SkyIslandsTest {
     }
 
     @Test
+    void noLesserIslandGrowsIntoADungeonIsland() {
+        SkyIslands field = new SkyIslands(SEED);
+        int grands = 0;
+        for (long gx = 0; gx < 3; gx++) for (long gz = 0; gz < 3; gz++) {
+            SkyIslands.Island grand = field.atCell(SkyIslands.Tier.GRAND, gx, gz);
+            if (grand == null) continue;
+            grands++;
+            int reach = (int) (grand.radius() * 1.18 * SkyIslands.CLOUD_RIM_OUTER) + 1;
+            for (SkyIslands.Island other : field.near(
+                grand.centreX() - reach,
+                grand.centreZ() - reach,
+                grand.centreX() + reach,
+                grand.centreZ() + reach)) {
+                if (other.tier() == SkyIslands.Tier.GRAND) continue;
+                for (int x = grand.centreX() - reach; x <= grand.centreX() + reach; x += 4)
+                    for (int z = grand.centreZ() - reach; z <= grand.centreZ() + reach; z += 4) assertTrue(
+                        field.column(grand, x, z) == null || field.column(other, x, z) == null,
+                        "a " + other.tier() + " island inside the dungeon island at " + x + "," + z);
+            }
+        }
+        assertTrue(grands > 0, "some dungeon islands to judge");
+    }
+
+    @Test
     void sameSeedSameIslandsDifferentSeedDifferent() {
         SkyIslands a = new SkyIslands(SEED);
         SkyIslands b = new SkyIslands(SEED);

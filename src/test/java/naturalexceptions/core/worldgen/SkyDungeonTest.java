@@ -45,8 +45,10 @@ final class SkyDungeonTest {
             this.cellZ = cellZ;
         }
 
-        private int[][] rock;
-        private int rockMinX, rockMinZ;
+        /** The island's rock by column, packed as {bottom, top} pairs (MISSING where the column is open sky). */
+        private int[] rock;
+        private int rockMinX, rockMinZ, rockSize;
+        private static final int MISSING = Integer.MIN_VALUE;
 
         /** The island's rock {bottom, top} at a column, cached (the noise is costly), or null for open sky. */
         int[] rock(int x, int z) {
@@ -54,14 +56,19 @@ final class SkyDungeonTest {
                 int r = (int) Math.ceil(island.radius()) + 4;
                 rockMinX = island.centreX() - r;
                 rockMinZ = island.centreZ() - r;
-                rock = new int[(2 * r + 1) * (2 * r + 1)][];
-                for (int dx = 0; dx <= 2 * r; dx++) for (int dz = 0; dz <= 2 * r; dz++)
-                    rock[dx * (2 * r + 1) + dz] = field.column(island, rockMinX + dx, rockMinZ + dz);
+                rockSize = 2 * r + 1;
+                rock = new int[rockSize * rockSize * 2];
+                for (int dx = 0; dx < rockSize; dx++) for (int dz = 0; dz < rockSize; dz++) {
+                    int[] column = field.column(island, rockMinX + dx, rockMinZ + dz);
+                    int i = (dx * rockSize + dz) * 2;
+                    rock[i] = column == null ? MISSING : column[0];
+                    rock[i + 1] = column == null ? MISSING : column[1];
+                }
             }
-            int size = (int) Math.round(Math.sqrt(rock.length));
             int dx = x - rockMinX, dz = z - rockMinZ;
-            if (dx < 0 || dz < 0 || dx >= size || dz >= size) return field.column(island, x, z);
-            return rock[dx * size + dz];
+            if (dx < 0 || dz < 0 || dx >= rockSize || dz >= rockSize) return field.column(island, x, z);
+            int i = (dx * rockSize + dz) * 2;
+            return rock[i] == MISSING ? null : new int[] { rock[i], rock[i + 1] };
         }
 
         String name() {
@@ -105,11 +112,19 @@ final class SkyDungeonTest {
             this.wardenGateOpen = wardenGateOpen;
             this.secretsOpen = secretsOpen;
             this.crumbled = crumbled;
-            int r = (int) Math.ceil(s.island.radius()) + 4;
-            minX = s.island.centreX() - r;
-            maxX = s.island.centreX() + r;
-            minZ = s.island.centreZ() - r;
-            maxZ = s.island.centreZ() + r;
+            // The dungeon's own extent (everything it places, and the way in), with room to walk round it: the
+            // island itself is far bigger than anything a flood needs to cross.
+            int x0 = s.dungeon.entrance()[0], x1 = x0, z0 = s.dungeon.entrance()[2], z1 = z0;
+            for (Piece p : s.dungeon.pieces()) {
+                x0 = Math.min(x0, p.x);
+                x1 = Math.max(x1, p.x);
+                z0 = Math.min(z0, p.z);
+                z1 = Math.max(z1, p.z);
+            }
+            minX = x0 - 8;
+            maxX = x1 + 8;
+            minZ = z0 - 8;
+            maxZ = z1 + 8;
             minY = s.island.centreY() - 60;
             maxY = s.island.centreY() + (s.dungeon.kind() == SkyDungeon.Kind.CITADEL ? 22 : 8);
         }
@@ -150,7 +165,7 @@ final class SkyDungeonTest {
             Reached seen = new Reached(this);
             assertTrue(passable(start[0], start[1], start[2]), s.name() + ": the entrance is open");
             int sx = maxX - minX + 1, sy = maxY - minY + 1, sz = maxZ - minZ + 1;
-            int[] queue = new int[sx * sy * sz];
+            int[] queue = new int[1 << 16]; // grown as the flood spreads: most of the box is never reached
             int head = 0, tail = 0;
             int first = seen.index(start[0], start[1], start[2]);
             seen.bits.set(first);
@@ -165,6 +180,13 @@ final class SkyDungeonTest {
                     int n = seen.index(nx, ny, nz);
                     if (seen.bits.get(n) || !passable(nx, ny, nz)) continue;
                     seen.bits.set(n);
+                    if (tail == queue.length) {
+                        // Drop what has been taken off the front before growing.
+                        System.arraycopy(queue, head, queue, 0, tail - head);
+                        tail -= head;
+                        head = 0;
+                        if (tail * 2 > queue.length) queue = java.util.Arrays.copyOf(queue, queue.length * 2);
+                    }
                     queue[tail++] = n;
                 }
             }

@@ -41,8 +41,9 @@ final class LandmarkMaterializer {
                     if (column == null) continue;
                     boolean water = field.pondAt(island, x, z) || field.waterfallAt(island, x, z);
                     SkyIslands.Surface surface = field.surface(island, x, z);
+                    boolean grand = island.tier() == SkyIslands.Tier.GRAND;
                     for (int y = column[0]; y <= column[1]; y++) {
-                        world.setBlock(x, y, z, islandBlock(field, x, y, z, column, water, surface), 0, 2);
+                        world.setBlock(x, y, z, islandBlock(field, x, y, z, column, water, surface, grand), 0, 2);
                         placed++;
                     }
                 }
@@ -97,8 +98,9 @@ final class LandmarkMaterializer {
         return placed;
     }
 
+    /** The block of an island at (x, y, z): its surface, then soil, then rock (Skystone on a dungeon's island). */
     private static Block islandBlock(SkyIslands field, int x, int y, int z, int[] column, boolean water,
-        SkyIslands.Surface surface) {
+        SkyIslands.Surface surface, boolean grand) {
         boolean rocky = surface != SkyIslands.Surface.GRASS;
         if (y == column[1]) {
             if (water) return Blocks.water;
@@ -126,7 +128,7 @@ final class LandmarkMaterializer {
         if (roll < COAL) return Blocks.coal_ore;
         if (roll < COAL + IRON) return Blocks.iron_ore;
         if (roll < COAL + IRON + COPPER && NEBlocks.copperOre != null) return NEBlocks.copperOre;
-        return Blocks.stone;
+        return grand && NEBlocks.skystoneRock != null ? NEBlocks.skystoneRock : Blocks.stone;
     }
 
     private static int placeDecor(World world, SkyIslands field, SkyIslands.Decor decor, int x, int y, int z) {
@@ -534,6 +536,10 @@ final class LandmarkMaterializer {
                 break;
             case PEW:
                 set(world, x, y, z, orElse(NEBlocks.pew, Blocks.oak_stairs), SIDE_FACING[meta & 3]);
+                break;
+            case ROCK:
+                if (meta == 1) set(world, x, y, z, Blocks.cobblestone, 0);
+                else set(world, x, y, z, orElse(NEBlocks.skystoneRock, Blocks.stone), 0);
                 break;
             case CHAIR:
                 if (NEBlocks.chair != null) set(world, x, y, z, NEBlocks.chair, meta & 15);

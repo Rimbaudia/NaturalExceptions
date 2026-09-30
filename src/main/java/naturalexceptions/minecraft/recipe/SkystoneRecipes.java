@@ -32,6 +32,11 @@ public final class SkystoneRecipes {
         ItemStack tiles = new ItemStack(decor, 1, BlockSkystoneDecor.TILES);
         ItemStack polished = new ItemStack(decor, 1, BlockSkystoneDecor.POLISHED);
 
+        if (NEBlocks.skystoneRock != null) {
+            // The rock, quarried from the great islands, dressed into bricks, or smoothed in the furnace.
+            GameRegistry.addRecipe(new ItemStack(bricks, 4, 0), "RR", "RR", 'R', NEBlocks.skystoneRock);
+            GameRegistry.addSmelting(NEBlocks.skystoneRock, polished.copy(), 0.1F);
+        }
         GameRegistry.addRecipe(new ItemStack(decor, 4, BlockSkystoneDecor.TILES), "BB", "BB", 'B', brick);
         GameRegistry.addSmelting(brick, polished.copy(), 0.1F);
         GameRegistry.addRecipe(

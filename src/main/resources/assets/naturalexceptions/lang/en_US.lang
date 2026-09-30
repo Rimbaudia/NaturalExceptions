@@ -102,6 +102,7 @@ death.attack.naturalexceptions.skyfall=%1$s was struck by a star %2$s called dow
 death.attack.naturalexceptions.thirst=%1$s died of thirst
 death.attack.naturalexceptions.shard=%1$s was pierced by %2$s's Stormglass bolt
 tile.cloud.name=Cloud
+tile.skystone.name=Skystone
 tile.skystoneBricks.name=Skystone Bricks
 tile.skystoneBricks.cracked.name=Cracked Skystone Bricks
 tile.skystoneBricks.mossy.name=Mossy Skystone Bricks
