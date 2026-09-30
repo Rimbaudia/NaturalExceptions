@@ -20,6 +20,8 @@ public final class NEItems {
     public static naturalexceptions.minecraft.item.ItemFluidVessel fluidVessel;
     public static naturalexceptions.minecraft.item.ItemAlmanac almanac;
     public static naturalexceptions.minecraft.item.ItemBandage bandage;
+    public static naturalexceptions.minecraft.item.ItemStypticSalve stypticSalve;
+    public static naturalexceptions.minecraft.item.ItemIronTonic ironTonic;
     public static naturalexceptions.minecraft.item.ItemExposureMask exposureMask;
     public static naturalexceptions.minecraft.item.ItemLumeniteShard lumeniteShard;
     public static naturalexceptions.minecraft.weapon.ItemSkyfall skyfall;
@@ -167,6 +169,10 @@ public final class NEItems {
         fluidVessel.setCreativeTab(NECreativeTab.INSTANCE);
         bandage = new naturalexceptions.minecraft.item.ItemBandage();
         bandage.setCreativeTab(NECreativeTab.INSTANCE);
+        stypticSalve = new naturalexceptions.minecraft.item.ItemStypticSalve();
+        stypticSalve.setCreativeTab(NECreativeTab.INSTANCE);
+        ironTonic = new naturalexceptions.minecraft.item.ItemIronTonic();
+        ironTonic.setCreativeTab(NECreativeTab.INSTANCE);
         exposureMask = new naturalexceptions.minecraft.item.ItemExposureMask();
         lumeniteShard = new naturalexceptions.minecraft.item.ItemLumeniteShard();
         lumeniteShard.setCreativeTab(NECreativeTab.INSTANCE);
@@ -203,6 +209,8 @@ public final class NEItems {
                     1,
                     net.minecraftforge.oredict.OreDictionary.WILDCARD_VALUE));
             GameRegistry.registerItem(bandage, "bandage");
+            GameRegistry.registerItem(stypticSalve, "styptic_salve");
+            GameRegistry.registerItem(ironTonic, "iron_tonic");
             GameRegistry.registerItem(exposureMask, "exposure_mask");
             GameRegistry.registerItem(lumeniteShard, "lumenite_shard");
             GameRegistry.registerItem(skyfall, "skyfall");
@@ -258,6 +266,12 @@ public final class NEItems {
                 net.minecraft.init.Items.paper,
                 net.minecraft.init.Items.string,
                 net.minecraft.init.Blocks.wool);
+            GameRegistry.addShapelessRecipe(
+                new ItemStack(ironTonic),
+                net.minecraft.init.Items.potionitem,
+                net.minecraft.init.Items.iron_ingot,
+                net.minecraft.init.Items.sugar,
+                net.minecraft.init.Blocks.red_mushroom);
             GameRegistry.addShapelessRecipe(
                 new ItemStack(exposureMask),
                 net.minecraft.init.Items.leather,

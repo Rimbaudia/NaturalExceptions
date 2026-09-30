@@ -32,6 +32,12 @@ public final class TreasureRecipes {
         Item cloakItem = NEItems.TREASURES.get(Treasure.GLIDER_CLOAK);
         if (NEBlocks.windbloom != null && cloakItem != null)
             GameRegistry.addRecipe(new RecipeGliderCloak(cloakItem, Item.getItemFromBlock(NEBlocks.windbloom)));
+        if (NEItems.stypticSalve != null && NEBlocks.windbloom != null) GameRegistry.addShapelessRecipe(
+            new ItemStack(NEItems.stypticSalve, 2),
+            Items.bowl,
+            NEBlocks.windbloom,
+            Items.slime_ball,
+            Items.paper);
         if (NEItems.windbloomTea != null && NEBlocks.windbloom != null) GameRegistry.addShapelessRecipe(
             new ItemStack(NEItems.windbloomTea),
             Items.potionitem,

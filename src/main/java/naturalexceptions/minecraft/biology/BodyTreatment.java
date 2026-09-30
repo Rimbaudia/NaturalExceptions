@@ -47,6 +47,28 @@ public final class BodyTreatment {
         return true;
     }
 
+    /** Stanches every bleeding cut on the player (a styptic salve). Returns how many; nothing changes if none bleed. */
+    public static int stanch(EntityPlayerMP player) {
+        BiologicalState state = BiologicalProperties.get(player)
+            .state();
+        long now = player.worldObj.getTotalWorldTime();
+        state.advanceTo(Math.max(state.lastResolvedTick(), now));
+        int stanched = state.stanchBleeding();
+        if (stanched > 0) BodyStatusSync.sendNow(player, state, now);
+        return stanched;
+    }
+
+    /** Gives the player blood to be made over the next while, and water (an iron tonic). */
+    public static void fortify(EntityPlayerMP player, double bloodMillilitres, double waterMillilitres) {
+        BiologicalState state = BiologicalProperties.get(player)
+            .state();
+        long now = player.worldObj.getTotalWorldTime();
+        state.advanceTo(Math.max(state.lastResolvedTick(), now));
+        state.addBloodRegeneration(bloodMillilitres);
+        state.replenishHydrationMillilitres(waterMillilitres);
+        BodyStatusSync.sendNow(player, state, now);
+    }
+
     /**
      * Treats the worst untreated injury in {@code regionId} together with every other untreated injury of the same
      * kind there: one dressing covers a burned arm however many times it was burned. Returns how many were treated.

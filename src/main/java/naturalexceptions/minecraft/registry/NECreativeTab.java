@@ -65,6 +65,8 @@ public final class NECreativeTab extends CreativeTabs {
         if (NEItems.bellows != null) list.add(new net.minecraft.item.ItemStack(NEItems.bellows));
         if (NEItems.fluidVessel != null) list.add(new net.minecraft.item.ItemStack(NEItems.fluidVessel));
         if (NEItems.bandage != null) list.add(new net.minecraft.item.ItemStack(NEItems.bandage));
+        if (NEItems.stypticSalve != null) list.add(new net.minecraft.item.ItemStack(NEItems.stypticSalve));
+        if (NEItems.ironTonic != null) list.add(new net.minecraft.item.ItemStack(NEItems.ironTonic));
         if (NEItems.exposureMask != null) list.add(new net.minecraft.item.ItemStack(NEItems.exposureMask));
 
         // 6. Knowledge & observation
