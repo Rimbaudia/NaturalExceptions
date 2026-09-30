@@ -76,6 +76,44 @@ public final class HostDamageMapping {
         return arm ? (left ? LEFT_ARM : RIGHT_ARM) : TORSO;
     }
 
+    /**
+     * Where a strike meets a body: a ray from (sx, sy, sz) along (dx, dy, dz) (an arrow's flight, a blow's aim) traced
+     * into the body's box. Returns {height, side}: how high it met the body (0 its feet, 1 the top of its head) and
+     * from which side of its facing ({@code yaw}, degrees) it came (-1 its left, +1 its right). A ray that misses the
+     * box (a glancing hit) meets it at the height it starts from, clamped to the body, on the side it comes from.
+     */
+    public static double[] strike(double minX, double minY, double minZ, double maxX, double maxY, double maxZ,
+        double sx, double sy, double sz, double dx, double dy, double dz, double yaw) {
+        double near = -2.0, far = 16.0;
+        double[] lo = { minX, minY, minZ }, hi = { maxX, maxY, maxZ }, s = { sx, sy, sz }, d = { dx, dy, dz };
+        boolean hit = true;
+        for (int axis = 0; axis < 3 && hit; axis++) {
+            if (Math.abs(d[axis]) < 1.0e-9) {
+                if (s[axis] < lo[axis] || s[axis] > hi[axis]) hit = false;
+                continue;
+            }
+            double t1 = (lo[axis] - s[axis]) / d[axis], t2 = (hi[axis] - s[axis]) / d[axis];
+            near = Math.max(near, Math.min(t1, t2));
+            far = Math.min(far, Math.max(t1, t2));
+            if (near > far) hit = false;
+        }
+        double hx, hy, hz;
+        if (hit) {
+            hx = sx + dx * near;
+            hy = sy + dy * near;
+            hz = sz + dz * near;
+        } else {
+            hx = sx;
+            hy = Math.max(minY, Math.min(maxY, sy));
+            hz = sz;
+        }
+        double cx = (minX + maxX) / 2.0, cz = (minZ + maxZ) / 2.0, halfWidth = Math.max(0.05, (maxX - minX) / 2.0);
+        double r = Math.toRadians(yaw);
+        double side = ((hx - cx) * -Math.cos(r) + (hz - cz) * -Math.sin(r)) / halfWidth; // + towards the right
+        double height = (hy - minY) / Math.max(0.1, maxY - minY);
+        return new double[] { Math.max(0.0, Math.min(1.0, height)), Math.max(-1.0, Math.min(1.0, side)) };
+    }
+
     /** A part drawn by its share of the body. */
     public static ResourceId anyPart(double roll) {
         if (roll < 0.40) return TORSO;

@@ -12,6 +12,29 @@ import naturalexceptions.core.biology.PhysicalInteraction;
 
 final class HostDamagePathTest {
 
+    /** A player-sized body at the origin, facing south (+z). */
+    private static double[] meet(double sx, double sy, double sz, double dx, double dy, double dz) {
+        return HostDamageMapping.strike(-0.3, 0.0, -0.3, 0.3, 1.8, 0.3, sx, sy, sz, dx, dy, dz, 0.0);
+    }
+
+    @Test
+    void strikesAreTracedToWhereTheyMeetTheBody() {
+        // An arrow falling steeply at the shins, from a tick before it lands (still high and in front).
+        double[] shins = meet(0.0, 1.0, 1.5, 0.0, -0.6, -1.0);
+        assertTrue(shins[0] < 0.42, "the shins, not the head: " + shins[0]);
+        double[] chest = meet(0.0, 1.1, 2.0, 0.0, 0.0, -1.0);
+        assertEquals(HostDamageMapping.TORSO, HostDamageMapping.region(chest[0], chest[1], 0.9), "level at the chest");
+        double[] eyes = meet(0.0, 1.6, 2.0, 0.0, 0.0, -1.0);
+        assertEquals(HostDamageMapping.HEAD, HostDamageMapping.region(eyes[0], eyes[1], 0.5), "level at the eyes");
+        double[] kick = meet(0.0, 1.6, 1.5, 0.0, -1.2, -1.0);
+        assertTrue(kick[0] < 0.42, "a blow aimed at the legs lands on them: " + kick[0]);
+        // From the body's right (it faces +z, so its right is -x): the right arm.
+        double[] right = meet(-2.0, 1.1, 0.0, 1.0, 0.0, 0.0);
+        assertEquals(HostDamageMapping.RIGHT_ARM, HostDamageMapping.region(right[0], right[1], 0.1));
+        double[] left = meet(2.0, 0.3, 0.0, -1.0, 0.0, 0.0);
+        assertEquals(HostDamageMapping.LEFT_LEG, HostDamageMapping.region(left[0], left[1], 0.5), "low from the left");
+    }
+
     @Test
     void hitsLandWhereTheyStrikeAndReachEveryPart() {
         assertEquals(HostDamageMapping.HEAD, HostDamageMapping.region(0.9, 0.0, 0.5), "a high arrow: the head");

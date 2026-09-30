@@ -133,20 +133,44 @@ public final class BiologicalEvents {
             Entity strike = source.getSourceOfDamage();
             if (category == HostDamageMapping.Category.PHYSICAL_HIT && strike != null
                 && strike != target
-                && strike.boundingBox != null
                 && target.boundingBox != null) {
+                // Traced into the body: an arrow along its flight from where it was, a blow along its striker's aim.
                 boolean thrown = source.isProjectile() || strike != source.getEntity();
-                double top = strike.boundingBox.maxY, bottom = strike.boundingBox.minY;
-                double hitY = thrown ? (top + bottom) / 2.0 : bottom + (top - bottom) * 0.7;
-                double tall = Math.max(0.1, target.boundingBox.maxY - target.boundingBox.minY);
-                height = (hitY - target.boundingBox.minY) / tall + target.getRNG()
-                    .nextGaussian() * 0.12;
-                double dx = strike.posX - target.posX, dz = strike.posZ - target.posZ;
-                double length = Math.sqrt(dx * dx + dz * dz);
-                if (length > 1.0e-3) {
-                    double yaw = Math.toRadians(target.renderYawOffset);
-                    side = (dx * -Math.cos(yaw) + dz * -Math.sin(yaw)) / length; // + towards the body's right
+                double sx = strike.posX, sy, sz = strike.posZ, dx, dy, dz;
+                if (thrown) {
+                    sy = strike.posY;
+                    dx = strike.motionX;
+                    dy = strike.motionY;
+                    dz = strike.motionZ;
+                } else {
+                    sy = strike.posY + strike.getEyeHeight();
+                    net.minecraft.util.Vec3 look = strike.getLookVec();
+                    dx = look != null ? look.xCoord : target.posX - sx;
+                    dy = look != null ? look.yCoord : 0.0;
+                    dz = look != null ? look.zCoord : target.posZ - sz;
                 }
+                if (dx * dx + dy * dy + dz * dz < 1.0e-6) {
+                    dx = target.posX - sx;
+                    dy = target.posY + target.height / 2.0 - sy;
+                    dz = target.posZ - sz;
+                }
+                net.minecraft.util.AxisAlignedBB box = target.boundingBox;
+                double[] met = HostDamageMapping.strike(
+                    box.minX,
+                    box.minY,
+                    box.minZ,
+                    box.maxX,
+                    box.maxY,
+                    box.maxZ,
+                    sx,
+                    sy,
+                    sz,
+                    dx,
+                    dy,
+                    dz,
+                    target.renderYawOffset);
+                height = met[0];
+                side = met[1];
             }
             naturalexceptions.core.id.ResourceId part = HostDamageMapping.region(
                 height,
