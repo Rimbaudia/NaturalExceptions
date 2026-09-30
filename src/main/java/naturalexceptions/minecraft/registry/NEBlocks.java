@@ -65,6 +65,9 @@ public final class NEBlocks {
     public static Block sawmill;
     public static Block hoistWindlass;
     public static Block hoistBasket;
+    public static Block cloudCondenser;
+    public static Block stormcrystal;
+    public static Block lighthouseLamp;
     public static Block fountain;
     public static Block orrery;
     public static Block chartTable;
@@ -169,6 +172,11 @@ public final class NEBlocks {
             naturalexceptions.minecraft.furniture.CuttingRecipes.Kind.SAW).setCreativeTab(NECreativeTab.INSTANCE);
         hoistWindlass = new naturalexceptions.minecraft.furniture.BlockHoist(true).setCreativeTab(NECreativeTab.INSTANCE);
         hoistBasket = new naturalexceptions.minecraft.furniture.BlockHoist(false).setCreativeTab(NECreativeTab.INSTANCE);
+        cloudCondenser = new naturalexceptions.minecraft.furniture.BlockCloudCondenser()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        stormcrystal = new naturalexceptions.minecraft.block.BlockStormcrystal().setCreativeTab(NECreativeTab.INSTANCE);
+        lighthouseLamp = new naturalexceptions.minecraft.furniture.BlockLighthouseLamp()
+            .setCreativeTab(NECreativeTab.INSTANCE);
         fountain = new naturalexceptions.minecraft.furniture.BlockFountain().setCreativeTab(NECreativeTab.INSTANCE);
         orrery = new naturalexceptions.minecraft.furniture.BlockOrrery().setCreativeTab(NECreativeTab.INSTANCE);
         chartTable = new naturalexceptions.minecraft.furniture.BlockChartTable().setCreativeTab(NECreativeTab.INSTANCE);
@@ -288,6 +296,9 @@ public final class NEBlocks {
             GameRegistry.registerBlock(sawmill, "sawmill");
             GameRegistry.registerBlock(hoistWindlass, "hoist_windlass");
             GameRegistry.registerBlock(hoistBasket, "hoist_basket");
+            GameRegistry.registerBlock(cloudCondenser, "cloud_condenser");
+            GameRegistry.registerBlock(stormcrystal, "stormcrystal");
+            GameRegistry.registerBlock(lighthouseLamp, "lighthouse_lamp");
             GameRegistry.registerBlock(fountain, "fountain");
             GameRegistry.registerBlock(orrery, "orrery");
             GameRegistry.registerBlock(chartTable, "chart_table");
@@ -341,6 +352,9 @@ public final class NEBlocks {
             GameRegistry.registerTileEntity(
                 naturalexceptions.minecraft.furniture.TileEntityHoist.class,
                 "naturalexceptions_hoist");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.furniture.TileEntityLighthouseLamp.class,
+                "naturalexceptions_lighthouse_lamp");
         } catch (Throwable ignored) {}
         try {
             GameRegistry.registerTileEntity(

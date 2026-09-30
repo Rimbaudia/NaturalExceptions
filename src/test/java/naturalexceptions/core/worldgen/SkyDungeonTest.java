@@ -114,19 +114,20 @@ final class SkyDungeonTest {
             this.crumbled = crumbled;
             // The dungeon's own extent (everything it places, and the way in), with room to walk round it: the
             // island itself is far bigger than anything a flood needs to cross.
-            int x0 = s.dungeon.entrance()[0], x1 = x0, z0 = s.dungeon.entrance()[2], z1 = z0;
+            int x0 = s.dungeon.entrance()[0], x1 = x0, z0 = s.dungeon.entrance()[2], z1 = z0, y1 = s.island.centreY();
             for (Piece p : s.dungeon.pieces()) {
                 x0 = Math.min(x0, p.x);
                 x1 = Math.max(x1, p.x);
                 z0 = Math.min(z0, p.z);
                 z1 = Math.max(z1, p.z);
+                y1 = Math.max(y1, p.y);
             }
             minX = x0 - 8;
             maxX = x1 + 8;
             minZ = z0 - 8;
             maxZ = z1 + 8;
             minY = s.island.centreY() - 60;
-            maxY = s.island.centreY() + (s.dungeon.kind() == SkyDungeon.Kind.CITADEL ? 22 : 8);
+            maxY = y1 + 2;
         }
 
         boolean passable(int x, int y, int z) {
@@ -322,6 +323,13 @@ final class SkyDungeonTest {
         }
         assertTrue(citadels >= 3, "enough citadels to judge: " + citadels);
         assertTrue(quarries * 2 >= citadels, "most citadels have their quarry: " + quarries + " of " + citadels);
+        int[] seen = new int[4];
+        String[] places = { "lumber camp", "condensers", "stormglass spire", "lighthouse" };
+        for (Sample s : samples()) for (int i = 0; i < places.length; i++)
+            if (s.dungeon.features()
+                .contains(places[i])) seen[i]++;
+        for (int i = 0; i < places.length; i++)
+            assertTrue(seen[i] * 3 >= citadels, "the " + places[i] + " is found on the islands: " + seen[i]);
     }
 
     @Test

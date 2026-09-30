@@ -989,5 +989,22 @@ final class SanctumLayout {
         corridors.shaft(sx, sz, hall.floor(), hall.floor() + hall.template.height + 1, top, false, false);
         d.entrance = new int[] { sx, gy, sz + 2 };
         d.surfaces.add(new int[] { gx - h - 1, gz - h - 1, gx + h + 1, gz + h + 1 });
+        landmarks(gx, gz, h, top);
+    }
+
+    /** Out on the sanctum's island, away from its gateway: a Stormglass Spire and a lighthouse on the rim. */
+    private void landmarks(int gx, int gz, int h, int top) {
+        int icx = island.centreX(), icz = island.centreZ(), far = (int) (island.radius() * 0.8);
+        IslandLandmarks land = new IslandLandmarks(d, icx, icz, top + 1, random);
+        CitadelSites sites = new CitadelSites(land::ground);
+        sites.reserve("gateway", gx - icx - h - 4, gz - icz - h - 4, gx - icx + h + 4, gz - icz + h + 4);
+        CitadelSites.Site s;
+        if ((s = sites.fit("spire", 25, 25, 0, 360, far / 2, far, true)) != null) land.spire(s);
+        if ((s = sites.fit("lighthouse", 21, 17, 0, 360, far / 2, far + 10, true)) != null) land.lighthouse(s);
+        for (CitadelSites.Site site : sites.sites) {
+            if (site.ground < 0) continue;
+            d.surfaces.add(new int[] { icx + site.x0 - 2, icz + site.z0 - 2, icx + site.x1 + 2, icz + site.z1 + 2 });
+            d.sites.add(new int[] { icx + site.x0, icz + site.z0, icx + site.x1, icz + site.z1 });
+        }
     }
 }

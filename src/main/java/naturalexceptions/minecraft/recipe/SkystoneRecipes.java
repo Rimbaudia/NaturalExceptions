@@ -142,6 +142,30 @@ public final class SkystoneRecipes {
             planks,
             'L',
             new ItemStack(Blocks.log, 1, OreDictionary.WILDCARD_VALUE));
+        net.minecraft.item.Item shard = naturalexceptions.minecraft.registry.NEItems.stormglassShard;
+        if (NEBlocks.cloudCondenser != null && shard != null && skystone != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.cloudCondenser),
+            "I I",
+            "ISI",
+            "BBB",
+            'I',
+            Items.iron_ingot,
+            'S',
+            shard,
+            'B',
+            skystone);
+        if (NEBlocks.lighthouseLamp != null && NEBlocks.stormglassLantern != null && shard != null) GameRegistry
+            .addRecipe(
+                new ItemStack(NEBlocks.lighthouseLamp),
+                "GSG",
+                "SLS",
+                "GSG",
+                'G',
+                Blocks.glass,
+                'S',
+                shard,
+                'L',
+                NEBlocks.stormglassLantern);
         if (NEBlocks.hoistBasket != null) GameRegistry
             .addRecipe(new ItemStack(NEBlocks.hoistBasket), " I ", "P P", "PPP", 'I', Items.iron_ingot, 'P', planks);
         if (naturalexceptions.minecraft.registry.NEItems.masonsChisel != null) GameRegistry.addRecipe(

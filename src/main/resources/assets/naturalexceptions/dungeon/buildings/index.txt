@@ -5,6 +5,8 @@ house_tall
 row_house
 cottage
 merchant_house
+woodcutters_hut
+cloudwrights_hut
 barracks
 smithy
 chapel

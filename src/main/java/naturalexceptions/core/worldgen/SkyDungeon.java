@@ -178,7 +178,13 @@ public final class SkyDungeon {
         /** A cutting bench; meta 0 a Mason's Bench, 1 a Sawmill. */
         CUTTING_BENCH,
         /** A quarry hoist's end; meta 0 its windlass (at the top), 1 its basket (at the foot). */
-        HOIST
+        HOIST,
+        /** A Cloud Condenser, empty. */
+        CONDENSER,
+        /** Stormcrystal; meta 1 a spire's crown. */
+        STORMCRYSTAL,
+        /** A Lighthouse Lamp. */
+        LIGHTHOUSE_LAMP
     }
 
     /** Directions for beds, torches, trapdoors and fence gates. */

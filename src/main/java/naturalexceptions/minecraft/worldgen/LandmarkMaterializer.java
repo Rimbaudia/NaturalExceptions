@@ -546,6 +546,15 @@ final class LandmarkMaterializer {
             case HOIST:
                 set(world, x, y, z, orElse(meta == 1 ? NEBlocks.hoistBasket : NEBlocks.hoistWindlass, Blocks.planks), 0);
                 break;
+            case CONDENSER:
+                set(world, x, y, z, orElse(NEBlocks.cloudCondenser, Blocks.glass), 0);
+                break;
+            case STORMCRYSTAL:
+                set(world, x, y, z, orElse(NEBlocks.stormcrystal, Blocks.glowstone), meta & 1);
+                break;
+            case LIGHTHOUSE_LAMP:
+                set(world, x, y, z, orElse(NEBlocks.lighthouseLamp, Blocks.glowstone), 0);
+                break;
             case ROCK:
                 if (meta == 1) set(world, x, y, z, Blocks.cobblestone, 0);
                 else set(world, x, y, z, orElse(NEBlocks.skystoneRock, Blocks.stone), 0);

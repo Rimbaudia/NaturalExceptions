@@ -48,6 +48,8 @@ final class CitadelLayout {
 
     private final SkyDungeon d;
     private final Random random;
+    /** The island's places beyond the town, and the ground helpers they share with it. */
+    private IslandLandmarks land;
     private int cx, cz, b;
     private double radius;
 
@@ -63,6 +65,7 @@ final class CitadelLayout {
         cz = island.centreZ();
         b = island.centreY() + 1;
         radius = island.radius();
+        land = new IslandLandmarks(d, cx, cz, b, random);
 
         ground();
         moat();
@@ -965,9 +968,20 @@ final class CitadelLayout {
             sites.reserve("guardhouse", 4, MOAT_OUT + 6, 16, MOAT_OUT + 8 + 11 + 4);
     }
 
-    private void paveAt(int dx, int dz, int ground) {
-        d.floorTile(cx + dx, ground, cz + dz);
-        for (int y = ground + 1; y <= ground + 3; y++) put(dx, y, dz, Block.AIR);
+    private int ground(int x0, int z0, int x1, int z1) {
+        return land.ground(x0, z0, x1, z1);
+    }
+
+    private void level(int x0, int z0, int x1, int z1, int g) {
+        land.level(x0, z0, x1, z1, g);
+    }
+
+    private void paveAt(int dx, int dz, int g) {
+        land.paveAt(dx, dz, g);
+    }
+
+    private void building(String name, int minX, int minZ, String feature, int g) {
+        land.building(name, minX, minZ, feature, g);
     }
 
     /** The island's surface height at a citadel offset (the citadel's own level where there is none). */
@@ -1011,38 +1025,6 @@ final class CitadelLayout {
         d.features.add("pier");
     }
 
-    /** The ground height most of the rectangle stands at, or -1 if any of it is off the island or too uneven. */
-    private int ground(int x0, int z0, int x1, int z1) {
-        java.util.Map<Integer, Integer> counts = new java.util.HashMap<>();
-        int least = Integer.MAX_VALUE, most = Integer.MIN_VALUE;
-        for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) {
-            int[] column = d.field.column(d.island, cx + x, cz + z);
-            if (column == null) return -1;
-            counts.merge(column[1], 1, Integer::sum);
-            least = Math.min(least, column[1]);
-            most = Math.max(most, column[1]);
-        }
-        if (most - least > 4) return -1;
-        int best = -1, bestCount = -1;
-        for (java.util.Map.Entry<Integer, Integer> e : counts.entrySet()) if (e.getValue() > bestCount) {
-            best = e.getKey();
-            bestCount = e.getValue();
-        }
-        return Math.min(best, b);
-    }
-
-    /** Brings the rectangle's ground to height {@code g}: earth filled under it, grass on top, rock cut away. */
-    private void level(int x0, int z0, int x1, int z1, int g) {
-        for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) {
-            int[] column = d.field.column(d.island, cx + x, cz + z);
-            if (column == null) continue;
-            int top = column[1];
-            for (int y = Math.min(top + 1, g - 1); y < g; y++) put(x, y, z, Block.DIRT);
-            put(x, g, z, Block.GRASS);
-            for (int y = g + 1; y <= top + 1; y++) put(x, y, z, Block.AIR);
-        }
-    }
-
     /**
      * An authored building out on the island at citadel offset (minX, minZ), facing south, on its ground levelled
      * with a margin of two all round and a Skyslate footing under it; false if the ground there will not take it.
@@ -1053,26 +1035,6 @@ final class CitadelLayout {
         if (g < 0) return false;
         building(name, minX, minZ, feature, g);
         return true;
-    }
-
-    /** An authored building out on the island at (minX, minZ), facing south, set on ground {@code g}. */
-    private void building(String name, int minX, int minZ, String feature, int g) {
-        RoomTemplate t = TemplateLibrary.building(name);
-        int maxX = minX + t.width() - 1, maxZ = minZ + t.depth() - 1;
-        level(minX - 2, minZ - 2, maxX + 2, maxZ + 4, g);
-        for (int x = minX; x <= maxX; x++) for (int z = minZ; z <= maxZ; z++) put(x, g - 1, z, Block.SKYSLATE, 0);
-        new RoomWriter(d).write(
-            t,
-            0,
-            cx + minX,
-            cz + minZ,
-            g,
-            t.roles.iterator()
-                .next(),
-            false);
-        paveAt((minX + maxX) / 2, maxZ + 1, g);
-        paveAt((minX + maxX) / 2, maxZ + 2, g);
-        if (feature != null) d.features.add(feature);
     }
 
     /** A fenced field of one crop on tilled soil at ground {@code g}, watered by a channel down its middle. */
@@ -1122,6 +1084,10 @@ final class CitadelLayout {
         if ((s = sites.fit("orchard", 23, 19, 35, 70, near, near + 40, false)) != null) orchard(s);
         if ((s = sites.fit("watchtower", 15, 15, 290, 340, near + 30, far, true)) != null) watchtower(s);
         if ((s = sites.fit("quarry", 33, 29, 110, 155, near + 40, far, true)) != null) quarry(s);
+        if ((s = sites.fit("lumber camp", 27, 23, 185, 250, near + 40, far, true)) != null) land.lumberCamp(s);
+        if ((s = sites.fit("condensers", 26, 15, -35, 35, near + 40, far + 10, true)) != null) land.condensers(s);
+        if ((s = sites.fit("spire", 25, 25, 240, 300, near + 40, far, true)) != null) land.spire(s);
+        if ((s = sites.fit("lighthouse", 21, 17, 55, 110, near + 40, far + 15, true)) != null) land.lighthouse(s);
     }
 
     /**
@@ -1197,29 +1163,8 @@ final class CitadelLayout {
             if (dx * dx + dz * dz <= 6) put(x, g + 1, z, Block.GRAVEL);
             if (dx * dx + dz * dz <= 1) put(x, g + 2, z, Block.GRAVEL);
         }
-        shed(s.x0 + 26, yard - 1, g);
+        land.shed(s.x0 + 26, yard - 1, g, 0, Loot.QUARRY);
         d.features.add("quarry");
-    }
-
-    /**
-     * The quarry's shed at (x0, z0), open to the west: log posts, plank walls on its other three sides, a slab roof;
-     * inside, the Mason's Bench, the tool chest, a water barrel and an anvil for dressing the picks.
-     */
-    private void shed(int x0, int z0, int g) {
-        int x1 = x0 + 5, z1 = z0 + 4;
-        for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) {
-            put(x, g, z, Block.PLANKS, 1);
-            boolean post = (x == x0 || x == x1) && (z == z0 || z == z1);
-            boolean wall = x == x1 || z == z0 || z == z1;
-            for (int y = g + 1; y <= g + 3; y++) put(x, y, z, post ? Block.LOG : wall ? Block.PLANKS : Block.AIR,
-                post ? 1 : wall ? 1 : 0);
-            put(x, g + 4, z, Block.SLAB, 1);
-        }
-        put(x1 - 1, g + 1, z0 + 1, Block.CUTTING_BENCH, 0);
-        put(x1 - 1, g + 1, z0 + 2, Block.CHEST, 0, Loot.QUARRY, null);
-        put(x1 - 1, g + 1, z0 + 3, Block.BARREL, 1);
-        put(x0 + 2, g + 1, z0 + 1, Block.ANVIL);
-        put(x0 + 2, g + 3, z0 + 3, Block.LAMP);
     }
 
     /** Every site's ground, with the road and the town, counts as the citadel's: nothing wild grows there. */

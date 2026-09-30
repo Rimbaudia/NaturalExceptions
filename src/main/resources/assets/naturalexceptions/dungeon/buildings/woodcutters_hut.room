@@ -1,0 +1,132 @@
+name: woodcutters_hut
+type: building
+footprint: 9x9
+height: 10
+roles: store
+kinds: citadel
+weight: 1
+carpet: brown
+roof: spruce
+timber: spruce
+eaves: 5
+---
+floor:
+ppppppppp
+ppppppppp
+ppppppppp
+ppppppppp
+ppppppppp
+ppppppppp
+ppppppppp
+ppppppppp
+ppppppppp
+layer 1:
+YYYYYYYYY
+YN.Q"QcbY
+Y:.....uY
+Y....qq.Y
+Y....qq.Y
+Y./.....Y
+Y.μ.....Y
+Y{.....!Y
+YYYYDYYYY
+layer 2:
+YYYYYYYYY
+Y..yjy..Y
+Y.......Y
+Y.......Y
+|.......|
+Y......\Y
+Y.......Y
+Y.......Y
+YY|YDY|YY
+layer 3:
+YYYYYYYYY
+Y...Q...Y
+Y.......Y
+Y.......Y
+Yd......Y
+Y.......Y
+Y......dY
+Y.......Y
+YYYYYYYYY
+layer 4:
+YYYYYYYYY
+Y...Q...Y
+Y.......Y
+Y.......Y
+Y.......Y
+Y.......Y
+Y.......Y
+Y.......Y
+YYYYYYYYY
+layer 5:
+2PPPPPPP4
+2PPPQPPP4
+2PPPPPPP4
+2PPPPPPP4
+2PPPPPPP4
+2PPPPPPP4
+2PPPPPPP4
+2PPPPPPP4
+2PPPPPPP4
+layer 6:
+.2PPPPP4.
+.2..Q..4.
+.2.....4.
+.2.....4.
+.2.....4.
+.2.....4.
+.2.....4.
+.2.....4.
+.2PPPPP4.
+layer 7:
+..2PPP4..
+..2.Q.4..
+..2...4..
+..2...4..
+..2...4..
+..2...4..
+..2...4..
+..2...4..
+..2PPP4..
+layer 8:
+...2P4...
+...2Q4...
+...2.4...
+...2.4...
+...2.4...
+...2.4...
+...2.4...
+...2.4...
+...2P4...
+layer 9:
+....P....
+....Q....
+....P....
+....P....
+....P....
+....P....
+....P....
+....P....
+....P....
+layer 10:
+.........
+....Q....
+.........
+.........
+.........
+.........
+.........
+.........
+.........
+ceiling:
+.........
+.........
+.........
+.........
+.........
+.........
+.........
+.........
+.........
