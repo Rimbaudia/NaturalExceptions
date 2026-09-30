@@ -821,4 +821,26 @@ final class SkyDungeonTest {
             }
         }
     }
+
+    @Test
+    void theWaysDownAreLit() {
+        int shafts = 0;
+        for (Sample s : samples()) {
+            for (Connection c : s.dungeon.connections()) {
+                if (c.style != Style.SHAFT) continue;
+                Room top = c.a.level < c.b.level ? c.a : c.b, bottom = top == c.a ? c.b : c.a;
+                int x = top.minX, z = top.minZ;
+                Piece hole = s.dungeon.at(x, top.floorY, z);
+                assertTrue(hole != null && hole.block == Block.LADDER, s.name() + ": the shaft's mouth");
+                for (int[] o : new int[][] { { 1, 0 }, { 0, 1 }, { 1, 1 } }) {
+                    Piece floor = s.dungeon.at(x + o[0], top.floorY, z + o[1]);
+                    Piece ceiling = s.dungeon.at(x + o[0], bottom.floorY + bottom.height + 1, z + o[1]);
+                    assertTrue(floor != null && floor.block == Block.LAMP, s.name() + ": lit round the mouth");
+                    assertTrue(ceiling != null && ceiling.block == Block.LAMP, s.name() + ": lit over the foot");
+                }
+                shafts++;
+            }
+        }
+        assertTrue(shafts >= 10, "enough shafts to judge: " + shafts);
+    }
 }

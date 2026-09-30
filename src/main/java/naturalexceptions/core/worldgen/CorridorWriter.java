@@ -243,7 +243,8 @@ final class CorridorWriter {
 
     /**
      * A shaft between levels at (x, z): a ladder from the lower floor up through the upper floor, walled where it
-     * crosses the rock; a gale lift adds a Gale Vent at the bottom that carries climbers up.
+     * crosses the rock, and lit by lanterns set in the floor round its mouth and in the ceiling round its foot; a gale
+     * lift adds a Gale Vent at the bottom that carries climbers up.
      */
     void shaft(int x, int z, int lowerFloor, int lowerCeiling, int upperFloor, boolean galeLift) {
         for (int y = lowerCeiling; y < upperFloor; y++)
@@ -254,5 +255,11 @@ final class CorridorWriter {
             }
         for (int y = lowerFloor + 1; y <= upperFloor; y++) d.put(x, y, z, Block.LADDER, 3);
         if (galeLift) d.put(x, lowerFloor, z, Block.VENT, RoomWriter.ventMeta(1));
+        // A lit square round the hole, so the way down (and the way up, overhead) shows from across a room: the
+        // shaft stands in its rooms' north-west corner, so the room lies to the east and south of it.
+        for (int[] o : new int[][] { { 1, 0 }, { 0, 1 }, { 1, 1 } }) {
+            d.put(x + o[0], upperFloor, z + o[1], Block.LAMP);
+            d.put(x + o[0], lowerCeiling, z + o[1], Block.LAMP);
+        }
     }
 }

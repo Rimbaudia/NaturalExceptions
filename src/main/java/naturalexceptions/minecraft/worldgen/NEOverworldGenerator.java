@@ -42,6 +42,19 @@ public final class NEOverworldGenerator implements IWorldGenerator {
         GameRegistry.registerWorldGenerator(new NEOverworldGenerator(), 0);
     }
 
+    /** The seed of a world's landmarks (sky islands, their dungeons, giant features, deep layers). */
+    public static long landmarkSeed(long worldSeed, WorldgenEpoch epoch) {
+        return worldSeed ^ ((long) epoch.value() << 40);
+    }
+
+    /** The seed the landmarks of this (overworld) world were laid out with. */
+    public static long landmarkSeed(World world) {
+        NEWorldSavedData savedData = NEWorldSavedData.get(world);
+        WorldgenEpoch epoch = savedData != null && savedData.metadata() != null ? savedData.metadata()
+            .worldgenEpoch() : WorldgenEpoch.CURRENT;
+        return landmarkSeed(world.getSeed(), epoch);
+    }
+
     @Override
     public void generate(Random ignoredForgeRandom, int chunkX, int chunkZ, World world, IChunkProvider chunkGenerator,
         IChunkProvider chunkProvider) {
@@ -74,7 +87,7 @@ public final class NEOverworldGenerator implements IWorldGenerator {
         WorldgenSites sites = new WorldgenSites(generation);
         generateOutcrops(world, chunkX, chunkZ, sites);
         // Rare, dramatic landmarks are structures too; they share this stage so older chunk records stay valid.
-        long landmarkSeed = world.getSeed() ^ ((long) epoch.value() << 40);
+        long landmarkSeed = landmarkSeed(world.getSeed(), epoch);
         int islandBlocks = LandmarkMaterializer
             .skyIslands(world, chunkX, chunkZ, new naturalexceptions.core.worldgen.SkyIslands(landmarkSeed));
         int landmarkBlocks = LandmarkMaterializer
