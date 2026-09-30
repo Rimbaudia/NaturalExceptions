@@ -24,6 +24,8 @@ public final class CommandLandmarks extends CommandBase {
     private static final int SEARCH = 1200;
     /** Dungeon islands are few (about one per 1536-block square, half the time), so look further for them. */
     private static final int DUNGEON_SEARCH = 4000;
+    /** How far {@code tp citadel} and {@code tp sanctum} look before giving up (one kind can be scarce nearby). */
+    static final int WIDE_SEARCH = 12000;
     private static final int SHOWN = 4;
 
     @Override
@@ -33,8 +35,8 @@ public final class CommandLandmarks extends CommandBase {
 
     @Override
     public String getCommandUsage(ICommandSender sender) {
-        return "/ne_landmarks [tp|tp dungeon] - nearest sky islands, dungeons and landmarks; tp goes to the nearest island"
-            + " (or dungeon)";
+        return "/ne_landmarks [tp [dungeon|citadel|sanctum]] - nearest sky islands, dungeons and landmarks; tp goes to"
+            + " the nearest island, or dungeon of that kind";
     }
 
     @Override
@@ -83,14 +85,7 @@ public final class CommandLandmarks extends CommandBase {
                 break;
             }
         }
-        List<SkyIslands.Island> dungeons = new ArrayList<>();
-        for (SkyIslands.Island island : islands
-            .near(px - DUNGEON_SEARCH, pz - DUNGEON_SEARCH, px + DUNGEON_SEARCH, pz + DUNGEON_SEARCH)) {
-            if (island.hasDungeon()) dungeons.add(island);
-        }
-        dungeons.sort(
-            (a, b) -> Double
-                .compare(distance(a.centreX(), a.centreZ(), px, pz), distance(b.centreX(), b.centreZ(), px, pz)));
+        List<SkyIslands.Island> dungeons = nearestDungeons(islands, px, pz, null, DUNGEON_SEARCH);
         sender.addChatMessage(new ChatComponentText("\u00a7eNearest sky dungeons:"));
         if (dungeons.isEmpty()) sender.addChatMessage(new ChatComponentText("  none within " + DUNGEON_SEARCH));
         SkyIslands.Island dungeonTarget = null;
@@ -137,10 +132,49 @@ public final class CommandLandmarks extends CommandBase {
         sender
             .addChatMessage(new ChatComponentText("\u00a78Islands only form in land generated after they were added."));
         if (args.length > 0 && "tp".equalsIgnoreCase(args[0])) {
-            boolean toDungeon = args.length > 1 && "dungeon".equalsIgnoreCase(args[1]);
-            if (toDungeon) target = dungeonTarget;
+            String what = args.length > 1 ? args[1].toLowerCase(java.util.Locale.ROOT) : "";
+            naturalexceptions.core.worldgen.SkyDungeon.Kind kind = null;
+            boolean toDungeon = true;
+            switch (what) {
+                case "":
+                    toDungeon = false;
+                    break;
+                case "dungeon":
+                case "dungeons":
+                    target = dungeonTarget;
+                    break;
+                case "citadel":
+                case "citadels":
+                    kind = naturalexceptions.core.worldgen.SkyDungeon.Kind.CITADEL;
+                    break;
+                case "sanctum":
+                case "sanctums":
+                    kind = naturalexceptions.core.worldgen.SkyDungeon.Kind.SANCTUM;
+                    break;
+                default:
+                    sender.addChatMessage(new ChatComponentText(getCommandUsage(sender)));
+                    return;
+            }
+            if (kind != null) {
+                target = null;
+                for (int reach : new int[] { DUNGEON_SEARCH, WIDE_SEARCH }) {
+                    for (SkyIslands.Island island : nearestDungeons(islands, px, pz, kind, reach)) {
+                        if (presence(world, islands, island) != Presence.MISSING) {
+                            target = island;
+                            break;
+                        }
+                    }
+                    if (target != null) break;
+                }
+            }
             if (target == null) {
-                sender.addChatMessage(new ChatComponentText("No island within reach can still appear here."));
+                String name = kind == null ? toDungeon ? "sky dungeon" : "island" : kindName(kind);
+                sender.addChatMessage(
+                    new ChatComponentText(
+                        "No " + name
+                            + " within "
+                            + (kind == null ? toDungeon ? DUNGEON_SEARCH : SEARCH : WIDE_SEARCH)
+                            + " blocks can still appear here."));
                 return;
             }
             prepare(world, target);
@@ -158,9 +192,12 @@ public final class CommandLandmarks extends CommandBase {
                 y = (top != null ? top[1] : target.centreY()) + 2;
             }
             player.setPositionAndUpdate(tx + 0.5, y, tz + 0.5);
+            String arrived = toDungeon ? kindName(islands.dungeonKind(target)) : "island";
             sender.addChatMessage(
                 new ChatComponentText(
-                    "Went to the island at " + target.centreX()
+                    "Went to the " + arrived
+                        + " at "
+                        + target.centreX()
                         + ", "
                         + target.centreY()
                         + ", "
@@ -169,6 +206,35 @@ public final class CommandLandmarks extends CommandBase {
                         + presence(world, islands, target).words
                         + ")."));
         }
+    }
+
+    /**
+     * Dungeon islands within {@code reach} of (px, pz), nearest first; only those of {@code kind} unless it is null.
+     */
+    static List<SkyIslands.Island> nearestDungeons(SkyIslands islands, int px, int pz,
+        naturalexceptions.core.worldgen.SkyDungeon.Kind kind, int reach) {
+        List<SkyIslands.Island> dungeons = new ArrayList<>();
+        for (SkyIslands.Island island : islands.near(px - reach, pz - reach, px + reach, pz + reach)) {
+            if (!island.hasDungeon() || kind != null && islands.dungeonKind(island) != kind) continue;
+            if (distance(island.centreX(), island.centreZ(), px, pz) <= reach) dungeons.add(island);
+        }
+        dungeons.sort(
+            (a, b) -> Double
+                .compare(distance(a.centreX(), a.centreZ(), px, pz), distance(b.centreX(), b.centreZ(), px, pz)));
+        return dungeons;
+    }
+
+    private static String kindName(naturalexceptions.core.worldgen.SkyDungeon.Kind kind) {
+        return kind == naturalexceptions.core.worldgen.SkyDungeon.Kind.CITADEL ? "citadel" : "sanctum";
+    }
+
+    @Override
+    @SuppressWarnings("rawtypes")
+    public List addTabCompletionOptions(ICommandSender sender, String[] args) {
+        if (args.length == 1) return getListOfStringsMatchingLastWord(args, "tp");
+        if (args.length == 2 && "tp".equalsIgnoreCase(args[0]))
+            return getListOfStringsMatchingLastWord(args, "dungeon", "citadel", "sanctum");
+        return null;
     }
 
     /** Whether an island listed from the seed is really in this world. */
