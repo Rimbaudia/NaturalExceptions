@@ -888,4 +888,20 @@ final class SkyDungeonTest {
         }
         assertTrue(judged >= 3, "enough deep dungeons: " + judged);
     }
+
+    @Test
+    void aLevelSeldomRepeatsARoom() {
+        for (Sample s : samples()) {
+            java.util.Map<Integer, java.util.Map<String, Integer>> per = new java.util.TreeMap<>();
+            for (Room room : s.dungeon.rooms()) if (room.level >= 0 && room.template != null)
+                per.computeIfAbsent(room.level, k -> new java.util.TreeMap<>())
+                    .merge(room.template, 1, Integer::sum);
+            for (java.util.Map.Entry<Integer, java.util.Map<String, Integer>> e : per.entrySet()) {
+                int repeats = 0;
+                for (int n : e.getValue()
+                    .values()) repeats += n - 1;
+                assertTrue(repeats <= 3, s.name() + ": level " + e.getKey() + " repeats " + repeats + " rooms");
+            }
+        }
+    }
 }

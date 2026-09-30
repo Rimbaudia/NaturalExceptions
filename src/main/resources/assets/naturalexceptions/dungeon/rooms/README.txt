@@ -42,8 +42,15 @@ Furnishings:
   }  an empty chest (furniture: a footlocker, a cupboard)
   !  barrel      {  crate      :  pantry shelf (faces away from the wall beside it)
   `  market counter (the "goods:" kind)        '  awning (the "awning:" colour), hung from the wall beside it
+The sky's own (Greek letters, as the ASCII ones are all taken; ';' starts a comment):
+  Ψ ψ  candelabra, its arm along x / along z          ω  brazier            φ  fountain       Θ  orrery
+  α β γ δ  pew with its back to the north, east, south, west       π Π  Skystone bench along x / along z
+  ξ  Stormglass hanging from the block above          >  Stormglass vein
 
 Headers for buildings: carpet, glass (colours); roof, timber, eaves; goods; awning. See RoomTemplate.java.
 
 Doorways must stay open on layers 1-3: the middle three columns or rows next to each wall, two deep.
-Rooms that link levels also keep each corner's 2 x 2 open on layers 1-3.
+Entrance halls also keep each corner's 2 x 2 open on layers 1-3 (the shaft from the surface comes down there).
+Shaft rooms ("roles: shaft_top" / "shaft_foot") are one cell, stand unturned, and are built round a ladder at the
+middle (4, 4) facing south: a top room leaves the three layers over the hole open, a foot room carries a mast ('0')
+just north of it the full height; both keep a light within two blocks.

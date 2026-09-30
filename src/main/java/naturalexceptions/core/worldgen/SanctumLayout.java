@@ -664,6 +664,8 @@ final class SanctumLayout {
     // --- Templates ------------------------------------------------------------------------------------------
 
     private final int[] trapsOnLevel = new int[MAX_LEVELS];
+    /** The rooms already used on each level. */
+    private final Map<Integer, Set<RoomTemplate>> usedOnLevel = new HashMap<>();
     private final int[] trapBudget = new int[MAX_LEVELS];
 
     private void templates() {
@@ -697,6 +699,14 @@ final class SanctumLayout {
             int times = used.getOrDefault(t, 0);
             weights.add(t.weight / (1.0 + 3.0 * times));
         }
+        // Never the same room twice on a level while another that fits has not been used there yet.
+        Set<RoomTemplate> here = usedOnLevel.computeIfAbsent(slot.level, k -> new HashSet<>());
+        boolean fresh = false;
+        for (RoomTemplate t : options) fresh |= !here.contains(t);
+        if (fresh) for (int k = options.size() - 1; k >= 0; k--) if (here.contains(options.get(k))) {
+            options.remove(k);
+            weights.remove(k);
+        }
         if (options.isEmpty()) {
             // Nothing authored fits these constraints: the plainest hall that does.
             for (RoomTemplate t : TemplateLibrary.all()) {
@@ -727,6 +737,8 @@ final class SanctumLayout {
         }
         slot.template = pick;
         used.merge(pick, 1, Integer::sum);
+        usedOnLevel.computeIfAbsent(slot.level, k -> new HashSet<>())
+            .add(pick);
         if (pick.trapped) trapsOnLevel[slot.level]++;
         // Turn it to fit its footprint; a square room may face any way.
         // A shaft room is built round a ladder that always faces south: it stands as authored.

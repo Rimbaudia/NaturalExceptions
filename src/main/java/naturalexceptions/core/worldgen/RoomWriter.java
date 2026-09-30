@@ -347,7 +347,7 @@ final class RoomWriter {
             case '\u0398':
                 d.put(x, y, z, Block.ORRERY);
                 break;
-            case ';':
+            case '\u03be':
                 d.put(x, y, z, Block.STORMGLASS_CLUSTER);
                 break;
             case '>':
