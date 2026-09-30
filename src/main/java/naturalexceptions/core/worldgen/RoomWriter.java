@@ -63,11 +63,10 @@ final class RoomWriter {
                     d.put(x, wy, z, Block.SKY_STAIRS, stairs((char) ('1' + SKY_STAIRS.indexOf(c)), rotation));
                 else if (c == 'b' || c == 'u') bed(template, rotation, tx, y, tz, x, wy, z, c == 'b');
                 else if (c == 'd') d.put(x, wy, z, Block.TORCH, torch(template, rotation, tx, y, tz));
-                else if (c == '[') {
-                    int hinge = nearestSolid(template, rotation, tx, y, tz);
-                    if (hinge < 0)
-                        throw new IllegalStateException(template.name + ": a trapdoor with no wall to hang on");
-                    d.put(x, wy, z, Block.TRAPDOOR, hinge);
+                else if (c == '[' || c == '\\') {
+                    int wall = nearestSolid(template, rotation, tx, y, tz);
+                    if (wall < 0) throw new IllegalStateException(template.name + ": a shelf or rack with no wall");
+                    d.put(x, wy, z, c == '[' ? Block.WALL_SHELF : Block.WEAPON_RACK, wall);
                 } else if (c == ']') d.put(x, wy, z, Block.FENCE_GATE, gate(template, rotation, tx, y, tz));
                 else if (c == '(' || c == ')')
                     d.put(x, wy, z, Block.PILLAR, (c == '(') == ((rotation & 1) == 0) ? 4 : 8);

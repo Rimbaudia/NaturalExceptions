@@ -42,7 +42,7 @@ public final class RoomTemplate {
 
     /** What each character in a template means. */
     public static final String LEGEND = ".#LB~=xRIGtfwcCsS^vF%,ghaTW?HKONA|oMQY*12345678_-DpPZeE"
-        + "09jkilmnJUVXyzrbuqd<@/&$+[]()}!{:`'\"";
+        + "09jkilmnJUVXyzrbuqd<@/&$+[]()}!{:`'\"\\";
 
     /** Vanilla dye colours by name, for carpets and stained glass. */
     public static final List<String> COLOURS = java.util.Arrays.asList(

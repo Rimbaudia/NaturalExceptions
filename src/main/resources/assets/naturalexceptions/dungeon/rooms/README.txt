@@ -36,7 +36,8 @@ Skystone:
   y z  polished slab, bottom / top half                r  brick slab (fallen masonry)
 Furnishings:
   b  a bed's head (against the wall)   u  its foot, beside it     q  carpet (the "carpet:" colour)
-  d  torch (on a wall beside it, else standing)                   [  trapdoor shelf (hinged to a wall beside it)
+  d  torch (on a wall beside it, else standing)                   [  wall shelf (hung on a wall beside it)
+  \  weapon rack (hung on a wall beside it)
   @  flower pot with a plant       &  brewing stand   $  enchanting table   +  jukebox
   }  an empty chest (furniture: a footlocker, a cupboard)
   !  barrel      {  crate      :  pantry shelf (faces away from the wall beside it)

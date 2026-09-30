@@ -312,9 +312,15 @@ final class LandmarkMaterializer {
                 else set(world, x, y, z, Blocks.stone_slab, 5 | (meta & 8));
                 break;
             case BED: {
-                // Each half on its own (the two may fall in different chunks); vanilla faces 0 south .. 3 east.
+                // Both halves: the partner may lie in the next chunk, and vanilla drops a half whose partner is missing
+                // when a neighbour changes, so it is set now too if that chunk is already there (never generated here).
                 int facing = VANILLA_FACING[meta & 3];
                 set(world, x, y, z, Blocks.bed, facing | (meta & 8));
+                int[] step = BED_STEP[meta & 3];
+                int sign = (meta & 8) != 0 ? -1 : 1;
+                int px = x + sign * step[0], pz = z + sign * step[1];
+                if (world.blockExists(px, y, pz) && world.getBlock(px, y, pz) != Blocks.bed)
+                    set(world, px, y, pz, Blocks.bed, facing | (~meta & 8));
                 break;
             }
             case CARPET:
@@ -451,6 +457,19 @@ final class LandmarkMaterializer {
                     Wares.stockCounter((net.minecraft.inventory.IInventory) tile, meta & 3, wareSeed(x, y, z));
                 break;
             }
+            case WALL_SHELF:
+            case WEAPON_RACK: {
+                boolean shelf = piece.block == naturalexceptions.core.worldgen.SkyDungeon.Block.WALL_SHELF;
+                Block furniture = shelf ? NEBlocks.wallShelf : NEBlocks.weaponRack;
+                if (furniture == null) break;
+                set(world, x, y, z, furniture, SIDE_FACING[meta & 3]);
+                TileEntity tile = world.getTileEntity(x, y, z);
+                if (tile instanceof net.minecraft.inventory.IInventory) {
+                    if (shelf) Wares.stockShelf((net.minecraft.inventory.IInventory) tile, wareSeed(x, y, z));
+                    else Wares.stockRack((net.minecraft.inventory.IInventory) tile, wareSeed(x, y, z));
+                }
+                break;
+            }
             case WOODEN_TABLE:
                 if (NEBlocks.woodenTable != null) set(world, x, y, z, NEBlocks.woodenTable, meta & 3);
                 else set(world, x, y, z, Blocks.fence, 0);
@@ -500,6 +519,9 @@ final class LandmarkMaterializer {
     private static long wareSeed(int x, int y, int z) {
         return x * 0x9E3779B97F4A7C15L ^ y * 0xC2B2AE3D27D4EB4FL ^ z * 0x165667B19E3779F9L;
     }
+
+    /** From a bed's foot to its head, by dungeon direction (north, east, south, west). */
+    private static final int[][] BED_STEP = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
 
     /** Vanilla facing for a dungeon direction (north, east, south, west): beds and fence gates. */
     private static final int[] VANILLA_FACING = { 2, 3, 0, 1 };

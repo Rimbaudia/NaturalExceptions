@@ -145,7 +145,11 @@ public final class SkyDungeon {
         /** Tilled, watered soil. */
         FARMLAND,
         /** A ripe crop on farmland; meta 0 wheat, 1 carrots, 2 potatoes. */
-        CROP
+        CROP,
+        /** A wall shelf, stocked; meta: the wall it hangs on ({@link #NORTH} ..). */
+        WALL_SHELF,
+        /** A weapon rack, with a worn weapon or two; meta: the wall it hangs on ({@link #NORTH} ..). */
+        WEAPON_RACK
     }
 
     /** Directions for beds, torches, trapdoors and fence gates. */
