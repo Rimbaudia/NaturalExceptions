@@ -554,16 +554,52 @@ public final class SkyDungeon {
         put(x, y, z, block, meta, null, null);
     }
 
-    /** Skystone, weathered by hash: mostly whole bricks, some cracked, some mossy. */
-    /** Wall masonry: Skystone Bricks, now and then cracked or mossy. */
-    void stone(int x, int y, int z) {
-        double roll = noise.unit3(x, y, z, 1);
-        put(x, y, z, Block.SKYSTONE, roll < 0.12 ? 1 : roll < 0.2 ? 2 : 0);
+    /**
+     * How a level of the dungeon looks, so a player always knows how deep they are: the upper halls clean and white,
+     * the next overgrown, the next forgotten (cracked, cobwebbed, half its lamps dark), the deepest storm-struck
+     * (Skyslate seamed with Stormglass, crystal hanging from the ceilings).
+     */
+    public enum Theme {
+
+        UPPER,
+        OVERGROWN,
+        FORGOTTEN,
+        STORMSTRUCK;
+
+        /** The look of {@code level} (0 the first below ground) in a dungeon {@code levels} deep. */
+        public static Theme of(int level, int levels) {
+            if (level <= 0) return UPPER;
+            if (level >= levels - 1) return STORMSTRUCK;
+            return level == 1 ? OVERGROWN : FORGOTTEN;
+        }
     }
 
-    /** A floor: Skystone Tiles, one in ten cracked. */
+    /** The look the masonry being written takes; the writers set it level by level. */
+    Theme theme = Theme.UPPER;
+
+    /** Wall masonry: Skystone Bricks, now and then cracked or mossy, as the level's look has it. */
+    void stone(int x, int y, int z) {
+        double roll = noise.unit3(x, y, z, 1);
+        switch (theme) {
+            case OVERGROWN:
+                put(x, y, z, Block.SKYSTONE, roll < 0.1 ? 1 : roll < 0.55 ? 2 : 0);
+                break;
+            case FORGOTTEN:
+                put(x, y, z, Block.SKYSTONE, roll < 0.35 ? 1 : roll < 0.42 ? 2 : 0);
+                break;
+            case STORMSTRUCK:
+                if (roll < 0.08) put(x, y, z, Block.STORMGLASS_VEIN);
+                else put(x, y, z, Block.SKYSLATE, 0);
+                break;
+            default:
+                put(x, y, z, Block.SKYSTONE, roll < 0.12 ? 1 : roll < 0.2 ? 2 : 0);
+                break;
+        }
+    }
+
+    /** A floor: Skystone Tiles, one in ten cracked (one in five on a forgotten level). */
     void floorTile(int x, int y, int z) {
-        put(x, y, z, Block.TILES, noise.unit3(x, y, z, 2) < 0.1 ? 1 : 0);
+        put(x, y, z, Block.TILES, noise.unit3(x, y, z, 2) < (theme == Theme.FORGOTTEN ? 0.2 : 0.1) ? 1 : 0);
     }
 
     /** A ceiling, plinth or sill: Polished Skystone. */
@@ -585,6 +621,8 @@ public final class SkyDungeon {
             case CHISELED:
             case PILLAR:
             case WARDED:
+            case SKYSLATE:
+            case STORMGLASS_VEIN:
                 return true;
             default:
                 return false;

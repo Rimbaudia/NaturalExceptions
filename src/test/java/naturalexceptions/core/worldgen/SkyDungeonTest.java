@@ -128,6 +128,8 @@ final class SkyDungeonTest {
                     case CARPET:
                     case TORCH:
                     case PRESSURE_PLATE:
+                    case VINE:
+                    case STORMGLASS_CLUSTER:
                         return true;
                     case GATE:
                         return piece.meta == SkyDungeon.WARDEN_BOUND ? wardenGateOpen : keyGateOpen;
@@ -855,5 +857,35 @@ final class SkyDungeonTest {
             }
         }
         assertTrue(shafts >= 10, "enough shafts to judge: " + shafts);
+    }
+
+    @Test
+    void eachLevelHasItsOwnLook() {
+        int judged = 0;
+        for (Sample s : samples()) {
+            int levels = 0;
+            for (Room room : s.dungeon.rooms()) levels = Math.max(levels, room.level + 1);
+            if (levels < 3) continue;
+            int[] mossy = new int[levels], slate = new int[levels], walls = new int[levels];
+            for (Room room : s.dungeon.rooms()) {
+                if (room.level < 0 || room.role == Role.VAULT) continue;
+                // The wall just outside the room's west side, up its height.
+                for (int z = room.minZ; z <= room.maxZ; z++)
+                    for (int y = room.floorY + 2; y <= room.floorY + room.height; y++) {
+                        Piece p = s.dungeon.at(room.minX - 1, y, z);
+                        if (p == null) continue;
+                        walls[room.level]++;
+                        if (p.block == Block.SKYSTONE && p.meta == 2) mossy[room.level]++;
+                        if (p.block == Block.SKYSLATE || p.block == Block.STORMGLASS_VEIN) slate[room.level]++;
+                    }
+            }
+            String name = s.name();
+            assertEquals(0, slate[0], name + ": no Skyslate up top");
+            assertTrue(mossy[0] < walls[0] * 0.2, name + ": the upper halls are clean");
+            assertTrue(mossy[1] > walls[1] * 0.3, name + ": the second level is overgrown");
+            assertTrue(slate[levels - 1] > walls[levels - 1] * 0.5, name + ": the deepest is storm-struck");
+            judged++;
+        }
+        assertTrue(judged >= 3, "enough deep dungeons: " + judged);
     }
 }

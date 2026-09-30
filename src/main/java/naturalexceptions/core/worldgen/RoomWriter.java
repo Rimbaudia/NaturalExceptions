@@ -145,7 +145,9 @@ final class RoomWriter {
                 else masonry(x, y, z, layer);
                 break;
             case 'L':
-                d.put(x, y, z, Block.LAMP);
+                // On a forgotten level a third of the lamps have gone dark.
+                if (d.theme == SkyDungeon.Theme.FORGOTTEN && d.noise.unit3(x, y, z, 72) < 0.33) masonry(x, y, z, layer);
+                else d.put(x, y, z, Block.LAMP);
                 break;
             case 'B':
                 d.put(x, y, z, Block.BOOKSHELF);

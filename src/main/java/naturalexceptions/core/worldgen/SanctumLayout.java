@@ -819,7 +819,10 @@ final class SanctumLayout {
     private void write() {
         RoomWriter rooms = new RoomWriter(d);
         CorridorWriter corridors = new CorridorWriter(d);
+        int levels = 0;
+        for (Slot slot : slots) levels = Math.max(levels, slot.level + 1);
         for (Slot slot : slots) {
+            d.theme = SkyDungeon.Theme.of(slot.level, levels);
             rooms.write(slot.template, slot.rotation, slot.minX(), slot.minZ(), slot.floor(), slot.role);
             slot.room = new SkyDungeon.Room(
                 (slot.minX() + slot.maxX()) / 2,
@@ -837,6 +840,7 @@ final class SanctumLayout {
             d.rooms.add(slot.room);
         }
         for (Edge e : edges) {
+            d.theme = SkyDungeon.Theme.of(Math.max(e.a.level, e.b.level), levels);
             if (e.style == Style.SHAFT) {
                 Slot top = e.a.level < e.b.level ? e.a : e.b, bottom = e.other(top);
                 corridors.shaft(
@@ -850,7 +854,57 @@ final class SanctumLayout {
             } else corridor(corridors, e);
             d.connections.add(new SkyDungeon.Connection(e.a.room, e.b.room, e.style, e.trap, e.critical));
         }
+        for (Slot slot : slots)
+            if (!slot.small && slot.role != Role.VAULT) dress(slot, SkyDungeon.Theme.of(slot.level, levels));
+        d.theme = SkyDungeon.Theme.UPPER;
         entrance(corridors);
+    }
+
+    /**
+     * The details of a level's look, only ever in open air: vines hanging down the walls of an overgrown level,
+     * cobwebs in the top corners of a forgotten one, Stormglass hanging from the ceilings of a storm-struck one (never
+     * over a shaft).
+     */
+    private void dress(Slot slot, SkyDungeon.Theme theme) {
+        int x0 = slot.minX(), x1 = slot.maxX(), z0 = slot.minZ(), z1 = slot.maxZ();
+        int top = slot.floor() + slot.template.height;
+        switch (theme) {
+            case OVERGROWN:
+                for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) {
+                    int wall = x == x0 ? SkyDungeon.WEST
+                        : x == x1 ? SkyDungeon.EAST : z == z0 ? SkyDungeon.NORTH : z == z1 ? SkyDungeon.SOUTH : -1;
+                    if (wall < 0 || d.noise.unit3(x, top, z, 73) >= 0.3) continue;
+                    int length = 1 + (int) (d.noise.unit3(x, top, z, 74) * 3);
+                    for (int y = top; y > top - length && open(x, y, z); y--) d.put(x, y, z, Block.VINE, wall);
+                }
+                for (int[] c : new int[][] { { x0, z0 }, { x1, z0 }, { x0, z1 }, { x1, z1 } })
+                    if (open(c[0], top, c[1]) && d.noise.unit3(c[0], top, c[1], 75) < 0.5)
+                        d.put(c[0], top, c[1], Block.LEAVES);
+                break;
+            case FORGOTTEN:
+                for (int[] c : new int[][] { { x0, z0 }, { x1, z0 }, { x0, z1 }, { x1, z1 } })
+                    if (open(c[0], top, c[1]) && d.noise.unit3(c[0], top, c[1], 76) < 0.4)
+                        d.put(c[0], top, c[1], Block.COBWEB);
+                break;
+            case STORMSTRUCK:
+                int cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+                boolean shaft = slot.role == Role.SHAFT_TOP || slot.role == Role.SHAFT_FOOT;
+                for (int x = x0 + 1; x < x1; x++) for (int z = z0 + 1; z < z1; z++) {
+                    if (shaft && Math.abs(x - cx) <= 1 && Math.abs(z - cz) <= 1) continue;
+                    SkyDungeon.Piece above = d.at(x, top + 1, z);
+                    if (above == null || !SkyDungeon.masonry(above.block) || !open(x, top, z)) continue;
+                    if (d.noise.unit3(x, top, z, 77) < 0.07) d.put(x, top, z, Block.STORMGLASS_CLUSTER);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    /** Whether (x, y, z) is open air in the dungeon as written so far. */
+    private boolean open(int x, int y, int z) {
+        SkyDungeon.Piece piece = d.at(x, y, z);
+        return piece != null && piece.block == Block.AIR;
     }
 
     private void corridor(CorridorWriter corridors, Edge e) {
