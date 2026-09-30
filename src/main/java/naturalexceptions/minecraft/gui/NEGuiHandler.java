@@ -16,11 +16,20 @@ public final class NEGuiHandler implements IGuiHandler {
     public static final int GUI_MATERIAL_NAMING = 2;
     public static final int GUI_MOLD_ASSEMBLY = 3;
     public static final int GUI_GEAR = 4;
+    /** A crate, pantry shelf or market counter. */
+    public static final int GUI_STORAGE = 5;
     public static final int GUI_ALLOY_NAMING = GUI_MATERIAL_NAMING;
 
     @Override
     public Object getServerGuiElement(int ID, EntityPlayer player, World world, int x, int y, int z) {
         if (ID == GUI_GEAR) return new naturalexceptions.minecraft.gear.ContainerGear(player);
+        if (ID == GUI_STORAGE) {
+            TileEntity te = world.getTileEntity(x, y, z);
+            if (te instanceof naturalexceptions.minecraft.furniture.TileEntityStorage)
+                return new naturalexceptions.minecraft.furniture.ContainerStorage(
+                    player.inventory,
+                    (naturalexceptions.minecraft.furniture.TileEntityStorage) te);
+        }
         if (ID == GUI_STARTER_SMELTER) {
             TileEntity te = world.getTileEntity(x, y, z);
             if (te instanceof TileEntityStarterSmelter) {
@@ -51,6 +60,13 @@ public final class NEGuiHandler implements IGuiHandler {
     @Override
     public Object getClientGuiElement(int ID, EntityPlayer player, World world, int x, int y, int z) {
         if (ID == GUI_GEAR) return new naturalexceptions.minecraft.gear.client.GuiGear(player);
+        if (ID == GUI_STORAGE) {
+            TileEntity te = world.getTileEntity(x, y, z);
+            if (te instanceof naturalexceptions.minecraft.furniture.TileEntityStorage)
+                return new naturalexceptions.minecraft.furniture.client.GuiStorage(
+                    player.inventory,
+                    (naturalexceptions.minecraft.furniture.TileEntityStorage) te);
+        }
         if (ID == GUI_STARTER_SMELTER) {
             TileEntity te = world.getTileEntity(x, y, z);
             if (te instanceof TileEntityStarterSmelter) {

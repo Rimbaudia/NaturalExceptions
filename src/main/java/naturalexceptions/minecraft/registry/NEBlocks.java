@@ -38,6 +38,17 @@ public final class NEBlocks {
     public static Block skystoneStairs;
     public static Block skystoneSlab;
     public static Block skystoneDoubleSlab;
+    public static Block skyslate;
+    public static Block skyslateStairs;
+    public static Block skyslateShingleStairs;
+    public static Block skyslateSlab;
+    public static Block skyslateDoubleSlab;
+    public static Block crate;
+    public static Block barrel;
+    public static Block pantryShelf;
+    public static Block marketCounter;
+    public static Block woodenTable;
+    public static Block marketAwning;
     public static Block windbloom;
     public static Block wardedSkystone;
     public static Block vaultGate;
@@ -98,6 +109,26 @@ public final class NEBlocks {
         skystoneSlab = new naturalexceptions.minecraft.block.BlockSkystoneSlab(false)
             .setCreativeTab(NECreativeTab.INSTANCE);
         skystoneDoubleSlab = new naturalexceptions.minecraft.block.BlockSkystoneSlab(true);
+        skyslate = new naturalexceptions.minecraft.block.BlockSkyslate().setCreativeTab(NECreativeTab.INSTANCE);
+        skyslateStairs = new naturalexceptions.minecraft.block.BlockSkystoneStairs(skyslate, 0, "skyslateStairs")
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        skyslateShingleStairs = new naturalexceptions.minecraft.block.BlockSkystoneStairs(
+            skyslate,
+            1,
+            "skyslateShingleStairs").setCreativeTab(NECreativeTab.INSTANCE);
+        skyslateSlab = new naturalexceptions.minecraft.block.BlockSkyslateSlab(false)
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        skyslateDoubleSlab = new naturalexceptions.minecraft.block.BlockSkyslateSlab(true);
+        crate = new naturalexceptions.minecraft.furniture.BlockCrate().setCreativeTab(NECreativeTab.INSTANCE);
+        barrel = new naturalexceptions.minecraft.furniture.BlockBarrel().setCreativeTab(NECreativeTab.INSTANCE);
+        pantryShelf = new naturalexceptions.minecraft.furniture.BlockPantryShelf()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        marketCounter = new naturalexceptions.minecraft.furniture.BlockMarketCounter()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        woodenTable = new naturalexceptions.minecraft.furniture.BlockWoodenTable()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        marketAwning = new naturalexceptions.minecraft.furniture.BlockMarketAwning()
+            .setCreativeTab(NECreativeTab.INSTANCE);
         windbloom = new naturalexceptions.minecraft.block.BlockWindbloom().setCreativeTab(NECreativeTab.INSTANCE);
         wardedSkystone = new naturalexceptions.minecraft.block.BlockWardedSkystone();
         vaultGate = new naturalexceptions.minecraft.block.BlockVaultGate();
@@ -173,6 +204,30 @@ public final class NEBlocks {
                 skystoneDoubleSlab,
                 naturalexceptions.minecraft.block.ItemSkystoneSlab.class,
                 "skystone_double_slab");
+            GameRegistry.registerBlock(skyslate, naturalexceptions.minecraft.block.ItemBlockSkyslate.class, "skyslate");
+            GameRegistry.registerBlock(skyslateStairs, "skyslate_stairs");
+            GameRegistry.registerBlock(skyslateShingleStairs, "skyslate_shingle_stairs");
+            GameRegistry
+                .registerBlock(skyslateSlab, naturalexceptions.minecraft.block.ItemSkyslateSlab.class, "skyslate_slab");
+            GameRegistry.registerBlock(
+                skyslateDoubleSlab,
+                naturalexceptions.minecraft.block.ItemSkyslateSlab.class,
+                "skyslate_double_slab");
+            GameRegistry.registerBlock(crate, naturalexceptions.minecraft.furniture.ItemBlockCrate.class, "crate");
+            GameRegistry.registerBlock(barrel, "barrel");
+            GameRegistry.registerBlock(pantryShelf, "pantry_shelf");
+            GameRegistry.registerBlock(
+                marketCounter,
+                naturalexceptions.minecraft.furniture.ItemBlockFurniture.class,
+                "market_counter");
+            GameRegistry.registerBlock(
+                woodenTable,
+                naturalexceptions.minecraft.furniture.ItemBlockFurniture.class,
+                "wooden_table");
+            GameRegistry.registerBlock(
+                marketAwning,
+                naturalexceptions.minecraft.furniture.ItemBlockFurniture.class,
+                "market_awning");
             GameRegistry.registerBlock(wardedSkystone, "warded_skystone");
             GameRegistry.registerBlock(vaultGate, "vault_gate");
             GameRegistry.registerBlock(triggerStone, "trigger_stone");
@@ -188,6 +243,23 @@ public final class NEBlocks {
 
         try {
             GameRegistry.registerTileEntity(TileEntityStarterSmelter.class, "starter_smelter");
+        } catch (Throwable ignored) {}
+        try {
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.furniture.TileEntityCrate.class,
+                "naturalexceptions_crate");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.furniture.TileEntityBarrel.class,
+                "naturalexceptions_barrel");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.furniture.TileEntityPantryShelf.class,
+                "naturalexceptions_pantry_shelf");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.furniture.TileEntityMarketCounter.class,
+                "naturalexceptions_market_counter");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.furniture.TileEntityWoodenTable.class,
+                "naturalexceptions_wooden_table");
         } catch (Throwable ignored) {}
         try {
             GameRegistry.registerTileEntity(

@@ -5,12 +5,16 @@ import net.minecraft.block.BlockStairs;
 import net.minecraft.entity.Entity;
 import net.minecraft.world.World;
 
-/** Skystone Brick Stairs: steps, seats, cornices and arches; as blast-proof as the bricks. */
+/** Skystone (or Skyslate) stairs: steps, seats, cornices, arches and roofs; as blast-proof as the stone. */
 public final class BlockSkystoneStairs extends BlockStairs {
 
     public BlockSkystoneStairs(Block bricks) {
-        super(bricks, 0);
-        setBlockName("skystoneStairs");
+        this(bricks, 0, "skystoneStairs");
+    }
+
+    public BlockSkystoneStairs(Block model, int meta, String name) {
+        super(model, meta);
+        setBlockName(name);
         setResistance(6000.0F);
         setHarvestLevel("pickaxe", 1);
         useNeighborBrightness = true;

@@ -183,6 +183,16 @@ public final class NaturalExceptions {
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
             naturalexceptions.minecraft.fabrication.TileEntityAssemblyTable.class,
             new naturalexceptions.minecraft.fabrication.client.RenderAssemblyTable());
+        naturalexceptions.minecraft.furniture.client.RenderFurnitureItems furniture = new naturalexceptions.minecraft.furniture.client.RenderFurnitureItems();
+        cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
+            naturalexceptions.minecraft.furniture.TileEntityWoodenTable.class,
+            furniture);
+        cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
+            naturalexceptions.minecraft.furniture.TileEntityMarketCounter.class,
+            furniture);
+        cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
+            naturalexceptions.minecraft.furniture.TileEntityPantryShelf.class,
+            furniture);
     }
 
     @Mod.EventHandler
