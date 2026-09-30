@@ -327,26 +327,54 @@ final class CitadelLayout {
         }
         for (int i = 0; i < steps; i++) {
             int[] at = ring[i % ring.length], next = ring[(i + 1) % ring.length];
+            int[] from = i == 0 ? null : ring[(i - 1) % ring.length];
             int y = b + 1 + i;
             for (int under = Math.max(b + 1, y - ring.length + 4); under < y; under++)
                 stone(tx + at[0], under, tz + at[1]);
-            put(tx + at[0], y, tz + at[1], Block.SKY_STAIRS, rising(next[0] - at[0], next[1] - at[1]));
+            // Each step faces the way it is walked onto, so at a corner you step straight onto its low front and turn
+            // on it; the first faces on round the ring.
+            int facing = from == null ? rising(next[0] - at[0], next[1] - at[1])
+                : rising(at[0] - from[0], at[1] - from[1]);
+            put(tx + at[0], y, tz + at[1], Block.SKY_STAIRS, facing);
             // Headroom over the step: three open blocks, cutting through the walk floor or the roof.
             for (int h = y + 1; h <= y + 3 && h <= b + top; h++) put(tx + at[0], h, tz + at[1], Block.AIR);
         }
-        // The hatch's curb: polished slabs on the roof round the opening, but not ahead of the last step.
-        int[] last = ring[(steps - 1) % ring.length], out = ring[steps % ring.length];
-        for (int k = steps - 3; k < steps; k++) {
+        stairHead(tx, tz, top, ring, steps);
+    }
+
+    /**
+     * The stair-head hut on a tower's roof: Skystone walls three high round the stair's last steps and the place it
+     * comes out on, a polished roof over it all, and a doorway onto the roof beyond that place.
+     */
+    private void stairHead(int tx, int tz, int top, int[][] ring, int steps) {
+        java.util.Set<Long> inside = new java.util.HashSet<>();
+        java.util.List<int[]> cells = new ArrayList<>();
+        for (int k = steps - 3; k <= steps; k++) {
             int[] at = ring[Math.floorMod(k, ring.length)];
-            for (int[] st : new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
-                int rx = at[0] + st[0], rz = at[1] + st[1];
-                if (rx == out[0] && rz == out[1]) continue;
-                if (Math.abs(rx) > 3 || Math.abs(rz) > 3) continue;
-                if (isHatch(ring, steps, rx, rz)) continue;
-                put(tx + rx, b + top + 1, tz + rz, Block.SKY_SLAB, 2);
-            }
+            inside.add(cell(at[0], at[1]));
+            cells.add(at);
         }
-        put(tx + last[0], b + top + 1, tz + last[1], Block.AIR);
+        int[] out = ring[steps % ring.length], beyond = ring[(steps + 1) % ring.length];
+        java.util.Set<Long> done = new java.util.HashSet<>();
+        for (int[] at : cells) for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) {
+            int x = at[0] + dx, z = at[1] + dz;
+            if (Math.abs(x) > 3 || Math.abs(z) > 3 || !done.add(cell(x, z))) continue;
+            put(tx + x, b + top + 4, tz + z, Block.SKY_SLAB, 2);
+            if (inside.contains(cell(x, z))) continue;
+            boolean door = x == beyond[0] && z == beyond[1];
+            for (int y = b + top + 1; y <= b + top + 3; y++)
+                if (door && y <= b + top + 2) put(tx + x, y, tz + z, Block.AIR);
+            else stone(tx + x, y, tz + z);
+        }
+        for (int k = steps - 3; k <= steps; k++) {
+            int[] at = ring[Math.floorMod(k, ring.length)];
+            for (int y = b + top + 1; y <= b + top + 3; y++) put(tx + at[0], y, tz + at[1], Block.AIR);
+        }
+        put(tx + out[0], b + top, tz + out[1], Block.POLISHED); // the floor it steps out onto
+    }
+
+    private static long cell(int x, int z) {
+        return ((long) x << 32) ^ (z & 0xffffffffL);
     }
 
     /** The ring's place nearest a tower's ground door: where its stair starts. */
@@ -365,14 +393,6 @@ final class CitadelLayout {
         int[][] out = new int[ring.length][];
         for (int k = 0; k < ring.length; k++) out[k] = ring[(start + k) % ring.length];
         return out;
-    }
-
-    private static boolean isHatch(int[][] ring, int steps, int x, int z) {
-        for (int k = steps - 3; k < steps; k++) {
-            int[] at = ring[Math.floorMod(k, ring.length)];
-            if (at[0] == x && at[1] == z) return true;
-        }
-        return false;
     }
 
     // --- Gatehouses -----------------------------------------------------------------------------------------

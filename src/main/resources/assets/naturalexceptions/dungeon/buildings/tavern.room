@@ -37,7 +37,7 @@ Q........QQ
 Q........"Q
 Q.4/2.+..QQ
 Q.........Q
-Q........4Q
+Q.......4.Q
 QQQQQDQQQQQ
 layer 2:
 Q#########Q
@@ -51,7 +51,7 @@ Q#########Q
 |........j#
 #........y#
 #.........#
-#.......4.#
+#......4..#
 Q#|##D##|#Q
 layer 3:
 Q#########Q
@@ -65,7 +65,7 @@ j........dj
 j........Q#
 #.........#
 #d........#
-#......4..#
+#.....4...#
 Q#j#####j#Q
 layer 4:
 Q#########Q
@@ -79,7 +79,7 @@ Q#########Q
 #........Q#
 #.........#
 #.........#
-#.....4...#
+#....4....#
 Q#########Q
 layer 5:
 Q#########Q
@@ -93,31 +93,31 @@ Q#########Q
 #PPPPPPPPQ#
 #PPPPPPPPP#
 #PPPPPPPPP#
-#PPPP4...P#
+#PPP4...PP#
 Q#########Q
 layer 6:
 YppYppYppYY
-pb.}pb}pb}p
-pu..pu.pu.p
-Y...p..p..Y
-p...p..p..p
-p...p..p..p
-Y...p..p..Y
-ppDppDppDpp
+pb}..p..}bp
+puqq.p.qqup
+Y.qq.p.qq.Y
+p.qq.p.qq.p
+p.4/.p./2.p
+Y....p....Y
+ppDpppppDpp
 p........Qp
 Y.........Y
-p.....oooop
-p.........p
+p....oooo.p
+p.......o.p
 YppYppYppYY
 layer 7:
 Yp|YppYp|YY
-p...p..p..p
-p...p..p..p
-Y...p..p..Y
-p...p..p..p
-|...p..p..|
-Y...p..p..Y
-ppDppDppDpp
+p....p....p
+p....p....p
+Y....p....Y
+p....p....p
+|....p....|
+Y....p....Y
+ppDpppppDpp
 |........Qp
 Y.........Y
 p.........p
@@ -125,27 +125,27 @@ p.........p
 YppYppYppYY
 layer 8:
 YppYppYppYY
-p...p..p..p
-p...p..p..p
-Y...p..p..Y
-p...p..p..p
-p...p..p..p
-Y...p..p..Y
+p....p....p
+p....p....p
+Yd...p...dY
+p....p....p
+p....p....p
+Y....p....Y
 ppppppppppp
 p........Qp
-Y....d....Y
-p.d.......p
+Yd........Y
+p.........p
 p.........p
 YppYppYppYY
 layer 9:
 YYYYYYYYYYY
-Y.........Y
-Y.........Y
-Y.........Y
-Y.........Y
-Y.........Y
-Y.........Y
-Y.........Y
+Y....p....Y
+Y....p....Y
+Y....p....Y
+Y....p....Y
+Y....p....Y
+Y....p....Y
+YpppppppppY
 Y........QY
 Y.........Y
 Y.........Y
