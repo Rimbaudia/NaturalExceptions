@@ -27,6 +27,28 @@ public final class Wares {
     private static final Object[][] PANTRY = { { Items.bread, 1, 3 }, { Items.apple, 1, 3 },
         { Items.baked_potato, 1, 3 }, { Items.cooked_fished, 1, 2 }, { Items.cookie, 2, 6 }, { Items.carrot, 1, 4 } };
 
+    private static final Object[][] SHELF = { { Items.book, 1, 2 }, { Items.bowl, 1, 3 }, { Items.glass_bottle, 1, 3 },
+        { Items.flower_pot, 1, 1 }, { Items.paper, 1, 4 }, { Items.bread, 1, 2 }, { Items.string, 1, 3 } };
+    private static final Object[][] RACK = { { Items.wooden_sword, 1, 1 }, { Items.stone_sword, 1, 1 },
+        { Items.bow, 1, 1 }, { Items.stone_axe, 1, 1 }, { Items.wooden_axe, 1, 1 } };
+
+    /** A shelf's odds and ends: none to two. */
+    public static void stockShelf(IInventory shelf, long seed) {
+        fill(shelf, SHELF, new Random(seed).nextInt(3), seed);
+    }
+
+    /** A rack's worn weapons and tools, one or two, a little used. */
+    public static void stockRack(IInventory rack, long seed) {
+        Random random = new Random(seed ^ 0x2545F491L);
+        int kinds = 1 + random.nextInt(2);
+        for (int slot = 0; slot < kinds; slot++) {
+            Item item = (Item) RACK[random.nextInt(RACK.length)][0];
+            ItemStack stack = new ItemStack(item);
+            stack.setItemDamage(item.getMaxDamage() / 3 + random.nextInt(Math.max(1, item.getMaxDamage() / 3)));
+            rack.setInventorySlotContents(slot, stack);
+        }
+    }
+
     /** Sets out two to four kinds of the stall's goods, the first slots first (the counter shows those). */
     public static void stockCounter(IInventory counter, int goods, long seed) {
         Object[][] table = goods == 1 ? FISH : goods == 2 ? POTTERY : goods == 3 ? CLOTH : PRODUCE;

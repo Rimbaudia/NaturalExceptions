@@ -193,6 +193,10 @@ public final class NaturalExceptions {
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
             naturalexceptions.minecraft.furniture.TileEntityPantryShelf.class,
             furniture);
+        cpw.mods.fml.client.registry.ClientRegistry
+            .bindTileEntitySpecialRenderer(naturalexceptions.minecraft.furniture.TileEntityWallShelf.class, furniture);
+        cpw.mods.fml.client.registry.ClientRegistry
+            .bindTileEntitySpecialRenderer(naturalexceptions.minecraft.furniture.TileEntityWeaponRack.class, furniture);
     }
 
     @Mod.EventHandler

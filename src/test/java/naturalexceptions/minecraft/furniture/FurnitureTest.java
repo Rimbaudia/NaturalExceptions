@@ -97,4 +97,18 @@ class FurnitureTest {
         assertEquals(1, table.getStackInSlot(0).stackSize, "one thing per place");
         assertEquals(3, table.lastFilled());
     }
+
+    @Test
+    void aWallShelfHoldsThreeStacksAndARackThreeWeapons() {
+        TileEntityWallShelf shelf = new TileEntityWallShelf();
+        for (int i = 0; i < 3; i++) assertTrue(shelf.addToFreeSlot(new ItemStack(Items.book, 16)));
+        assertFalse(shelf.addToFreeSlot(new ItemStack(Items.book)), "three places");
+        assertEquals(16, shelf.getStackInSlot(0).stackSize, "a whole stack in each");
+        TileEntityWeaponRack rack = new TileEntityWeaponRack();
+        assertFalse(rack.addToFreeSlot(new ItemStack(Items.bread)), "bread is no weapon");
+        assertTrue(rack.addToFreeSlot(new ItemStack(Items.iron_sword)));
+        assertTrue(rack.addToFreeSlot(new ItemStack(Items.bow)));
+        assertTrue(rack.addToFreeSlot(new ItemStack(Items.stone_pickaxe)));
+        assertFalse(rack.addToFreeSlot(new ItemStack(Items.wooden_axe)), "three at most");
+    }
 }

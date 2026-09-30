@@ -49,6 +49,8 @@ public final class NEBlocks {
     public static Block marketCounter;
     public static Block woodenTable;
     public static Block marketAwning;
+    public static Block wallShelf;
+    public static Block weaponRack;
     public static Block windbloom;
     public static Block wardedSkystone;
     public static Block vaultGate;
@@ -129,6 +131,8 @@ public final class NEBlocks {
             .setCreativeTab(NECreativeTab.INSTANCE);
         marketAwning = new naturalexceptions.minecraft.furniture.BlockMarketAwning()
             .setCreativeTab(NECreativeTab.INSTANCE);
+        wallShelf = new naturalexceptions.minecraft.furniture.BlockWallShelf().setCreativeTab(NECreativeTab.INSTANCE);
+        weaponRack = new naturalexceptions.minecraft.furniture.BlockWeaponRack().setCreativeTab(NECreativeTab.INSTANCE);
         windbloom = new naturalexceptions.minecraft.block.BlockWindbloom().setCreativeTab(NECreativeTab.INSTANCE);
         wardedSkystone = new naturalexceptions.minecraft.block.BlockWardedSkystone();
         vaultGate = new naturalexceptions.minecraft.block.BlockVaultGate();
@@ -228,6 +232,8 @@ public final class NEBlocks {
                 marketAwning,
                 naturalexceptions.minecraft.furniture.ItemBlockFurniture.class,
                 "market_awning");
+            GameRegistry.registerBlock(wallShelf, "wall_shelf");
+            GameRegistry.registerBlock(weaponRack, "weapon_rack");
             GameRegistry.registerBlock(wardedSkystone, "warded_skystone");
             GameRegistry.registerBlock(vaultGate, "vault_gate");
             GameRegistry.registerBlock(triggerStone, "trigger_stone");
@@ -260,6 +266,12 @@ public final class NEBlocks {
             GameRegistry.registerTileEntity(
                 naturalexceptions.minecraft.furniture.TileEntityWoodenTable.class,
                 "naturalexceptions_wooden_table");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.furniture.TileEntityWallShelf.class,
+                "naturalexceptions_wall_shelf");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.furniture.TileEntityWeaponRack.class,
+                "naturalexceptions_weapon_rack");
         } catch (Throwable ignored) {}
         try {
             GameRegistry.registerTileEntity(

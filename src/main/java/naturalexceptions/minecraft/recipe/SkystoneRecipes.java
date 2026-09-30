@@ -94,6 +94,10 @@ public final class SkystoneRecipes {
                 new ItemStack(Blocks.wooden_slab, 1, BlockWoodenTable.PLANKS[wood]),
                 'F',
                 Blocks.fence);
+        if (NEBlocks.wallShelf != null)
+            GameRegistry.addRecipe(new ItemStack(NEBlocks.wallShelf, 3), "SSS", "T T", 'S', slabs, 'T', Items.stick);
+        if (NEBlocks.weaponRack != null) GameRegistry
+            .addRecipe(new ItemStack(NEBlocks.weaponRack), "T T", "PTP", "T T", 'T', Items.stick, 'P', planks);
         if (NEBlocks.marketAwning != null) {
             int[] wool = { 14, 11, 13, 4 };
             for (int colour = 0; colour < wool.length; colour++) GameRegistry.addRecipe(
