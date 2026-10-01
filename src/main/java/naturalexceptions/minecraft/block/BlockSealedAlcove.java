@@ -3,8 +3,6 @@ package naturalexceptions.minecraft.block;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.EntityLiving;
-import net.minecraft.entity.monster.EntityCaveSpider;
-import net.minecraft.entity.monster.EntitySpider;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -58,10 +56,8 @@ public final class BlockSealedAlcove extends Block {
                 mob = new naturalexceptions.minecraft.entity.EntityStormboneArcher(world);
                 break;
             case SPIDER:
-                mob = new EntitySpider(world);
-                break;
             case CAVE_SPIDER:
-                mob = new EntityCaveSpider(world);
+                mob = new naturalexceptions.minecraft.entity.EntityCloudweaver(world);
                 break;
             case ZOMBIE:
             default:

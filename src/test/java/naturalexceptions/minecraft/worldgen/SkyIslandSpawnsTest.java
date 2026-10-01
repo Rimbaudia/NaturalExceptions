@@ -32,5 +32,7 @@ final class SkyIslandSpawnsTest {
         assertEquals("naturalexceptions.gale_husk", LandmarkMaterializer.entityName("Zombie"));
         assertEquals("naturalexceptions.stormbone_archer", LandmarkMaterializer.entityName("Skeleton"));
         assertEquals("naturalexceptions.citadel_guard", LandmarkMaterializer.entityName("CitadelGuard"));
+        assertEquals("naturalexceptions.cloudweaver", LandmarkMaterializer.entityName("Spider"));
+        assertEquals("naturalexceptions.cloudweaver", LandmarkMaterializer.entityName("CaveSpider"));
     }
 }

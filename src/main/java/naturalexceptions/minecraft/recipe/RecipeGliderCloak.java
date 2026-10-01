@@ -14,24 +14,26 @@ import net.minecraftforge.oredict.OreDictionary;
 import naturalexceptions.minecraft.item.GliderCloaks;
 
 /**
- * The Glider Cloak, sewn from any wool, leather and Windbloom, takes the colour of its wool (most of it).
+ * The Glider Cloak: its sail of Cloudsilk, its shoulders of wool (whose colour it takes, most of it), leather and
+ * Windbloom.
  *
  * <pre>
- *   W L W
- *   F W F     W = wool of any colour, L = leather, F = Windbloom
- *   W . W
+ *   W L W     W = wool of any colour, L = leather
+ *   F S F     F = Windbloom, S = Cloudsilk
+ *   S . S
  * </pre>
  */
 public final class RecipeGliderCloak extends ShapedRecipes {
 
-    public RecipeGliderCloak(Item cloak, Item windbloom) {
-        super(3, 3, pattern(windbloom), new ItemStack(cloak));
+    public RecipeGliderCloak(Item cloak, Item windbloom, Item cloudsilk) {
+        super(3, 3, pattern(windbloom, cloudsilk), new ItemStack(cloak));
     }
 
-    private static ItemStack[] pattern(Item windbloom) {
+    private static ItemStack[] pattern(Item windbloom, Item cloudsilk) {
         ItemStack wool = new ItemStack(Blocks.wool, 1, OreDictionary.WILDCARD_VALUE);
         ItemStack leather = new ItemStack(Items.leather), flower = new ItemStack(windbloom);
-        return new ItemStack[] { wool, leather, wool, flower, wool, flower, wool, null, wool };
+        ItemStack silk = new ItemStack(cloudsilk);
+        return new ItemStack[] { wool, leather, wool, flower, silk, flower, silk, null, silk };
     }
 
     @Override
@@ -39,17 +41,18 @@ public final class RecipeGliderCloak extends ShapedRecipes {
         return GliderCloaks.withColour(getRecipeOutput().copy(), GliderCloaks.woolColour(grid));
     }
 
-    /** The same cloak from a Warden's Gale Core, leather and two wool, in the wool's colour. */
+    /** The same cloak from a Warden's Gale Core, leather, a wool and two Cloudsilk, in the wool's colour. */
     public static final class FromCore extends ShapelessRecipes {
 
-        public FromCore(Item cloak, Item core) {
+        public FromCore(Item cloak, Item core, Item cloudsilk) {
             super(
                 new ItemStack(cloak),
                 Arrays.asList(
                     new ItemStack(core),
                     new ItemStack(Items.leather),
                     new ItemStack(Blocks.wool, 1, OreDictionary.WILDCARD_VALUE),
-                    new ItemStack(Blocks.wool, 1, OreDictionary.WILDCARD_VALUE)));
+                    new ItemStack(cloudsilk),
+                    new ItemStack(cloudsilk)));
         }
 
         @Override

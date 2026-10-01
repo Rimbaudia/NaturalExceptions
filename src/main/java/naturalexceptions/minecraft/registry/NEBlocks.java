@@ -75,6 +75,7 @@ public final class NEBlocks {
     public static Block archeryButt;
     public static Block trainingDummy;
     public static Block wellWinch;
+    public static Block cloudsilkRope;
     public static Block fountain;
     public static Block orrery;
     public static Block chartTable;
@@ -195,6 +196,7 @@ public final class NEBlocks {
         trainingDummy = new naturalexceptions.minecraft.furniture.BlockTrainingDummy()
             .setCreativeTab(NECreativeTab.INSTANCE);
         wellWinch = new naturalexceptions.minecraft.furniture.BlockWellWinch().setCreativeTab(NECreativeTab.INSTANCE);
+        cloudsilkRope = new naturalexceptions.minecraft.block.BlockCloudsilkRope().setCreativeTab(NECreativeTab.INSTANCE);
         fountain = new naturalexceptions.minecraft.furniture.BlockFountain().setCreativeTab(NECreativeTab.INSTANCE);
         orrery = new naturalexceptions.minecraft.furniture.BlockOrrery().setCreativeTab(NECreativeTab.INSTANCE);
         chartTable = new naturalexceptions.minecraft.furniture.BlockChartTable().setCreativeTab(NECreativeTab.INSTANCE);
@@ -324,6 +326,10 @@ public final class NEBlocks {
             GameRegistry.registerBlock(archeryButt, "archery_butt");
             GameRegistry.registerBlock(trainingDummy, "training_dummy");
             GameRegistry.registerBlock(wellWinch, "well_winch");
+            GameRegistry.registerBlock(
+                cloudsilkRope,
+                naturalexceptions.minecraft.block.ItemBlockCloudsilkRope.class,
+                "cloudsilk_rope");
             GameRegistry.registerBlock(fountain, "fountain");
             GameRegistry.registerBlock(orrery, "orrery");
             GameRegistry.registerBlock(chartTable, "chart_table");

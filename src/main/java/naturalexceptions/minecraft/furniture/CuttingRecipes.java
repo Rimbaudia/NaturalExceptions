@@ -135,9 +135,15 @@ public final class CuttingRecipes {
         return out;
     }
 
-    /** Wool of any colour into carpet of its colour, dressings for wounds, or back into string. */
+    /**
+     * Wool of any colour into carpet of its colour, dressings for wounds, or back into string; and Cloudsilk into
+     * dressings, more of them than wool gives.
+     */
     private static List<Recipe> weaving() {
         List<Recipe> out = new ArrayList<>();
+        Item silk = naturalexceptions.minecraft.registry.NEItems.cloudsilk;
+        if (silk != null && naturalexceptions.minecraft.registry.NEItems.bandage != null)
+            out.add(new Recipe(silk, -1, 1, new ItemStack(naturalexceptions.minecraft.registry.NEItems.bandage, 4)));
         Item wool = Item.getItemFromBlock(Blocks.wool);
         for (int colour = 0; colour < 16; colour++) {
             out.add(new Recipe(wool, colour, 1, new ItemStack(Blocks.carpet, 2, colour)));

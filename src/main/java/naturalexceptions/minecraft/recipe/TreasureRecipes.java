@@ -26,12 +26,15 @@ public final class TreasureRecipes {
         if (shard == null || copper == null) return;
         ItemStack anyWool = new ItemStack(Blocks.wool, 1, OreDictionary.WILDCARD_VALUE);
 
-        // A bottled cloud; a cloak that catches the wind on Windbloom petals.
+        // Cloudsilk Rope: three silk twisted into six lengths.
+        if (NEItems.cloudsilk != null && NEBlocks.cloudsilkRope != null) GameRegistry
+            .addRecipe(new ItemStack(NEBlocks.cloudsilkRope, 6), "S", "S", "S", 'S', NEItems.cloudsilk);
+        // A bottled cloud; a cloak that catches the wind on Windbloom petals and a Cloudsilk sail.
         if (NEBlocks.cloud != null)
             add(Treasure.CLOUD_FLASK, " C ", "CBC", " L ", 'C', NEBlocks.cloud, 'B', Items.glass_bottle, 'L', shard);
         Item cloakItem = NEItems.TREASURES.get(Treasure.GLIDER_CLOAK);
-        if (NEBlocks.windbloom != null && cloakItem != null)
-            GameRegistry.addRecipe(new RecipeGliderCloak(cloakItem, Item.getItemFromBlock(NEBlocks.windbloom)));
+        if (NEBlocks.windbloom != null && cloakItem != null && NEItems.cloudsilk != null) GameRegistry
+            .addRecipe(new RecipeGliderCloak(cloakItem, Item.getItemFromBlock(NEBlocks.windbloom), NEItems.cloudsilk));
         if (NEItems.stypticSalve != null && NEBlocks.windbloom != null) GameRegistry.addShapelessRecipe(
             new ItemStack(NEItems.stypticSalve, 2),
             Items.bowl,
@@ -75,7 +78,8 @@ public final class TreasureRecipes {
             Item flask = NEItems.TREASURES.get(Treasure.CLOUD_FLASK),
                 cloak = NEItems.TREASURES.get(Treasure.GLIDER_CLOAK);
             if (flask != null) GameRegistry.addShapelessRecipe(new ItemStack(flask), core, Items.glass_bottle);
-            if (cloak != null) GameRegistry.addRecipe(new RecipeGliderCloak.FromCore(cloak, core));
+            if (cloak != null && NEItems.cloudsilk != null)
+                GameRegistry.addRecipe(new RecipeGliderCloak.FromCore(cloak, core, NEItems.cloudsilk));
         }
         // Skyfall is forged from a fallen star, not from Stormglass.
         if (NEItems.skyfall != null && NEItems.materialSample != null) GameRegistry.addRecipe(new RecipeSkyfall());

@@ -30,6 +30,8 @@ public final class NEItems {
     public static naturalexceptions.minecraft.item.ItemMasonsChisel masonsChisel;
     public static naturalexceptions.minecraft.item.ItemWaterJug waterJug;
     public static naturalexceptions.minecraft.item.ItemCitadelHalberd citadelHalberd;
+    public static naturalexceptions.minecraft.item.ItemCloudsilk cloudsilk;
+    public static naturalexceptions.minecraft.item.ItemSilkspinner silkspinner;
     public static naturalexceptions.minecraft.weapon.ItemSkyfall skyfall;
     public static naturalexceptions.minecraft.weapon.ItemShardcaster shardcaster;
     public static naturalexceptions.minecraft.item.ItemWindbloomTea windbloomTea;
@@ -194,6 +196,10 @@ public final class NEItems {
         waterJug.setCreativeTab(NECreativeTab.INSTANCE);
         citadelHalberd = new naturalexceptions.minecraft.item.ItemCitadelHalberd();
         citadelHalberd.setCreativeTab(NECreativeTab.INSTANCE);
+        cloudsilk = new naturalexceptions.minecraft.item.ItemCloudsilk();
+        cloudsilk.setCreativeTab(NECreativeTab.INSTANCE);
+        silkspinner = new naturalexceptions.minecraft.item.ItemSilkspinner();
+        silkspinner.setCreativeTab(NECreativeTab.INSTANCE);
         skyfall = new naturalexceptions.minecraft.weapon.ItemSkyfall();
         skyfall.setCreativeTab(NECreativeTab.INSTANCE);
         shardcaster = new naturalexceptions.minecraft.weapon.ItemShardcaster();
@@ -237,6 +243,8 @@ public final class NEItems {
             GameRegistry.registerItem(masonsChisel, "masons_chisel");
             GameRegistry.registerItem(waterJug, "water_jug");
             GameRegistry.registerItem(citadelHalberd, "citadel_halberd");
+            GameRegistry.registerItem(cloudsilk, "cloudsilk");
+            GameRegistry.registerItem(silkspinner, "silkspinner");
             GameRegistry.registerItem(skyfall, "skyfall");
             GameRegistry.registerItem(shardcaster, "shardcaster");
             GameRegistry.registerItem(windbloomTea, "windbloom_tea");

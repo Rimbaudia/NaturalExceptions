@@ -168,6 +168,22 @@ public final class NaturalExceptions {
             64,
             3,
             true);
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.entity.EntityCloudweaver.class,
+            "cloudweaver",
+            12,
+            this,
+            64,
+            3,
+            true);
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.entity.EntityCloudsilk.class,
+            "cloudsilk",
+            13,
+            this,
+            64,
+            10,
+            true);
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.entity.SkyMobEvents());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.worldgen.SkyIslandSpawns());
         cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
@@ -248,6 +264,12 @@ public final class NaturalExceptions {
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
             naturalexceptions.minecraft.entity.EntityCitadelGuard.class,
             new naturalexceptions.minecraft.entity.client.RenderCitadelGuard());
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.entity.EntityCloudweaver.class,
+            new naturalexceptions.minecraft.entity.client.RenderCloudweaver());
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.entity.EntityCloudsilk.class,
+            new net.minecraft.client.renderer.entity.RenderSnowball(naturalexceptions.minecraft.registry.NEItems.cloudsilk));
         cpw.mods.fml.client.registry.RenderingRegistry
             .registerBlockHandler(new naturalexceptions.minecraft.client.model.PartModelRenderer());
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(

@@ -71,6 +71,61 @@ final class SkyMobsTest {
     }
 
     @Test
+    void aCloudweaverSpitsFromAfarAndItsSilkBinds() {
+        assertFalse(EntityCloudweaver.inSpit(3.0), "close in it bites");
+        assertTrue(EntityCloudweaver.inSpit(4.0));
+        assertTrue(EntityCloudweaver.inSpit(14.0));
+        assertFalse(EntityCloudweaver.inSpit(15.0));
+        assertTrue(EntityCloudweaver.SPIT_COOLDOWN >= 40, "not a hail of it");
+        assertTrue(EntityCloudsilk.BIND_TICKS >= 20 && EntityCloudsilk.BIND_AMPLIFIER >= 3, "it pins you");
+    }
+
+    @Test
+    void aCloudweaverLeavesItsSilkAndNowAndThenMore() {
+        Random random = new Random(3);
+        int clouds = 0, spinners = 0;
+        for (int i = 0; i < 2000; i++) {
+            boolean silk = false;
+            for (ItemStack st : EntityCloudweaver.drops(random, 0)) {
+                silk |= st.getItem() == NEItems.cloudsilk && st.stackSize >= 1;
+                if (st.getItem() == net.minecraft.item.Item.getItemFromBlock(NEBlocks.cloud)) clouds++;
+                if (st.getItem() == NEItems.silkspinner) spinners++;
+            }
+            assertTrue(silk, "Cloudsilk every time");
+        }
+        assertTrue(clouds > 100 && clouds < 320, "a Cloud now and then: " + clouds);
+        assertTrue(spinners > 10 && spinners < 90, "its spinneret once in a long while: " + spinners);
+    }
+
+    @Test
+    void cloudsilkRopeUnrollsAsFarAsTheAirAndTheRopeGo() {
+        assertEquals(5, naturalexceptions.minecraft.block.BlockCloudsilkRope.unroll(64, k -> k < 5), "to the ground");
+        assertEquals(3, naturalexceptions.minecraft.block.BlockCloudsilkRope.unroll(3, k -> true), "as far as it goes");
+        assertEquals(
+            naturalexceptions.minecraft.block.BlockCloudsilkRope.MAX_DROP,
+            naturalexceptions.minecraft.block.BlockCloudsilkRope.unroll(64, k -> true),
+            "no further than it can hang");
+    }
+
+    @Test
+    void cloudsilkMakesRopeAndDressings() {
+        boolean rope = false;
+        for (Object entry : CraftingManager.getInstance()
+            .getRecipeList()) {
+            ItemStack out = ((IRecipe) entry).getRecipeOutput();
+            rope |= out != null && out.getItem() == net.minecraft.item.Item.getItemFromBlock(NEBlocks.cloudsilkRope)
+                && out.stackSize == 6;
+        }
+        assertTrue(rope, "three silk twist into six rope");
+        ItemStack dressings = null;
+        for (naturalexceptions.minecraft.furniture.CuttingRecipes.Recipe r : naturalexceptions.minecraft.furniture.CuttingRecipes
+            .forInput(naturalexceptions.minecraft.furniture.CuttingRecipes.Kind.LOOM, new ItemStack(NEItems.cloudsilk)))
+            if (r.output()
+                .getItem() == NEItems.bandage) dressings = r.output();
+        assertTrue(dressings != null && dressings.stackSize == 4, "four dressings a silk at the loom");
+    }
+
+    @Test
     void aCitadelHalberdHitsHarderThanASwordAndCanBeMade() {
         assertTrue(ItemCitadelHalberd.DAMAGE > 6.0);
         boolean found = false;

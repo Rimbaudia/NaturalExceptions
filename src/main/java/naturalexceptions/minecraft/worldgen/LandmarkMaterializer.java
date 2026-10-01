@@ -674,6 +674,7 @@ final class LandmarkMaterializer {
         if (mob.equals("Zombie")) return id + ".gale_husk";
         if (mob.equals("Skeleton")) return id + ".stormbone_archer";
         if (mob.equals("CitadelGuard")) return id + ".citadel_guard";
+        if (mob.equals("Spider") || mob.equals("CaveSpider")) return id + ".cloudweaver";
         return mob;
     }
 
