@@ -55,6 +55,16 @@ final class SkyLandmarkBlocksTest {
     }
 
     @Test
+    void aLighthouseLampsCoreBurnsInsideItsLens() {
+        BlockLighthouseLamp lamp = (BlockLighthouseLamp) NEBlocks.lighthouseLamp;
+        double[] core = lamp.parts(0)[BlockLighthouseLamp.CORE];
+        double r = BlockLighthouseLamp.LENS;
+        assertTrue(core[0] > 0.5 - r && core[3] < 0.5 + r && core[2] > 0.5 - r && core[5] < 0.5 + r, "inside the lens");
+        assertTrue(core[1] >= BlockLighthouseLamp.LENS_FOOT && core[4] <= BlockLighthouseLamp.LENS_TOP, "and under its cap");
+        assertTrue(TileEntityLighthouseLamp.BEAM >= 256, "its beams reach far: " + TileEntityLighthouseLamp.BEAM);
+    }
+
+    @Test
     void theIslandsPiecesCanBeMade() {
         for (Item piece : new Item[] { Item.getItemFromBlock(NEBlocks.cloudCondenser),
             Item.getItemFromBlock(NEBlocks.lighthouseLamp) }) {

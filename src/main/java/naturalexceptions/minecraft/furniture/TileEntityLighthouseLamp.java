@@ -10,7 +10,7 @@ import cpw.mods.fml.relauncher.SideOnly;
 public final class TileEntityLighthouseLamp extends TileEntity {
 
     /** How far the beams reach, in blocks. */
-    public static final double BEAM = 96.0;
+    public static final double BEAM = 256.0;
     /** Degrees the beams turn a tick. */
     public static final double TURN = 1.5;
 
@@ -22,7 +22,7 @@ public final class TileEntityLighthouseLamp extends TileEntity {
     @Override
     @SideOnly(Side.CLIENT)
     public double getMaxRenderDistanceSquared() {
-        return 320.0 * 320.0;
+        return 512.0 * 512.0;
     }
 
     @Override
