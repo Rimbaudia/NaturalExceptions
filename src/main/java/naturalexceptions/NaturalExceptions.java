@@ -137,6 +137,40 @@ public final class NaturalExceptions {
         cpw.mods.fml.common.registry.EntityRegistry
             .registerModEntity(naturalexceptions.minecraft.furniture.EntitySeat.class, "seat", 6, this, 32, 20, false);
         cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.entity.EntityGaleHusk.class,
+            "gale_husk",
+            8,
+            this,
+            64,
+            3,
+            true);
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.entity.EntityStormboneArcher.class,
+            "stormbone_archer",
+            9,
+            this,
+            64,
+            3,
+            true);
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.entity.EntityStormArrow.class,
+            "storm_arrow",
+            10,
+            this,
+            64,
+            20,
+            true);
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.entity.EntityCitadelGuard.class,
+            "citadel_guard",
+            11,
+            this,
+            64,
+            3,
+            true);
+        MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.entity.SkyMobEvents());
+        MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.worldgen.SkyIslandSpawns());
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
             naturalexceptions.minecraft.furniture.EntityHoistHook.class,
             "hoist_hook",
             7,
@@ -202,6 +236,18 @@ public final class NaturalExceptions {
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
             naturalexceptions.minecraft.entity.EntitySkystoneSentinel.class,
             new naturalexceptions.minecraft.entity.client.RenderSkystoneSentinel());
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.entity.EntityGaleHusk.class,
+            naturalexceptions.minecraft.entity.client.RenderSkyMob.galeHusk());
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.entity.EntityStormboneArcher.class,
+            naturalexceptions.minecraft.entity.client.RenderSkyMob.stormboneArcher());
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.entity.EntityStormArrow.class,
+            new net.minecraft.client.renderer.entity.RenderArrow());
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.entity.EntityCitadelGuard.class,
+            new naturalexceptions.minecraft.entity.client.RenderCitadelGuard());
         cpw.mods.fml.client.registry.RenderingRegistry
             .registerBlockHandler(new naturalexceptions.minecraft.client.model.PartModelRenderer());
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(

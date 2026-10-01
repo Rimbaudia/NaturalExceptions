@@ -4,9 +4,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.monster.EntityCaveSpider;
-import net.minecraft.entity.monster.EntitySkeleton;
 import net.minecraft.entity.monster.EntitySpider;
-import net.minecraft.entity.monster.EntityZombie;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -57,8 +55,7 @@ public final class BlockSealedAlcove extends Block {
                 mob = new naturalexceptions.minecraft.entity.EntitySkystoneSentinel(world);
                 break;
             case SKELETON:
-                mob = new EntitySkeleton(world);
-                mob.setCurrentItemOrArmor(0, new ItemStack(Items.bow));
+                mob = new naturalexceptions.minecraft.entity.EntityStormboneArcher(world);
                 break;
             case SPIDER:
                 mob = new EntitySpider(world);
@@ -68,13 +65,14 @@ public final class BlockSealedAlcove extends Block {
                 break;
             case ZOMBIE:
             default:
-                mob = new EntityZombie(world);
+                mob = new naturalexceptions.minecraft.entity.EntityGaleHusk(world);
                 break;
         }
-        if ((meta & ARMED) != 0 && (mob instanceof EntityZombie || mob instanceof EntitySkeleton)) {
+        boolean husk = mob instanceof naturalexceptions.minecraft.entity.EntityGaleHusk;
+        if ((meta & ARMED) != 0 && (husk || mob instanceof naturalexceptions.minecraft.entity.EntityStormboneArcher)) {
             mob.setCurrentItemOrArmor(4, new ItemStack(Items.iron_helmet));
             mob.setCurrentItemOrArmor(3, new ItemStack(Items.iron_chestplate));
-            if (mob instanceof EntityZombie) mob.setCurrentItemOrArmor(0, new ItemStack(Items.iron_sword));
+            if (husk) mob.setCurrentItemOrArmor(0, new ItemStack(Items.iron_sword));
         }
         // It steps out of its niche into the open (a niche is only one block high).
         int[] spot = { x, z };

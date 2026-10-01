@@ -1180,8 +1180,17 @@ final class CitadelLayout {
         }
         pier(end, last);
         sites.reserve("causeway", -4, MOAT_OUT + 2, 8, end + 11); // the road, and the pier with its crane
-        if (building("guardhouse", 6, MOAT_OUT + 8, "guardhouse"))
-            sites.reserve("guardhouse", 4, MOAT_OUT + 6, 16, MOAT_OUT + 8 + 11 + 4);
+        RoomTemplate post = TemplateLibrary.building("guardhouse");
+        int gz = MOAT_OUT + 8, gg = ground(4, gz - 2, 6 + post.width() + 1, gz + post.depth() + 3);
+        if (building("guardhouse", 6, gz, "guardhouse")) {
+            sites.reserve("guardhouse", 4, gz - 2, 16, gz + post.depth() + 4);
+            // Its watch: two either side of the door, one within, one at the roadside looking down the causeway.
+            int door = 6 + post.width() / 2, front = gz + post.depth();
+            put(door - 1, gg + 1, front, Block.GUARD, SkyDungeon.SOUTH);
+            put(door + 1, gg + 1, front, Block.GUARD, SkyDungeon.SOUTH);
+            put(door, gg + 1, front - 4, Block.GUARD, SkyDungeon.SOUTH);
+            put(5, gg + 1, gz + 4, Block.GUARD, SkyDungeon.WEST);
+        }
     }
 
     private int ground(int x0, int z0, int x1, int z1) {

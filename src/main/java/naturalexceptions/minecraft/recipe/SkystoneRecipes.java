@@ -218,6 +218,15 @@ public final class SkystoneRecipes {
             Blocks.hay_block,
             'L',
             logs);
+        if (naturalexceptions.minecraft.registry.NEItems.citadelHalberd != null) GameRegistry.addRecipe(
+            new ItemStack(naturalexceptions.minecraft.registry.NEItems.citadelHalberd),
+            "III",
+            " SI",
+            " S ",
+            'I',
+            Items.iron_ingot,
+            'S',
+            Items.stick);
         if (NEBlocks.wellWinch != null) GameRegistry.addRecipe(
             new ItemStack(NEBlocks.wellWinch),
             "PLP",

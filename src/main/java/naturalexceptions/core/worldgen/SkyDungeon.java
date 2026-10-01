@@ -195,7 +195,9 @@ public final class SkyDungeon {
         /** A training dummy; meta: the way he faces ({@link #NORTH} ..). */
         TRAINING_DUMMY,
         /** A well's winch; meta 0 its drum along x, 1 along z. */
-        WELL_WINCH
+        WELL_WINCH,
+        /** A Citadel Guard posted here (no block); meta: the way he faces ({@link #NORTH} ..). */
+        GUARD
     }
 
     /** A door piece's meta for its upper half (the lower half's meta is the way it faces). */

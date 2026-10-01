@@ -22,7 +22,8 @@ public final class ItemDungeonEgg extends Item {
 
     /** Name, shell colour, spot colour. */
     static final Object[][] KINDS = { { "stormwisp", 0x5A3E96, 0xEDE4FF }, { "skystoneSentinel", 0xC8D2E0, 0x7A5AC0 },
-        { "skyWarden", 0xAEB8CC, 0xD6AC3C } };
+        { "skyWarden", 0xAEB8CC, 0xD6AC3C }, { "galeHusk", 0x7E8A9A, 0xD8DCE0 }, { "stormboneArcher", 0xD6D2C4, 0x8E62E0 },
+        { "citadelGuard", 0x4A5468, 0xC8D2E0 } };
 
     @SideOnly(Side.CLIENT)
     private IIcon spots;
@@ -39,6 +40,12 @@ public final class ItemDungeonEgg extends Item {
                 return new EntitySkystoneSentinel(world);
             case 2:
                 return new EntitySkyWarden(world);
+            case 3:
+                return new naturalexceptions.minecraft.entity.EntityGaleHusk(world);
+            case 4:
+                return new naturalexceptions.minecraft.entity.EntityStormboneArcher(world);
+            case 5:
+                return new naturalexceptions.minecraft.entity.EntityCitadelGuard(world);
             default:
                 return new EntityStormwisp(world);
         }
@@ -66,6 +73,8 @@ public final class ItemDungeonEgg extends Item {
             z + o[2] + 0.5,
             world.rand.nextFloat() * 360.0F,
             0.0F);
+        if (mob instanceof naturalexceptions.minecraft.entity.EntityCitadelGuard)
+            ((naturalexceptions.minecraft.entity.EntityCitadelGuard) mob).post(x + o[0], y + o[1], z + o[2]);
         world.spawnEntityInWorld(mob);
         mob.playLivingSound();
         if (!player.capabilities.isCreativeMode) stack.stackSize--;

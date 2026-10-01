@@ -136,6 +136,7 @@ final class SkyDungeonTest {
                 switch (piece.block) {
                     case AIR:
                     case DOOR: // it opens
+                    case GUARD: // a man standing, not a block
                     case LADDER:
                     case WATER:
                     case TALL_GRASS:
@@ -331,6 +332,12 @@ final class SkyDungeonTest {
                 .contains(places[i])) seen[i]++;
         for (int i = 0; i < places.length; i++)
             assertTrue(seen[i] * 3 >= citadels, "the " + places[i] + " is found on the islands: " + seen[i]);
+        for (Sample s : samples()) if (s.dungeon.features()
+            .contains("guardhouse")) {
+            int guards = 0;
+            for (Piece p : s.dungeon.pieces()) if (p.block == Block.GUARD) guards++;
+            assertEquals(4, guards, s.name() + ": the guardhouse has its watch of four");
+        }
         for (Sample s : samples()) if (s.dungeon.kind() == SkyDungeon.Kind.CITADEL)
             for (String district : new String[] { "market plaza", "tourney ground", "artisans' quarter", "manor quarter" })
                 assertTrue(
@@ -835,6 +842,7 @@ final class SkyDungeonTest {
     private static boolean open(Sample s, int x, int y, int z) {
         Piece p = s.dungeon.at(x, y, z);
         if (p != null) return p.block == Block.AIR || p.block == Block.DOOR
+            || p.block == Block.GUARD
             || p.block == Block.CARPET
             || p.block == Block.TORCH
             || p.block == Block.TALL_GRASS

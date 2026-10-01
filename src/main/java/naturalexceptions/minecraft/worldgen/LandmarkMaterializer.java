@@ -563,6 +563,16 @@ final class LandmarkMaterializer {
             case ARCHERY_BUTT:
                 set(world, x, y, z, orElse(NEBlocks.archeryButt, Blocks.hay_block), SIDE_FACING[meta & 3]);
                 break;
+            case GUARD: {
+                // A Citadel Guard at his post: no block, only him.
+                naturalexceptions.minecraft.entity.EntityCitadelGuard guard = new naturalexceptions.minecraft.entity.EntityCitadelGuard(
+                    world);
+                guard.setLocationAndAngles(x + 0.5, y, z + 0.5, SIDE_YAW[meta & 3], 0.0F);
+                guard.rotationYawHead = guard.renderYawOffset = SIDE_YAW[meta & 3];
+                guard.post(x, y, z);
+                world.spawnEntityInWorld(guard);
+                break;
+            }
             case WELL_WINCH:
                 set(world, x, y, z, orElse(NEBlocks.wellWinch, Blocks.fence), meta & 1);
                 break;
@@ -623,6 +633,8 @@ final class LandmarkMaterializer {
 
     /** Vanilla side for a dungeon direction (north, east, south, west): what a shelf's front faces. */
     private static final int[] SIDE_FACING = { 2, 5, 3, 4 };
+    /** An entity's yaw facing north, east, south, west. */
+    private static final float[] SIDE_YAW = { 180.0F, 270.0F, 0.0F, 90.0F };
     /** Vine meta clinging to the wall on the north, east, south, west. */
     private static final int[] VINE_META = { 4, 8, 1, 2 };
     /** An awning's wall, as its block counts them (0 north, 1 south, 2 west, 3 east), by dungeon direction. */
@@ -655,8 +667,13 @@ final class LandmarkMaterializer {
      */
     /** The entity name a dungeon's mob list means: vanilla's names as they are, and the sky's own creatures. */
     static String entityName(String mob) {
-        if (mob.equals("Stormwisp")) return naturalexceptions.NaturalExceptions.MOD_ID + ".stormwisp";
-        if (mob.equals("Sentinel")) return naturalexceptions.NaturalExceptions.MOD_ID + ".skystone_sentinel";
+        String id = naturalexceptions.NaturalExceptions.MOD_ID;
+        if (mob.equals("Stormwisp")) return id + ".stormwisp";
+        if (mob.equals("Sentinel")) return id + ".skystone_sentinel";
+        // The sky's own dead in place of vanilla's.
+        if (mob.equals("Zombie")) return id + ".gale_husk";
+        if (mob.equals("Skeleton")) return id + ".stormbone_archer";
+        if (mob.equals("CitadelGuard")) return id + ".citadel_guard";
         return mob;
     }
 

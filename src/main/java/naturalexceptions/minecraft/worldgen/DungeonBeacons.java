@@ -46,7 +46,7 @@ public final class DungeonBeacons {
     private static SkyIslands field;
     private static final Map<String, Beacon> BEACONS = new HashMap<>();
 
-    private static synchronized SkyIslands field(World world) {
+    static synchronized SkyIslands field(World world) {
         long seed = NEOverworldGenerator.landmarkSeed(world);
         if (field == null || field.seed() != seed) {
             field = new SkyIslands(seed);
