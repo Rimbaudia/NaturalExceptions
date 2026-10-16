@@ -29,3 +29,11 @@ Gradle is executed using a Java 25 daemon, producing Java-8-compatible mod bytec
 
 > [!NOTE]
 > P0's bootstrap copper scatter has been replaced by the P6 staged Overworld materializer. See [the P6 generation boundary](docs/architecture/p6-staged-overworld-generation-boundary.md) for its deterministic fields, geology-gated copper, host-terrain compromise, and chunk-history rules.
+
+## Performance
+
+`./gradlew runClient` loads [Angelica](https://github.com/GTNewHorizons/Angelica) (the 1.7.10 port of Sodium), GTNHLib and Hodgepodge. They are dev-runtime only and never become NE dependencies. Players on weak machines should install the same three mods next to NE.
+
+Don't use OptiFine or FastCraft. Both conflict with Angelica, and OptiFine can't be redistributed or pulled from Maven.
+
+Angelica's video settings (Options → Video Settings) are where the FPS is. On integrated graphics, try a render distance of 6–8 and Fast graphics.
