@@ -177,7 +177,6 @@ public final class CommandLandmarks extends CommandBase {
                             + " blocks can still appear here."));
                 return;
             }
-            prepare(world, target);
             int tx = target.centreX(), tz = target.centreZ();
             int y;
             if (toDungeon) {
@@ -191,6 +190,7 @@ public final class CommandLandmarks extends CommandBase {
                 int[] top = islands.column(target, tx, tz);
                 y = (top != null ? top[1] : target.centreY()) + 2;
             }
+            prepare(world, tx, tz);
             player.setPositionAndUpdate(tx + 0.5, y, tz + 0.5);
             String arrived = toDungeon ? kindName(islands.dungeonKind(target)) : "island";
             sender.addChatMessage(
@@ -279,15 +279,18 @@ public final class CommandLandmarks extends CommandBase {
                 .chunkExists(world, cx, cz);
     }
 
+    /** Chunks generated around the landing spot before a teleport, each way. */
+    private static final int PREPARE_REACH = 4;
+
     /**
-     * Generates (and so populates) the land under and around an island before a teleport, so the island is
-     * already there on arrival. One ring of extra chunks lets the edge chunks finish too.
+     * Generates (and so populates) the land around the landing spot before a teleport, so what is in view is
+     * there on arrival; one ring past it lets the inner chunks finish. The rest of a large island fills in as
+     * it is approached: generating all of a citadel's island at once held the game up for tens of seconds.
      */
-    private static void prepare(World world, SkyIslands.Island island) {
-        int reach = ((int) Math.ceil(island.radius() * 1.3) >> 4) + 2;
-        int cx = island.centreX() >> 4, cz = island.centreZ() >> 4;
-        for (int dx = -reach; dx <= reach; dx++) {
-            for (int dz = -reach; dz <= reach; dz++) world.getChunkFromChunkCoords(cx + dx, cz + dz);
+    private static void prepare(World world, int x, int z) {
+        int cx = x >> 4, cz = z >> 4;
+        for (int dx = -PREPARE_REACH; dx <= PREPARE_REACH; dx++) {
+            for (int dz = -PREPARE_REACH; dz <= PREPARE_REACH; dz++) world.getChunkFromChunkCoords(cx + dx, cz + dz);
         }
     }
 
