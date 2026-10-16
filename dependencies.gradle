@@ -40,4 +40,10 @@ dependencies {
     testRuntimeOnly('org.junit.platform:junit-platform-launcher')
     // GUI input regression tests load Minecraft client classes without opening a display.
     testRuntimeOnly('org.lwjgl.lwjgl:lwjgl:2.9.4-nightly-20150209')
+
+    // Client performance for runClient only (never published as NE dependencies).
+    // Angelica is the 1.7.10 Sodium port; it replaces OptiFine/FastCraft, which conflict with it.
+    runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.2.33:dev')
+    runtimeOnlyNonPublishable('com.github.GTNewHorizons:GTNHLib:0.11.54:dev')
+    runtimeOnlyNonPublishable('com.github.GTNewHorizons:Hodgepodge:2.7.216:dev')
 }
