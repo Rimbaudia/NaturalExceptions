@@ -12,6 +12,9 @@ import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+
 /**
  * A piece of furniture that holds items: a crate, a pantry shelf, a market counter, a table. Its slots are saved
  * with it and sent to clients, so what it holds can be drawn on it.
@@ -24,6 +27,22 @@ public abstract class TileEntityStorage extends TileEntity implements IInventory
     protected TileEntityStorage(int size, String name) {
         this.slots = new ItemStack[size];
         this.name = name;
+    }
+
+    /** True when nothing is held, so there is nothing to draw. */
+    public boolean isEmpty() {
+        for (ItemStack stack : slots) if (stack != null) return false;
+        return true;
+    }
+
+    /**
+     * What furniture holds is small: past this it is a few pixels, and a citadel has hundreds of stocked pieces,
+     * so drawing them all out to the vanilla 64 blocks costs a weak machine most of its frame.
+     */
+    @Override
+    @SideOnly(Side.CLIENT)
+    public double getMaxRenderDistanceSquared() {
+        return 32.0 * 32.0;
     }
 
     @Override

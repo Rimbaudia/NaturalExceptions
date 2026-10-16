@@ -41,12 +41,18 @@ public final class RenderFurnitureItems extends TileEntitySpecialRenderer {
         { 0.73, 0.73, -5 } };
     private static final double[][] COUNTER = { { 0.3, 0.5, 0 }, { 0.7, 0.5, 0 } };
 
+    /** Beyond this (squared) a sprite's sixteenth of thickness can't be seen, so it is drawn as a flat card. */
+    private static final double THICK_WITHIN_SQ = 12.0 * 12.0;
+
     private final RenderBlocks blocks = new RenderBlocks();
+    private boolean flat;
 
     @Override
     public void renderTileEntityAt(TileEntity tile, double x, double y, double z, float partialTicks) {
         if (!(tile instanceof TileEntityStorage)) return;
         TileEntityStorage storage = (TileEntityStorage) tile;
+        if (storage.isEmpty()) return;
+        flat = x * x + y * y + z * z > THICK_WITHIN_SQ;
         int meta = tile.getBlockMetadata();
         light(tile, meta);
         GL11.glEnable(GL12.GL_RESCALE_NORMAL);
@@ -197,8 +203,11 @@ public final class RenderFurnitureItems extends TileEntitySpecialRenderer {
         blocks.renderBlockAsItem(Block.getBlockFromItem(stack.getItem()), stack.getItemDamage(), 1.0F);
     }
 
-    /** The item's picture with a sixteenth of thickness, every render pass in its colour, in the unit square. */
-    private static void drawSprite(ItemStack stack) {
+    /**
+     * The item's picture with a sixteenth of thickness, every render pass in its colour, in the unit square; far
+     * off, a flat two-sided card instead (one draw rather than the thick sprite's six).
+     */
+    private void drawSprite(ItemStack stack) {
         Item item = stack.getItem();
         Minecraft.getMinecraft()
             .getTextureManager()
@@ -210,6 +219,10 @@ public final class RenderFurnitureItems extends TileEntitySpecialRenderer {
             if (icon == null) continue;
             int colour = item.getColorFromItemStack(stack, pass);
             GL11.glColor4f((colour >> 16 & 255) / 255.0F, (colour >> 8 & 255) / 255.0F, (colour & 255) / 255.0F, 1.0F);
+            if (flat) {
+                card(icon);
+                continue;
+            }
             ItemRenderer.renderItemIn2D(
                 Tessellator.instance,
                 icon.getMaxU(),
@@ -221,5 +234,23 @@ public final class RenderFurnitureItems extends TileEntitySpecialRenderer {
                 0.0625F);
         }
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+    }
+
+    /** The picture on both faces of the unit square, mapped as {@link ItemRenderer#renderItemIn2D} maps it. */
+    private static void card(IIcon icon) {
+        float u0 = icon.getMaxU(), v0 = icon.getMinV(), u1 = icon.getMinU(), v1 = icon.getMaxV();
+        Tessellator t = Tessellator.instance;
+        t.startDrawingQuads();
+        t.setNormal(0.0F, 0.0F, 1.0F);
+        t.addVertexWithUV(0.0, 0.0, 0.0, u0, v1);
+        t.addVertexWithUV(1.0, 0.0, 0.0, u1, v1);
+        t.addVertexWithUV(1.0, 1.0, 0.0, u1, v0);
+        t.addVertexWithUV(0.0, 1.0, 0.0, u0, v0);
+        t.setNormal(0.0F, 0.0F, -1.0F);
+        t.addVertexWithUV(0.0, 1.0, 0.0, u0, v0);
+        t.addVertexWithUV(1.0, 1.0, 0.0, u1, v0);
+        t.addVertexWithUV(1.0, 0.0, 0.0, u1, v1);
+        t.addVertexWithUV(0.0, 0.0, 0.0, u0, v1);
+        t.draw();
     }
 }
