@@ -215,6 +215,7 @@ public final class NaturalExceptions {
         if (event.getSide()
             .isClient()) {
             registerClientRenderers();
+            naturalexceptions.minecraft.client.CommandFps.register();
             MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.client.NEItemTooltipEventHandler());
             naturalexceptions.minecraft.client.P8ClientCues cues = new naturalexceptions.minecraft.client.P8ClientCues();
             MinecraftForge.EVENT_BUS.register(cues);

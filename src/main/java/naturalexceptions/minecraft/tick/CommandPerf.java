@@ -99,6 +99,24 @@ public final class CommandPerf extends CommandBase {
                 target.centreZ(),
                 chunks,
                 ms));
+        // What each chunk's first tick near a player does next: vanilla's light pass, for the shade under overhangs.
+        long lightStart = System.nanoTime(), worst = 0;
+        int lit = 0;
+        for (int dx = -reach + 1; dx < reach; dx++) for (int dz = -reach + 1; dz < reach; dz++) {
+            net.minecraft.world.chunk.Chunk chunk = provider.loadChunk(cx + dx, cz + dz);
+            if (chunk.isLightPopulated || !chunk.isTerrainPopulated) continue;
+            long t = System.nanoTime();
+            chunk.func_150809_p();
+            worst = Math.max(worst, System.nanoTime() - t);
+            lit++;
+        }
+        say(
+            sender,
+            String.format(
+                "First-tick light pass: %d chunks in %.0f ms, worst %.1f ms",
+                lit,
+                (System.nanoTime() - lightStart) / 1.0e6,
+                worst / 1.0e6));
         report(sender, NEOverworldGenerator.PROFILER);
     }
 
