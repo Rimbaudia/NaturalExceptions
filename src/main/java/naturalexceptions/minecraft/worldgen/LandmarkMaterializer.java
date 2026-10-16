@@ -1,5 +1,9 @@
 package naturalexceptions.minecraft.worldgen;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import net.minecraft.block.Block;
@@ -7,6 +11,8 @@ import net.minecraft.init.Blocks;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntityChest;
 import net.minecraft.world.World;
+import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import net.minecraft.world.gen.feature.WorldGenTrees;
 
 import naturalexceptions.core.worldgen.DeepLayers;
@@ -33,6 +39,31 @@ final class LandmarkMaterializer {
         int x0 = chunkX * 16;
         int z0 = chunkZ * 16;
         int placed = 0;
+        // Island rock, soil, cloud and decor go straight into the chunk and it is lit once at the end: through
+        // world.setBlock each block relit its column and neighbours, a quarter-second a chunk over a grand island.
+        Chunk chunk = world.getChunkFromChunkCoords(chunkX, chunkZ);
+        List<int[]> glowing = new ArrayList<>();
+        batchChunk = chunk;
+        batchGlowing = glowing;
+        try {
+            placed = materializeIslands(world, chunk, x0, z0, field, glowing);
+        } finally {
+            batchChunk = null;
+            batchGlowing = null;
+        }
+        if (placed > 0) relight(world, chunk, glowing);
+        return placed;
+    }
+
+    /** The chunk being materialized, while it is: dungeon pieces written into it may skip world.setBlock too. */
+    private static Chunk batchChunk;
+    private static List<int[]> batchGlowing;
+    /** Whether a block's class reacts to being placed (overrides onBlockAdded), by class. */
+    private static final Map<Class<?>, Boolean> REACTS = new IdentityHashMap<>();
+
+    private static int materializeIslands(World world, Chunk chunk, int x0, int z0, SkyIslands field,
+        List<int[]> glowing) {
+        int placed = 0;
         for (SkyIslands.Island island : field.near(x0, z0, x0 + 15, z0 + 15)) {
             // 1. Rock, soil and the kind's surface; the pond and the waterfall's channel.
             for (int x = x0; x < x0 + 16; x++) {
@@ -43,7 +74,7 @@ final class LandmarkMaterializer {
                     SkyIslands.Surface surface = field.surface(island, x, z);
                     boolean grand = island.tier() == SkyIslands.Tier.GRAND;
                     for (int y = column[0]; y <= column[1]; y++) {
-                        world.setBlock(x, y, z, islandBlock(field, x, y, z, column, water, surface, grand), 0, 2);
+                        place(chunk, x, y, z, islandBlock(field, x, y, z, column, water, surface, grand), 0, glowing);
                         placed++;
                     }
                 }
@@ -56,7 +87,7 @@ final class LandmarkMaterializer {
                         || field.pondAt(island, x, z)
                         || field.waterfallAt(island, x, z)) continue;
                     for (int y = cloud[0]; y <= cloud[1]; y++) {
-                        world.setBlock(x, y, z, NEBlocks.cloud, 0, 2);
+                        place(chunk, x, y, z, NEBlocks.cloud, 0, glowing);
                         placed++;
                     }
                 }
@@ -68,7 +99,7 @@ final class LandmarkMaterializer {
                     int[] column = length > 0 ? field.column(island, x, z) : null;
                     if (column == null) continue;
                     for (int y = column[0] - 1; y >= column[0] - length && world.isAirBlock(x, y, z); y--) {
-                        world.setBlock(x, y, z, NEBlocks.stormglassCluster, 0, 2);
+                        place(chunk, x, y, z, NEBlocks.stormglassCluster, 0, glowing);
                         placed++;
                     }
                 }
@@ -86,7 +117,7 @@ final class LandmarkMaterializer {
                     if (decor == SkyIslands.Decor.NONE) continue;
                     int[] column = field.column(island, x, z);
                     if (column == null || world.getBlock(x, column[1], z) == NEBlocks.cloud) continue;
-                    placed += placeDecor(world, field, decor, x, column[1] + 1, z);
+                    placed += placeDecor(chunk, field, decor, x, column[1] + 1, z, glowing);
                 }
             }
             // 5. Trees, each only when it fits wholly inside this chunk.
@@ -96,6 +127,67 @@ final class LandmarkMaterializer {
             placed += buildDungeon(world, field, island, x0, z0);
         }
         return placed;
+    }
+
+    /**
+     * True when a block can be written straight into storage: it holds no tile entity and does nothing on being
+     * placed. Still water is the exception kept in: its placement check only matters beside lava. A class that
+     * overrides either of Block's (World, x, y, z) hooks counts as reacting, which errs safe.
+     */
+    private static boolean plain(Block block, int meta) {
+        if (block == Blocks.water) return true;
+        if (block.hasTileEntity(meta)) return false;
+        Boolean reacts = REACTS.get(block.getClass());
+        if (reacts == null) {
+            reacts = false;
+            for (Class<?> c = block.getClass(); c != Block.class && c != null && !reacts; c = c.getSuperclass()) {
+                for (java.lang.reflect.Method m : c.getDeclaredMethods()) {
+                    Class<?>[] p = m.getParameterTypes();
+                    if (p.length == 4 && p[0] == World.class
+                        && p[1] == int.class
+                        && p[2] == int.class
+                        && p[3] == int.class
+                        && m.getReturnType() == void.class) {
+                        reacts = true;
+                        break;
+                    }
+                }
+            }
+            REACTS.put(block.getClass(), reacts);
+        }
+        return !reacts;
+    }
+
+    /**
+     * One block written into the chunk's storage, with none of world.setBlock's per-block lighting; what gives
+     * light is noted so {@link #relight} can light it. Only for plain blocks: nothing here needs onBlockAdded.
+     */
+    private static void place(Chunk chunk, int x, int y, int z, Block block, int meta, List<int[]> glowing) {
+        if (y < 0 || y > 255) return;
+        ExtendedBlockStorage[] sections = chunk.getBlockStorageArray();
+        ExtendedBlockStorage section = sections[y >> 4];
+        if (section == null) {
+            if (block == Blocks.air) return;
+            section = sections[y >> 4] = new ExtendedBlockStorage(y >> 4 << 4, !chunk.worldObj.provider.hasNoSky);
+        }
+        int lx = x & 15, ly = y & 15, lz = z & 15;
+        Block old = section.getBlockByExtId(lx, ly, lz);
+        if (old.hasTileEntity(section.getExtBlockMetadata(lx, ly, lz))) chunk.removeTileEntity(lx, y, lz);
+        section.func_150818_a(lx, ly, lz, block);
+        section.setExtBlockMetadata(lx, ly, lz, meta);
+        if (block.getLightValue() > 0) glowing.add(new int[] { x, y, z });
+    }
+
+    /**
+     * Lights a chunk after {@link #place}: skylight down every column at once, then what glows. Clearing the
+     * light-populated flag has vanilla's first-tick pass relight the shade under overhangs (here, under the
+     * islands) and hold the chunk back from players until it has.
+     */
+    private static void relight(World world, Chunk chunk, List<int[]> glowing) {
+        chunk.generateSkylightMap();
+        chunk.isLightPopulated = false;
+        for (int[] p : glowing) world.func_147451_t(p[0], p[1], p[2]);
+        chunk.setChunkModified();
     }
 
     /** The block of an island at (x, y, z): its surface, then soil, then rock (Skystone on a dungeon's island). */
@@ -131,42 +223,44 @@ final class LandmarkMaterializer {
         return grand && NEBlocks.skystoneRock != null ? NEBlocks.skystoneRock : Blocks.stone;
     }
 
-    private static int placeDecor(World world, SkyIslands field, SkyIslands.Decor decor, int x, int y, int z) {
+    private static int placeDecor(Chunk chunk, SkyIslands field, SkyIslands.Decor decor, int x, int y, int z,
+        List<int[]> glowing) {
         switch (decor) {
             case TALL_GRASS:
-                world.setBlock(x, y, z, Blocks.tallgrass, 1, 2);
+                place(chunk, x, y, z, Blocks.tallgrass, 1, glowing);
                 return 1;
             case FERN:
-                world.setBlock(x, y, z, Blocks.tallgrass, 2, 2);
+                place(chunk, x, y, z, Blocks.tallgrass, 2, glowing);
                 return 1;
             case RED_FLOWER:
-                world.setBlock(x, y, z, Blocks.red_flower, (int) (field.blockRoll(x, y, z, 12) * 9), 2);
+                place(chunk, x, y, z, Blocks.red_flower, (int) (field.blockRoll(x, y, z, 12) * 9), glowing);
                 return 1;
             case YELLOW_FLOWER:
-                world.setBlock(x, y, z, Blocks.yellow_flower, 0, 2);
+                place(chunk, x, y, z, Blocks.yellow_flower, 0, glowing);
                 return 1;
             case WINDBLOOM:
                 if (NEBlocks.windbloom == null) return 0;
-                world.setBlock(x, y, z, NEBlocks.windbloom, 0, 2);
+                place(chunk, x, y, z, NEBlocks.windbloom, 0, glowing);
                 return 1;
             case BUSH:
-                world.setBlock(x, y, z, Blocks.leaves, 4, 2); // oak leaves that never decay
+                place(chunk, x, y, z, Blocks.leaves, 4, glowing); // oak leaves that never decay
                 return 1;
             case DEAD_BUSH:
-                world.setBlock(x, y, z, Blocks.deadbush, 0, 2);
+                place(chunk, x, y, z, Blocks.deadbush, 0, glowing);
                 return 1;
             case TALL_BOULDER:
-                world.setBlock(x, y, z, Blocks.mossy_cobblestone, 0, 2);
-                world.setBlock(x, y + 1, z, Blocks.cobblestone, 0, 2);
+                place(chunk, x, y, z, Blocks.mossy_cobblestone, 0, glowing);
+                place(chunk, x, y + 1, z, Blocks.cobblestone, 0, glowing);
                 return 2;
             case BOULDER:
-                world.setBlock(
+                place(
+                    chunk,
                     x,
                     y,
                     z,
                     field.blockRoll(x, y, z, 13) < 0.5 ? Blocks.mossy_cobblestone : Blocks.cobblestone,
                     0,
-                    2);
+                    glowing);
                 return 1;
             case NONE:
             default:
@@ -580,7 +674,13 @@ final class LandmarkMaterializer {
                 set(world, x, y, z, orElse(NEBlocks.trainingDummy, Blocks.hay_block), SIDE_FACING[meta & 3]);
                 break;
             case HOIST:
-                set(world, x, y, z, orElse(meta == 1 ? NEBlocks.hoistBasket : NEBlocks.hoistWindlass, Blocks.planks), 0);
+                set(
+                    world,
+                    x,
+                    y,
+                    z,
+                    orElse(meta == 1 ? NEBlocks.hoistBasket : NEBlocks.hoistWindlass, Blocks.planks),
+                    0);
                 break;
             case CONDENSER:
                 set(world, x, y, z, orElse(NEBlocks.cloudCondenser, Blocks.glass), 0);
@@ -658,7 +758,10 @@ final class LandmarkMaterializer {
         { Blocks.tallgrass, 2 }, { Blocks.sapling, 0 }, { Blocks.red_flower, 1 }, { Blocks.red_flower, 2 } };
 
     private static void set(World world, int x, int y, int z, Block block, int meta) {
-        world.setBlock(x, y, z, block, meta, 2);
+        Chunk chunk = batchChunk;
+        if (chunk != null && x >> 4 == chunk.xPosition && z >> 4 == chunk.zPosition && plain(block, meta)) {
+            place(chunk, x, y, z, block, meta, batchGlowing);
+        } else world.setBlock(x, y, z, block, meta, 2);
     }
 
     /**
