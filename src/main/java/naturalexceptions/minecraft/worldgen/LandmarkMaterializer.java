@@ -10,6 +10,7 @@ import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntityChest;
+import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
@@ -179,15 +180,73 @@ final class LandmarkMaterializer {
     }
 
     /**
-     * Lights a chunk after {@link #place}: skylight down every column at once, then what glows. Clearing the
-     * light-populated flag has vanilla's first-tick pass relight the shade under overhangs (here, under the
-     * islands) and hold the chunk back from players until it has.
+     * Lights a chunk after {@link #place}: skylight down every column at once, daylight spread in under the
+     * island from beside it, then what glows. The chunk is then marked lit, so vanilla's first-tick pass skips
+     * it: that pass relights every open block under every overhang, which under a sky island is some eighteen
+     * thousand light updates and a sixth of a second a chunk, where only the island's rim needs any.
      */
     private static void relight(World world, Chunk chunk, List<int[]> glowing) {
         chunk.generateSkylightMap();
-        chunk.isLightPopulated = false;
+        if (!world.provider.hasNoSky) {
+            darkenBelow(chunk);
+            spreadIntoShade(world, chunk);
+        }
+        chunk.isLightPopulated = true;
         for (int[] p : glowing) world.func_147451_t(p[0], p[1], p[2]);
         chunk.setChunkModified();
+    }
+
+    /**
+     * Skylight down each whole column, as {@link Chunk#generateSkylightMap} works it but on to the bottom: that
+     * stops once the light is spent, which over an island leaves the open air below still at full daylight. The
+     * first-tick pass would then walk every one of those blocks back down, about a third of a second a chunk;
+     * dark from the start, it only has to spread light in from the island's rim.
+     */
+    private static void darkenBelow(Chunk chunk) {
+        ExtendedBlockStorage[] sections = chunk.getBlockStorageArray();
+        int top = chunk.getTopFilledSegment() + 15;
+        for (int x = 0; x < 16; x++) for (int z = 0; z < 16; z++) {
+            int light = 15;
+            for (int y = top; y >= 0; y--) {
+                int opacity = chunk.func_150808_b(x, y, z);
+                if (opacity == 0 && light != 15) opacity = 1;
+                light = Math.max(0, light - opacity);
+                ExtendedBlockStorage section = sections[y >> 4];
+                if (section != null) section.setExtSkylightValue(x, y & 15, z, light);
+            }
+        }
+    }
+
+    /**
+     * Daylight into the shade under the island: each open block beneath a covered column that has open sky
+     * beside it (in this chunk or a generated neighbour, either way across the border) is relit, and the light
+     * spreads on inward from there by itself.
+     */
+    private static void spreadIntoShade(World world, Chunk chunk) {
+        int x0 = chunk.xPosition << 4, z0 = chunk.zPosition << 4;
+        int[][] sides = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+        for (int lx = 0; lx < 16; lx++) for (int lz = 0; lz < 16; lz++) {
+            int here = chunk.heightMap[lz << 4 | lx];
+            for (int[] side : sides) {
+                int nx = lx + side[0], nz = lz + side[1];
+                boolean inside = nx >= 0 && nx < 16 && nz >= 0 && nz < 16;
+                Chunk other = inside ? chunk : neighbour(world, x0 + nx, z0 + nz);
+                if (other == null) continue;
+                int there = other.heightMap[(nz & 15) << 4 | (nx & 15)];
+                // This column is covered where the one beside it is open...
+                for (int y = there; y < here; y++) if (chunk.func_150808_b(lx, y, lz) < 15)
+                    world.updateLightByType(EnumSkyBlock.Sky, x0 + lx, y, z0 + lz);
+                // ...and across the border, the other way round (inside the chunk the loop above sees both).
+                if (!inside) for (int y = here; y < there; y++) if (other.func_150808_b(nx & 15, y, nz & 15) < 15)
+                    world.updateLightByType(EnumSkyBlock.Sky, x0 + nx, y, z0 + nz);
+            }
+        }
+    }
+
+    /** The chunk holding (x, z) if it has been generated, without generating it. */
+    private static Chunk neighbour(World world, int x, int z) {
+        return world.getChunkProvider()
+            .chunkExists(x >> 4, z >> 4) ? world.getChunkFromChunkCoords(x >> 4, z >> 4) : null;
     }
 
     /** The block of an island at (x, y, z): its surface, then soil, then rock (Skystone on a dungeon's island). */
