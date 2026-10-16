@@ -211,7 +211,7 @@ public final class CommandLandmarks extends CommandBase {
     /**
      * Dungeon islands within {@code reach} of (px, pz), nearest first; only those of {@code kind} unless it is null.
      */
-    static List<SkyIslands.Island> nearestDungeons(SkyIslands islands, int px, int pz,
+    public static List<SkyIslands.Island> nearestDungeons(SkyIslands islands, int px, int pz,
         naturalexceptions.core.worldgen.SkyDungeon.Kind kind, int reach) {
         List<SkyIslands.Island> dungeons = new ArrayList<>();
         for (SkyIslands.Island island : islands.near(px - reach, pz - reach, px + reach, pz + reach)) {
@@ -238,7 +238,7 @@ public final class CommandLandmarks extends CommandBase {
     }
 
     /** Whether an island listed from the seed is really in this world. */
-    enum Presence {
+    public enum Presence {
 
         /** Its blocks are there. */
         THERE("there"),
@@ -256,7 +256,7 @@ public final class CommandLandmarks extends CommandBase {
         }
     }
 
-    static Presence presence(World world, SkyIslands islands, SkyIslands.Island island) {
+    public static Presence presence(World world, SkyIslands islands, SkyIslands.Island island) {
         int x = island.centreX(), z = island.centreZ();
         int cx = x >> 4, cz = z >> 4;
         if (!chunkOnRecord(world, cx, cz)) return Presence.UNEXPLORED;
@@ -291,7 +291,7 @@ public final class CommandLandmarks extends CommandBase {
         }
     }
 
-    static long landmarkSeed(World world) {
+    public static long landmarkSeed(World world) {
         NEWorldSavedData saved = NEWorldSavedData.get(world);
         WorldgenEpoch epoch = saved != null && saved.metadata() != null ? saved.metadata()
             .worldgenEpoch() : WorldgenEpoch.CURRENT;

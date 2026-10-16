@@ -17,6 +17,7 @@ public final class SubsystemProfiler {
         final Map<String, Long> counters = new HashMap<>();
         final Map<String, Long> accumulatedNanos = new HashMap<>();
         final Map<String, Long> invocations = new HashMap<>();
+        final Map<String, Long> maxNanos = new HashMap<>();
         long activeCount;
         long sleepingCount;
         long queuedWorkCount;
@@ -44,6 +45,7 @@ public final class SubsystemProfiler {
         State s = getOrCreateState(subsystem);
         s.accumulatedNanos.put(operation, s.accumulatedNanos.getOrDefault(operation, 0L) + elapsedNanos);
         s.invocations.put(operation, s.invocations.getOrDefault(operation, 0L) + 1);
+        s.maxNanos.put(operation, Math.max(s.maxNanos.getOrDefault(operation, 0L), elapsedNanos));
     }
 
     public synchronized void setActiveCount(ResourceId subsystem, long active) {
@@ -67,6 +69,7 @@ public final class SubsystemProfiler {
                 Collections.emptyMap(),
                 Collections.emptyMap(),
                 Collections.emptyMap(),
+                Collections.emptyMap(),
                 0L,
                 0L,
                 0L);
@@ -76,6 +79,7 @@ public final class SubsystemProfiler {
             new HashMap<>(s.counters),
             new HashMap<>(s.accumulatedNanos),
             new HashMap<>(s.invocations),
+            new HashMap<>(s.maxNanos),
             s.activeCount,
             s.sleepingCount,
             s.queuedWorkCount);

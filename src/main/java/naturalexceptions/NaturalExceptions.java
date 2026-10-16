@@ -269,7 +269,8 @@ public final class NaturalExceptions {
             new naturalexceptions.minecraft.entity.client.RenderCloudweaver());
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
             naturalexceptions.minecraft.entity.EntityCloudsilk.class,
-            new net.minecraft.client.renderer.entity.RenderSnowball(naturalexceptions.minecraft.registry.NEItems.cloudsilk));
+            new net.minecraft.client.renderer.entity.RenderSnowball(
+                naturalexceptions.minecraft.registry.NEItems.cloudsilk));
         cpw.mods.fml.client.registry.RenderingRegistry
             .registerBlockHandler(new naturalexceptions.minecraft.client.model.PartModelRenderer());
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
@@ -352,6 +353,7 @@ public final class NaturalExceptions {
             event.registerServerCommand(new naturalexceptions.minecraft.tick.CommandP11());
             event.registerServerCommand(new naturalexceptions.minecraft.biology.CommandBiology());
             event.registerServerCommand(new naturalexceptions.minecraft.worldgen.CommandLandmarks());
+            event.registerServerCommand(new naturalexceptions.minecraft.tick.CommandPerf());
         }
     }
 

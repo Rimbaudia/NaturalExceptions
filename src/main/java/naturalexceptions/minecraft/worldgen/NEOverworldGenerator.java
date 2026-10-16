@@ -68,6 +68,7 @@ public final class NEOverworldGenerator implements IWorldGenerator {
         OverworldSample[][] samples = sampleChunk(generation, chunkX, chunkZ);
         ChunkGenerationRecordBuilder history = new ChunkGenerationRecordBuilder(world.getSeed(), epoch, chunkX, chunkZ);
 
+        long stage = System.nanoTime();
         adjustBaseTerrain(world, chunkX, chunkZ, samples);
         history.mark(WorldgenStage.BASE_TERRAIN);
 
@@ -78,25 +79,32 @@ public final class NEOverworldGenerator implements IWorldGenerator {
         applySoilAndSurface(world, chunkX, chunkZ, samples);
         history.mark(WorldgenStage.SOIL_SURFACE);
 
+        stage = time("stage_terrain_geology_surface", stage);
         seedEcology(world, chunkX, chunkZ, generation, samples);
         history.mark(WorldgenStage.ECOLOGY);
 
         int copperBlocks = generateCopper(world, chunkX, chunkZ, generation);
         history.mark(WorldgenStage.RESOURCES);
+        stage = time("stage_ecology_copper", stage);
 
         WorldgenSites sites = new WorldgenSites(generation);
         generateOutcrops(world, chunkX, chunkZ, sites);
         // Rare, dramatic landmarks are structures too; they share this stage so older chunk records stay valid.
         long landmarkSeed = landmarkSeed(world.getSeed(), epoch);
+        stage = time("stage_outcrops", stage);
         int islandBlocks = LandmarkMaterializer
             .skyIslands(world, chunkX, chunkZ, new naturalexceptions.core.worldgen.SkyIslands(landmarkSeed));
+        stage = time("stage_sky_islands", stage);
         int landmarkBlocks = LandmarkMaterializer
             .landmarks(world, chunkX, chunkZ, new naturalexceptions.core.worldgen.Landmarks(landmarkSeed));
+        stage = time("stage_landmarks", stage);
         int deepBlocks = LandmarkMaterializer
             .deepLayers(world, chunkX, chunkZ, new naturalexceptions.core.worldgen.DeepLayers(landmarkSeed));
         history.mark(WorldgenStage.STRUCTURES);
+        stage = time("stage_deep_layers", stage);
         generateInitialAnomalies(world, chunkX, chunkZ, sites);
         history.mark(WorldgenStage.INITIAL_ANOMALIES);
+        time("stage_anomalies", stage);
 
         Chunk chunk = world.getChunkFromChunkCoords(chunkX, chunkZ);
         NEChunkGenerationHistory.mark(chunk, history.build());
@@ -108,6 +116,13 @@ public final class NEOverworldGenerator implements IWorldGenerator {
         PROFILER.incrementCounter(SUBSYSTEM, "landmark_blocks_changed", landmarkBlocks);
         PROFILER.incrementCounter(SUBSYSTEM, "deep_layer_blocks_changed", deepBlocks);
         PROFILER.recordElapsedNanos(SUBSYSTEM, "chunk_materialization", System.nanoTime() - startNanos);
+    }
+
+    /** Records the time since {@code since} under one stage's name, and returns now for the next stage. */
+    private static long time(String stage, long since) {
+        long now = System.nanoTime();
+        PROFILER.recordElapsedNanos(SUBSYSTEM, stage, now - since);
+        return now;
     }
 
     private OverworldSample[][] sampleChunk(OverworldGeneration generation, int chunkX, int chunkZ) {

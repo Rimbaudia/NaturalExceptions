@@ -12,16 +12,32 @@ public final class SubsystemMetrics {
     private final Map<String, Long> counters;
     private final Map<String, Long> accumulatedNanos;
     private final Map<String, Long> invocations;
+    private final Map<String, Long> maxNanos;
     private final long activeCount;
     private final long sleepingCount;
     private final long queuedWorkCount;
 
     public SubsystemMetrics(ResourceId subsystem, Map<String, Long> counters, Map<String, Long> accumulatedNanos,
         Map<String, Long> invocations, long activeCount, long sleepingCount, long queuedWorkCount) {
+        this(
+            subsystem,
+            counters,
+            accumulatedNanos,
+            invocations,
+            Collections.emptyMap(),
+            activeCount,
+            sleepingCount,
+            queuedWorkCount);
+    }
+
+    public SubsystemMetrics(ResourceId subsystem, Map<String, Long> counters, Map<String, Long> accumulatedNanos,
+        Map<String, Long> invocations, Map<String, Long> maxNanos, long activeCount, long sleepingCount,
+        long queuedWorkCount) {
         this.subsystem = Objects.requireNonNull(subsystem, "subsystem");
         this.counters = Collections.unmodifiableMap(counters);
         this.accumulatedNanos = Collections.unmodifiableMap(accumulatedNanos);
         this.invocations = Collections.unmodifiableMap(invocations);
+        this.maxNanos = Collections.unmodifiableMap(maxNanos);
         this.activeCount = activeCount;
         this.sleepingCount = sleepingCount;
         this.queuedWorkCount = queuedWorkCount;
@@ -43,6 +59,12 @@ public final class SubsystemMetrics {
 
     public long invocations(String operation) {
         Long val = invocations.get(operation);
+        return val != null ? val : 0L;
+    }
+
+    /** The longest single call of an operation, so spikes show and not only averages. */
+    public long maxNanos(String operation) {
+        Long val = maxNanos.get(operation);
         return val != null ? val : 0L;
     }
 
