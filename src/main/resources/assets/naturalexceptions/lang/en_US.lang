@@ -203,3 +203,6 @@ item.aegisSigil.name=Aegis Sigil
 tile.sheave.name=Sheave
 item.hoistRope.name=Hoist Rope
 entity.naturalexceptions.hoist_load.name=Hoist Basket
+tile.derrickPivot.name=Derrick Pivot
+tile.counterweightBox.name=Counterweight Box
+entity.naturalexceptions.hoist_counterweight.name=Counterweight Box

@@ -7,7 +7,6 @@ import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.IBlockAccess;
 
-import naturalexceptions.minecraft.furniture.BlockHoist;
 import naturalexceptions.minecraft.furniture.BlockSheave;
 import naturalexceptions.minecraft.registry.NEBlocks;
 
@@ -28,25 +27,6 @@ public final class HeadframeDefinition extends MultiblockDefinition {
     public static final int MIN_HEIGHT = 3, MAX_HEIGHT = 12;
     /** How far from its windlass the shaft may be, either way. */
     public static final int REACH = 5;
-
-    /** A headframe as found: its sheave, the ground its posts stand on, and which way its beam runs. */
-    public static final class Frame {
-
-        public final int sheaveX, sheaveY, sheaveZ, groundY;
-        public final boolean beamAlongX;
-
-        Frame(int sheaveX, int sheaveY, int sheaveZ, int groundY, boolean beamAlongX) {
-            this.sheaveX = sheaveX;
-            this.sheaveY = sheaveY;
-            this.sheaveZ = sheaveZ;
-            this.groundY = groundY;
-            this.beamAlongX = beamAlongX;
-        }
-
-        public int height() {
-            return sheaveY - groundY - 1;
-        }
-    }
 
     private HeadframeDefinition() {
         super(
@@ -79,14 +59,14 @@ public final class HeadframeDefinition extends MultiblockDefinition {
      * The headframe a windlass at (x, y, z) works: a sheave within reach whose frame stands on the ground the windlass
      * stands on; null if there is none.
      */
-    public Frame find(IBlockAccess world, int x, int y, int z) {
-        Frame best = null;
+    public HoistFrame find(IBlockAccess world, int x, int y, int z) {
+        HoistFrame best = null;
         int bestDistance = Integer.MAX_VALUE;
         for (int dx = -REACH; dx <= REACH; dx++)
             for (int dz = -REACH; dz <= REACH; dz++) for (int dy = MIN_HEIGHT; dy <= MAX_HEIGHT + 1; dy++) {
                 int sx = x + dx, sy = y + dy, sz = z + dz;
                 if (!(world.getBlock(sx, sy, sz) instanceof BlockSheave)) continue;
-                Frame frame = frame(world, sx, sy, sz);
+                HoistFrame frame = frame(world, sx, sy, sz);
                 if (frame == null || frame.groundY != y - 1) continue;
                 int distance = dx * dx + dz * dz;
                 if (distance < bestDistance) {
@@ -98,7 +78,7 @@ public final class HeadframeDefinition extends MultiblockDefinition {
     }
 
     /** The headframe round the sheave at (sx, sy, sz), if it is whole; null if not. */
-    public Frame frame(IBlockAccess world, int sx, int sy, int sz) {
+    public HoistFrame frame(IBlockAccess world, int sx, int sy, int sz) {
         for (boolean alongX : new boolean[] { true, false }) {
             int ax = alongX ? 1 : 0, az = alongX ? 0 : 1;
             int ground = post(world, sx - ax, sy, sz - az);
@@ -107,7 +87,7 @@ public final class HeadframeDefinition extends MultiblockDefinition {
             if (height < MIN_HEIGHT || height > MAX_HEIGHT) continue;
             boolean open = true;
             for (int y = sy - 1; y >= ground && open; y--) open = clear(world, sx, y, sz);
-            if (open) return new Frame(sx, sy, sz, ground, alongX);
+            if (open) return HoistFrame.headframe(sx, sy, sz, ground);
         }
         return null;
     }
@@ -128,8 +108,7 @@ public final class HeadframeDefinition extends MultiblockDefinition {
 
     /** Open for the basket: air, or the basket itself waiting there. */
     public static boolean clear(IBlockAccess world, int x, int y, int z) {
-        Block block = world.getBlock(x, y, z);
-        return block.isAir(world, x, y, z) || block instanceof BlockHoist && !((BlockHoist) block).top;
+        return naturalexceptions.minecraft.furniture.HoistGeometry.clearFor(world, x, y, z);
     }
 
     /** Validation for a windlass at (x, y, z): whole if it has a headframe to work. */
@@ -142,7 +121,7 @@ public final class HeadframeDefinition extends MultiblockDefinition {
             y,
             z,
             null,
-            "No headframe within " + REACH
+            "none within " + REACH
                 + " blocks: a Sheave in a log beam on two log posts "
                 + MIN_HEIGHT
                 + "-"

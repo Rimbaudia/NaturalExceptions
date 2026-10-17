@@ -12,16 +12,19 @@ import org.lwjgl.opengl.GL11;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import naturalexceptions.minecraft.furniture.BlockHoist;
-import naturalexceptions.minecraft.furniture.BlockSheave;
+import naturalexceptions.minecraft.furniture.EntityHoistCounterweight;
 import naturalexceptions.minecraft.furniture.EntityHoistLoad;
 import naturalexceptions.minecraft.furniture.HoistGeometry;
+import naturalexceptions.minecraft.furniture.TileEntityDerrickPivot;
 import naturalexceptions.minecraft.furniture.TileEntityHoist;
 
 /**
  * A windlass's moving parts: the drum with its wound rope, turning as the rope pays out; the crank turning with it;
- * the brake lever, up when set and down when off; the rope from the drum up over the sheave; and the sheave's wheel,
- * turning with the rope. Its parts are placed as its block's are ({@link naturalexceptions.minecraft.block.PartModel}
- * authored with the rope leaving towards -z), so what is drawn is where it is clicked.
+ * the brake lever, up when set and laid over when off; the rope up to the sheave (straight up to a headframe's, or up
+ * a derrick's mast and out along its boom to the one at its tip, following the tip while the boom swings), over the
+ * sheave's turning wheel and down to the basket; and the counterweight's rope from the back of the drum down into its
+ * well. Its parts are placed as its block's are ({@link naturalexceptions.minecraft.block.PartModel} authored with the
+ * rope leaving towards -z), so what is drawn is where it is clicked.
  */
 @SideOnly(Side.CLIENT)
 public final class RenderWindlass extends TileEntitySpecialRenderer {
@@ -42,56 +45,32 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
         GL11.glTranslated(x, y, z);
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         boolean alongX = facing == 2 || facing == 3; // the drum's axle
-        double turn = Math.toDegrees(rope / HoistGeometry.DRUM);
+        double r = HoistGeometry.DRUM;
         IIcon wood = Blocks.planks.getIcon(1, 1), log = Blocks.log.getIcon(2, 1),
             iron = Blocks.iron_block.getIcon(2, 0);
-        // The drum, its wound rope, and the crank: all turning about the axle at (_, 0.6, 0.5).
-        double[] hub = point(0.5, 0.6, 0.5, facing);
-        GL11.glPushMatrix();
-        GL11.glTranslated(hub[0], hub[1], hub[2]);
-        rotate(turn, alongX);
-        double r = HoistGeometry.DRUM;
-        HoistDrawing.box(log, axial(-0.3, 0.3, r, alongX));
-        HoistDrawing.box(HoistGeometry.ropeIcon(), axial(-0.22, 0.22, r + 0.03, alongX));
-        HoistDrawing.box(iron, axial(-0.5, 0.5, 0.04, alongX)); // the axle, out through both posts
-        // The crank on the +x end: an arm out from the axle and the handle at its end.
-        double[] arm = axial(0.47, 0.51, 0.03, alongX);
-        arm[alongX ? 4 : 4] = 0.28;
-        HoistDrawing.box(iron, arm);
-        double[] handle = axial(0.47, 0.62, 0.035, alongX);
-        handle[1] = 0.24;
-        handle[4] = 0.31;
-        HoistDrawing.box(wood, handle);
-        GL11.glPopMatrix();
-        // The brake lever, on its quadrant at the -x end: up when set, laid over when off.
-        double[] pivot = point(0.025, 0.45, 0.5, facing);
-        GL11.glPushMatrix();
-        GL11.glTranslated(pivot[0], pivot[1], pivot[2]);
-        rotate(hoist.braked() ? 0 : 50, alongX);
-        double[] lever = axial(-0.02, 0.02, 0.025, alongX);
-        lever[1] = 0.0;
-        lever[4] = 0.5;
-        HoistDrawing.box(wood, lever);
-        GL11.glPopMatrix();
-        // The rope up to the sheave and the sheave's wheel.
-        int[] sheave = hoist.sheaveForDrawing();
-        if (sheave != null && tile.getWorldObj()
-            .getBlock(sheave[0], sheave[1], sheave[2]) instanceof BlockSheave) {
-            boolean wheelAlongZ = BlockSheave.axleAlongX(
-                tile.getWorldObj()
-                    .getBlockMetadata(sheave[0], sheave[1], sheave[2]));
-            double[] away = HoistGeometry
-                .away(tile.getWorldObj(), tile.xCoord, tile.zCoord, sheave[0], sheave[1], sheave[2]);
-            double ax = sheave[0] - tile.xCoord + 0.5, ay = sheave[1] - tile.yCoord + 0.5,
-                az = sheave[2] - tile.zCoord + 0.5, w = HoistGeometry.WHEEL;
-            // Off the top of the drum, up to the near side of the wheel, over its top, and down its far side.
-            double[] drumTop = point(0.5, 0.6 + r + 0.03, 0.5, facing);
-            double[] near = { ax - away[0] * w * 0.7, ay + w * 0.7, az - away[2] * w * 0.7 };
+        IIcon cord = HoistGeometry.ropeIcon();
+        drum(rope, facing, alongX, r, wood, log, iron);
+        lever(hoist.braked(), facing, alongX, wood);
+        double[] tip = tip(hoist, load, partialTicks);
+        if (tip != null) {
+            double ax = tip[0] - tile.xCoord, ay = tip[1] - tile.yCoord, az = tip[2] - tile.zCoord, angle = tip[3];
+            double w = HoistGeometry.WHEEL, cx = Math.cos(angle), cz = Math.sin(angle);
+            // The rope off the top of the drum, by way of the mast for a derrick, up to the near side of the wheel.
+            double[] from = point(0.5, 0.6 + r + 0.03, 0.5, facing);
+            int[] derrick = hoist.derrickForDrawing();
+            if (derrick != null) {
+                double px = derrick[0] - tile.xCoord + 0.5, py = derrick[1] - tile.yCoord,
+                    pz = derrick[2] - tile.zCoord + 0.5;
+                double[] foot = { px, py + 0.55, pz }, top = { px, derrick[3] - tile.yCoord + 0.5, pz };
+                HoistDrawing.cord(cord, from, foot, 0.05);
+                HoistDrawing.cord(cord, foot, top, 0.05);
+                from = top;
+            }
+            double[] near = { ax - cx * w * 0.7, ay + w * 0.7, az - cz * w * 0.7 };
             double[] crown = { ax, ay + w, az };
-            double[] far = { ax + away[0] * w * 0.7, ay + w * 0.7, az + away[2] * w * 0.7 };
-            double[] edge = { ax + away[0] * w, ay, az + away[2] * w };
-            IIcon cord = HoistGeometry.ropeIcon();
-            HoistDrawing.cord(cord, drumTop, near, 0.05);
+            double[] far = { ax + cx * w * 0.7, ay + w * 0.7, az + cz * w * 0.7 };
+            double[] edge = { ax + cx * w, ay, az + cz * w };
+            HoistDrawing.cord(cord, from, near, 0.05);
             HoistDrawing.cord(cord, near, crown, 0.05);
             HoistDrawing.cord(cord, crown, far, 0.05);
             HoistDrawing.cord(cord, far, edge, 0.05);
@@ -103,22 +82,93 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
                     iron,
                     new double[] { end[0] - 0.06, end[1] - 0.2, end[2] - 0.06, end[0] + 0.06, end[1], end[2] + 0.06 });
             }
-            // The wheel: two squares a quarter-turn apart make its rim, turning about the sheave's axle.
+            // The wheel: two squares a quarter-turn apart make its rim, standing in the rope's way, turning.
             GL11.glPushMatrix();
             GL11.glTranslated(ax, ay, az);
-            rotate(-Math.toDegrees(rope / w), wheelAlongZ);
+            GL11.glRotated(-Math.toDegrees(angle), 0, 1, 0);
+            GL11.glRotated(-Math.toDegrees(rope / w), 0, 0, 1);
             for (int k = 0; k < 2; k++) {
                 GL11.glPushMatrix();
-                rotate(45 * k, wheelAlongZ);
-                double t = 0.06;
-                HoistDrawing.box(
-                    log,
-                    wheelAlongZ ? new double[] { -t, -w, -w, t, w, w } : new double[] { -w, -w, -t, w, w, t });
+                GL11.glRotated(45 * k, 0, 0, 1);
+                HoistDrawing.box(log, new double[] { -w, -w, -0.06, w, w, 0.06 });
                 GL11.glPopMatrix();
             }
             GL11.glPopMatrix();
         }
+        // The counterweight's rope, off the back of the drum and down into its well.
+        EntityHoistCounterweight counter = counter(hoist);
+        if (counter != null) {
+            double cy = counter.lastTickPosY + (counter.posY - counter.lastTickPosY) * partialTicks;
+            double[] back = point(0.5, 0.6, 0.5 + r + 0.03, facing);
+            double[] bail = { counter.posX - tile.xCoord, cy + 0.95 - tile.yCoord, counter.posZ - tile.zCoord };
+            HoistDrawing.cord(cord, back, bail, 0.05);
+        }
         GL11.glPopMatrix();
+    }
+
+    /** The drum, its wound rope and the crank, all turning with the rope about the axle at (_, 0.6, 0.5). */
+    private static void drum(double rope, int facing, boolean alongX, double r, IIcon wood, IIcon log, IIcon iron) {
+        double[] hub = point(0.5, 0.6, 0.5, facing);
+        GL11.glPushMatrix();
+        GL11.glTranslated(hub[0], hub[1], hub[2]);
+        rotate(Math.toDegrees(rope / r), alongX);
+        HoistDrawing.box(log, axial(-0.3, 0.3, r, alongX));
+        HoistDrawing.box(HoistGeometry.ropeIcon(), axial(-0.22, 0.22, r + 0.03, alongX));
+        HoistDrawing.box(iron, axial(-0.5, 0.5, 0.04, alongX)); // the axle, out through both posts
+        double[] arm = axial(0.47, 0.51, 0.03, alongX);
+        arm[4] = 0.28;
+        HoistDrawing.box(iron, arm);
+        double[] handle = axial(0.47, 0.62, 0.035, alongX);
+        handle[1] = 0.24;
+        handle[4] = 0.31;
+        HoistDrawing.box(wood, handle);
+        GL11.glPopMatrix();
+    }
+
+    /** The brake lever on its quadrant at the -x end: up when set, laid over when off. */
+    private static void lever(boolean braked, int facing, boolean alongX, IIcon wood) {
+        double[] pivot = point(0.025, 0.45, 0.5, facing);
+        GL11.glPushMatrix();
+        GL11.glTranslated(pivot[0], pivot[1], pivot[2]);
+        rotate(braked ? 0 : 50, alongX);
+        double[] lever = axial(-0.02, 0.02, 0.025, alongX);
+        lever[1] = 0.0;
+        lever[4] = 0.5;
+        HoistDrawing.box(wood, lever);
+        GL11.glPopMatrix();
+    }
+
+    /** The sheave's axle where it is now and the way the rope leaves it: {x, y, z, angle}; null if none is known. */
+    private static double[] tip(TileEntityHoist hoist, EntityHoistLoad load, float partialTicks) {
+        int[] derrick = hoist.derrickForDrawing();
+        if (derrick != null) {
+            TileEntity t = hoist.getWorldObj()
+                .getTileEntity(derrick[0], derrick[1], derrick[2]);
+            if (t instanceof TileEntityDerrickPivot && ((TileEntityDerrickPivot) t).slewing()) {
+                TileEntityDerrickPivot pivot = (TileEntityDerrickPivot) t;
+                double ticks = pivot.ticksIn(partialTicks);
+                double[] p = pivot.tip(ticks);
+                return new double[] { p[0], p[1], p[2], pivot.angle(ticks) };
+            }
+        }
+        int[] s = hoist.sheaveForDrawing();
+        if (s == null) return null;
+        double angle;
+        if (derrick != null) angle = TileEntityDerrickPivot.angleOf(derrick[4]);
+        else {
+            double[] a = HoistGeometry.away(hoist.getWorldObj(), hoist.xCoord, hoist.zCoord, s[0], s[1], s[2]);
+            angle = Math.atan2(a[2], a[0]);
+        }
+        return new double[] { s[0] + 0.5, s[1] + 0.5, s[2] + 0.5, angle };
+    }
+
+    private static EntityHoistCounterweight counter(TileEntityHoist hoist) {
+        if (!hoist.counterHooked()) return null;
+        for (Object o : hoist.getWorldObj().loadedEntityList) if (o instanceof EntityHoistCounterweight) {
+            EntityHoistCounterweight c = (EntityHoistCounterweight) o;
+            if (c.windlassX == hoist.xCoord && c.windlassY == hoist.yCoord && c.windlassZ == hoist.zCoord) return c;
+        }
+        return null;
     }
 
     /** A point of the windlass as authored (rope leaving towards -z), where it is for this facing. */

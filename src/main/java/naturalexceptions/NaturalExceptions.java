@@ -197,6 +197,14 @@ public final class NaturalExceptions {
             96,
             1,
             false); // its rope length goes out every tick; the client hangs it from that, no positions
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.furniture.EntityHoistCounterweight.class,
+            "hoist_counterweight",
+            14,
+            this,
+            96,
+            1,
+            false);
         MinecraftForge.EVENT_BUS.register(new NEChunkGenerationHistory());
         cpw.mods.fml.common.network.NetworkRegistry.INSTANCE
             .registerGuiHandler(this, new naturalexceptions.minecraft.gui.NEGuiHandler());
@@ -339,6 +347,12 @@ public final class NaturalExceptions {
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
             naturalexceptions.minecraft.furniture.TileEntityHoist.class,
             new naturalexceptions.minecraft.furniture.client.RenderWindlass());
+        cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
+            naturalexceptions.minecraft.furniture.TileEntityDerrickPivot.class,
+            new naturalexceptions.minecraft.furniture.client.RenderDerrickPivot());
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.furniture.EntityHoistCounterweight.class,
+            new naturalexceptions.minecraft.furniture.client.RenderHoistCounterweight());
     }
 
     @Mod.EventHandler

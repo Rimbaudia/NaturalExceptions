@@ -27,6 +27,8 @@ public final class EntityHoistLoad extends Entity implements IEntityAdditionalSp
 
     /** Watched: the rope paid out from the sheave, exactly, so a client sees it where the server has it. */
     private static final int ROPE = 20;
+    /** Watched: where the rope comes down (the sheave, or a swinging boom's tip), and the way it leaves the wheel. */
+    private static final int SHEAVE_X = 21, SHEAVE_Z = 22, AWAY = 23;
     /** The basket's floor is this far above its foot (the entity's position). */
     static final double FLOOR = 0.1;
 
@@ -50,12 +52,28 @@ public final class EntityHoistLoad extends Entity implements IEntityAdditionalSp
         sheaveY = sheave[1];
         sheaveZ = sheave[2];
         setRope(paidOut);
+        setSheave(sheaveX + 0.5, sheaveZ + 0.5, 0.0);
         hang();
+    }
+
+    /** Where the rope comes down (block centre coordinates) and the way it leaves the wheel (radians). */
+    void setSheave(double x, double z, double away) {
+        dataWatcher.updateObject(SHEAVE_X, (float) x);
+        dataWatcher.updateObject(SHEAVE_Z, (float) z);
+        dataWatcher.updateObject(AWAY, (float) away);
+    }
+
+    /** The way the rope leaves the wheel to come down to the basket, as an angle (radians, from +x towards +z). */
+    public double away() {
+        return dataWatcher.getWatchableObjectFloat(AWAY);
     }
 
     @Override
     protected void entityInit() {
         dataWatcher.addObject(ROPE, 1.0F);
+        dataWatcher.addObject(SHEAVE_X, 0.0F);
+        dataWatcher.addObject(SHEAVE_Z, 0.0F);
+        dataWatcher.addObject(AWAY, 0.0F);
     }
 
     public double rope() {
@@ -68,11 +86,16 @@ public final class EntityHoistLoad extends Entity implements IEntityAdditionalSp
 
     /** Puts the basket where its rope holds it: the foot {@code rope} under the sheave's axle. */
     private void hang() {
-        setPosition(sheaveX + 0.5, sheaveY + 0.5 - rope(), sheaveZ + 0.5);
+        double x = dataWatcher.getWatchableObjectFloat(SHEAVE_X), z = dataWatcher.getWatchableObjectFloat(SHEAVE_Z);
+        if (x == 0 && z == 0) {
+            x = sheaveX + 0.5;
+            z = sheaveZ + 0.5;
+        }
+        setPosition(x, sheaveY + 0.5 - rope(), z);
     }
 
     public double[] sheave() {
-        return new double[] { sheaveX + 0.5, sheaveY + 0.5, sheaveZ + 0.5 };
+        return new double[] { posX, sheaveY + 0.5, posZ };
     }
 
     @Override

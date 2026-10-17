@@ -245,6 +245,28 @@ public final class SkystoneRecipes {
         // A sheave: a wheel of planks on an iron axle, between two cheeks.
         if (NEBlocks.sheave != null) GameRegistry
             .addRecipe(new ItemStack(NEBlocks.sheave), "P P", "PIP", "P P", 'P', planks, 'I', Items.iron_ingot);
+        // A derrick's pivot: an iron turntable on a stone footing, a timber hub in it.
+        if (NEBlocks.derrickPivot != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.derrickPivot),
+            " L ",
+            "III",
+            "CCC",
+            'L',
+            new ItemStack(Blocks.log, 1, OreDictionary.WILDCARD_VALUE),
+            'I',
+            Items.iron_ingot,
+            'C',
+            Blocks.cobblestone);
+        // A counterweight box: a crate of planks bound with iron, on a bail.
+        if (NEBlocks.counterweightBox != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.counterweightBox),
+            "I I",
+            "PIP",
+            "PPP",
+            'I',
+            Items.iron_ingot,
+            'P',
+            planks);
         if (NEBlocks.hoistBasket != null) GameRegistry
             .addRecipe(new ItemStack(NEBlocks.hoistBasket), " I ", "P P", "PPP", 'I', Items.iron_ingot, 'P', planks);
         if (naturalexceptions.minecraft.registry.NEItems.masonsChisel != null) GameRegistry.addRecipe(

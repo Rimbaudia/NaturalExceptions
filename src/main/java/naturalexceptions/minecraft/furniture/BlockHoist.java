@@ -24,7 +24,7 @@ import naturalexceptions.minecraft.multiblock.HeadframeDefinition;
  * and the brake lever at the other, facing (metadata 2..5) the shaft its rope runs to. Right-click and hold the crank
  * to wind up; sneak and hold to let down (easing the brake); right-click the lever to set or release the brake; right-
  * click with Hoist Rope to fit a coil; with anything else, open the store the basket carries. It works only by a whole
- * headframe ({@link HeadframeDefinition}), and says what is missing if it has none.
+ * headframe ({@link HeadframeDefinition}) or derrick, and says what is missing if it has none.
  * <p>
  * The Basket: set it in the shaft, and the windlass hooks it onto its rope.
  */
@@ -134,11 +134,9 @@ public final class BlockHoist extends BlockParts {
             } else player.openGui(NaturalExceptions.instance, NEGuiHandler.GUI_STORAGE, world, x, y, z);
             return true;
         }
-        if (HeadframeDefinition.INSTANCE.find(world, x, y, z) == null) {
+        if (naturalexceptions.minecraft.multiblock.HoistFrames.find(world, x, y, z) == null) {
             player.addChatMessage(
-                new ChatComponentText(
-                    HeadframeDefinition.INSTANCE.validate(world, x, y, z, 2)
-                        .failureReason()));
+                new ChatComponentText(naturalexceptions.minecraft.multiblock.HoistFrames.missing(world, x, y, z)));
             return true;
         }
         if (onLever(facing(world.getBlockMetadata(x, y, z)), hitX, hitZ)) {

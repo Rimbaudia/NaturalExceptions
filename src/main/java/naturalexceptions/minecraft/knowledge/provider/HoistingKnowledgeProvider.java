@@ -5,12 +5,15 @@ import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
 import naturalexceptions.core.hoisting.HoistMasses;
+import naturalexceptions.minecraft.furniture.TileEntityDerrickPivot;
+import naturalexceptions.minecraft.furniture.TileEntityHoist;
 import naturalexceptions.minecraft.item.ItemHoistRope;
 import naturalexceptions.minecraft.knowledge.IKnowledgeProvider;
 import naturalexceptions.minecraft.knowledge.KnowledgeCategory;
 import naturalexceptions.minecraft.knowledge.KnowledgeEntry;
 import naturalexceptions.minecraft.knowledge.KnowledgeRegistry;
 import naturalexceptions.minecraft.knowledge.ProcessStep;
+import naturalexceptions.minecraft.multiblock.DerrickDefinition;
 import naturalexceptions.minecraft.multiblock.HeadframeDefinition;
 import naturalexceptions.minecraft.registry.NEBlocks;
 import naturalexceptions.minecraft.registry.NEItems;
@@ -77,6 +80,64 @@ public final class HoistingKnowledgeProvider implements IKnowledgeProvider {
                         .addInput(sheave, "Sheave")
                         .addNote("Up: wind the crank. Down: ease the brake, or release it.")
                         .build())
+                .addRelated("derrick")
+                .addRelated("counterweight_box")
+                .build());
+        ItemStack pivot = new ItemStack(NEBlocks.derrickPivot != null ? NEBlocks.derrickPivot : Blocks.cobblestone);
+        ItemStack box = new ItemStack(NEBlocks.counterweightBox != null ? NEBlocks.counterweightBox : Blocks.planks);
+        registry.registerEntry(
+            KnowledgeEntry.builder("derrick", "Derrick", KnowledgeCategory.MULTIBLOCKS)
+                .icon(pivot)
+                .summary("A hoist on a boom that swings: lift out of a pit, swing round, set down on the lip.")
+                .description(
+                    "Set a Derrick Pivot on the ground and stand a mast of logs on it, " + DerrickDefinition.MIN_MAST
+                        + " to "
+                        + DerrickDefinition.MAX_MAST
+                        + " high. From the mast's "
+                        + "top run a boom of logs out level, "
+                        + DerrickDefinition.MIN_BOOM
+                        + " to "
+                        + DerrickDefinition.MAX_BOOM
+                        + " long, with a Sheave at its tip (placed facing along the "
+                        + "boom). A Windlass on the same ground within "
+                        + DerrickDefinition.REACH
+                        + " blocks of the "
+                        + "pivot works it: its rope runs up the mast, out along the boom, over the sheave and down "
+                        + "to a Basket set under the tip.\n\n"
+                        + "Wind and brake it as a headframe's. Right-click the pivot to swing the boom a "
+                        + "quarter-turn clockwise, sneak to swing it the other way: the basket goes round with the "
+                        + "tip. The boom swings only when the way round is clear, and the basket only when it is "
+                        + "hoisted up or its own way round is clear too: hoist, swing, lower.")
+                .multiblock(DerrickDefinition.INSTANCE)
+                .addProperty(
+                    "Mast",
+                    DerrickDefinition.MIN_MAST + "-" + DerrickDefinition.MAX_MAST + " logs on the pivot")
+                .addProperty(
+                    "Boom",
+                    DerrickDefinition.MIN_BOOM + "-" + DerrickDefinition.MAX_BOOM + " out, Sheave at the tip")
+                .addProperty("Swing", "A quarter-turn a time, " + TileEntityDerrickPivot.TICKS / 20 + " s")
+                .addRelated("headframe")
+                .addRelated("counterweight_box")
+                .build());
+        registry.registerEntry(
+            KnowledgeEntry.builder("counterweight_box", "Counterweight Box", KnowledgeCategory.MULTIBLOCKS)
+                .icon(box)
+                .summary("A box of stone on the windlass's drum, wound the other way: it balances the basket.")
+                .description(
+                    "Dig a well straight down behind a windlass (on the side away from the rope), as deep as "
+                        + "the basket is to travel, and set a Counterweight Box in it: the windlass hangs it from "
+                        + "its drum, the other way round from the basket. As the basket goes down the box comes up; "
+                        + "as the basket comes up the box goes down, and its well's floor and mouth are the "
+                        + "basket's limits.\n\n"
+                        + "Right-click the hanging box with a block to load it, with an empty hand to take a block "
+                        + "back. Weighted heavier than the basket, the basket rises with the brake off; lighter, "
+                        + "it sinks, slower than it would alone. Two blocks of stone about balance a rider.")
+                .addProperty("Capacity", TileEntityHoist.COUNTER_CAPACITY + " blocks")
+                .addProperty(
+                    "Weight",
+                    String.format("Box %.0f kg, %.0f kg a block", HoistMasses.COUNTERWEIGHT_BOX, HoistMasses.BLOCK))
+                .addRelated("headframe")
+                .addRelated("derrick")
                 .build());
     }
 }

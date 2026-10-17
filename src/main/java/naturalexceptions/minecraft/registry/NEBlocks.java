@@ -67,6 +67,8 @@ public final class NEBlocks {
     public static Block hoistWindlass;
     public static Block hoistBasket;
     public static Block sheave;
+    public static Block derrickPivot;
+    public static Block counterweightBox;
     public static Block cloudCondenser;
     public static Block stormcrystal;
     public static Block lighthouseLamp;
@@ -187,6 +189,10 @@ public final class NEBlocks {
         hoistBasket = new naturalexceptions.minecraft.furniture.BlockHoist(false)
             .setCreativeTab(NECreativeTab.INSTANCE);
         sheave = new naturalexceptions.minecraft.furniture.BlockSheave().setCreativeTab(NECreativeTab.INSTANCE);
+        derrickPivot = new naturalexceptions.minecraft.furniture.BlockDerrickPivot()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        counterweightBox = new naturalexceptions.minecraft.furniture.BlockCounterweightBox()
+            .setCreativeTab(NECreativeTab.INSTANCE);
         cloudCondenser = new naturalexceptions.minecraft.furniture.BlockCloudCondenser()
             .setCreativeTab(NECreativeTab.INSTANCE);
         stormcrystal = new naturalexceptions.minecraft.block.BlockStormcrystal().setCreativeTab(NECreativeTab.INSTANCE);
@@ -331,6 +337,8 @@ public final class NEBlocks {
             GameRegistry.registerBlock(hoistWindlass, "hoist_windlass");
             GameRegistry.registerBlock(hoistBasket, "hoist_basket");
             GameRegistry.registerBlock(sheave, "sheave");
+            GameRegistry.registerBlock(derrickPivot, "derrick_pivot");
+            GameRegistry.registerBlock(counterweightBox, "counterweight_box");
             GameRegistry.registerBlock(cloudCondenser, "cloud_condenser");
             GameRegistry.registerBlock(stormcrystal, "stormcrystal");
             GameRegistry.registerBlock(lighthouseLamp, "lighthouse_lamp");
@@ -398,6 +406,9 @@ public final class NEBlocks {
             GameRegistry.registerTileEntity(
                 naturalexceptions.minecraft.furniture.TileEntityHoist.class,
                 "naturalexceptions_hoist");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.furniture.TileEntityDerrickPivot.class,
+                "naturalexceptions_derrick_pivot");
             GameRegistry.registerTileEntity(
                 naturalexceptions.minecraft.furniture.TileEntityLighthouseLamp.class,
                 "naturalexceptions_lighthouse_lamp");

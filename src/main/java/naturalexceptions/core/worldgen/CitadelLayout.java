@@ -1386,6 +1386,20 @@ final class CitadelLayout {
         for (int x = sx - 1; x <= sx + 1; x++) for (int z = zc - 2; z <= zc + 2; z++) put(x, g + 7, z, Block.SLAB, 1);
         put(sx, deep, zc, Block.HOIST, 1);
         put(sx + 2, g + 1, zc, Block.HOIST, SkyDungeon.WEST_FACING_WINDLASS);
+        // Its counterweight: a well behind the windlass as deep as the basket travels, the box waiting at its mouth.
+        for (int y = deep - 1; y <= g; y++) put(sx + 3, y, zc, Block.AIR);
+        put(sx + 3, deep - 2, zc, Block.ROCK);
+        put(sx + 3, g, zc, Block.COUNTERWEIGHT, 2);
+        // The derrick on the north lip: its pivot at the edge, a mast of nine, a boom of nine out over the pit with
+        // the sheave above the deep floor, its windlass beside it; the basket on the floor under the tip.
+        int rx = px + 11, rz = pz - 1;
+        put(rx, g + 1, rz, Block.DERRICK_PIVOT);
+        for (int y = g + 2; y <= g + 10; y++) put(rx, y, rz, Block.LOG, 1);
+        for (int k = 1; k < 9; k++) put(rx, g + 10, rz + k, Block.LOG, 1 | 32);
+        put(rx, g + 10, rz + 9, Block.SHEAVE, 1); // its wheel turns along the boom
+        put(rx, deep, rz + 9, Block.HOIST, 1);
+        put(rx + 2, g + 1, rz, Block.HOIST, SkyDungeon.WEST_FACING_WINDLASS);
+        put(rx + 2, g, rz, Block.PLANKS, 1);
         lampPost(sx + 2, zc - 3, g);
         // The yard: pallets of cut stone in two rows (some full, some part taken), the spoil heap, the shed.
         int yard = pz + pd + 2;

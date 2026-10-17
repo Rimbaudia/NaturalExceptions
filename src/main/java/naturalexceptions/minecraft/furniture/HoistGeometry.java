@@ -18,12 +18,24 @@ public final class HoistGeometry {
         return BlockHoist.BASKET;
     }
 
+    public static double[][] counterweight() {
+        return BlockCounterweightBox.PARTS;
+    }
+
     /**
      * The way the rope leaves the sheave's wheel to go down the shaft: across the wheel, away from the windlass (a unit
      * step along x or z, the way the wheel turns).
      */
     public static double[] away(EntityHoistLoad load) {
-        return away(load.worldObj, load.windlassX, load.windlassZ, load.sheaveX, load.sheaveY, load.sheaveZ);
+        double a = load.away();
+        return new double[] { Math.cos(a), 0, Math.sin(a) };
+    }
+
+    /** Open for a basket or a counterweight to hang in: air, or one of them waiting there as a block. */
+    public static boolean clearFor(net.minecraft.world.IBlockAccess world, int x, int y, int z) {
+        net.minecraft.block.Block block = world.getBlock(x, y, z);
+        return block.isAir(world, x, y, z) || block instanceof BlockHoist && !((BlockHoist) block).top
+            || block instanceof BlockCounterweightBox;
     }
 
     public static double[] away(net.minecraft.world.World world, int wx, int wz, int sx, int sy, int sz) {

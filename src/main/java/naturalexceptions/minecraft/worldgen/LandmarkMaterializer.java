@@ -821,6 +821,18 @@ final class LandmarkMaterializer {
             case SHEAVE:
                 set(world, x, y, z, orElse(NEBlocks.sheave, Blocks.planks), meta & 1);
                 break;
+            case DERRICK_PIVOT:
+                set(world, x, y, z, orElse(NEBlocks.derrickPivot, Blocks.cobblestone), 0);
+                break;
+            case COUNTERWEIGHT:
+                set(world, x, y, z, orElse(NEBlocks.counterweightBox, Blocks.planks), 0);
+                // Its stone goes to the windlass in front of it, which hangs it.
+                for (int[] o : new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                    net.minecraft.tileentity.TileEntity t = world.getTileEntity(x + o[0], y + 1, z + o[1]);
+                    if (t instanceof naturalexceptions.minecraft.furniture.TileEntityHoist)
+                        ((naturalexceptions.minecraft.furniture.TileEntityHoist) t).weightCounterBlocks(meta);
+                }
+                break;
             case CONDENSER:
                 set(world, x, y, z, orElse(NEBlocks.cloudCondenser, Blocks.glass), 0);
                 break;

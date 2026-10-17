@@ -201,7 +201,11 @@ public final class SkyDungeon {
         /** A cut-stone pallet; meta: how many dressed blocks are stacked on it (0 to 8). */
         PALLET,
         /** A hoist's sheave; meta: 0 its wheel turning across x, 1 across z. */
-        SHEAVE
+        SHEAVE,
+        /** A derrick's pivot. */
+        DERRICK_PIVOT,
+        /** A counterweight box waiting in its well; meta: the blocks of stone in it. */
+        COUNTERWEIGHT
     }
 
     /** A door piece's meta for its upper half (the lower half's meta is the way it faces). */
