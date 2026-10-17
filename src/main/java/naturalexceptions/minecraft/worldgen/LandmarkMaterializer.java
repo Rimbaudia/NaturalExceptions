@@ -439,7 +439,15 @@ final class LandmarkMaterializer {
                 set(world, x, y, z, orElse(NEBlocks.wardedSkystone, Blocks.bedrock), 0);
                 break;
             case LAMP:
-                set(world, x, y, z, orElse(NEBlocks.stormglassLantern, Blocks.glowstone), 0);
+                // A whole lamp set into the stone, or a small lantern (its meta is the lantern's own).
+                set(
+                    world,
+                    x,
+                    y,
+                    z,
+                    orElse(NEBlocks.stormglassLantern, Blocks.glowstone),
+                    meta == naturalexceptions.core.worldgen.SkyDungeon.LAMP_STANDING
+                        || meta == naturalexceptions.core.worldgen.SkyDungeon.LAMP_HANGING ? meta : 0);
                 break;
             case LADDER:
                 set(world, x, y, z, Blocks.ladder, meta);

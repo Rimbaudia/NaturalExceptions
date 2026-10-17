@@ -82,7 +82,7 @@ final class IslandLandmarks {
     void lampPost(int dx, int dz, int g) {
         put(dx, g + 1, dz, Block.FENCE);
         put(dx, g + 2, dz, Block.FENCE);
-        put(dx, g + 3, dz, Block.LAMP);
+        put(dx, g + 3, dz, Block.LAMP, SkyDungeon.LAMP_STANDING);
     }
 
     /** An authored building out on the island at (minX, minZ), facing south, set on ground {@code g}. */
@@ -124,7 +124,7 @@ final class IslandLandmarks {
         put(x1 - 1, g + 1, z0 + 2, Block.CHEST, 0, loot, null);
         put(x1 - 1, g + 1, z0 + 3, Block.BARREL, 1);
         put(x0 + 2, g + 1, z0 + 1, bench == 0 ? Block.ANVIL : Block.CRATE);
-        put(x0 + 2, g + 3, z0 + 3, Block.LAMP);
+        put(x0 + 2, g + 3, z0 + 3, Block.LAMP, SkyDungeon.LAMP_HANGING); // from the roof
     }
 
     /** A spruce as the island grows them: a straight trunk under a cone of boughs. */
@@ -215,7 +215,12 @@ final class IslandLandmarks {
             int depth = (int) Math.round(3 * (1 - (r / crater) * (r / crater)));
             for (int y = g - depth + 1; y <= g; y++) put(x, y, z, Block.AIR);
             double n = d.noise.unit(cx + x, cz + z, 81);
-            put(x, g - depth, z, r < crater - 2 ? (n < 0.5 ? Block.ROCK : Block.GRAVEL) : Block.GRAVEL, n < 0.25 ? 1 : 0);
+            put(
+                x,
+                g - depth,
+                z,
+                r < crater - 2 ? (n < 0.5 ? Block.ROCK : Block.GRAVEL) : Block.GRAVEL,
+                n < 0.25 ? 1 : 0);
             put(x, g - depth - 1, z, Block.ROCK);
         }
         int floor = g - 3, height = 30 + random.nextInt(11);
@@ -225,7 +230,8 @@ final class IslandLandmarks {
         for (int h = 0; h <= height; h++) {
             double t = (double) h / height;
             double r = 3.4 * Math.pow(1 - t, 0.9) + 0.4;
-            double ox = mx + Math.cos(lean) * reach * Math.pow(t, 1.5), oz = mz + Math.sin(lean) * reach * Math.pow(t, 1.5);
+            double ox = mx + Math.cos(lean) * reach * Math.pow(t, 1.5),
+                oz = mz + Math.sin(lean) * reach * Math.pow(t, 1.5);
             for (int x = (int) Math.floor(ox - r); x <= Math.ceil(ox + r); x++)
                 for (int z = (int) Math.floor(oz - r); z <= Math.ceil(oz + r); z++) {
                     double jag = d.noise.unit3(cx + x, floor + h, cz + z, 82) * 0.9;
@@ -296,7 +302,8 @@ final class IslandLandmarks {
             }
         }
         // The roof: a Skyslate cap and a carved finial.
-        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) put(tx + dx, g + height + 1, tz + dz, Block.SKYSLATE, 1);
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++) put(tx + dx, g + height + 1, tz + dz, Block.SKYSLATE, 1);
         put(tx, g + height + 2, tz, Block.CHISELED);
         // The ladder up the north wall, through each floor to the lantern room.
         for (int y = g + 1; y <= g + 24; y++) put(tx, y, tz - 2, Block.LADDER, 3);
@@ -312,16 +319,16 @@ final class IslandLandmarks {
         put(tx - 2, g + 1, tz + 1, Block.BARREL);
         put(tx - 2, g + 1, tz + 2, Block.BARREL);
         put(tx + 2, g + 1, tz + 2, Block.CRATE);
-        put(tx + 2, g + 3, tz - 1, Block.LAMP);
         put(tx - 2, g + 9, tz + 2, Block.CRATE);
         put(tx + 2, g + 9, tz + 2, Block.CRATE);
         put(tx + 2, g + 10, tz + 2, Block.CRATE);
         put(tx + 2, g + 9, tz - 1, Block.BARREL);
-        put(tx + 2, g + 11, tz + 1, Block.LAMP);
         put(tx - 1, g + 17, tz + 1, Block.WOODEN_TABLE, 1);
         put(tx - 2, g + 17, tz + 1, Block.CHAIR, 1 << 2 | SkyDungeon.WEST);
         put(tx + 2, g + 17, tz + 2, Block.CHEST, 0, Loot.STORE, null);
-        put(tx + 2, g + 19, tz - 1, Block.LAMP);
+        // A lantern hanging from the ceiling of each storey, in the middle of the room.
+        for (int ceiling : new int[] { g + 7, g + 15, g + 23 })
+            put(tx, ceiling, tz + 1, Block.LAMP, SkyDungeon.LAMP_HANGING);
         // The lamp, on a polished pedestal in the middle of the lantern room.
         put(tx, g + 25, tz, Block.POLISHED);
         put(tx, g + 26, tz, Block.LIGHTHOUSE_LAMP);

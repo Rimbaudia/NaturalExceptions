@@ -178,8 +178,10 @@ public final class NEBlocks {
             naturalexceptions.minecraft.furniture.CuttingRecipes.Kind.MASON).setCreativeTab(NECreativeTab.INSTANCE);
         sawmill = new naturalexceptions.minecraft.furniture.BlockCuttingBench(
             naturalexceptions.minecraft.furniture.CuttingRecipes.Kind.SAW).setCreativeTab(NECreativeTab.INSTANCE);
-        hoistWindlass = new naturalexceptions.minecraft.furniture.BlockHoist(true).setCreativeTab(NECreativeTab.INSTANCE);
-        hoistBasket = new naturalexceptions.minecraft.furniture.BlockHoist(false).setCreativeTab(NECreativeTab.INSTANCE);
+        hoistWindlass = new naturalexceptions.minecraft.furniture.BlockHoist(true)
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        hoistBasket = new naturalexceptions.minecraft.furniture.BlockHoist(false)
+            .setCreativeTab(NECreativeTab.INSTANCE);
         cloudCondenser = new naturalexceptions.minecraft.furniture.BlockCloudCondenser()
             .setCreativeTab(NECreativeTab.INSTANCE);
         stormcrystal = new naturalexceptions.minecraft.block.BlockStormcrystal().setCreativeTab(NECreativeTab.INSTANCE);
@@ -191,12 +193,15 @@ public final class NEBlocks {
             naturalexceptions.minecraft.furniture.CuttingRecipes.Kind.POTTER).setCreativeTab(NECreativeTab.INSTANCE);
         glassFurnace = new naturalexceptions.minecraft.furniture.BlockCuttingBench(
             naturalexceptions.minecraft.furniture.CuttingRecipes.Kind.GLASS).setCreativeTab(NECreativeTab.INSTANCE);
-        tanningRack = new naturalexceptions.minecraft.furniture.BlockTanningRack().setCreativeTab(NECreativeTab.INSTANCE);
-        archeryButt = new naturalexceptions.minecraft.furniture.BlockArcheryButt().setCreativeTab(NECreativeTab.INSTANCE);
+        tanningRack = new naturalexceptions.minecraft.furniture.BlockTanningRack()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        archeryButt = new naturalexceptions.minecraft.furniture.BlockArcheryButt()
+            .setCreativeTab(NECreativeTab.INSTANCE);
         trainingDummy = new naturalexceptions.minecraft.furniture.BlockTrainingDummy()
             .setCreativeTab(NECreativeTab.INSTANCE);
         wellWinch = new naturalexceptions.minecraft.furniture.BlockWellWinch().setCreativeTab(NECreativeTab.INSTANCE);
-        cloudsilkRope = new naturalexceptions.minecraft.block.BlockCloudsilkRope().setCreativeTab(NECreativeTab.INSTANCE);
+        cloudsilkRope = new naturalexceptions.minecraft.block.BlockCloudsilkRope()
+            .setCreativeTab(NECreativeTab.INSTANCE);
         fountain = new naturalexceptions.minecraft.furniture.BlockFountain().setCreativeTab(NECreativeTab.INSTANCE);
         orrery = new naturalexceptions.minecraft.furniture.BlockOrrery().setCreativeTab(NECreativeTab.INSTANCE);
         chartTable = new naturalexceptions.minecraft.furniture.BlockChartTable().setCreativeTab(NECreativeTab.INSTANCE);
@@ -259,7 +264,10 @@ public final class NEBlocks {
             GameRegistry.registerBlock(lumeniteLamp, "lumenite_lamp");
             GameRegistry.registerBlock(stormglassCluster, "stormglass_cluster");
             GameRegistry.registerBlock(stormglassVein, "stormglass_vein");
-            GameRegistry.registerBlock(stormglassLantern, "stormglass_lantern");
+            GameRegistry.registerBlock(
+                stormglassLantern,
+                naturalexceptions.minecraft.block.ItemBlockStormglassLantern.class,
+                "stormglass_lantern");
             GameRegistry.registerBlock(magmaRock, "magma_rock");
             GameRegistry.registerBlock(cloud, "cloud");
             GameRegistry.registerBlock(skystoneRock, "skystone");
@@ -456,6 +464,13 @@ public final class NEBlocks {
                 NEItems.stormglassShard,
                 'G',
                 net.minecraft.init.Blocks.glass);
+            // A lamp's glass and frame make two small lanterns.
+            GameRegistry.addShapelessRecipe(
+                new net.minecraft.item.ItemStack(
+                    stormglassLantern,
+                    2,
+                    naturalexceptions.minecraft.block.BlockStormglassLantern.SMALL),
+                new net.minecraft.item.ItemStack(stormglassLantern, 1, 0));
             GameRegistry
                 .addRecipe(new net.minecraft.item.ItemStack(starterSmelter), "BBB", "B B", "BBB", 'B', refractoryBrick);
             GameRegistry.addRecipe(new net.minecraft.item.ItemStack(castingTable), "BBB", "B B", 'B', refractoryBrick);

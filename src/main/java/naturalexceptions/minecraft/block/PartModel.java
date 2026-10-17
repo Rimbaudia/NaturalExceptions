@@ -21,6 +21,11 @@ public interface PartModel {
     /** Metadata used to draw the block as an item. */
     int inventoryMetadata();
 
+    /** Metadata used to draw the block as the item with damage {@code itemDamage}: by default, always the same. */
+    default int inventoryMetadata(int itemDamage) {
+        return inventoryMetadata();
+    }
+
     /** Shared render type id, assigned when the client registers its renderer. */
     final class RenderType {
 

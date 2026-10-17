@@ -59,7 +59,7 @@ public final class PartModelRenderer implements ISimpleBlockRenderingHandler {
     public void renderInventoryBlock(Block block, int metadata, int modelId, RenderBlocks renderer) {
         if (!(block instanceof PartModel)) return;
         PartModel model = (PartModel) block;
-        int meta = model.inventoryMetadata();
+        int meta = model.inventoryMetadata(metadata);
         GL11.glPushMatrix();
         GL11.glTranslatef(-0.5F, -0.5F, -0.5F);
         Tessellator tess = Tessellator.instance;

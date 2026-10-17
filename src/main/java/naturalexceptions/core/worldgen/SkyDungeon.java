@@ -207,6 +207,10 @@ public final class SkyDungeon {
     public static final int NORTH = 0, EAST = 1, SOUTH = 2, WEST = 3;
     /** Torch meta: standing on the floor. */
     public static final int STANDING = 4;
+    /**
+     * A {@link Block#LAMP}'s meta: a whole lamp block (0), or a small lantern standing on what is below, or hanging.
+     */
+    public static final int LAMP_STANDING = 2, LAMP_HANGING = 3;
     /** What a flower pot holds, by meta: poppy, dandelion, fern, oak sapling, blue orchid, allium. */
     public static final int POT_PLANTS = 6;
 

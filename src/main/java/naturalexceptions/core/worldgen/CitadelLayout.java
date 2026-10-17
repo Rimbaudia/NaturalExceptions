@@ -135,7 +135,7 @@ final class CitadelLayout {
     private void lampPost(int dx, int dz, int ground) {
         put(dx, ground + 1, dz, Block.FENCE);
         put(dx, ground + 2, dz, Block.FENCE);
-        put(dx, ground + 3, dz, Block.LAMP);
+        put(dx, ground + 3, dz, Block.LAMP, SkyDungeon.LAMP_STANDING);
     }
 
     // --- Ground, moat and walls -----------------------------------------------------------------------------
