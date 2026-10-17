@@ -50,6 +50,7 @@ abstract class BlockParts extends Block implements PartModel {
     public void addCollisionBoxesToList(World world, int x, int y, int z, AxisAlignedBB mask, List boxes,
         Entity entity) {
         for (double[] b : parts(world.getBlockMetadata(x, y, z))) {
+            if (PartModel.empty(b)) continue;
             AxisAlignedBB box = AxisAlignedBB
                 .getBoundingBox(x + b[0], y + b[1], z + b[2], x + b[3], y + b[4], z + b[5]);
             if (mask.intersectsWith(box)) boxes.add(box);

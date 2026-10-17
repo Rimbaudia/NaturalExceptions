@@ -78,6 +78,16 @@ public final class TileEntityCuttingBench extends TileEntityStorage {
         this.heat = heat;
     }
 
+    /** Keeps the bench's look in step with its input slot: the piece is on it only while there is one. */
+    @Override
+    public void markDirty() {
+        super.markDirty();
+        if (worldObj == null || worldObj.isRemote) return;
+        int meta = worldObj.getBlockMetadata(xCoord, yCoord, zCoord);
+        int want = getStackInSlot(INPUT) != null ? meta | BlockCuttingBench.LOADED : meta & ~BlockCuttingBench.LOADED;
+        if (want != meta) worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, want, 2);
+    }
+
     @Override
     public void writeToNBT(NBTTagCompound tag) {
         super.writeToNBT(tag);

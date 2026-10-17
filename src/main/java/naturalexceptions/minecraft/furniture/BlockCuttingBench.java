@@ -53,6 +53,10 @@ public final class BlockCuttingBench extends BlockParts {
     /** Which parts of the glass furnace glow: the mouth and the gather. */
     private static final int MOUTH = 5, GATHER = 7;
     private static final double[][][] MODELS = { MASON, SAW, LOOM, POTTER, GLASS };
+    /** Each kind's part that is the piece waiting to be worked (-1 for none): only there while something is. */
+    private static final int[] WORKPIECE = { 2, 6, -1, 3, -1 };
+    /** Metadata bit set while the bench has something in its input slot; the low bits are its facing. */
+    public static final int LOADED = 8;
 
     /** Each kind's name, as a block and on its screen. */
     static final String[] BLOCK_NAMES = { "masonsBench", "sawmill", "loom", "pottersWheel", "glassFurnace" };
@@ -86,11 +90,22 @@ public final class BlockCuttingBench extends BlockParts {
     public double[][] parts(int metadata) {
         double[][] src = MODELS[kind.ordinal()];
         double[][] out = new double[src.length][];
-        int facing = metadata < 2 || metadata > 5 ? 2 : metadata; // the side its working front faces
-        for (int i = 0; i < src.length; i++) out[i] = PartModel.rotate(src[i], facing);
+        int facing = facing(metadata); // the side its working front faces
+        int work = (metadata & LOADED) != 0 ? -1 : WORKPIECE[kind.ordinal()];
+        for (int i = 0; i < src.length; i++) {
+            double[] box = src[i];
+            // An empty bench: the workpiece flattened to nothing where it would sit, so no part changes its index.
+            if (i == work) box = new double[] { box[0], box[1], box[2], box[3], box[1], box[5] };
+            out[i] = PartModel.rotate(box, facing);
+        }
         return out;
     }
 
+    /** The side a bench's working front faces (2..5), from its metadata. */
+    static int facing(int metadata) {
+        int facing = metadata & 7;
+        return facing < 2 || facing > 5 ? 2 : facing;
+    }
 
     @Override
     @SideOnly(Side.CLIENT)
@@ -183,7 +198,7 @@ public final class BlockCuttingBench extends BlockParts {
             // Smoke from the flue; now and then a flame licking out of the glory hole.
             world.spawnParticle("smoke", x + 0.5, y + 1.3, z + 0.5, 0.0, 0.04, 0.0);
             if (random.nextInt(3) == 0) {
-                double[] m = PartModel.rotate(GLASS[MOUTH], Math.max(2, world.getBlockMetadata(x, y, z)));
+                double[] m = PartModel.rotate(GLASS[MOUTH], facing(world.getBlockMetadata(x, y, z)));
                 world.spawnParticle(
                     "flame",
                     x + (m[0] + m[3]) / 2,

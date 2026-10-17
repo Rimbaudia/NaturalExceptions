@@ -45,6 +45,11 @@ public interface PartModel {
     }
 
     /** Smallest box containing all parts. */
+    /** A part with no volume: one left out of this state of the model, drawn and bumped into as nothing. */
+    static boolean empty(double[] part) {
+        return part[0] >= part[3] || part[1] >= part[4] || part[2] >= part[5];
+    }
+
     static double[] bounds(double[][] parts) {
         double[] result = { 1, 1, 1, 0, 0, 0 };
         for (double[] part : parts) {
