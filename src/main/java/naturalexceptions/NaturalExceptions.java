@@ -195,8 +195,8 @@ public final class NaturalExceptions {
             7,
             this,
             64,
-            1,
-            true);
+            20,
+            false); // the client works out the ride itself: no stream of positions
         MinecraftForge.EVENT_BUS.register(new NEChunkGenerationHistory());
         cpw.mods.fml.common.network.NetworkRegistry.INSTANCE
             .registerGuiHandler(this, new naturalexceptions.minecraft.gui.NEGuiHandler());
@@ -334,17 +334,10 @@ public final class NaturalExceptions {
             });
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
             naturalexceptions.minecraft.furniture.EntityHoistHook.class,
-            new net.minecraft.client.renderer.entity.Render() {
-
-                @Override
-                public void doRender(net.minecraft.entity.Entity entity, double x, double y, double z, float yaw,
-                    float partialTicks) {}
-
-                @Override
-                protected net.minecraft.util.ResourceLocation getEntityTexture(net.minecraft.entity.Entity entity) {
-                    return null;
-                }
-            });
+            new naturalexceptions.minecraft.furniture.client.RenderHoistHook());
+        cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
+            naturalexceptions.minecraft.furniture.TileEntityHoist.class,
+            new naturalexceptions.minecraft.furniture.client.RenderHoistRope());
     }
 
     @Mod.EventHandler

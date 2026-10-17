@@ -1361,13 +1361,13 @@ final class CitadelLayout {
                 for (int h = y + 1; h <= y + 3 && h <= g; h++) put(x, h, z, Block.AIR);
             }
         }
-        // The derrick: its mast at the east lip on a cobbled footing, the boom out over the floor, the chain down to
-        // the basket; a guy line back to a stake; the windlass at the mast's foot.
+        // The derrick: its mast at the east lip on a cobbled footing, the boom out over the floor, the basket on the
+        // floor under its end; a guy line back to a stake; the windlass at the mast's foot.
         int mx = px + pw + 1, bx = px + 14;
         put(mx, g, zc, Block.ROCK, 1);
         for (int y = g + 1; y <= g + 11; y++) put(mx, y, zc, Block.LOG, 1);
         for (int x = bx; x < mx; x++) put(x, g + 11, zc, Block.LOG, 1 | 16);
-        for (int y = g - 8; y <= g + 10; y++) put(bx, y, zc, Block.IRON_BARS);
+        // (Its rope, from the boom down to the basket, is drawn by the windlass; no chain of bars in the rider's way.)
         put(bx, g - 11, zc, Block.HOIST, 1);
         put(mx, g + 1, zc + 1, Block.HOIST, 0);
         put(mx + 3, g + 1, zc, Block.LOG, 1);

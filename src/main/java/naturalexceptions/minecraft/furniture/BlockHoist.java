@@ -30,7 +30,7 @@ public final class BlockHoist extends BlockParts {
     private static final double[][] WINDLASS = { { 0.05, 0.0, 0.3, 0.2, 0.9, 0.7 }, { 0.8, 0.0, 0.3, 0.95, 0.9, 0.7 },
         { 0.2, 0.45, 0.32, 0.8, 0.77, 0.68 }, { 0.95, 0.56, 0.46, 1.0, 0.66, 0.54 },
         { 0.95, 0.3, 0.46, 1.0, 0.66, 0.54 } };
-    private static final double[][] BASKET = { { 0.1, 0.0, 0.1, 0.9, 0.1, 0.9 }, { 0.1, 0.1, 0.1, 0.9, 0.6, 0.18 },
+    static final double[][] BASKET = { { 0.1, 0.0, 0.1, 0.9, 0.1, 0.9 }, { 0.1, 0.1, 0.1, 0.9, 0.6, 0.18 },
         { 0.1, 0.1, 0.82, 0.9, 0.6, 0.9 }, { 0.1, 0.1, 0.18, 0.18, 0.6, 0.82 }, { 0.82, 0.1, 0.18, 0.9, 0.6, 0.82 },
         { 0.46, 0.6, 0.46, 0.54, 1.0, 0.54 } };
 
@@ -51,8 +51,12 @@ public final class BlockHoist extends BlockParts {
     @Override
     public double[][] parts(int metadata) {
         double[][] src = top ? WINDLASS : BASKET;
+        boolean away = !top && (metadata & 1) != 0; // the basket is up on its rope, with a rider
         double[][] out = new double[src.length][];
-        for (int i = 0; i < src.length; i++) out[i] = src[i].clone();
+        for (int i = 0; i < src.length; i++) {
+            out[i] = src[i].clone();
+            if (away) out[i][4] = out[i][1];
+        }
         return out;
     }
 
@@ -98,8 +102,8 @@ public final class BlockHoist extends BlockParts {
         int[] best = null;
         int bestDistance = Integer.MAX_VALUE;
         int dyFrom = top ? -DEPTH : 3, dyTo = top ? -3 : DEPTH;
-        for (int dy = dyFrom; dy <= dyTo; dy++) for (int dx = -REACH; dx <= REACH; dx++)
-            for (int dz = -REACH; dz <= REACH; dz++) {
+        for (int dy = dyFrom; dy <= dyTo; dy++)
+            for (int dx = -REACH; dx <= REACH; dx++) for (int dz = -REACH; dz <= REACH; dz++) {
                 Block b = world.getBlock(x + dx, y + dy, z + dz);
                 if (!(b instanceof BlockHoist) || ((BlockHoist) b).top == top) continue;
                 int distance = dx * dx + dz * dz;
@@ -134,13 +138,22 @@ public final class BlockHoist extends BlockParts {
         }
         if (other == null || player.isRiding()) return true;
         @SuppressWarnings("unchecked")
-        List<EntityHoistHook> busy = world
-            .getEntitiesWithinAABB(EntityHoistHook.class, AxisAlignedBB.getBoundingBox(x - 1, y - 1, z - 1, x + 2, y + 3, z + 2));
+        List<EntityHoistHook> busy = world.getEntitiesWithinAABB(
+            EntityHoistHook.class,
+            AxisAlignedBB.getBoundingBox(x - 1, y - 1, z - 1, x + 2, y + 3, z + 2));
         if (!busy.isEmpty()) return true;
-        EntityHoistHook hook = EntityHoistHook.between(world, windlass, basket, top);
+        EntityHoistHook hook = EntityHoistHook.between(world, windlass, basket, top, ropeTop(world, basket, windlass));
         world.spawnEntityInWorld(hook);
         player.mountEntity(hook);
         return true;
+    }
+
+    /** The height the basket's rope hangs from: the underside of what is over the basket (the derrick's boom). */
+    static int ropeTop(World world, int[] basket, int[] windlass) {
+        for (int y = basket[1] + 2; y <= basket[1] + 64 && y < 256; y++) if (world.getBlock(basket[0], y, basket[2])
+            .getMaterial()
+            .isSolid()) return y;
+        return windlass[1] + 10;
     }
 
     @Override
