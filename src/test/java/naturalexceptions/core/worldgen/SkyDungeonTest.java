@@ -2,6 +2,7 @@ package naturalexceptions.core.worldgen;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayDeque;
@@ -271,6 +272,25 @@ final class SkyDungeonTest {
     }
 
     @Test
+    void theCitadelPierReachesOutOverTheRim() {
+        int citadels = 0;
+        for (Sample s : samples()) {
+            if (s.dungeon.kind() != SkyDungeon.Kind.CITADEL) continue;
+            citadels++;
+            int cx = s.island.centreX(), cz = s.island.centreZ(), far = Integer.MIN_VALUE;
+            for (Piece p : s.dungeon.pieces())
+                if (Math.abs(p.x - cx) <= 3 && p.block != SkyDungeon.Block.AIR) far = Math.max(far, p.z - cz);
+            assertNull(
+                s.field.column(s.island, cx, cz + far),
+                s.name() + ": the pier's end is still over land, " + far + " out");
+            boolean landBefore = false;
+            for (int t = far - 12; t < far; t++) landBefore |= s.field.column(s.island, cx, cz + t) != null;
+            assertTrue(landBefore, s.name() + ": the pier is not joined to the island");
+        }
+        assertTrue(citadels >= 3, "enough citadels to judge: " + citadels);
+    }
+
+    @Test
     void citadelsHaveAWetMoatAClearWallLaneAndLandsOutside() {
         int citadels = 0, quarries = 0;
         for (Sample s : samples()) {
@@ -327,19 +347,19 @@ final class SkyDungeonTest {
         assertTrue(quarries * 2 >= citadels, "most citadels have their quarry: " + quarries + " of " + citadels);
         int[] seen = new int[4];
         String[] places = { "lumber camp", "condensers", "stormglass spire", "lighthouse" };
-        for (Sample s : samples()) for (int i = 0; i < places.length; i++)
-            if (s.dungeon.features()
-                .contains(places[i])) seen[i]++;
+        for (Sample s : samples()) for (int i = 0; i < places.length; i++) if (s.dungeon.features()
+            .contains(places[i])) seen[i]++;
         for (int i = 0; i < places.length; i++)
             assertTrue(seen[i] * 3 >= citadels, "the " + places[i] + " is found on the islands: " + seen[i]);
         for (Sample s : samples()) if (s.dungeon.features()
             .contains("guardhouse")) {
-            int guards = 0;
-            for (Piece p : s.dungeon.pieces()) if (p.block == Block.GUARD) guards++;
-            assertEquals(4, guards, s.name() + ": the guardhouse has its watch of four");
-        }
-        for (Sample s : samples()) if (s.dungeon.kind() == SkyDungeon.Kind.CITADEL)
-            for (String district : new String[] { "market plaza", "tourney ground", "artisans' quarter", "manor quarter" })
+                int guards = 0;
+                for (Piece p : s.dungeon.pieces()) if (p.block == Block.GUARD) guards++;
+                assertEquals(4, guards, s.name() + ": the guardhouse has its watch of four");
+            }
+        for (Sample s : samples())
+            if (s.dungeon.kind() == SkyDungeon.Kind.CITADEL) for (String district : new String[] { "market plaza",
+                "tourney ground", "artisans' quarter", "manor quarter" })
                 assertTrue(
                     s.dungeon.features()
                         .contains(district),
@@ -353,7 +373,14 @@ final class SkyDungeonTest {
             Piece above = s.dungeon.at(p.x, p.y + 1, p.z);
             assertTrue(
                 above != null && above.block == Block.DOOR && above.meta == SkyDungeon.DOOR_TOP,
-                s.name() + ": a door at " + p.x + "," + p.y + "," + p.z + " has " + (above == null ? "nothing" : above.block)
+                s.name() + ": a door at "
+                    + p.x
+                    + ","
+                    + p.y
+                    + ","
+                    + p.z
+                    + " has "
+                    + (above == null ? "nothing" : above.block)
                     + " over it");
         }
     }
@@ -819,7 +846,8 @@ final class SkyDungeonTest {
      * room, never up or down. {@code blocked} cells count as walls.
      */
     private static boolean walksTo(Sample s, int tx, int tz, Set<Long> blocked) {
-        int b = s.island.centreY() + 1, cx = s.island.centreX(), cz = s.island.centreZ(), r = CitadelLayout.MOAT_OUT + 4;
+        int b = s.island.centreY() + 1, cx = s.island.centreX(), cz = s.island.centreZ(),
+            r = CitadelLayout.MOAT_OUT + 4;
         int[] start = { cx, b + 1, cz + CitadelLayout.MOAT_OUT }; // on the drawbridge
         Set<Long> seen = new HashSet<>();
         ArrayDeque<int[]> queue = new ArrayDeque<>();

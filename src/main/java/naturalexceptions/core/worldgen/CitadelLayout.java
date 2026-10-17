@@ -584,8 +584,8 @@ final class CitadelLayout {
     }
 
     /** The houses of the back row, the small workshops among them, and what is left for kitchen gardens. */
-    private static final String[] BACK_ROW = { "row_house", "cottage", "merchant_house", "house_small",
-        "house_timber", "house_corner", "house_tall", "bakery" };
+    private static final String[] BACK_ROW = { "row_house", "cottage", "merchant_house", "house_small", "house_timber",
+        "house_corner", "house_tall", "bakery" };
 
     /**
      * Behind the plots on the ring road, a back street on every side, and a second row of plots facing it: houses
@@ -897,8 +897,9 @@ final class CitadelLayout {
                     .next(),
                 false);
             int mu = u0 + w / 2, mv = v0 + d / 2;
-            int[] step = front == SkyDungeon.SOUTH ? new int[] { mu, v0 + d } : front == SkyDungeon.NORTH
-                ? new int[] { mu, v0 - 1 } : front == SkyDungeon.EAST ? new int[] { u0 + w, mv } : new int[] { u0 - 1, mv };
+            int[] step = front == SkyDungeon.SOUTH ? new int[] { mu, v0 + d }
+                : front == SkyDungeon.NORTH ? new int[] { mu, v0 - 1 }
+                    : front == SkyDungeon.EAST ? new int[] { u0 + w, mv } : new int[] { u0 - 1, mv };
             pave(step[0], step[1]);
         }
 
@@ -1014,8 +1015,7 @@ final class CitadelLayout {
         for (int u = 18; u <= 24; u += 3)
             for (int v : new int[] { 18, 22 }) at.put(u, b + 1, v, Block.TRAINING_DUMMY, at.facing(SkyDungeon.NORTH));
         for (int u = 17; u <= 25; u++) for (int y = b + 1; y <= b + 2; y++) at.put(u, y, n - 5, Block.PLANKS, 1);
-        for (int u = 18; u <= 24; u += 2)
-            at.put(u, b + 2, n - 6, Block.WEAPON_RACK, at.facing(SkyDungeon.SOUTH));
+        for (int u = 18; u <= 24; u += 2) at.put(u, b + 2, n - 6, Block.WEAPON_RACK, at.facing(SkyDungeon.SOUTH));
         at.put(16, b + 1, 14, Block.BARREL, 1);
         at.put(26, b + 1, 14, Block.BARREL, 1);
         lampPost(at.dx(15), at.dz(13));
@@ -1161,7 +1161,8 @@ final class CitadelLayout {
      */
     private void approach() {
         int end = MOAT_OUT + 2, last = b;
-        for (int t = MOAT_OUT + 2; t <= radius + 4; t++) {
+        // On to the rim, wherever it is: an island's outline wanders well past its nominal radius.
+        for (int t = MOAT_OUT + 2; t <= radius * 2; t++) {
             boolean land = true;
             for (int w = -3; w <= 3; w++) land &= d.field.column(d.island, cx + w, cz + t) != null;
             if (!land) break;
