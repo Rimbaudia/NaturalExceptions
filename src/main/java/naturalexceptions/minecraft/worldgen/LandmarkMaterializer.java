@@ -357,12 +357,75 @@ final class LandmarkMaterializer {
             .of(field, island);
         if (dungeon == null) return 0;
         int placed = 0;
+        List<naturalexceptions.core.worldgen.SkyDungeon.Piece> torches = new ArrayList<>();
         for (naturalexceptions.core.worldgen.SkyDungeon.Piece piece : dungeon.piecesInChunk(x0 >> 4, z0 >> 4)) {
             if (piece.y < 1 || piece.y > 254) continue;
-            writePiece(world, piece, island);
+            if (piece.block == naturalexceptions.core.worldgen.SkyDungeon.Block.TORCH) torches.add(piece);
+            else writePiece(world, piece, island);
             placed++;
         }
+        // Torches last, once the walls they hang on are in.
+        for (naturalexceptions.core.worldgen.SkyDungeon.Piece torch : torches) hangTorch(world, dungeon, torch);
         return placed;
+    }
+
+    /**
+     * A torch on the side the layout gives it if something solid is there, else on another side that is, else
+     * standing on what is below, else none. Through world.setBlock a torch drops at once when nothing beside it is
+     * solid yet (its wall later in the chunk, or in a neighbour not yet generated), and one hung on air drops the
+     * first time anything beside it changes: dozens a citadel, left lying in its rooms. So it is written straight
+     * into the chunk, with no such check, once its own chunk's walls are in.
+     */
+    private static void hangTorch(World world, naturalexceptions.core.worldgen.SkyDungeon dungeon,
+        naturalexceptions.core.worldgen.SkyDungeon.Piece torch) {
+        int given = Math.min(torch.meta, 4);
+        int[] order = { given, 0, 1, 2, 3, 4 };
+        for (int side : order) {
+            if (!holds(world, dungeon, torch.x, torch.y, torch.z, side)) continue;
+            Chunk chunk = batchChunk;
+            int meta = TORCH_META[side];
+            if (chunk != null && torch.x >> 4 == chunk.xPosition && torch.z >> 4 == chunk.zPosition) {
+                place(chunk, torch.x, torch.y, torch.z, Blocks.torch, meta, batchGlowing);
+            } else world.setBlock(torch.x, torch.y, torch.z, Blocks.torch, meta, 2);
+            return;
+        }
+    }
+
+    /** Whether a torch at (x, y, z) can hang on its side {@code side} (a dungeon direction; 4 is standing). */
+    private static boolean holds(World world, naturalexceptions.core.worldgen.SkyDungeon dungeon, int x, int y, int z,
+        int side) {
+        int sx = x, sy = y, sz = z;
+        net.minecraftforge.common.util.ForgeDirection face;
+        switch (side) {
+            case 0:
+                sz--;
+                face = net.minecraftforge.common.util.ForgeDirection.SOUTH;
+                break;
+            case 1:
+                sx++;
+                face = net.minecraftforge.common.util.ForgeDirection.WEST;
+                break;
+            case 2:
+                sz++;
+                face = net.minecraftforge.common.util.ForgeDirection.NORTH;
+                break;
+            case 3:
+                sx--;
+                face = net.minecraftforge.common.util.ForgeDirection.EAST;
+                break;
+            default:
+                sy--;
+                face = net.minecraftforge.common.util.ForgeDirection.UP;
+                break;
+        }
+        naturalexceptions.core.worldgen.SkyDungeon.Piece there = dungeon.at(sx, sy, sz);
+        if (there != null && there.block == naturalexceptions.core.worldgen.SkyDungeon.Block.AIR) return false;
+        // Not built yet (not generated, or not yet populated with the island and its buildings): trust the layout,
+        // where what it puts there is a wall and, with nothing, the island's rock is.
+        Chunk beside = neighbour(world, sx, sz);
+        if (beside == null || !beside.isTerrainPopulated) return true;
+        Block block = world.getBlock(sx, sy, sz);
+        return side == 4 ? block.canPlaceTorchOnTop(world, sx, sy, sz) : block.isSideSolid(world, sx, sy, sz, face);
     }
 
     private static void writePiece(World world, naturalexceptions.core.worldgen.SkyDungeon.Piece piece,
