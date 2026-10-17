@@ -199,7 +199,9 @@ public final class SkyDungeon {
         /** A Citadel Guard posted here (no block); meta: the way he faces ({@link #NORTH} ..). */
         GUARD,
         /** A cut-stone pallet; meta: how many dressed blocks are stacked on it (0 to 8). */
-        PALLET
+        PALLET,
+        /** A hoist's sheave; meta: 0 its wheel turning across x, 1 across z. */
+        SHEAVE
     }
 
     /** A door piece's meta for its upper half (the lower half's meta is the way it faces). */
@@ -213,6 +215,8 @@ public final class SkyDungeon {
      * A {@link Block#LAMP}'s meta: a whole lamp block (0), or a small lantern standing on what is below, or hanging.
      */
     public static final int LAMP_STANDING = 2, LAMP_HANGING = 3;
+    /** A {@link Block#HOIST}'s meta: 1 a basket; otherwise a windlass, facing (2..5, vanilla sides) its shaft. */
+    public static final int WEST_FACING_WINDLASS = 4;
     /** What a flower pot holds, by meta: poppy, dandelion, fern, oak sapling, blue orchid, allium. */
     public static final int POT_PLANTS = 6;
 

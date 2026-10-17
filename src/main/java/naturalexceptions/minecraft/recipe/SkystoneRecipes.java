@@ -111,15 +111,8 @@ public final class SkystoneRecipes {
                 Items.stick);
         Object skystone = NEBlocks.skystoneBricks;
         // The quarry's tools: the Mason's Bench, the hoist's windlass and basket, the Sawmill, the chisel.
-        if (NEBlocks.masonsBench != null && skystone != null) GameRegistry.addRecipe(
-            new ItemStack(NEBlocks.masonsBench),
-            "BBB",
-            " I ",
-            "B B",
-            'B',
-            skystone,
-            'I',
-            Items.iron_ingot);
+        if (NEBlocks.masonsBench != null && skystone != null) GameRegistry
+            .addRecipe(new ItemStack(NEBlocks.masonsBench), "BBB", " I ", "B B", 'B', skystone, 'I', Items.iron_ingot);
         if (NEBlocks.sawmill != null) GameRegistry.addRecipe(
             new ItemStack(NEBlocks.sawmill),
             " I ",
@@ -154,8 +147,8 @@ public final class SkystoneRecipes {
             shard,
             'B',
             skystone);
-        if (NEBlocks.lighthouseLamp != null && NEBlocks.stormglassLantern != null && shard != null) GameRegistry
-            .addRecipe(
+        if (NEBlocks.lighthouseLamp != null && NEBlocks.stormglassLantern != null && shard != null)
+            GameRegistry.addRecipe(
                 new ItemStack(NEBlocks.lighthouseLamp),
                 "GSG",
                 "SLS",
@@ -168,8 +161,17 @@ public final class SkystoneRecipes {
                 NEBlocks.stormglassLantern);
         // The artisans' benches and the tourney ground's pieces.
         ItemStack logs = new ItemStack(Blocks.log, 1, OreDictionary.WILDCARD_VALUE);
-        if (NEBlocks.loom != null) GameRegistry
-            .addRecipe(new ItemStack(NEBlocks.loom), "PPP", "SWS", "P P", 'P', planks, 'S', Items.string, 'W', Blocks.wool);
+        if (NEBlocks.loom != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.loom),
+            "PPP",
+            "SWS",
+            "P P",
+            'P',
+            planks,
+            'S',
+            Items.string,
+            'W',
+            Blocks.wool);
         if (NEBlocks.pottersWheel != null) GameRegistry.addRecipe(
             new ItemStack(NEBlocks.pottersWheel),
             " S ",
@@ -192,8 +194,8 @@ public final class SkystoneRecipes {
             Items.iron_ingot,
             'F',
             Blocks.furnace);
-        if (NEBlocks.tanningRack != null)
-            GameRegistry.addRecipe(new ItemStack(NEBlocks.tanningRack), "LSL", "L L", "LSL", 'L', Items.stick, 'S', Items.string);
+        if (NEBlocks.tanningRack != null) GameRegistry
+            .addRecipe(new ItemStack(NEBlocks.tanningRack), "LSL", "L L", "LSL", 'L', Items.stick, 'S', Items.string);
         if (NEBlocks.archeryButt != null) GameRegistry.addRecipe(
             new ItemStack(NEBlocks.archeryButt),
             "WHW",
@@ -240,6 +242,9 @@ public final class SkystoneRecipes {
             Items.string,
             'B',
             Items.bucket);
+        // A sheave: a wheel of planks on an iron axle, between two cheeks.
+        if (NEBlocks.sheave != null) GameRegistry
+            .addRecipe(new ItemStack(NEBlocks.sheave), "P P", "PIP", "P P", 'P', planks, 'I', Items.iron_ingot);
         if (NEBlocks.hoistBasket != null) GameRegistry
             .addRecipe(new ItemStack(NEBlocks.hoistBasket), " I ", "P P", "PPP", 'I', Items.iron_ingot, 'P', planks);
         if (naturalexceptions.minecraft.registry.NEItems.masonsChisel != null) GameRegistry.addRecipe(

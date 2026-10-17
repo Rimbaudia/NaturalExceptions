@@ -1361,19 +1361,32 @@ final class CitadelLayout {
                 for (int h = y + 1; h <= y + 3 && h <= g; h++) put(x, h, z, Block.AIR);
             }
         }
-        // The derrick: its mast at the east lip on a cobbled footing, the boom out over the floor, the basket on the
-        // floor under its end; a guy line back to a stake; the windlass at the mast's foot.
-        int mx = px + pw + 1, bx = px + 14;
-        put(mx, g, zc, Block.ROCK, 1);
-        for (int y = g + 1; y <= g + 11; y++) put(mx, y, zc, Block.LOG, 1);
-        for (int x = bx; x < mx; x++) put(x, g + 11, zc, Block.LOG, 1 | 16);
-        // (Its rope, from the boom down to the basket, is drawn by the windlass; no chain of bars in the rider's way.)
-        put(bx, g - 11, zc, Block.HOIST, 1);
-        put(mx, g + 1, zc + 1, Block.HOIST, 0);
-        put(mx + 3, g + 1, zc, Block.LOG, 1);
-        for (int y = g + 2; y <= g + 11; y++) put(mx + 3, y, zc, Block.FENCE);
-        for (int x = mx + 1; x <= mx + 2; x++) put(x, g + 11, zc, Block.FENCE);
-        lampPost(mx, zc - 4, g);
+        // The headframe: a shaft sunk beyond the east lip down to the pit floor's level, a gallery from its foot out
+        // under the benches to the floor, two log posts over its mouth with the sheave between their tops, and the
+        // windlass on the lip facing it, fitted with rope; the basket waits at the bottom.
+        int sx = px + pw + 1, deep = g - 11; // the shaft, and the level of the pit's floor (one up from its rock)
+        for (int y = deep; y <= g; y++) put(sx, y, zc, Block.AIR);
+        put(sx, deep - 1, zc, Block.ROCK);
+        for (int x = px + 15; x < sx; x++) {
+            put(x, deep - 1, zc, Block.ROCK);
+            for (int y = deep; y <= deep + 1; y++) put(x, y, zc, Block.AIR);
+        }
+        put(sx - 3, deep + 1, zc, Block.LAMP, SkyDungeon.LAMP_HANGING);
+        // Its collar: a plank deck round the mouth, a rail on the pit side; the windlass on a footing of its own.
+        for (int x = sx - 1; x <= sx + 1; x++)
+            for (int z = zc - 1; z <= zc + 1; z++) if (x != sx || z != zc) put(x, g, z, Block.PLANKS, 1);
+        put(sx + 2, g, zc, Block.PLANKS, 1);
+        put(sx - 1, g + 1, zc, Block.FENCE);
+        // The frame: two spruce posts, the sheave between their tops; a cap beam over them, braced at its ends, and a
+        // little roof of slabs over the wheel.
+        for (int side : new int[] { -1, 1 }) for (int y = g + 1; y <= g + 5; y++) put(sx, y, zc + side, Block.LOG, 1);
+        put(sx, g + 5, zc, Block.SHEAVE, 0); // its wheel turns across x, towards the windlass
+        for (int z = zc - 2; z <= zc + 2; z++) put(sx, g + 6, z, Block.LOG, 1 | 32);
+        for (int side : new int[] { -2, 2 }) put(sx, g + 5, zc + side, Block.FENCE);
+        for (int x = sx - 1; x <= sx + 1; x++) for (int z = zc - 2; z <= zc + 2; z++) put(x, g + 7, z, Block.SLAB, 1);
+        put(sx, deep, zc, Block.HOIST, 1);
+        put(sx + 2, g + 1, zc, Block.HOIST, SkyDungeon.WEST_FACING_WINDLASS);
+        lampPost(sx + 2, zc - 3, g);
         // The yard: pallets of cut stone in two rows (some full, some part taken), the spoil heap, the shed.
         int yard = pz + pd + 2;
         for (int p = 0; p < 6; p++) for (int row = 0; row < 2; row++) {

@@ -144,11 +144,14 @@ public final class CuttingRecipes {
         Item silk = naturalexceptions.minecraft.registry.NEItems.cloudsilk;
         if (silk != null && naturalexceptions.minecraft.registry.NEItems.bandage != null)
             out.add(new Recipe(silk, -1, 1, new ItemStack(naturalexceptions.minecraft.registry.NEItems.bandage, 4)));
+        // String laid up into a coil of hoist rope.
+        if (naturalexceptions.minecraft.registry.NEItems.hoistRope != null) out.add(
+            new Recipe(Items.string, -1, 6, new ItemStack(naturalexceptions.minecraft.registry.NEItems.hoistRope)));
         Item wool = Item.getItemFromBlock(Blocks.wool);
         for (int colour = 0; colour < 16; colour++) {
             out.add(new Recipe(wool, colour, 1, new ItemStack(Blocks.carpet, 2, colour)));
-            if (naturalexceptions.minecraft.registry.NEItems.bandage != null)
-                out.add(new Recipe(wool, colour, 1, new ItemStack(naturalexceptions.minecraft.registry.NEItems.bandage, 3)));
+            if (naturalexceptions.minecraft.registry.NEItems.bandage != null) out.add(
+                new Recipe(wool, colour, 1, new ItemStack(naturalexceptions.minecraft.registry.NEItems.bandage, 3)));
             out.add(new Recipe(wool, colour, 1, new ItemStack(Items.string, 4)));
         }
         return out;

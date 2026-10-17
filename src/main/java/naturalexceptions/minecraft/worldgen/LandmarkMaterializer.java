@@ -813,7 +813,13 @@ final class LandmarkMaterializer {
                     y,
                     z,
                     orElse(meta == 1 ? NEBlocks.hoistBasket : NEBlocks.hoistWindlass, Blocks.planks),
-                    0);
+                    meta >= 2 && meta <= 5 ? meta : 2);
+                if (meta != 1
+                    && world.getTileEntity(x, y, z) instanceof naturalexceptions.minecraft.furniture.TileEntityHoist)
+                    ((naturalexceptions.minecraft.furniture.TileEntityHoist) world.getTileEntity(x, y, z)).fitCoils(3);
+                break;
+            case SHEAVE:
+                set(world, x, y, z, orElse(NEBlocks.sheave, Blocks.planks), meta & 1);
                 break;
             case CONDENSER:
                 set(world, x, y, z, orElse(NEBlocks.cloudCondenser, Blocks.glass), 0);

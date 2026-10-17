@@ -1,41 +1,46 @@
 package naturalexceptions.minecraft.furniture;
 
-import java.util.List;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
+import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.AxisAlignedBB;
+import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.IIcon;
 import net.minecraft.world.World;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import naturalexceptions.NaturalExceptions;
+import naturalexceptions.core.hoisting.HoistDynamics;
 import naturalexceptions.minecraft.gui.NEGuiHandler;
+import naturalexceptions.minecraft.multiblock.HeadframeDefinition;
 
 /**
- * A quarry hoist: the Hoist Windlass at the top (a rope drum on two posts, with its crank) and the Hoist Basket at
- * the foot, anywhere within {@link #REACH} across and {@link #DEPTH} down. Right-click either with an empty hand to
- * ride the hook to the other; with something in hand, or sneaking, open the hoist's store, which both ends share.
+ * The two ends of a hoist. The Windlass ({@link #top}): a rope drum between two posts on a footing, a crank at one end
+ * and the brake lever at the other, facing (metadata 2..5) the shaft its rope runs to. Right-click and hold the crank
+ * to wind up; sneak and hold to let down (easing the brake); right-click the lever to set or release the brake; right-
+ * click with Hoist Rope to fit a coil; with anything else, open the store the basket carries. It works only by a whole
+ * headframe ({@link HeadframeDefinition}), and says what is missing if it has none.
+ * <p>
+ * The Basket: set it in the shaft, and the windlass hooks it onto its rope.
  */
 public final class BlockHoist extends BlockParts {
 
-    /** How far across and down a windlass reaches its basket. */
-    public static final int REACH = 12, DEPTH = 40;
-
-    private static final double[][] WINDLASS = { { 0.05, 0.0, 0.3, 0.2, 0.9, 0.7 }, { 0.8, 0.0, 0.3, 0.95, 0.9, 0.7 },
-        { 0.2, 0.45, 0.32, 0.8, 0.77, 0.68 }, { 0.95, 0.56, 0.46, 1.0, 0.66, 0.54 },
-        { 0.95, 0.3, 0.46, 1.0, 0.66, 0.54 } };
+    /** The windlass as authored, its rope leaving towards -z: a footing, two posts, the lever's quadrant. */
+    private static final double[][] WINDLASS = { { 0.0, 0.0, 0.2, 1.0, 0.125, 0.8 },
+        { 0.05, 0.125, 0.35, 0.2, 0.85, 0.65 }, { 0.8, 0.125, 0.35, 0.95, 0.85, 0.65 },
+        { 0.0, 0.125, 0.42, 0.05, 0.45, 0.58 } };
+    /** The basket: its floor, four sides, and the ring its slings meet in. */
     static final double[][] BASKET = { { 0.1, 0.0, 0.1, 0.9, 0.1, 0.9 }, { 0.1, 0.1, 0.1, 0.9, 0.6, 0.18 },
         { 0.1, 0.1, 0.82, 0.9, 0.6, 0.9 }, { 0.1, 0.1, 0.18, 0.18, 0.6, 0.82 }, { 0.82, 0.1, 0.18, 0.9, 0.6, 0.82 },
         { 0.46, 0.6, 0.46, 0.54, 1.0, 0.54 } };
 
-    /** The windlass (top) or the basket (foot). */
-    final boolean top;
+    /** The windlass (true) or the basket. */
+    public final boolean top;
 
     public BlockHoist(boolean top) {
         super(Material.wood);
@@ -48,21 +53,27 @@ public final class BlockHoist extends BlockParts {
         setHarvestLevel("axe", 0);
     }
 
+    /** The way a windlass faces (2..5): its rope runs off the drum that way. */
+    public static int facing(int metadata) {
+        return metadata < 2 || metadata > 5 ? 2 : metadata;
+    }
+
     @Override
     public double[][] parts(int metadata) {
-        double[][] src = top ? WINDLASS : BASKET;
-        boolean away = !top && (metadata & 1) != 0; // the basket is up on its rope, with a rider
-        double[][] out = new double[src.length][];
-        for (int i = 0; i < src.length; i++) {
-            out[i] = src[i].clone();
-            if (away) out[i][4] = out[i][1];
+        if (!top) {
+            double[][] out = new double[BASKET.length][];
+            for (int i = 0; i < BASKET.length; i++) out[i] = BASKET[i].clone();
+            return out;
         }
+        double[][] out = new double[WINDLASS.length][];
+        for (int i = 0; i < WINDLASS.length; i++)
+            out[i] = naturalexceptions.minecraft.block.PartModel.rotate(WINDLASS[i], facing(metadata));
         return out;
     }
 
     @Override
     public int inventoryMetadata() {
-        return 0;
+        return 2;
     }
 
     @Override
@@ -78,11 +89,8 @@ public final class BlockHoist extends BlockParts {
     @Override
     @SideOnly(Side.CLIENT)
     public IIcon partIcon(int index, int metadata) {
-        if (top) {
-            if (index == 2) return Blocks.log.getIcon(2, 1);
-            if (index >= 3) return Blocks.iron_block.getIcon(2, 0);
-            return getIcon(1, 0);
-        }
+        if (top)
+            return index == 3 ? Blocks.iron_block.getIcon(2, 0) : index == 0 ? Blocks.log.getIcon(2, 1) : getIcon(1, 0);
         if (index == 5) return Blocks.iron_block.getIcon(2, 0);
         return getIcon(1, 0);
     }
@@ -97,68 +105,64 @@ public final class BlockHoist extends BlockParts {
         return top ? new TileEntityHoist() : null;
     }
 
-    /** The other end of the hoist at (x, y, z): {x, y, z}, or null if there is none in reach. */
-    public int[] partner(World world, int x, int y, int z) {
-        int[] best = null;
-        int bestDistance = Integer.MAX_VALUE;
-        int dyFrom = top ? -DEPTH : 3, dyTo = top ? -3 : DEPTH;
-        for (int dy = dyFrom; dy <= dyTo; dy++)
-            for (int dx = -REACH; dx <= REACH; dx++) for (int dz = -REACH; dz <= REACH; dz++) {
-                Block b = world.getBlock(x + dx, y + dy, z + dz);
-                if (!(b instanceof BlockHoist) || ((BlockHoist) b).top == top) continue;
-                int distance = dx * dx + dz * dz;
-                if (distance < bestDistance) {
-                    bestDistance = distance;
-                    best = new int[] { x + dx, y + dy, z + dz };
-                }
-            }
-        return best;
+    /** A windlass faces away from whoever places it: its rope runs off towards where they look. */
+    @Override
+    public void onBlockPlacedBy(World world, int x, int y, int z, EntityLivingBase placer, ItemStack stack) {
+        if (top) world.setBlockMetadataWithNotify(x, y, z, BlockPantryShelf.facingTowards(placer) ^ 1, 2);
+    }
+
+    /** Whether a click at (hx, hz) on a windlass facing {@code facing} is on its brake lever, at the drum's -x end. */
+    static boolean onLever(int facing, float hx, float hz) {
+        float along = facing == 4 || facing == 5 ? hz : hx;
+        return along < 0.25F;
     }
 
     @Override
     public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side, float hitX,
         float hitY, float hitZ) {
+        if (!top) return false;
         if (world.isRemote) return true;
-        int[] other = partner(world, x, y, z);
-        int[] windlass = top ? new int[] { x, y, z } : other;
-        int[] basket = top ? other : new int[] { x, y, z };
-        if (player.getHeldItem() != null || player.isSneaking()) {
-            if (windlass == null) return true;
-            TileEntity tile = world.getTileEntity(windlass[0], windlass[1], windlass[2]);
-            if (tile instanceof TileEntityHoist && basket != null)
-                ((TileEntityHoist) tile).link(basket[0], basket[1], basket[2]);
-            player.openGui(
-                NaturalExceptions.instance,
-                NEGuiHandler.GUI_STORAGE,
-                world,
-                windlass[0],
-                windlass[1],
-                windlass[2]);
+        TileEntity tile = world.getTileEntity(x, y, z);
+        if (!(tile instanceof TileEntityHoist)) return true;
+        TileEntityHoist hoist = (TileEntityHoist) tile;
+        ItemStack held = player.getHeldItem();
+        if (held != null) {
+            if (hoist.fitRope(held)) {
+                player.addChatMessage(
+                    new ChatComponentText("The windlass has " + hoist.ropeLength() + " blocks of rope on its drum."));
+                if (held.stackSize <= 0) player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
+            } else player.openGui(NaturalExceptions.instance, NEGuiHandler.GUI_STORAGE, world, x, y, z);
             return true;
         }
-        if (other == null || player.isRiding()) return true;
-        @SuppressWarnings("unchecked")
-        List<EntityHoistHook> busy = world.getEntitiesWithinAABB(
-            EntityHoistHook.class,
-            AxisAlignedBB.getBoundingBox(x - 1, y - 1, z - 1, x + 2, y + 3, z + 2));
-        if (!busy.isEmpty()) return true;
-        EntityHoistHook hook = EntityHoistHook.between(world, windlass, basket, top, ropeTop(world, basket, windlass));
-        world.spawnEntityInWorld(hook);
-        player.mountEntity(hook);
+        if (HeadframeDefinition.INSTANCE.find(world, x, y, z) == null) {
+            player.addChatMessage(
+                new ChatComponentText(
+                    HeadframeDefinition.INSTANCE.validate(world, x, y, z, 2)
+                        .failureReason()));
+            return true;
+        }
+        if (onLever(facing(world.getBlockMetadata(x, y, z)), hitX, hitZ)) {
+            hoist.toggleBrake();
+            world.playSoundEffect(x + 0.5, y + 0.5, z + 0.5, "random.wood_click", 0.6F, hoist.braked() ? 0.8F : 1.2F);
+            player.addChatMessage(
+                new ChatComponentText(hoist.braked() ? "Brake set." : "Brake off: the heavier side runs down."));
+            return true;
+        }
+        if (!hoist.hooked()) {
+            player.addChatMessage(
+                new ChatComponentText(
+                    hoist.ropeLength() < 3 ? "Fit rope to the windlass (right-click it with Hoist Rope)."
+                        : "Set a basket in the shaft within reach of the rope (" + hoist.ropeLength() + " blocks)."));
+            return true;
+        }
+        hoist.work(HoistDynamics.Crank.WINDLASS, player.isSneaking() ? 1 : -1);
         return true;
-    }
-
-    /** The height the basket's rope hangs from: the underside of what is over the basket (the derrick's boom). */
-    static int ropeTop(World world, int[] basket, int[] windlass) {
-        for (int y = basket[1] + 2; y <= basket[1] + 64 && y < 256; y++) if (world.getBlock(basket[0], y, basket[2])
-            .getMaterial()
-            .isSolid()) return y;
-        return windlass[1] + 10;
     }
 
     @Override
     public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
         TileEntity tile = world.getTileEntity(x, y, z);
+        if (tile instanceof TileEntityHoist && !world.isRemote) ((TileEntityHoist) tile).taken();
         if (tile instanceof TileEntityStorage && !world.isRemote)
             ((TileEntityStorage) tile).dropContents(world, x, y, z);
         super.breakBlock(world, x, y, z, block, meta);

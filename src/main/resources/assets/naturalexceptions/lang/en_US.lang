@@ -200,3 +200,6 @@ item.galeMaul.name=Gale Maul
 item.wardensVisor.name=Warden's Visor
 item.galeheartBelt.name=Galeheart Belt
 item.aegisSigil.name=Aegis Sigil
+tile.sheave.name=Sheave
+item.hoistRope.name=Hoist Rope
+entity.naturalexceptions.hoist_load.name=Hoist Basket

@@ -25,6 +25,25 @@ class HoistDynamicsTest {
     }
 
     @Test
+    void withTheBrakeSetACrankStillWindsUpPastThePawl() {
+        HoistDynamics rope = run(new HoistDynamics(20.0), 100, RIDER_IN_BASKET, 0.0, Crank.WINDLASS, -1, true);
+        assertTrue(rope.paidOut() < 17.0, "wound up: " + rope.paidOut());
+        double before = rope.paidOut();
+        run(rope, 100, RIDER_IN_BASKET, 0.0, Crank.NONE, 0, true);
+        assertEquals(before, rope.paidOut(), 1e-9, "and the pawl holds it there");
+    }
+
+    @Test
+    void easingTheBrakeLetsItDownNoFasterThanTheCrank() {
+        HoistDynamics rope = new HoistDynamics(5.0);
+        for (int i = 0; i < 100; i++) {
+            rope.step(400.0, 0.0, Crank.WINDLASS, 1, true, 1.0, 30.0);
+            assertTrue(rope.speed() <= Crank.WINDLASS.speed + 1e-12, "eased: " + rope.speed());
+        }
+        assertTrue(rope.paidOut() > 7.0, "it went down: " + rope.paidOut());
+    }
+
+    @Test
     void theHeavierSideGoesDown() {
         assertTrue(run(new HoistDynamics(10.0), 40, RIDER_IN_BASKET, 60.0, Crank.NONE, 0, false).paidOut() > 10.5);
         assertTrue(run(new HoistDynamics(10.0), 40, RIDER_IN_BASKET, 200.0, Crank.NONE, 0, false).paidOut() < 9.5);
@@ -68,6 +87,13 @@ class HoistDynamicsTest {
         assertTrue(fastest <= HoistDynamics.MAX_SPEED + 1e-12);
         assertEquals(30.0, rope.paidOut(), 1e-9);
         assertEquals(0.0, rope.speed(), 1e-9);
+    }
+
+    @Test
+    void itSlowsComingInToTheFloor() {
+        HoistDynamics rope = new HoistDynamics(1.0);
+        while (rope.paidOut() < 29.7) rope.step(400.0, 0.0, Crank.NONE, 0, false, 1.0, 30.0);
+        assertTrue(rope.speed() <= 0.04, "coming in at " + rope.speed());
     }
 
     @Test

@@ -190,13 +190,13 @@ public final class NaturalExceptions {
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.entity.SkyMobEvents());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.worldgen.SkyIslandSpawns());
         cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
-            naturalexceptions.minecraft.furniture.EntityHoistHook.class,
-            "hoist_hook",
+            naturalexceptions.minecraft.furniture.EntityHoistLoad.class,
+            "hoist_load",
             7,
             this,
-            64,
-            20,
-            false); // the client works out the ride itself: no stream of positions
+            96,
+            1,
+            false); // its rope length goes out every tick; the client hangs it from that, no positions
         MinecraftForge.EVENT_BUS.register(new NEChunkGenerationHistory());
         cpw.mods.fml.common.network.NetworkRegistry.INSTANCE
             .registerGuiHandler(this, new naturalexceptions.minecraft.gui.NEGuiHandler());
@@ -333,11 +333,12 @@ public final class NaturalExceptions {
                 }
             });
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
-            naturalexceptions.minecraft.furniture.EntityHoistHook.class,
-            new naturalexceptions.minecraft.furniture.client.RenderHoistHook());
+            naturalexceptions.minecraft.furniture.EntityHoistLoad.class,
+            new naturalexceptions.minecraft.furniture.client.RenderHoistLoad());
+        naturalexceptions.minecraft.furniture.client.HoistHandLine.register();
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
             naturalexceptions.minecraft.furniture.TileEntityHoist.class,
-            new naturalexceptions.minecraft.furniture.client.RenderHoistRope());
+            new naturalexceptions.minecraft.furniture.client.RenderWindlass());
     }
 
     @Mod.EventHandler

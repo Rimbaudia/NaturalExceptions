@@ -92,6 +92,7 @@ public final class KnowledgeRegistry {
         new naturalexceptions.minecraft.knowledge.provider.CastingKnowledgeProvider().registerEntries(this);
         new naturalexceptions.minecraft.knowledge.provider.AssemblyKnowledgeProvider().registerEntries(this);
         new naturalexceptions.minecraft.knowledge.provider.MaterialKnowledgeProvider().registerEntries(this);
+        new naturalexceptions.minecraft.knowledge.provider.HoistingKnowledgeProvider().registerEntries(this);
     }
 
     public synchronized void reset() {

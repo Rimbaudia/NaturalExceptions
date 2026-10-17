@@ -20,6 +20,7 @@ public final class NEItems {
     public static naturalexceptions.minecraft.item.ItemFluidVessel fluidVessel;
     public static naturalexceptions.minecraft.item.ItemAlmanac almanac;
     public static naturalexceptions.minecraft.item.ItemBandage bandage;
+    public static naturalexceptions.minecraft.item.ItemHoistRope hoistRope;
     public static naturalexceptions.minecraft.item.ItemStypticSalve stypticSalve;
     public static naturalexceptions.minecraft.item.ItemIronTonic ironTonic;
     public static naturalexceptions.minecraft.item.ItemExposureMask exposureMask;
@@ -175,6 +176,8 @@ public final class NEItems {
         almanac.setCreativeTab(NECreativeTab.INSTANCE);
         fluidVessel = new naturalexceptions.minecraft.item.ItemFluidVessel();
         fluidVessel.setCreativeTab(NECreativeTab.INSTANCE);
+        hoistRope = new naturalexceptions.minecraft.item.ItemHoistRope();
+        hoistRope.setCreativeTab(NECreativeTab.INSTANCE);
         bandage = new naturalexceptions.minecraft.item.ItemBandage();
         bandage.setCreativeTab(NECreativeTab.INSTANCE);
         stypticSalve = new naturalexceptions.minecraft.item.ItemStypticSalve();
@@ -233,6 +236,7 @@ public final class NEItems {
                     1,
                     net.minecraftforge.oredict.OreDictionary.WILDCARD_VALUE));
             GameRegistry.registerItem(bandage, "bandage");
+            GameRegistry.registerItem(hoistRope, "hoist_rope");
             GameRegistry.registerItem(stypticSalve, "styptic_salve");
             GameRegistry.registerItem(ironTonic, "iron_tonic");
             GameRegistry.registerItem(exposureMask, "exposure_mask");
