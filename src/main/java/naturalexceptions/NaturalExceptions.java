@@ -85,6 +85,9 @@ public final class NaturalExceptions {
         FMLCommonHandler.instance()
             .bus()
             .register(new naturalexceptions.minecraft.worldgen.DungeonBeacons());
+        FMLCommonHandler.instance()
+            .bus()
+            .register(new naturalexceptions.minecraft.worldgen.LandPreparation());
         NEOverworldGenerator.register();
         cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
             naturalexceptions.minecraft.event.EntityFallingStar.class,

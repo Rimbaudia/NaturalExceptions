@@ -190,21 +190,27 @@ public final class CommandLandmarks extends CommandBase {
                 int[] top = islands.column(target, tx, tz);
                 y = (top != null ? top[1] : target.centreY()) + 2;
             }
-            prepare(world, tx, tz);
-            player.setPositionAndUpdate(tx + 0.5, y, tz + 0.5);
             String arrived = toDungeon ? kindName(islands.dungeonKind(target)) : "island";
-            sender.addChatMessage(
-                new ChatComponentText(
-                    "Went to the " + arrived
-                        + " at "
-                        + target.centreX()
-                        + ", "
-                        + target.centreY()
-                        + ", "
-                        + target.centreZ()
-                        + " ("
-                        + presence(world, islands, target).words
-                        + ")."));
+            SkyIslands.Island to = target;
+            sender.addChatMessage(new ChatComponentText("\u00a77Going to the " + arrived + " once its land is made."));
+            LandPreparation.start(
+                player,
+                tx + 0.5,
+                y,
+                tz + 0.5,
+                "the " + arrived + "'s land",
+                () -> sender.addChatMessage(
+                    new ChatComponentText(
+                        "Went to the " + arrived
+                            + " at "
+                            + to.centreX()
+                            + ", "
+                            + to.centreY()
+                            + ", "
+                            + to.centreZ()
+                            + " ("
+                            + presence(world, islands, to).words
+                            + ").")));
         }
     }
 
@@ -277,21 +283,6 @@ public final class CommandLandmarks extends CommandBase {
         return provider.currentChunkLoader instanceof net.minecraft.world.chunk.storage.AnvilChunkLoader
             && ((net.minecraft.world.chunk.storage.AnvilChunkLoader) provider.currentChunkLoader)
                 .chunkExists(world, cx, cz);
-    }
-
-    /** Chunks generated around the landing spot before a teleport, each way. */
-    private static final int PREPARE_REACH = 4;
-
-    /**
-     * Generates (and so populates) the land around the landing spot before a teleport, so what is in view is
-     * there on arrival; one ring past it lets the inner chunks finish. The rest of a large island fills in as
-     * it is approached: generating all of a citadel's island at once held the game up for tens of seconds.
-     */
-    private static void prepare(World world, int x, int z) {
-        int cx = x >> 4, cz = z >> 4;
-        for (int dx = -PREPARE_REACH; dx <= PREPARE_REACH; dx++) {
-            for (int dz = -PREPARE_REACH; dz <= PREPARE_REACH; dz++) world.getChunkFromChunkCoords(cx + dx, cz + dz);
-        }
     }
 
     public static long landmarkSeed(World world) {
