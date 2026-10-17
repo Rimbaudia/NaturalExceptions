@@ -46,4 +46,8 @@ dependencies {
     runtimeOnlyNonPublishable('com.github.GTNewHorizons:Angelica:2.2.33:dev')
     runtimeOnlyNonPublishable('com.github.GTNewHorizons:GTNHLib:0.11.54:dev')
     runtimeOnlyNonPublishable('com.github.GTNewHorizons:Hodgepodge:2.7.216:dev')
+    // Lumi replaces vanilla's lighting engine; vanilla's chokes on the open air under sky islands.
+    runtimeOnlyNonPublishable('com.falsepattern:lumi-mc1.7.10:1.2.2:dev') { transitive = false }
+    runtimeOnlyNonPublishable('com.falsepattern:chunkapi-mc1.7.10:0.8.4:dev') { transitive = false }
+    runtimeOnlyNonPublishable('com.falsepattern:falsepatternlib-mc1.7.10:1.12.2:dev') { transitive = false }
 }

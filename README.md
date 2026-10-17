@@ -32,7 +32,7 @@ Gradle is executed using a Java 25 daemon, producing Java-8-compatible mod bytec
 
 ## Performance
 
-`./gradlew runClient` loads [Angelica](https://github.com/GTNewHorizons/Angelica) (the 1.7.10 port of Sodium), GTNHLib and Hodgepodge. They are dev-runtime only and never become NE dependencies. Players on weak machines should install the same three mods next to NE.
+`./gradlew runClient` loads [Angelica](https://github.com/GTNewHorizons/Angelica) (the 1.7.10 port of Sodium), GTNHLib and Hodgepodge, plus [Lumi](https://github.com/FalsePattern/Lumi) with ChunkAPI and FalsePatternLib. Lumi replaces vanilla's lighting engine, which chokes on the open air under sky islands: without it, a Citadel ran at about 4 FPS on a T440p, and with it at about 30. These mods are dev-runtime only and never become NE dependencies. Players should install the same ones next to NE.
 
 Don't use OptiFine or FastCraft. Both conflict with Angelica, and OptiFine can't be redistributed or pulled from Maven.
 
