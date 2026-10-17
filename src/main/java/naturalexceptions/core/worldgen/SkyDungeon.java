@@ -197,7 +197,9 @@ public final class SkyDungeon {
         /** A well's winch; meta 0 its drum along x, 1 along z. */
         WELL_WINCH,
         /** A Citadel Guard posted here (no block); meta: the way he faces ({@link #NORTH} ..). */
-        GUARD
+        GUARD,
+        /** A cut-stone pallet; meta: how many dressed blocks are stacked on it (0 to 8). */
+        PALLET
     }
 
     /** A door piece's meta for its upper half (the lower half's meta is the way it faces). */

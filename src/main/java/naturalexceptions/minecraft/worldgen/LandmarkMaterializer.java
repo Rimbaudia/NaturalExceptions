@@ -769,6 +769,9 @@ final class LandmarkMaterializer {
             case SEAM:
                 set(world, x, y, z, orElse(NEBlocks.skystoneSeam, Blocks.stone), meta & 1);
                 break;
+            case PALLET:
+                set(world, x, y, z, orElse(NEBlocks.stonePallet, Blocks.planks), Math.min(meta, 8));
+                break;
             case CUTTING_BENCH: {
                 Block[] benches = { NEBlocks.masonsBench, NEBlocks.sawmill, NEBlocks.loom, NEBlocks.pottersWheel,
                     NEBlocks.glassFurnace };

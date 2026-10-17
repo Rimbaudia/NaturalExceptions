@@ -48,6 +48,7 @@ public final class NEBlocks {
     public static Block skyslateSlab;
     public static Block skyslateDoubleSlab;
     public static Block crate;
+    public static Block stonePallet;
     public static Block barrel;
     public static Block pantryShelf;
     public static Block marketCounter;
@@ -157,6 +158,8 @@ public final class NEBlocks {
             .setCreativeTab(NECreativeTab.INSTANCE);
         skyslateDoubleSlab = new naturalexceptions.minecraft.block.BlockSkyslateSlab(true);
         crate = new naturalexceptions.minecraft.furniture.BlockCrate().setCreativeTab(NECreativeTab.INSTANCE);
+        stonePallet = new naturalexceptions.minecraft.furniture.BlockStonePallet()
+            .setCreativeTab(NECreativeTab.INSTANCE);
         barrel = new naturalexceptions.minecraft.furniture.BlockBarrel().setCreativeTab(NECreativeTab.INSTANCE);
         pantryShelf = new naturalexceptions.minecraft.furniture.BlockPantryShelf()
             .setCreativeTab(NECreativeTab.INSTANCE);
@@ -298,6 +301,7 @@ public final class NEBlocks {
                 "skyslate_double_slab");
             GameRegistry.registerBlock(crate, naturalexceptions.minecraft.furniture.ItemBlockCrate.class, "crate");
             GameRegistry.registerBlock(barrel, "barrel");
+            GameRegistry.registerBlock(stonePallet, "stone_pallet");
             GameRegistry.registerBlock(pantryShelf, "pantry_shelf");
             GameRegistry.registerBlock(
                 marketCounter,
@@ -442,6 +446,14 @@ public final class NEBlocks {
 
         try {
             GameRegistry.addRecipe(new net.minecraft.item.ItemStack(smelterOutlet), "B B", " B ", 'B', refractoryBrick);
+            GameRegistry.addRecipe(
+                new net.minecraft.item.ItemStack(stonePallet),
+                "SSS",
+                "P P",
+                'S',
+                new net.minecraft.item.ItemStack(net.minecraft.init.Blocks.wooden_slab, 1, 32767),
+                'P',
+                new net.minecraft.item.ItemStack(net.minecraft.init.Blocks.planks, 1, 32767));
             naturalexceptions.minecraft.recipe.TreasureRecipes.register();
             naturalexceptions.minecraft.recipe.SkystoneRecipes.register();
             if (NEItems.lumeniteShard != null && NEItems.copperIngot != null) GameRegistry.addRecipe(

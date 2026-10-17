@@ -1374,15 +1374,12 @@ final class CitadelLayout {
         for (int y = g + 2; y <= g + 11; y++) put(mx + 3, y, zc, Block.FENCE);
         for (int x = mx + 1; x <= mx + 2; x++) put(x, g + 11, zc, Block.FENCE);
         lampPost(mx, zc - 4, g);
-        // The yard: pallets of cut stone, the spoil heap, the shed.
+        // The yard: pallets of cut stone in two rows (some full, some part taken), the spoil heap, the shed.
         int yard = pz + pd + 2;
-        for (int p = 0; p < 4; p++) {
-            int x0 = s.x0 + 3 + p * 3;
-            for (int x = x0; x <= x0 + 1; x++) for (int z = yard; z <= yard + 1; z++) {
-                put(x, g + 1, z, Block.SLAB, 1);
-                put(x, g + 2, z, Block.SKYSTONE, 0);
-                if ((x + z + p) % 2 == 0) put(x, g + 3, z, Block.SKYSTONE, 0);
-            }
+        for (int p = 0; p < 6; p++) for (int row = 0; row < 2; row++) {
+            int x = s.x0 + 3 + p * 2, z = yard + row * 2;
+            int held = (int) (d.noise.unit(cx + x, cz + z, 74) * 12); // past 8: full
+            put(x, g + 1, z, Block.PALLET, Math.min(8, held));
         }
         for (int x = s.x0 + 17; x <= s.x0 + 22; x++) for (int z = yard; z <= Math.min(s.z1, yard + 4); z++) {
             int dx = x - (s.x0 + 19), dz = z - (yard + 2);

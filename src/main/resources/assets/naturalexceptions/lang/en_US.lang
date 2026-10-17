@@ -161,6 +161,7 @@ tile.skyslateDoubleSlab.brick.name=Skyslate Brick Slab
 tile.skyslateDoubleSlab.shingles.name=Skyslate Shingle Slab
 tile.crate.name=Crate
 tile.barrel.name=Barrel
+tile.stonePallet.name=Cut-Stone Pallet
 tile.pantryShelf.name=Pantry Shelf
 tile.marketCounter.produce.name=Market Counter (Produce)
 tile.marketCounter.fish.name=Market Counter (Fish)
