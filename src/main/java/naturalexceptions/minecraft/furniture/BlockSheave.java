@@ -17,9 +17,13 @@ import cpw.mods.fml.relauncher.SideOnly;
 public final class BlockSheave extends BlockParts {
 
     private static final double P = 1.0 / 16.0;
-    /** Authored with the axle along z: two cheeks, the bar over the wheel, the axle. */
-    private static final double[][] PARTS = { { 1, 2, 0, 15, 16, 2 }, { 1, 2, 14, 15, 16, 16 },
-        { 0, 14, 2, 16, 16, 14 }, { 7, 7, 2, 9, 9, 14 } };
+    /**
+     * Authored with the axle along z: two open cheeks (each two upright straps, a bar across their feet and a boss
+     * round the axle, so the wheel shows through), the bar over the wheel, and last the axle.
+     */
+    private static final double[][] PARTS = { { 1, 2, 0, 3, 16, 2 }, { 13, 2, 0, 15, 16, 2 }, { 3, 2, 0, 13, 4, 2 },
+        { 6, 6, 0, 10, 10, 2 }, { 1, 2, 14, 3, 16, 16 }, { 13, 2, 14, 15, 16, 16 }, { 3, 2, 14, 13, 4, 16 },
+        { 6, 6, 14, 10, 10, 16 }, { 0, 14, 2, 16, 16, 14 }, { 7, 7, 2, 9, 9, 14 } };
 
     public BlockSheave() {
         super(Material.wood);
@@ -49,7 +53,7 @@ public final class BlockSheave extends BlockParts {
     @Override
     @SideOnly(Side.CLIENT)
     public IIcon partIcon(int index, int metadata) {
-        return index == 3 ? Blocks.iron_block.getIcon(2, 0) : Blocks.planks.getIcon(1, 1);
+        return index == PARTS.length - 1 ? Blocks.iron_block.getIcon(2, 0) : Blocks.planks.getIcon(1, 1);
     }
 
     @Override

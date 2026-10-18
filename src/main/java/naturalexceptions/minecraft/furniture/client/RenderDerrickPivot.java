@@ -81,8 +81,12 @@ public final class RenderDerrickPivot extends TileEntitySpecialRenderer {
         HoistDrawing.box(log, new double[] { 0.5, -0.5, -0.5, length - 0.5, 0.5, 0.5 });
         // The sheave's two cheeks and the bar over its wheel, at the tip.
         double t = length;
-        HoistDrawing.box(plank, new double[] { t - 0.4375, -0.375, -0.5, t + 0.4375, 0.5, -0.375 });
-        HoistDrawing.box(plank, new double[] { t - 0.4375, -0.375, 0.375, t + 0.4375, 0.5, 0.5 });
+        for (double[] side : new double[][] { { -0.5, -0.375 }, { 0.375, 0.5 } }) { // open cheeks, as the block's
+            HoistDrawing.box(plank, new double[] { t - 0.4375, -0.375, side[0], t - 0.3125, 0.5, side[1] });
+            HoistDrawing.box(plank, new double[] { t + 0.3125, -0.375, side[0], t + 0.4375, 0.5, side[1] });
+            HoistDrawing.box(plank, new double[] { t - 0.3125, -0.375, side[0], t + 0.3125, -0.25, side[1] });
+            HoistDrawing.box(plank, new double[] { t - 0.125, -0.125, side[0], t + 0.125, 0.125, side[1] });
+        }
         HoistDrawing.box(plank, new double[] { t - 0.5, 0.375, -0.375, t + 0.5, 0.5, 0.375 });
         GL11.glPopMatrix();
     }
