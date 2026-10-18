@@ -208,11 +208,24 @@ public final class TileEntityDerrickPivot extends TileEntity {
     /** On a client: the stakes its mast is guyed to, {x, y, z, mast top} each, looked for now and then. */
     private int[][] stays = new int[0][];
     private int staysLook;
+    /** On a client: the standing boom's facing and the mast's top, from the same look; facing 0 if there is none. */
+    private int braceFacing, braceTop;
+
+    /** On a client: {boom facing, mast top} of the derrick standing here, for its knee brace; null if none stands. */
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public int[] brace() {
+        stays();
+        return braceFacing == 0 ? null : new int[] { braceFacing, braceTop };
+    }
 
     @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
     public int[][] stays() {
         if (worldObj == null || staysLook-- > 0) return stays;
         staysLook = 100;
+        naturalexceptions.minecraft.multiblock.HoistFrame frame = DerrickDefinition.INSTANCE
+            .frame(worldObj, xCoord, yCoord, zCoord);
+        braceFacing = frame == null ? 0 : frame.boomFacing;
+        braceTop = frame == null ? 0 : frame.mastTop;
         int top = yCoord;
         while (top < yCoord + DerrickDefinition.MAX_MAST
             && worldObj.getBlock(xCoord, top + 1, zCoord) instanceof net.minecraft.block.BlockLog) top++;

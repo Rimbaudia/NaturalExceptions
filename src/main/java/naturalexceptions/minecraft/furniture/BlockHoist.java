@@ -156,6 +156,14 @@ public final class BlockHoist extends BlockParts {
             return true;
         }
         hoist.work(HoistDynamics.Crank.WINDLASS, player.isSneaking() ? 1 : -1);
+        net.minecraft.nbt.NBTTagCompound kept = player.getEntityData();
+        if (!kept.getBoolean("NEHoistTaught")) {
+            kept.setBoolean("NEHoistTaught", true);
+            player.addChatMessage(
+                new ChatComponentText(
+                    "Hold right-click on the crank to wind the basket up; sneak to pay it out. The lever end "
+                        + "sets and frees the brake: with it off, the heavier side runs down."));
+        }
         return true;
     }
 

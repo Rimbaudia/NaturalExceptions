@@ -119,6 +119,17 @@ public final class EntityHoistLoad extends Entity implements IEntityAdditionalSp
      */
     private void setDown(Entity rider) {
         if (rider.ridingEntity != null) return;
+        if (!isDead && !rider.isDead && !free(rider) && !landing()) {
+            // Mid-shaft there is no stepping out: the rider stays standing in the basket.
+            rider.mountEntity(this);
+            if (rider instanceof EntityPlayer && worldObj.getTotalWorldTime() - stayToldAt > 60) {
+                stayToldAt = worldObj.getTotalWorldTime();
+                ((EntityPlayer) rider).addChatMessage(
+                    new net.minecraft.util.ChatComponentText(
+                        "Nowhere to step out here: ride on to the top or the bottom."));
+            }
+            return;
+        }
         double floor = posY + FLOOR;
         int fy = (int) Math.floor(floor + 0.5);
         int bx = (int) Math.floor(posX), bz = (int) Math.floor(posZ);
@@ -126,10 +137,7 @@ public final class EntityHoistLoad extends Entity implements IEntityAdditionalSp
         for (int[] o : new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
             int x = bx + o[0], z = bz + o[1];
             for (int y = fy - 1; y <= fy + 1; y++) {
-                if (worldObj.getBlock(x, y - 1, z)
-                    .getMaterial()
-                    .isSolid() && worldObj.isAirBlock(x, y, z)
-                    && worldObj.isAirBlock(x, y + 1, z)) {
+                if (standable(x, y, z)) {
                     spot = new double[] { x + 0.5, y, z + 0.5 };
                     break;
                 }
@@ -139,6 +147,29 @@ public final class EntityHoistLoad extends Entity implements IEntityAdditionalSp
         if (rider instanceof EntityPlayerMP) ((EntityPlayerMP) rider).setPositionAndUpdate(spot[0], spot[1], spot[2]);
         else rider.setPosition(spot[0], spot[1], spot[2]);
         rider.fallDistance = 0.0F;
+    }
+
+    private long stayToldAt = -1000;
+
+    /** A rider who can fly out (creative) may leave anywhere. */
+    private static boolean free(Entity rider) {
+        return rider instanceof EntityPlayer && ((EntityPlayer) rider).capabilities.allowFlying;
+    }
+
+    /** Whether there is somewhere beside the basket's floor to step out onto. */
+    private boolean landing() {
+        int fy = (int) Math.floor(posY + FLOOR + 0.5);
+        int bx = (int) Math.floor(posX), bz = (int) Math.floor(posZ);
+        for (int[] o : new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } })
+            for (int y = fy - 1; y <= fy + 1; y++) if (standable(bx + o[0], y, bz + o[1])) return true;
+        return false;
+    }
+
+    private boolean standable(int x, int y, int z) {
+        return worldObj.getBlock(x, y - 1, z)
+            .getMaterial()
+            .isSolid() && worldObj.isAirBlock(x, y, z)
+            && worldObj.isAirBlock(x, y + 1, z);
     }
 
     @Override
