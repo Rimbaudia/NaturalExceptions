@@ -22,6 +22,8 @@ import naturalexceptions.minecraft.registry.NEBlocks;
 public final class TileEntityDerrickPivot extends TileEntity {
 
     public static final int TICKS = 60;
+    /** How far from the pivot a stake for a guy rope may stand. */
+    public static final int STAKE_REACH = 5;
 
     private boolean slewing;
     private int from, to, length, mastTop;
@@ -203,7 +205,33 @@ public final class TileEntityDerrickPivot extends TileEntity {
         readFromNBT(packet.func_148857_g());
     }
 
-    /** Its turning boom is drawn far out from it. */
+    /** On a client: the stakes its mast is guyed to, {x, y, z, mast top} each, looked for now and then. */
+    private int[][] stays = new int[0][];
+    private int staysLook;
+
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public int[][] stays() {
+        if (worldObj == null || staysLook-- > 0) return stays;
+        staysLook = 100;
+        int top = yCoord;
+        while (top < yCoord + DerrickDefinition.MAX_MAST
+            && worldObj.getBlock(xCoord, top + 1, zCoord) instanceof net.minecraft.block.BlockLog) top++;
+        java.util.List<int[]> found = new java.util.ArrayList<>();
+        if (top - yCoord >= DerrickDefinition.MIN_MAST)
+            for (int dx = -STAKE_REACH; dx <= STAKE_REACH; dx++) for (int dz = -STAKE_REACH; dz <= STAKE_REACH; dz++) {
+                if (Math.abs(dx) + Math.abs(dz) < 3) continue;
+                int x = xCoord + dx, z = zCoord + dz;
+                if (worldObj.getBlock(x, yCoord, z) instanceof net.minecraft.block.BlockFence
+                    && worldObj.getBlock(x, yCoord - 1, z)
+                        .getMaterial()
+                        .isSolid()
+                    && !(worldObj.getBlock(x, yCoord + 1, z) instanceof net.minecraft.block.BlockFence))
+                    found.add(new int[] { x, yCoord, z, top });
+            }
+        return stays = found.toArray(new int[0][]);
+    }
+
+    /** Its turning boom and its guy ropes are drawn far out from it. */
     @Override
     @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
     public net.minecraft.util.AxisAlignedBB getRenderBoundingBox() {

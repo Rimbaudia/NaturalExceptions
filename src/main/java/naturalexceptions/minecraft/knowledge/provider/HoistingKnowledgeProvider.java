@@ -107,7 +107,10 @@ public final class HoistingKnowledgeProvider implements IKnowledgeProvider {
                         + "Wind and brake it as a headframe's. Right-click the pivot to swing the boom a "
                         + "quarter-turn clockwise, sneak to swing it the other way: the basket goes round with the "
                         + "tip. The boom swings only when the way round is clear, and the basket only when it is "
-                        + "hoisted up or its own way round is clear too: hoist, swing, lower.")
+                        + "hoisted up or its own way round is clear too: hoist, swing, lower.\n\n"
+                        + "Guy it: a fence post standing alone on the pivot's ground, 3 to "
+                        + TileEntityDerrickPivot.STAKE_REACH
+                        + " blocks from it, is a stake, and a guy rope runs to it from the mast's top.")
                 .multiblock(DerrickDefinition.INSTANCE)
                 .addProperty(
                     "Mast",

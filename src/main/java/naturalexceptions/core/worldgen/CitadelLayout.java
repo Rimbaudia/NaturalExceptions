@@ -1400,6 +1400,11 @@ final class CitadelLayout {
         put(rx, deep, rz + 9, Block.HOIST, 1);
         put(rx + 2, g + 1, rz, Block.HOIST, SkyDungeon.WEST_FACING_WINDLASS);
         put(rx + 2, g, rz, Block.PLANKS, 1);
+        // Its dressing: a cobbled footing round the pivot, a cap on the mast, and a stake either side along the lip
+        // for the guy ropes from the mast's top (drawn by the pivot).
+        for (int x = rx - 1; x <= rx + 1; x++) for (int z = rz - 1; z <= rz; z++) put(x, g, z, Block.ROCK, 1);
+        put(rx, g + 11, rz, Block.FENCE);
+        for (int side : new int[] { -4, 4 }) put(rx + side, g + 1, rz, Block.FENCE);
         lampPost(sx + 2, zc - 3, g);
         // The yard: pallets of cut stone in two rows (some full, some part taken), the spoil heap, the shed.
         int yard = pz + pd + 2;

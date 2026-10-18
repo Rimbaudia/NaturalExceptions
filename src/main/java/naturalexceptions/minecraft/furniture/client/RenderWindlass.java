@@ -51,6 +51,7 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
         IIcon cord = HoistGeometry.ropeIcon();
         drum(rope, facing, alongX, r, wood, log, iron);
         lever(hoist.braked(), facing, alongX, wood);
+        pawl(hoist.braked(), facing, alongX, r, iron);
         double[] tip = tip(hoist, load, partialTicks);
         if (tip != null) {
             double ax = tip[0] - tile.xCoord, ay = tip[1] - tile.yCoord, az = tip[2] - tile.zCoord, angle = tip[3];
@@ -87,12 +88,7 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
             GL11.glTranslated(ax, ay, az);
             GL11.glRotated(-Math.toDegrees(angle), 0, 1, 0);
             GL11.glRotated(-Math.toDegrees(rope / w), 0, 0, 1);
-            for (int k = 0; k < 2; k++) {
-                GL11.glPushMatrix();
-                GL11.glRotated(45 * k, 0, 0, 1);
-                HoistDrawing.box(log, new double[] { -w, -w, -0.06, w, w, 0.06 });
-                GL11.glPopMatrix();
-            }
+            wheel(w, log, wood, iron);
             GL11.glPopMatrix();
         }
         // The counterweight's rope, off the back of the drum and down into its well.
@@ -112,8 +108,26 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
         GL11.glPushMatrix();
         GL11.glTranslated(hub[0], hub[1], hub[2]);
         rotate(Math.toDegrees(rope / r), alongX);
-        HoistDrawing.box(log, axial(-0.3, 0.3, r, alongX));
-        HoistDrawing.box(HoistGeometry.ropeIcon(), axial(-0.22, 0.22, r + 0.03, alongX));
+        // Barrel, the rope wound on it, and a flange either side: each eight-sided, two squares a half-turn apart.
+        for (int k = 0; k < 2; k++) {
+            GL11.glPushMatrix();
+            rotate(45 * k, alongX);
+            HoistDrawing.box(log, axial(-0.3, 0.3, r * 0.92, alongX));
+            HoistDrawing.box(HoistGeometry.ropeIcon(), axial(-0.21, 0.21, r * 0.92 + 0.03, alongX));
+            HoistDrawing.box(log, axial(-0.25, -0.21, r * 0.92 + 0.06, alongX));
+            HoistDrawing.box(log, axial(0.21, 0.25, r * 0.92 + 0.06, alongX));
+            GL11.glPopMatrix();
+        }
+        // The ratchet's teeth round the brake end.
+        for (int k = 0; k < 8; k++) {
+            GL11.glPushMatrix();
+            rotate(45 * k, alongX);
+            double[] tooth = axial(-0.3, -0.26, 0.025, alongX);
+            tooth[1] = r + 0.02;
+            tooth[4] = r + 0.1;
+            HoistDrawing.box(iron, tooth);
+            GL11.glPopMatrix();
+        }
         HoistDrawing.box(iron, axial(-0.5, 0.5, 0.04, alongX)); // the axle, out through both posts
         double[] arm = axial(0.47, 0.51, 0.03, alongX);
         arm[4] = 0.28;
@@ -123,6 +137,52 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
         handle[4] = 0.31;
         HoistDrawing.box(wood, handle);
         GL11.glPopMatrix();
+    }
+
+    /**
+     * The pawl on the brake-end post: down on the ratchet's teeth when the brake is set (the rope can only be wound
+     * in), lifted clear when it is off.
+     */
+    private static void pawl(boolean braked, int facing, boolean alongX, double r, IIcon iron) {
+        double[] hinge = point(0.22, 0.6 + r + 0.22, 0.5 + r + 0.05, facing);
+        GL11.glPushMatrix();
+        GL11.glTranslated(hinge[0], hinge[1], hinge[2]);
+        // Lying back towards the drum's top and down onto it when set; swung up off it when not.
+        boolean flip = facing == 3 || facing == 4;
+        rotate((braked ? 0 : 40) * (flip ? -1 : 1), alongX);
+        double[] arm = axial(0.0, 0.04, 0.02, alongX);
+        double reach = 0.18;
+        if (alongX) {
+            arm[1] = -0.12;
+            arm[4] = -0.08;
+            arm[2] = flip ? 0 : -reach;
+            arm[5] = flip ? reach : 0;
+        } else {
+            arm[1] = -0.12;
+            arm[4] = -0.08;
+            arm[0] = flip ? 0 : -reach;
+            arm[3] = flip ? reach : 0;
+        }
+        HoistDrawing.box(iron, arm);
+        GL11.glPopMatrix();
+    }
+
+    /** A sheave's wheel in its own frame (its axle along z): an eight-sided rim, six spokes and a hub. */
+    private static void wheel(double w, IIcon log, IIcon wood, IIcon iron) {
+        double side = w * Math.tan(Math.PI / 8);
+        for (int k = 0; k < 8; k++) {
+            GL11.glPushMatrix();
+            GL11.glRotated(45 * k + 22.5, 0, 0, 1);
+            HoistDrawing.box(log, new double[] { -side, w - 0.07, -0.07, side, w, 0.07 });
+            GL11.glPopMatrix();
+        }
+        for (int k = 0; k < 6; k++) {
+            GL11.glPushMatrix();
+            GL11.glRotated(60 * k, 0, 0, 1);
+            HoistDrawing.box(wood, new double[] { -0.02, 0.05, -0.025, 0.02, w - 0.06, 0.025 });
+            GL11.glPopMatrix();
+        }
+        HoistDrawing.box(iron, new double[] { -0.07, -0.07, -0.08, 0.07, 0.07, 0.08 });
     }
 
     /** The brake lever on its quadrant at the -x end: up when set, laid over when off. */
