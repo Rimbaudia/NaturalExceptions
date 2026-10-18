@@ -76,6 +76,11 @@ public final class TileEntityHoist extends TileEntityStorage {
         return hooked;
     }
 
+    /** The rope's speed now, blocks a tick (positive going down). */
+    double speed() {
+        return rope.speed();
+    }
+
     /** The rope paid out, sheave to basket (blocks). */
     public double paidOut() {
         return rope.paidOut();
@@ -393,19 +398,69 @@ public final class TileEntityHoist extends TileEntityStorage {
             bottom);
         load.setRope(rope.paidOut());
         if (counter != null) counter.setDepth(counterRef - rope.paidOut());
+        sounds(moved, top, bottom);
         if (moved) {
-            if (worldObj.getTotalWorldTime() % 8 == 0) worldObj.playSoundEffect(
-                xCoord + 0.5,
-                yCoord + 0.5,
-                zCoord + 0.5,
-                brake && rope.speed() < 0 ? "random.click" : "random.door_close",
-                0.25F,
-                0.6F + worldObj.rand.nextFloat() * 0.1F);
             if (Math.abs(rope.paidOut() - lastSent) > 0.5) {
                 lastSent = rope.paidOut();
                 markDirty();
             }
         }
+    }
+
+    /** Rope run since the pawl last dropped over a tooth (blocks); a tooth's worth of rope on the drum. */
+    private double ratchet;
+    private static final double TOOTH = 0.12;
+    private double lastSpeed;
+
+    /** The hoist's own noises: the pawl, the timber creaking, the brake, and the basket setting down. */
+    private void sounds(boolean moved, double top, double bottom) {
+        double speed = rope.speed();
+        long time = worldObj.getTotalWorldTime();
+        if (moved) {
+            if (brake && speed < 0) {
+                ratchet += -speed;
+                if (ratchet >= TOOTH) {
+                    ratchet -= TOOTH;
+                    play(
+                        xCoord + 0.5,
+                        yCoord + 0.6,
+                        zCoord + 0.5,
+                        "ratchet",
+                        0.5F,
+                        0.95F + worldObj.rand.nextFloat() * 0.1F);
+                }
+            }
+            if (time % 14 == 0)
+                play(xCoord + 0.5, yCoord + 0.6, zCoord + 0.5, "creak", 0.35F, (float) (0.75 + Math.abs(speed) * 3.0));
+            if (brake && speed > 0 && time % 9 == 0)
+                play(xCoord + 0.5, yCoord + 0.6, zCoord + 0.5, "brake", 0.3F, 1.0F);
+        }
+        // Coming to rest at either end after running: the basket sets down.
+        if (Math.abs(lastSpeed) > 0.02 && Math.abs(speed) < 1e-4
+            && load != null
+            && (rope.paidOut() >= bottom - 1e-3 || rope.paidOut() <= top + 1e-3)) {
+            play(load.posX, load.posY, load.posZ, "land", 0.7F, 0.9F + worldObj.rand.nextFloat() * 0.2F);
+            int bx = (int) Math.floor(load.posX), by = (int) Math.floor(load.posY - 0.5),
+                bz = (int) Math.floor(load.posZ);
+            Block under = worldObj.getBlock(bx, by, bz);
+            if (worldObj instanceof net.minecraft.world.WorldServer
+                && under.getMaterial() != net.minecraft.block.material.Material.air)
+                ((net.minecraft.world.WorldServer) worldObj).func_147487_a(
+                    "blockcrack_" + Block.getIdFromBlock(under) + "_" + worldObj.getBlockMetadata(bx, by, bz),
+                    load.posX,
+                    load.posY + 0.05,
+                    load.posZ,
+                    12,
+                    0.35,
+                    0.02,
+                    0.35,
+                    0.05);
+        }
+        lastSpeed = speed;
+    }
+
+    void play(double x, double y, double z, String sound, float volume, float pitch) {
+        worldObj.playSoundEffect(x, y, z, "naturalexceptions:hoist." + sound, volume, pitch);
     }
 
     private static void drop(net.minecraft.entity.Entity e) {

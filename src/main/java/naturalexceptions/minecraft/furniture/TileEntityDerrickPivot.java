@@ -94,7 +94,7 @@ public final class TileEntityDerrickPivot extends TileEntity {
         slewing = true;
         markDirty();
         worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        worldObj.playSoundEffect(xCoord + 0.5, mastTop, zCoord + 0.5, "random.door_open", 0.8F, 0.5F);
+        worldObj.playSoundEffect(xCoord + 0.5, yCoord + 0.5, zCoord + 0.5, "naturalexceptions:hoist.slew", 0.9F, 1.0F);
     }
 
     /** Why the boom cannot swing from where it is to {@code next}; null if it can. */
@@ -144,7 +144,12 @@ public final class TileEntityDerrickPivot extends TileEntity {
 
     @Override
     public void updateEntity() {
-        if (worldObj.isRemote || !slewing || worldObj.getTotalWorldTime() - start < TICKS) return;
+        if (worldObj.isRemote || !slewing) return;
+        long in = worldObj.getTotalWorldTime() - start;
+        // The turntable grinds on for as long as it turns (its sound is shorter than a swing).
+        if (in > 0 && in % 26 == 0 && in < TICKS - 10) worldObj
+            .playSoundEffect(xCoord + 0.5, yCoord + 0.5, zCoord + 0.5, "naturalexceptions:hoist.slew", 0.7F, 0.95F);
+        if (in < TICKS) return;
         // Set down pointing the new way: the logs lying along it, the sheave at the tip turning along it too.
         int[] d = DerrickDefinition.step(to);
         Block log = boomBlock != null ? boomBlock : net.minecraft.init.Blocks.log;
@@ -156,7 +161,7 @@ public final class TileEntityDerrickPivot extends TileEntity {
         slewing = false;
         markDirty();
         worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        worldObj.playSoundEffect(xCoord + 0.5, mastTop, zCoord + 0.5, "random.wood_click", 0.8F, 0.7F);
+        worldObj.playSoundEffect(xCoord + 0.5, yCoord + 0.5, zCoord + 0.5, "naturalexceptions:hoist.seat", 1.0F, 1.0F);
     }
 
     @Override

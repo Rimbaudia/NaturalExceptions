@@ -29,6 +29,48 @@
       "gear/glide"
     ]
   },
+  "hoist.brake": {
+    "category": "block",
+    "sounds": [
+      "hoist/brake"
+    ]
+  },
+  "hoist.creak": {
+    "category": "block",
+    "sounds": [
+      "hoist/creak"
+    ]
+  },
+  "hoist.land": {
+    "category": "block",
+    "sounds": [
+      "hoist/land"
+    ]
+  },
+  "hoist.lever": {
+    "category": "block",
+    "sounds": [
+      "hoist/lever"
+    ]
+  },
+  "hoist.ratchet": {
+    "category": "block",
+    "sounds": [
+      "hoist/ratchet"
+    ]
+  },
+  "hoist.seat": {
+    "category": "block",
+    "sounds": [
+      "hoist/seat"
+    ]
+  },
+  "hoist.slew": {
+    "category": "block",
+    "sounds": [
+      "hoist/slew"
+    ]
+  },
   "trap.crumble": {
     "category": "block",
     "sounds": [

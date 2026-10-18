@@ -141,7 +141,9 @@ public final class BlockHoist extends BlockParts {
         }
         if (onLever(facing(world.getBlockMetadata(x, y, z)), hitX, hitZ)) {
             hoist.toggleBrake();
-            world.playSoundEffect(x + 0.5, y + 0.5, z + 0.5, "random.wood_click", 0.6F, hoist.braked() ? 0.8F : 1.2F);
+            hoist.play(x + 0.5, y + 0.5, z + 0.5, "lever", 0.7F, hoist.braked() ? 0.9F : 1.1F);
+            if (hoist.braked() && Math.abs(hoist.speed()) > 0.03)
+                hoist.play(x + 0.5, y + 0.6, z + 0.5, "brake", 0.6F, 0.9F);
             player.addChatMessage(
                 new ChatComponentText(hoist.braked() ? "Brake set." : "Brake off: the heavier side runs down."));
             return true;
