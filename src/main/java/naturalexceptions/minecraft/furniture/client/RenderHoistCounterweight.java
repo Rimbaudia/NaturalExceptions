@@ -19,6 +19,15 @@ public final class RenderHoistCounterweight extends Render {
 
     @Override
     public void doRender(Entity entity, double x, double y, double z, float yaw, float partialTicks) {
+        // Shaded face by face as blocks are, so not lit again by the item lighting (which left the faces turned
+        // from its lights near black).
+        boolean lit = GL11.glIsEnabled(GL11.GL_LIGHTING);
+        GL11.glDisable(GL11.GL_LIGHTING);
+        draw(entity, x, y, z, partialTicks);
+        if (lit) GL11.glEnable(GL11.GL_LIGHTING);
+    }
+
+    private void draw(Entity entity, double x, double y, double z, float partialTicks) {
         int light = entity.worldObj.getLightBrightnessForSkyBlocks(
             (int) Math.floor(entity.posX),
             (int) Math.floor(entity.posY + 0.5),

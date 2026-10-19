@@ -31,6 +31,15 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
 
     @Override
     public void renderTileEntityAt(TileEntity tile, double x, double y, double z, float partialTicks) {
+        // Shaded face by face as blocks are, so not lit again by the item lighting (which left the faces turned
+        // from its lights near black).
+        boolean lit = GL11.glIsEnabled(GL11.GL_LIGHTING);
+        GL11.glDisable(GL11.GL_LIGHTING);
+        draw(tile, x, y, z, partialTicks);
+        if (lit) GL11.glEnable(GL11.GL_LIGHTING);
+    }
+
+    private void draw(TileEntity tile, double x, double y, double z, float partialTicks) {
         if (!(tile instanceof TileEntityHoist)) return;
         TileEntityHoist hoist = (TileEntityHoist) tile;
         int facing = BlockHoist.facing(tile.getBlockMetadata());
@@ -108,21 +117,17 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
         GL11.glPushMatrix();
         GL11.glTranslated(hub[0], hub[1], hub[2]);
         rotate(Math.toDegrees(rope / r), alongX);
-        // Barrel, the rope wound on it, and a flange either side: each eight-sided, two squares a half-turn apart.
-        for (int k = 0; k < 2; k++) {
-            GL11.glPushMatrix();
-            rotate(45 * k, alongX);
-            HoistDrawing.box(log, axial(-0.3, 0.3, r * 0.92, alongX));
-            HoistDrawing.box(HoistGeometry.ropeIcon(), axial(-0.21, 0.21, r * 0.92 + 0.03, alongX));
-            HoistDrawing.box(log, axial(-0.25, -0.21, r * 0.92 + 0.06, alongX));
-            HoistDrawing.box(log, axial(0.21, 0.25, r * 0.92 + 0.06, alongX));
-            GL11.glPopMatrix();
-        }
+        // Barrel, the rope wound on it, and a flange either side, each one round solid; the barrel stops short of
+        // the posts so its ends do not lie in their faces.
+        HoistDrawing.prism(log, 12, r * 0.95, -0.29, 0.29, alongX);
+        HoistDrawing.prism(HoistGeometry.ropeIcon(), 12, r * 0.95 + 0.03, -0.21, 0.21, alongX);
+        HoistDrawing.prism(log, 12, r * 0.95 + 0.07, -0.25, -0.21, alongX);
+        HoistDrawing.prism(log, 12, r * 0.95 + 0.07, 0.21, 0.25, alongX);
         // The ratchet's teeth round the brake end.
         for (int k = 0; k < 8; k++) {
             GL11.glPushMatrix();
             rotate(45 * k, alongX);
-            double[] tooth = axial(-0.3, -0.26, 0.025, alongX);
+            double[] tooth = axial(-0.29, -0.25, 0.025, alongX);
             tooth[1] = r + 0.02;
             tooth[4] = r + 0.1;
             HoistDrawing.box(iron, tooth);
@@ -132,7 +137,7 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
         double[] arm = axial(0.47, 0.51, 0.03, alongX);
         arm[4] = 0.28;
         HoistDrawing.box(iron, arm);
-        double[] handle = axial(0.47, 0.62, 0.035, alongX);
+        double[] handle = axial(0.51, 0.62, 0.035, alongX);
         handle[1] = 0.24;
         handle[4] = 0.31;
         HoistDrawing.box(wood, handle);
@@ -167,15 +172,9 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
         GL11.glPopMatrix();
     }
 
-    /** A sheave's wheel in its own frame (its axle along z): an eight-sided rim, six spokes and a hub. */
+    /** A sheave's wheel in its own frame (its axle along z): a twelve-sided rim, six spokes and a hub. */
     private static void wheel(double w, IIcon log, IIcon wood, IIcon iron) {
-        double side = w * Math.tan(Math.PI / 8);
-        for (int k = 0; k < 8; k++) {
-            GL11.glPushMatrix();
-            GL11.glRotated(45 * k + 22.5, 0, 0, 1);
-            HoistDrawing.box(log, new double[] { -side, w - 0.07, -0.07, side, w, 0.07 });
-            GL11.glPopMatrix();
-        }
+        HoistDrawing.ring(log, 12, w - 0.07, w, 0.07);
         for (int k = 0; k < 6; k++) {
             GL11.glPushMatrix();
             GL11.glRotated(60 * k, 0, 0, 1);

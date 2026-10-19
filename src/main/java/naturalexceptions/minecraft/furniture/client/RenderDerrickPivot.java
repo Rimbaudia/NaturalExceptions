@@ -24,6 +24,15 @@ public final class RenderDerrickPivot extends TileEntitySpecialRenderer {
 
     @Override
     public void renderTileEntityAt(TileEntity tile, double x, double y, double z, float partialTicks) {
+        // Shaded face by face as blocks are, so not lit again by the item lighting (which left the faces turned
+        // from its lights near black).
+        boolean lit = GL11.glIsEnabled(GL11.GL_LIGHTING);
+        GL11.glDisable(GL11.GL_LIGHTING);
+        draw(tile, x, y, z, partialTicks);
+        if (lit) GL11.glEnable(GL11.GL_LIGHTING);
+    }
+
+    private void draw(TileEntity tile, double x, double y, double z, float partialTicks) {
         if (!(tile instanceof TileEntityDerrickPivot)) return;
         TileEntityDerrickPivot pivot = (TileEntityDerrickPivot) tile;
         int[][] stays = pivot.stays();
