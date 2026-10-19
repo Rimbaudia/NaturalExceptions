@@ -1367,11 +1367,30 @@ final class CitadelLayout {
         int sx = px + pw + 1, deep = g - 11; // the shaft, and the level of the pit's floor (one up from its rock)
         for (int y = deep; y <= g; y++) put(sx, y, zc, Block.AIR);
         put(sx, deep - 1, zc, Block.ROCK);
+        // The gallery: three wide and three high where there is rock enough over it, two high under the benches whose
+        // floors lie just above it (so it opens no holes in them); a timber set (log legs in the walls, a cap across)
+        // by the
+        // shaft and three in, and a lamp hung in the roof between them, over head height.
         for (int x = px + 15; x < sx; x++) {
-            put(x, deep - 1, zc, Block.ROCK);
-            for (int y = deep; y <= deep + 1; y++) put(x, y, zc, Block.AIR);
+            int i = x - px, bench = i < pw ? floor[i][zc - pz] : g; // the ground over this stretch
+            boolean covered = bench >= deep;
+            int roof = covered ? Math.min(deep + 2, bench - 1) : deep + 2;
+            for (int z = zc - 1; z <= zc + 1; z++) {
+                put(x, deep - 1, z, Block.ROCK);
+                for (int y = deep; y <= roof; y++) put(x, y, z, Block.AIR);
+                if (covered && roof < bench - 1) put(x, roof + 1, z, Block.ROCK);
+            }
+            if (covered) for (int y = deep; y <= roof; y++) {
+                put(x, y, zc - 2, Block.ROCK);
+                put(x, y, zc + 2, Block.ROCK);
+            }
         }
-        put(sx - 3, deep + 1, zc, Block.LAMP, SkyDungeon.LAMP_HANGING);
+        for (int x : new int[] { sx - 1, sx - 4 }) {
+            for (int y = deep; y <= deep + 1; y++)
+                for (int z : new int[] { zc - 2, zc + 2 }) put(x, y, z, Block.LOG, 1);
+            for (int z = zc - 2; z <= zc + 2; z++) put(x, deep + 2, z, Block.LOG, 1 | 32);
+        }
+        put(sx - 2, deep + 2, zc, Block.LAMP, SkyDungeon.LAMP_HANGING);
         // Its collar: a plank deck round the mouth, a rail on the pit side; the windlass on a footing of its own.
         for (int x = sx - 1; x <= sx + 1; x++)
             for (int z = zc - 1; z <= zc + 1; z++) if (x != sx || z != zc) put(x, g, z, Block.PLANKS, 1);
