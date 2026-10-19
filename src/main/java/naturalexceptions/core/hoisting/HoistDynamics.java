@@ -27,8 +27,11 @@ public final class HoistDynamics {
     public static final double DRUM_MASS = 40.0;
     /** The drum's friction (N per m/s of rope speed). */
     public static final double FRICTION = 260.0;
-    /** The fastest the rope may run (blocks a tick): a governor on the drum, about 3 m/s. */
-    public static final double MAX_SPEED = 0.15;
+    /**
+     * The fastest the rope may run (blocks a tick): a governor on the drum, about 1.2 m/s, so that a free run (an
+     * empty basket hauled back up by its counterweight, say) is a steady ride to watch rather than a jump.
+     */
+    public static final double MAX_SPEED = 0.06;
     /** Near either end the governor slows it, to this much speed (blocks a tick) per block still to go. */
     public static final double SLOWING = 0.12;
     /** The slowest it is slowed to, so that it still arrives. */
