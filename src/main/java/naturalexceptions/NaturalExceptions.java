@@ -22,7 +22,10 @@ import naturalexceptions.minecraft.worldgen.NEOverworldGenerator;
     modid = NaturalExceptions.MOD_ID,
     name = NaturalExceptions.MOD_NAME,
     version = Tags.VERSION,
-    acceptedMinecraftVersions = "[1.7.10]")
+    acceptedMinecraftVersions = "[1.7.10]",
+    // 1.7.10 is not playable without these (see README, Requirements). Angelica, client-only, is checked in preInit.
+    dependencies = "required-after:gtnhlib;required-after:hodgepodge;required-after:lumi;required-after:chunkapi;"
+        + "required-after:falsepatternlib")
 public final class NaturalExceptions {
 
     public static final String MOD_ID = "naturalexceptions";
@@ -36,6 +39,12 @@ public final class NaturalExceptions {
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
+        if (event.getSide()
+            .isClient() && !cpw.mods.fml.common.Loader.isModLoaded("angelica"))
+            // Forge shows its missing-mods screen for this, naming the mod.
+            throw new cpw.mods.fml.common.MissingModsException(
+                java.util.Collections
+                    .singleton(cpw.mods.fml.common.versioning.VersionParser.parseVersionReference("angelica")));
         BuiltinContent.register();
         NEItems.register();
         NEBlocks.register();
