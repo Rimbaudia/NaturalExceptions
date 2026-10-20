@@ -1,6 +1,7 @@
 package naturalexceptions.minecraft.knowledge;
 
 import net.minecraft.entity.player.EntityPlayer;
+
 import naturalexceptions.core.knowledge.KnowledgeDisplay;
 import naturalexceptions.core.knowledge.KnowledgeSubjectRef;
 import naturalexceptions.core.material.CanonicalMaterialKey;
@@ -9,7 +10,8 @@ import naturalexceptions.core.material.MaterialRef;
 
 /** Player-aware material naming for tooltip/UI surfaces without changing stack or simulation identity. */
 public final class KnowledgePresentation {
-    private KnowledgePresentation() { }
+
+    private KnowledgePresentation() {}
 
     public static String materialName(EntityPlayer player, MaterialRef ref, CanonicalMaterialKey key) {
         if (ref == null) return "Unidentified material";
@@ -19,11 +21,18 @@ public final class KnowledgePresentation {
         int rgb = naturalexceptions.core.material.MaterialAppearance.getSolidColor(ref, key);
         String appearance = classify(rgb);
         String state = key != null && key.phase() == MaterialPhase.LIQUID ? "liquid" : "solid";
-        return KnowledgeDisplay.resolve(KnowledgeSubjectRef.material(ref),
-            player == null ? null : PlayerKnowledgeProperties.get(player).knowledge(), appearance, state);
+        return KnowledgeDisplay.resolve(
+            KnowledgeSubjectRef.material(ref),
+            player == null ? null
+                : PlayerKnowledgeProperties.get(player)
+                    .knowledge(),
+            appearance,
+            state);
     }
 
-    public static String appearance(int color) { return classify(color); }
+    public static String appearance(int color) {
+        return classify(color);
+    }
 
     /**
      * The material as a word before an object's name: "Copper" for a known material, "Reddish" for one only seen
@@ -32,9 +41,11 @@ public final class KnowledgePresentation {
     public static String materialPrefix(EntityPlayer player, MaterialRef ref, CanonicalMaterialKey key) {
         String name = materialName(player, ref, key);
         String suffix = " material";
-        if (name.toLowerCase(java.util.Locale.ROOT).endsWith(suffix) && name.length() > suffix.length())
+        if (name.toLowerCase(java.util.Locale.ROOT)
+            .endsWith(suffix) && name.length() > suffix.length())
             name = name.substring(0, name.length() - suffix.length());
-        if (name.toLowerCase(java.util.Locale.ROOT).startsWith("unidentified")) return "Unidentified";
+        if (name.toLowerCase(java.util.Locale.ROOT)
+            .startsWith("unidentified")) return "Unidentified";
         return name;
     }
 
@@ -42,8 +53,13 @@ public final class KnowledgePresentation {
     public static EntityPlayer viewer() {
         if (cpw.mods.fml.common.FMLCommonHandler.instance()
             .getEffectiveSide()
-            .isClient()) return naturalexceptions.minecraft.client.ClientPlayer.get();
+            .isClient()) return clientPlayer();
         return null;
+    }
+
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    private static EntityPlayer clientPlayer() {
+        return naturalexceptions.minecraft.client.ClientPlayer.get();
     }
 
     private static String classify(int color) {

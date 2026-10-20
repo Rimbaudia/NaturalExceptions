@@ -367,8 +367,9 @@ public final class BiologicalEvents {
                     1.0,
                     state.physiology()
                         .energyCapacityJoules()));
-        player.getFoodStats()
-            .setFoodLevel(Math.max(0, Math.min(20, derivedFood)));
+        // Through the field: FoodStats.setFoodLevel is client-only, and a dedicated server has no such method.
+        naturalexceptions.minecraft.SidedVanilla
+            .setFoodLevel(player.getFoodStats(), Math.max(0, Math.min(20, derivedFood)));
         applyMovement(player, state);
         thirst(player, state);
         if (player instanceof net.minecraft.entity.player.EntityPlayerMP)

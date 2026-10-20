@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -95,9 +94,8 @@ public final class GameItemRegistry {
                 } catch (Throwable ignored) {}
 
                 List<ItemStack> subItems = new ArrayList<>();
-                try {
-                    item.getSubItems(item, (CreativeTabs) null, subItems);
-                } catch (Throwable ignored) {}
+                // Its variants where they are known: getSubItems is client-only, so a server indexes each item once.
+                naturalexceptions.minecraft.SidedVanilla.subItems(item, subItems);
 
                 if (subItems.isEmpty()) {
                     try {

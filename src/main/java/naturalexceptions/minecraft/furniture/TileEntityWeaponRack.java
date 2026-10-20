@@ -31,6 +31,7 @@ public final class TileEntityWeaponRack extends TileEntityStorage {
         return item instanceof ItemSword || item instanceof ItemTool
             || item instanceof ItemHoe
             || item instanceof ItemBow
-            || item.isFull3D();
+            // Its field, not isFull3D(): that is client-only, and the rack is checked on the server too.
+            || naturalexceptions.minecraft.SidedVanilla.isFull3D(item);
     }
 }

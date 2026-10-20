@@ -52,9 +52,14 @@ public final class NaturalExceptions {
         if (event.getSide()
             .isClient()) {
             registerResourcePacks();
-            // Before the first texture stitch, so empty gear slots have their silhouettes.
-            naturalexceptions.minecraft.gear.client.GearIcons.register();
+            registerGearIcons();
         }
+    }
+
+    /** Before the first texture stitch, so empty gear slots have their silhouettes. */
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    private void registerGearIcons() {
+        naturalexceptions.minecraft.gear.client.GearIcons.register();
     }
 
     @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
@@ -233,25 +238,29 @@ public final class NaturalExceptions {
             .init();
 
         if (event.getSide()
-            .isClient()) {
-            registerClientRenderers();
-            naturalexceptions.minecraft.client.CommandFps.register();
-            naturalexceptions.minecraft.client.ArrivalHold.register();
-            MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.client.NEItemTooltipEventHandler());
-            naturalexceptions.minecraft.client.P8ClientCues cues = new naturalexceptions.minecraft.client.P8ClientCues();
-            MinecraftForge.EVENT_BUS.register(cues);
-            FMLCommonHandler.instance()
-                .bus()
-                .register(cues);
-            naturalexceptions.minecraft.knowledge.client.NEKnowledgeKeyHandler.register();
-            naturalexceptions.minecraft.biology.client.BodyStatusPanel.register();
-            naturalexceptions.minecraft.worldgen.client.GuiDungeonChart.Opener.register();
-            naturalexceptions.minecraft.gui.client.EffectColumn.register();
-            naturalexceptions.minecraft.gear.client.InventoryTabs.register();
-            naturalexceptions.minecraft.gear.client.GearRenderer.register();
-            naturalexceptions.minecraft.gear.client.GearClientEffects.register();
-            naturalexceptions.minecraft.gear.client.VisorSight.register();
-        }
+            .isClient()) registerClient();
+    }
+
+    /** The client's renderers, input, overlays and cues (stripped from a dedicated server's copy of this class). */
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    private void registerClient() {
+        registerClientRenderers();
+        naturalexceptions.minecraft.client.CommandFps.register();
+        naturalexceptions.minecraft.client.ArrivalHold.register();
+        MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.client.NEItemTooltipEventHandler());
+        naturalexceptions.minecraft.client.P8ClientCues cues = new naturalexceptions.minecraft.client.P8ClientCues();
+        MinecraftForge.EVENT_BUS.register(cues);
+        FMLCommonHandler.instance()
+            .bus()
+            .register(cues);
+        naturalexceptions.minecraft.knowledge.client.NEKnowledgeKeyHandler.register();
+        naturalexceptions.minecraft.biology.client.BodyStatusPanel.register();
+        naturalexceptions.minecraft.worldgen.client.GuiDungeonChart.Opener.register();
+        naturalexceptions.minecraft.gui.client.EffectColumn.register();
+        naturalexceptions.minecraft.gear.client.InventoryTabs.register();
+        naturalexceptions.minecraft.gear.client.GearRenderer.register();
+        naturalexceptions.minecraft.gear.client.GearClientEffects.register();
+        naturalexceptions.minecraft.gear.client.VisorSight.register();
     }
 
     @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
