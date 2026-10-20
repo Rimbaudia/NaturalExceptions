@@ -63,3 +63,9 @@ On a weak machine, use `./gradlew runClient21` instead of `runClient`. It runs t
 Angelica's video settings (Options → Video Settings) are where the FPS is. On integrated graphics, try a render distance of 6–8 and Fast graphics.
 
 `/ne_perf` shows what NE's own work costs: server tick time, then calls, average and worst ms for each timed operation, including every worldgen stage. `/ne_perf gen` generates the nearest ungenerated Citadel and times it, and works from a server console. `/ne_perf reset` clears the figures.
+
+## License
+
+Copyright (c) 2026 Aljosa. All rights reserved: you may download and play Natural Exceptions, but not redistribute or
+modify it (see [LICENSE](LICENSE)). The build files from the GTNewHorizons ExampleMod template keep their MIT license
+([LICENSE-ExampleMod](LICENSE-ExampleMod)).
