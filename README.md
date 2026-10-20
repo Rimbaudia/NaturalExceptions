@@ -46,8 +46,11 @@ NE needs these mods next to it, and Forge refuses to start without them. 1.7.10 
 The test pack (`tools/testpack`) has all of them. To play the current build on another machine, see
 [Testing on the Mac](docs/testing-on-mac.md).
 
-On a dedicated server (which has no Angelica), set `optimizeWorldUpdateLight=false` in `config/hodgepodge.cfg`: that
-Hodgepodge fix collides with Lumi and crashes the server at startup. With Angelica loaded, Hodgepodge skips it on its own.
+NE's coremod (`naturalexceptions.coremod`) makes them start together. On a dedicated server, which has no Angelica,
+Hodgepodge would apply a lighting fix (`optimizeWorldUpdateLight`) that collides with Lumi and stops the server at
+startup. NE leaves that fix out whenever Lumi is present, as Hodgepodge itself does when Angelica is loaded.
+`ServerSideLinkageTest` keeps NE's common code off anything Minecraft has only on the client, which would work in
+single player and crash a server.
 
 ## Performance
 
