@@ -5,6 +5,9 @@
 #   tools/testpack/publish.sh                   build, assemble the pack in build/testpack, make sure it is served
 #   tools/testpack/publish.sh --no-build        publish the jar already built
 #   tools/testpack/publish.sh --install-server  also install and start the server (a systemd user service), once
+#   tools/testpack/publish.sh --site URL        assemble it for a website at URL instead (GitHub Pages, from CI),
+#                                               with a download page; nothing is served from here
+#                                               (NE_REPO_URL: the source repository, linked from the page)
 #
 # NE_PACK_HOST sets the name the test machine reaches this one by (default: <hostname>.local). See
 # docs/testing-on-mac.md.
@@ -27,13 +30,20 @@ LWJGL3IFY_MMC_URL=https://github.com/GTNewHorizons/lwjgl3ify/releases/download/$
 
 build=1
 install_server=0
-for arg in "$@"; do
-    case $arg in
+site=
+while (( $# )); do
+    case $1 in
         --no-build) build=0 ;;
         --install-server) install_server=1 ;;
-        *) echo "unknown option: $arg" >&2; exit 2 ;;
+        --site) site=${2:?--site needs the URL of the site}; shift ;;
+        *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
+    shift
 done
+# Where the pack is fetched from: this machine on the home network, or the website.
+BASE=${site:-http://$HOST:$PORT}
+BASE=${BASE%/}
+[[ -n $site ]] && INSTANCE="Natural Exceptions"
 
 if [[ ! -x $PACKWIZ ]]; then
     echo "packwiz is not installed: go install github.com/packwiz/packwiz@latest" >&2
@@ -77,9 +87,20 @@ OverrideMemory=true
 MinMemAlloc=512
 MaxMemAlloc=3072
 OverrideCommands=true
-PreLaunchCommand="\$INST_JAVA" -jar packwiz-installer-bootstrap.jar http://$HOST:$PORT/pack.toml
+PreLaunchCommand="\$INST_JAVA" -jar packwiz-installer-bootstrap.jar $BASE/pack.toml
 EOF
 (cd "$stage" && zip -qr "$ROOT/$OUT/NaturalExceptions-Test.zip" NaturalExceptions-Test)
+
+if [[ -n $site ]]; then
+    # The download page, filled in for this build.
+    version=${jar#build/libs/naturalexceptions-}
+    version=${version%.jar}
+    sed -e "s|@BASE@|$BASE|g" -e "s|@VERSION@|$version|g" -e "s|@JAR@|${jar##*/}|g" -e "s|@REPO@|${NE_REPO_URL:-#}|g" \
+        tools/testpack/site/index.html > "$OUT/index.html"
+    : > "$OUT/.nojekyll"
+    echo "Assembled for $BASE in $OUT."
+    exit 0
+fi
 
 # The server: a systemd user service serving build/testpack.
 unit=$HOME/.config/systemd/user/ne-testpack.service

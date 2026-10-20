@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Natural Exceptions</title>
+<meta name="description" content="Natural Exceptions: a systems-driven absurdity sandbox mod for Minecraft 1.7.10. Install it with Prism Launcher in one step.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f1ea; --panel: #fffdf8; --ink: #23201c; --muted: #6b645a; --line: #ddd5c6;
+    --accent: #3f7a4a; --accent-ink: #ffffff; --code: #efe9dd;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17181b; --panel: #202226; --ink: #ece8df; --muted: #a39d92; --line: #34363c;
+      --accent: #6fb27c; --accent-ink: #10130f; --code: #2a2c31;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 Inter, system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 48px 16px 64px; }
+  h1 { font-family: Silkscreen, monospace; font-weight: 400; font-size: clamp(2rem, 7vw, 3.2rem); margin: 0 0 8px; letter-spacing: .02em; }
+  .tagline { color: var(--muted); font-size: 1.1rem; margin: 0 0 28px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 36px; }
+  .badge { border: 1px solid var(--line); border-radius: 999px; padding: 2px 12px; font-size: .85rem; color: var(--muted); }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+  h2 { font-size: 1.15rem; margin: 0 0 12px; }
+  ol, ul { padding-left: 1.3em; margin: 0; }
+  li { margin: 6px 0; }
+  .url { display: flex; gap: 8px; margin: 10px 0 4px; }
+  .url code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; }
+  code { background: var(--code); border-radius: 6px; padding: 6px 10px; font: .9rem/1.4 ui-monospace, monospace; }
+  li code, p code { padding: 1px 6px; }
+  button { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 0 14px; font: 600 .9rem Inter, sans-serif; cursor: pointer; }
+  a { color: var(--accent); }
+  .muted { color: var(--muted); font-size: .9rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+  td { border-top: 1px solid var(--line); padding: 6px 4px; }
+  td:last-child { color: var(--muted); text-align: right; white-space: nowrap; }
+  footer { color: var(--muted); font-size: .85rem; text-align: center; margin-top: 32px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Natural Exceptions</h1>
+  <p class="tagline">A systems-driven absurdity sandbox, where experimentation is the main way forward.</p>
+  <div class="badges">
+    <span class="badge">Minecraft 1.7.10</span>
+    <span class="badge">Forge 10.13.4.1614</span>
+    <span class="badge">Java 21</span>
+    <span class="badge">Version @VERSION@</span>
+  </div>
+
+  <section>
+    <h2>Install with Prism Launcher</h2>
+    <ol>
+      <li>Install <a href="https://prismlauncher.org/">Prism Launcher</a> and sign in with your Microsoft account.</li>
+      <li>Choose <strong>Add Instance → Import</strong> and paste this link:
+        <div class="url"><code id="instance">@BASE@/NaturalExceptions-Test.zip</code><button type="button" data-copy="instance">Copy</button></div>
+      </li>
+      <li>Press <strong>Play</strong>. If Prism asks for Java 21, let it download it.</li>
+    </ol>
+    <p class="muted">Every time you press Play, the instance updates itself to the newest build, along with the mods it needs. The first launch downloads everything, so it takes a while.</p>
+  </section>
+
+  <section>
+    <h2>Play together</h2>
+    <p>Everyone joining needs the instance above. To host a dedicated server on Linux with Java 21, run
+      <code>tools/testpack/make-server.sh</code> from the source, as described in
+      <a href="@REPO@/blob/master/docs/testing-on-mac.md#playing-together">the server guide</a>.</p>
+  </section>
+
+  <section>
+    <h2>Installing by hand</h2>
+    <p>For your own Forge 1.7.10 setup on Java 21, put these in <code>mods</code>:</p>
+    <table>
+      <tr><td><a href="@BASE@/mods/@JAR@">Natural Exceptions</a></td><td>@VERSION@</td></tr>
+      <tr><td><a href="https://github.com/LegacyModdingMC/UniMixins">UniMixins</a></td><td>0.3.1</td></tr>
+      <tr><td><a href="https://github.com/GTNewHorizons/GTNHLib">GTNHLib</a> and GTNHExtLib</td><td>0.11.54, 1.0.5</td></tr>
+      <tr><td><a href="https://github.com/GTNewHorizons/Hodgepodge">Hodgepodge</a></td><td>2.7.216</td></tr>
+      <tr><td><a href="https://github.com/FalsePattern/Lumi">Lumi</a>, ChunkAPI, FalsePatternLib</td><td>1.2.2, 0.8.4, 1.12.2</td></tr>
+      <tr><td><a href="https://github.com/GTNewHorizons/Angelica">Angelica</a> (client only)</td><td>2.2.33</td></tr>
+      <tr><td><a href="https://github.com/GTNewHorizons/lwjgl3ify">lwjgl3ify</a></td><td>3.0.33</td></tr>
+    </table>
+    <p class="muted">Natural Exceptions will not start without them. Running Java 21 also needs lwjgl3ify's launcher; the Prism instance has it set up already.</p>
+  </section>
+
+  <footer><a href="@REPO@">Source on GitHub</a></footer>
+</main>
+<script>
+  document.querySelectorAll("button[data-copy]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var text = document.getElementById(b.dataset.copy).textContent;
+      (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () {
+        b.textContent = "Copied";
+        setTimeout(function () { b.textContent = "Copy"; }, 1500);
+      }, function () { window.prompt("Copy this link:", text); });
+    });
+  });
+</script>
+</body>
+</html>

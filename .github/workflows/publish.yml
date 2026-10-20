@@ -1,0 +1,55 @@
+# Builds Natural Exceptions on every push to master, runs its tests, and publishes it to GitHub Pages: the download
+# page, the packwiz pack the Prism instance updates itself from, and that instance (tools/testpack/publish.sh --site).
+name: Build and publish
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the version comes from the tags and commits
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: Install packwiz
+        run: go install github.com/packwiz/packwiz@latest && echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      - name: Build and test
+        run: ./gradlew build -x spotlessCheck --no-daemon
+      - name: Assemble the site
+        run: |
+          owner=${GITHUB_REPOSITORY_OWNER,,}
+          repo=${GITHUB_REPOSITORY#*/}
+          NE_REPO_URL="https://github.com/$GITHUB_REPOSITORY" \
+            tools/testpack/publish.sh --no-build --site "https://$owner.github.io/$repo/"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/testpack
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
