@@ -1,6 +1,6 @@
 # Builds Natural Exceptions on every push to master, runs its tests, and publishes it to GitHub Pages: the download
 # page, the packwiz pack the Prism instance updates itself from, and that instance (tools/testpack/publish.sh --site).
-name: Build and publish
+name: Build and publish the website
 
 on:
   push:
