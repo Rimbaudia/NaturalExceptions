@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Makes a dedicated Natural Exceptions server: Forge 1.7.10 on Java 21 (lwjgl3ify's launcher, as the test pack's
 # client runs), with the server's side of the test pack (every required mod but the client-only Angelica) pulled from
-# the pack server, which also keeps it up to date. See docs/testing-on-mac.md, "Playing together".
+# the pack server, which also keeps it up to date. See the README, "Playing together".
 #
 #   tools/testpack/make-server.sh DIR [PACK_URL]
 #

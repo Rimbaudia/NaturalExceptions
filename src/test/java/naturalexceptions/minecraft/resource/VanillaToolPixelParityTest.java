@@ -83,10 +83,19 @@ final class VanillaToolPixelParityTest {
         return result;
     }
 
+    /** Minecraft's own iron tool texture, from the game on the test classpath. */
+    private static BufferedImage vanillaIron(String tool) throws java.io.IOException {
+        try (java.io.InputStream in = VanillaToolPixelParityTest.class
+            .getResourceAsStream("/assets/minecraft/textures/items/iron_" + tool + ".png")) {
+            if (in == null) throw new java.io.FileNotFoundException("Minecraft's iron_" + tool + ".png");
+            return ImageIO.read(in);
+        }
+    }
+
     @Test
     void ironToolsWithWoodenHandlesMatchEveryVanillaPixel() throws Exception {
         for (int n = 0; n < NAMES.length; n++) {
-            BufferedImage expected = ImageIO.read(new File("tools/textures/source/vanilla/iron_" + NAMES[n] + ".png"));
+            BufferedImage expected = vanillaIron(NAMES[n]);
             BufferedImage actual = render(tool(HEADS[n], BuiltinMaterials.IRON, BuiltinMaterials.WOOD));
             for (int y = 0; y < 16; y++) {
                 for (int x = 0; x < 16; x++) {
@@ -103,7 +112,7 @@ final class VanillaToolPixelParityTest {
     @Test
     void copperKeepsVanillaGeometryAndWoodColorsWhileMetalHandlesRemainTintable() throws Exception {
         for (int n = 0; n < NAMES.length; n++) {
-            BufferedImage vanilla = ImageIO.read(new File("tools/textures/source/vanilla/iron_" + NAMES[n] + ".png"));
+            BufferedImage vanilla = vanillaIron(NAMES[n]);
             BufferedImage copper = render(tool(HEADS[n], BuiltinMaterials.COPPER, BuiltinMaterials.WOOD));
             BufferedImage metalHandle = render(tool(HEADS[n], BuiltinMaterials.COPPER, BuiltinMaterials.IRON));
             for (int y = 0; y < 16; y++) {

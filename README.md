@@ -1,68 +1,61 @@
 # Natural Exceptions
 
-Natural Exceptions is a systems-driven absurdity sandbox where experimentation is the primary form of progression.
+A systems-driven absurdity sandbox for Minecraft 1.7.10, where experimentation is the main way forward. Real
+materials, continuous physical states, processes, environmental fields and absurd phenomena coexist under coherent
+world rules.
 
-**Target:** Minecraft Java 1.7.10 / Forge 10.13.4.1614  
-**Status:** N0.01.0 is under active development.
+**Minecraft 1.7.10 · Forge 10.13.4.1614 · Java 21**
 
-## Premise
+## Install
 
-Real materials, continuous physical states, processes, environmental fields, and absurd phenomena coexist under coherent world rules. Minecraft is the first host, but Natural Exceptions owns its canonical physical truth.
+The easy way is the ready-made [Prism Launcher](https://prismlauncher.org/) instance, which keeps itself up to date:
 
-## Development & Build
+1. Install Prism Launcher and sign in with your Microsoft account.
+2. **Add Instance → Import**, and paste `https://rimbaudia.github.io/NaturalExceptions/NaturalExceptions-Test.zip`.
+3. Press **Play**. If Prism asks for Java 21, let it download it.
 
-This project uses the GTNewHorizons ExampleMod / RetroFuturaGradle toolchain.
-Gradle is executed using a Java 25 daemon, producing Java-8-compatible mod bytecode via Jabel.
+Every Play pulls the newest build and the mods it needs. The download page is at
+[rimbaudia.github.io/NaturalExceptions](https://rimbaudia.github.io/NaturalExceptions/).
 
-### Build Commands
+## Required mods
 
-```bash
-# Build the mod JAR
-./gradlew build
-
-# Run unit and integration tests
-./gradlew test
-
-# Launch the Minecraft development client
-./gradlew runClient
-```
-
-> [!NOTE]
-> P0's bootstrap copper scatter has been replaced by the P6 staged Overworld materializer. See [the P6 generation boundary](docs/architecture/p6-staged-overworld-generation-boundary.md) for its deterministic fields, geology-gated copper, host-terrain compromise, and chunk-history rules.
-
-## Requirements
-
-NE needs these mods next to it, and Forge refuses to start without them. 1.7.10 is not playable without them.
+Natural Exceptions does not start without these; the Prism instance includes them all.
 
 | Mod | Version | Side |
 | --- | --- | --- |
 | [UniMixins](https://github.com/LegacyModdingMC/UniMixins) (`+unimixins-all`) | 0.3.1 | both |
-| [GTNHLib](https://github.com/GTNewHorizons/GTNHLib) and its GTNHExtLib | 0.11.54, 1.0.5 | both |
+| [GTNHLib](https://github.com/GTNewHorizons/GTNHLib) and GTNHExtLib | 0.11.54, 1.0.5 | both |
 | [Hodgepodge](https://github.com/GTNewHorizons/Hodgepodge) | 2.7.216 | both |
 | [Lumi](https://github.com/FalsePattern/Lumi) with ChunkAPI and FalsePatternLib | 1.2.2, 0.8.4, 1.12.2 | both |
 | [Angelica](https://github.com/GTNewHorizons/Angelica) | 2.2.33 | client |
-| [lwjgl3ify](https://github.com/GTNewHorizons/lwjgl3ify), to run on Java 21 | 3.0.33 | both |
+| [lwjgl3ify](https://github.com/GTNewHorizons/lwjgl3ify) (Java 21) | 3.0.33 | both |
 
-The test pack (`tools/testpack`) has all of them. To play the current build on another machine, see
-[Testing on the Mac](docs/testing-on-mac.md).
+The pack that lists them is in [`tools/testpack/pack`](tools/testpack/pack). Don't add OptiFine or FastCraft: both
+conflict with Angelica. On integrated graphics, a render distance of 6–8 and Fast graphics (Options → Video Settings)
+help.
 
-NE's coremod (`naturalexceptions.coremod`) makes them start together. On a dedicated server, which has no Angelica,
-Hodgepodge would apply a lighting fix (`optimizeWorldUpdateLight`) that collides with Lumi and stops the server at
-startup. NE leaves that fix out whenever Lumi is present, as Hodgepodge itself does when Angelica is loaded.
-`ServerSideLinkageTest` keeps NE's common code off anything Minecraft has only on the client, which would work in
-single player and crash a server.
+## Playing together
 
-## Performance
+Everyone joining needs the same instance. To host a dedicated server on Linux with Java 21:
 
-`./gradlew runClient` loads [Angelica](https://github.com/GTNewHorizons/Angelica) (the 1.7.10 port of Sodium), GTNHLib and Hodgepodge, plus [Lumi](https://github.com/FalsePattern/Lumi) with ChunkAPI and FalsePatternLib. Lumi replaces vanilla's lighting engine, which chokes on the open air under sky islands: without it, a Citadel ran at about 4 FPS on a T440p, and with it at about 30. They are required: NE will not load without them (see Requirements below).
+```bash
+tools/testpack/make-server.sh ~/ne-server https://rimbaudia.github.io/NaturalExceptions/pack.toml
+```
 
-Don't use OptiFine or FastCraft. Both conflict with Angelica, and OptiFine can't be redistributed or pulled from Maven.
+This installs Forge 1.7.10 with lwjgl3ify's Java 21 launcher, and writes `start.sh`, which pulls the server's side of
+the pack (every required mod except the client-only Angelica) on each start. Accept Mojang's
+[EULA](https://aka.ms/MinecraftEULA) by setting `eula=true` in `~/ne-server/eula.txt`, then run `~/ne-server/start.sh`.
+Players add the server's address under Multiplayer. From outside the server's network, port 25565 has to be forwarded
+to it.
 
-On a weak machine, use `./gradlew runClient21` instead of `runClient`. It runs the same client on Java 21 with lwjgl3ify, and a modern JIT and garbage collector usually mean steadier frames and fewer GC hitches than Java 8.
+## Building
 
-Angelica's video settings (Options → Video Settings) are where the FPS is. On integrated graphics, try a render distance of 6–8 and Fast graphics.
+```bash
+./gradlew build          # the mod jar, in build/libs, and the tests
+./gradlew runClient21    # a development client on Java 21
+```
 
-`/ne_perf` shows what NE's own work costs: server tick time, then calls, average and worst ms for each timed operation, including every worldgen stage. `/ne_perf gen` generates the nearest ungenerated Citadel and times it, and works from a server console. `/ne_perf reset` clears the figures.
+Gradle runs on Java 25 and builds Java 8 bytecode. Every push to `master` builds the mod and publishes the site.
 
 ## License
 

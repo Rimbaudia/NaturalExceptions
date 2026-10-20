@@ -9,8 +9,7 @@
 #                                               with a download page; nothing is served from here
 #                                               (NE_REPO_URL: the source repository, linked from the page)
 #
-# NE_PACK_HOST sets the name the test machine reaches this one by (default: <hostname>.local). See
-# docs/testing-on-mac.md.
+# NE_PACK_HOST sets the name the test machine reaches this one by (default: <hostname>.local).
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."

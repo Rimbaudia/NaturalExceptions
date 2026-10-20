@@ -14,7 +14,7 @@ import naturalexceptions.minecraft.entity.EntitySkyWarden;
  * The Sky Warden: a stone knight held together by wind and light. A broad Skystone torso with a Stormglass core in its
  * chest, a helm floating free above the shoulders, slab pauldrons, oversized gauntlets hovering off the upper arms,
  * short plated legs, and three fragments of rock circling the waist. Built at player scale (32 px tall) and drawn
- * 1.3 times larger. The texture layout (128 x 64) is shared with tools/textures/generate_playable_pass_sprites.py.
+ * 1.3 times larger, on a 128 x 64 texture.
  */
 @SideOnly(Side.CLIENT)
 public final class ModelSkyWarden extends ModelBase {

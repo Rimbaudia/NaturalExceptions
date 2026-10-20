@@ -52,7 +52,7 @@ public final class BodyStatusPanel {
     private static final int LINE_HEIGHT = 11;
     private static final int ICON = 9;
 
-    /** Icon cells along v = 64 in the sprite sheet (see tools/textures/generate_interface_art.py). */
+    /** Icon cells along v = 64 in the interface sprite sheet. */
     private static final int ICON_BLOOD = 0;
     private static final int ICON_BURN = 1;
     private static final int ICON_BONE = 2;
@@ -120,8 +120,7 @@ public final class BodyStatusPanel {
             return;
         }
         GuiContainer gui = (GuiContainer) event.gui;
-        InventoryOverlayLayout
-            .reserveLeft(open ? layoutFor(gui).reservedLeftWidth(GuiGeometry.left(gui)) : effects);
+        InventoryOverlayLayout.reserveLeft(open ? layoutFor(gui).reservedLeftWidth(GuiGeometry.left(gui)) : effects);
     }
 
     @SubscribeEvent

@@ -1,8 +1,7 @@
 Sky dungeon room templates. Each .room file is one room's inside; the header is described in RoomTemplate.java.
-Only rooms listed in index.txt are used. The files are written (and checked) by tools/dungeon/write_rooms.py from
-tools/dungeon/rooms.py; surface buildings by tools/dungeon/buildings.py.
+Only rooms listed in index.txt are used.
 
-The writer dresses every room: a floor of Skystone Tiles, a Polished Skystone ceiling, and brick walls on a polished
+Every room is dressed the same way: a floor of Skystone Tiles, a Polished Skystone ceiling, and brick walls on a polished
 plinth. In a template '#' follows the same rule: a tile in the floor layer, polished in the ceiling, brick between.
 
 Legend (one character per block):
