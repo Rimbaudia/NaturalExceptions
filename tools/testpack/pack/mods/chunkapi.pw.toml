@@ -1,0 +1,8 @@
+name = "ChunkAPI"
+filename = "chunkapi-mc1.7.10-0.8.4.jar"
+side = "both"
+
+[download]
+url = "https://mvn.falsepattern.com/releases/com/falsepattern/chunkapi-mc1.7.10/0.8.4/chunkapi-mc1.7.10-0.8.4.jar"
+hash-format = "sha256"
+hash = "054e695ca938f20930fa59a97441df4a192ee10cd2cda77487c51a98ce06f00e"

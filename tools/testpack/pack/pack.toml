@@ -1,0 +1,13 @@
+name = "Natural Exceptions (test)"
+author = "Aljosa"
+version = "dev"
+pack-format = "packwiz:1.1.0"
+
+[index]
+file = "index.toml"
+hash-format = "sha256"
+hash = "b2ddca2c263a1f18330b95728068bf74a64827cfb665c5b4cd3183aafdadc41f"
+
+[versions]
+forge = "10.13.4.1614"
+minecraft = "1.7.10"

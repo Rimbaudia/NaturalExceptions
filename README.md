@@ -30,9 +30,28 @@ Gradle is executed using a Java 25 daemon, producing Java-8-compatible mod bytec
 > [!NOTE]
 > P0's bootstrap copper scatter has been replaced by the P6 staged Overworld materializer. See [the P6 generation boundary](docs/architecture/p6-staged-overworld-generation-boundary.md) for its deterministic fields, geology-gated copper, host-terrain compromise, and chunk-history rules.
 
+## Requirements
+
+NE needs these mods next to it, and Forge refuses to start without them. 1.7.10 is not playable without them.
+
+| Mod | Version | Side |
+| --- | --- | --- |
+| [UniMixins](https://github.com/LegacyModdingMC/UniMixins) (`+unimixins-all`) | 0.3.1 | both |
+| [GTNHLib](https://github.com/GTNewHorizons/GTNHLib) and its GTNHExtLib | 0.11.54, 1.0.5 | both |
+| [Hodgepodge](https://github.com/GTNewHorizons/Hodgepodge) | 2.7.216 | both |
+| [Lumi](https://github.com/FalsePattern/Lumi) with ChunkAPI and FalsePatternLib | 1.2.2, 0.8.4, 1.12.2 | both |
+| [Angelica](https://github.com/GTNewHorizons/Angelica) | 2.2.33 | client |
+| [lwjgl3ify](https://github.com/GTNewHorizons/lwjgl3ify), to run on Java 21 | 3.0.33 | both |
+
+The test pack (`tools/testpack`) has all of them. To play the current build on another machine, see
+[Testing on the Mac](docs/testing-on-mac.md).
+
+On a dedicated server (which has no Angelica), set `optimizeWorldUpdateLight=false` in `config/hodgepodge.cfg`: that
+Hodgepodge fix collides with Lumi and crashes the server at startup. With Angelica loaded, Hodgepodge skips it on its own.
+
 ## Performance
 
-`./gradlew runClient` loads [Angelica](https://github.com/GTNewHorizons/Angelica) (the 1.7.10 port of Sodium), GTNHLib and Hodgepodge, plus [Lumi](https://github.com/FalsePattern/Lumi) with ChunkAPI and FalsePatternLib. Lumi replaces vanilla's lighting engine, which chokes on the open air under sky islands: without it, a Citadel ran at about 4 FPS on a T440p, and with it at about 30. These mods are dev-runtime only and never become NE dependencies. Players should install the same ones next to NE.
+`./gradlew runClient` loads [Angelica](https://github.com/GTNewHorizons/Angelica) (the 1.7.10 port of Sodium), GTNHLib and Hodgepodge, plus [Lumi](https://github.com/FalsePattern/Lumi) with ChunkAPI and FalsePatternLib. Lumi replaces vanilla's lighting engine, which chokes on the open air under sky islands: without it, a Citadel ran at about 4 FPS on a T440p, and with it at about 30. They are required: NE will not load without them (see Requirements below).
 
 Don't use OptiFine or FastCraft. Both conflict with Angelica, and OptiFine can't be redistributed or pulled from Maven.
 

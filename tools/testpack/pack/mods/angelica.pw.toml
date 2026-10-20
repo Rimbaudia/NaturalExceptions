@@ -1,0 +1,8 @@
+name = "Angelica"
+filename = "Angelica-2.2.33.jar"
+side = "client"
+
+[download]
+url = "https://nexus.gtnewhorizons.com/repository/public/com/github/GTNewHorizons/Angelica/2.2.33/Angelica-2.2.33.jar"
+hash-format = "sha256"
+hash = "3d4cf526d4bbb86ca347ec03a24397d48c2b91e73ffd4f61d03447dc998c2b18"

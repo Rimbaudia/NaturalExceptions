@@ -1,0 +1,10 @@
+[Unit]
+Description=Natural Exceptions test pack, served to the test machine
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 -m http.server @PORT@ --directory @ROOT@/build/testpack
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

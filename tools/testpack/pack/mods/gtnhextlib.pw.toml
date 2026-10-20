@@ -1,0 +1,8 @@
+name = "GTNHExtLib"
+filename = "GTNHExtLib-1.0.5.jar"
+side = "both"
+
+[download]
+url = "https://nexus.gtnewhorizons.com/repository/public/com/github/GTNewHorizons/GTNHExtLib/1.0.5/GTNHExtLib-1.0.5.jar"
+hash-format = "sha256"
+hash = "64509ae4fd28a61c01ca71712fec0bfbd2b62ddb2bb8e53b1bab1b73c1e1bb38"

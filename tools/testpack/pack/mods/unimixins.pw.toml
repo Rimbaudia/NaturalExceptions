@@ -1,0 +1,8 @@
+name = "UniMixins"
+filename = "+unimixins-all-1.7.10-0.3.1.jar"
+side = "both"
+
+[download]
+url = "https://github.com/LegacyModdingMC/UniMixins/releases/download/0.3.1/%2Bunimixins-all-1.7.10-0.3.1.jar"
+hash-format = "sha256"
+hash = "ad0ea4f92daf7bf7ec5c10e16258425e47929126954aea5d80df69ce26cd7318"
