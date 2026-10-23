@@ -469,6 +469,22 @@ public final class NEBlocks {
                 new net.minecraft.item.ItemStack(net.minecraft.init.Blocks.planks, 1, 32767));
             naturalexceptions.minecraft.recipe.TreasureRecipes.register();
             naturalexceptions.minecraft.recipe.SkystoneRecipes.register();
+            // Nine copper ingots to a block and back, as Minecraft does iron. Only ingots, not castings: a block
+            // melts as 9 kg, an ingot as 1 kg, a casting is about 0.22 kg, so castings in would make copper.
+            if (NEItems.copperIngot != null && copperBlock != null) {
+                GameRegistry.addRecipe(
+                    new net.minecraft.item.ItemStack(copperBlock),
+                    "CCC",
+                    "CCC",
+                    "CCC",
+                    'C',
+                    NEItems.copperIngot);
+                GameRegistry.addShapelessRecipe(new net.minecraft.item.ItemStack(NEItems.copperIngot, 9), copperBlock);
+            }
+            // Slag ground up is basic slag, a phosphate fertilizer: bone meal, as Minecraft knows it.
+            if (NEItems.slagLump != null) GameRegistry.addShapelessRecipe(
+                new net.minecraft.item.ItemStack(net.minecraft.init.Items.dye, 1, 15),
+                NEItems.slagLump);
             // Copper ingots or cool cast copper ingots (RecipeCastCopper).
             if (NEItems.lumeniteShard != null && NEItems.copperIngot != null) GameRegistry.addRecipe(
                 new naturalexceptions.minecraft.recipe.RecipeCastCopper(

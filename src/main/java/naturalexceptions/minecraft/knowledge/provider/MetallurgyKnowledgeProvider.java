@@ -189,7 +189,9 @@ public final class MetallurgyKnowledgeProvider implements IKnowledgeProvider {
                         + "If excessive slag accumulates in the crucible, it reduces available capacity for metal. "
                         + "Hold an empty Foundry Ladle and Shift-Right-Click the Starter Smelter controller to skim off a scoop of slag.\n\n"
                         + "The Smelter Outlet automatically taps from the bottom metal layer, ensuring that poured components "
-                        + "are pure metal rather than contaminated by slag.")
+                        + "are pure metal rather than contaminated by slag.\n\n"
+                        + "Cold slag is not waste: ground up, it is basic slag, a phosphate fertilizer, used on fields "
+                        + "much as bone meal is.")
                 .addProperty("Phase", "Liquid / Glassy Solid")
                 .addProperty("Density", "Lower than metal (floats on top)")
                 .addProperty("Removal Method", "Shift-Right-Click with an empty Foundry Ladle")
@@ -200,6 +202,13 @@ public final class MetallurgyKnowledgeProvider implements IKnowledgeProvider {
                         .addInput(ladleStack, "Foundry Ladle")
                         .addOutput(slagStack, "Molten Slag Lump")
                         .addNote("Skimmed from top layer of crucible.")
+                        .build())
+                .addUsage(
+                    ProcessStep.builder()
+                        .operation("Grinding")
+                        .machine(new ItemStack(net.minecraft.init.Blocks.crafting_table), "Crafting Grid")
+                        .addInput(slagStack, "Slag Lump")
+                        .addOutput(new ItemStack(Items.dye, 1, 15), "Bone Meal (basic slag fertilizer)")
                         .build())
                 .addRelated("foundry_ladle")
                 .addRelated("starter_smelter")
