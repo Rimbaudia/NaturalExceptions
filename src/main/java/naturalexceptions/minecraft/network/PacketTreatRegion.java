@@ -38,9 +38,17 @@ public final class PacketTreatRegion implements IMessage {
 
         @Override
         public IMessage onMessage(PacketTreatRegion message, MessageContext ctx) {
-            EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            if (player != null && message != null && message.regionId != null)
-                BodyTreatment.applyFromCursor(player, message.regionId);
+            final EntityPlayerMP player = ctx.getServerHandler().playerEntity;
+            if (player == null || message == null || message.regionId == null) return null;
+            final String region = message.regionId;
+            // Takes from the cursor stack and changes the body: on the main thread (see MainThreadTasks).
+            MainThreadTasks.submit(new Runnable() {
+
+                @Override
+                public void run() {
+                    if (!player.isDead) BodyTreatment.applyFromCursor(player, region);
+                }
+            });
             return null;
         }
     }

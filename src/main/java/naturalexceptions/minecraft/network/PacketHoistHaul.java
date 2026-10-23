@@ -38,11 +38,20 @@ public final class PacketHoistHaul implements IMessage {
 
         @Override
         public IMessage onMessage(PacketHoistHaul message, MessageContext ctx) {
-            EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            if (player == null || !(player.ridingEntity instanceof EntityHoistLoad)) return null;
-            EntityHoistLoad load = (EntityHoistLoad) player.ridingEntity;
-            TileEntity tile = player.worldObj.getTileEntity(load.windlassX, load.windlassY, load.windlassZ);
-            if (tile instanceof TileEntityHoist) ((TileEntityHoist) tile).haul(message.way < 0 ? -1 : 1);
+            final EntityPlayerMP player = ctx.getServerHandler().playerEntity;
+            if (player == null || message == null) return null;
+            final int way = message.way < 0 ? -1 : 1;
+            // Drives the hoist the game tick is stepping: on the main thread (see MainThreadTasks).
+            MainThreadTasks.submit(new Runnable() {
+
+                @Override
+                public void run() {
+                    if (player.isDead || !(player.ridingEntity instanceof EntityHoistLoad)) return;
+                    EntityHoistLoad load = (EntityHoistLoad) player.ridingEntity;
+                    TileEntity tile = player.worldObj.getTileEntity(load.windlassX, load.windlassY, load.windlassZ);
+                    if (tile instanceof TileEntityHoist) ((TileEntityHoist) tile).haul(way);
+                }
+            });
             return null;
         }
     }

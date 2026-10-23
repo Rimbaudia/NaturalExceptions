@@ -26,6 +26,13 @@ public final class GearMovement {
     private static final Map<EntityPlayer, Long> LAST_SOUND = new WeakHashMap<>();
     private static final Map<EntityPlayer, Long> LAST_DASH = new WeakHashMap<>();
     private static final Map<EntityPlayer, Long> LAST_AEGIS = new WeakHashMap<>();
+    /** When each player's last glide, climb or double jump was accepted. */
+    private static final Map<EntityPlayer, Long> LAST_GLIDE = new WeakHashMap<>(), LAST_CLIMB = new WeakHashMap<>(),
+        LAST_JUMP = new WeakHashMap<>();
+    /** The client reports a glide or climb every 5 ticks; a little slack for lag, none for spam. */
+    static final long CONTINUOUS_GAP_TICKS = 3L;
+    /** One double jump an airborne spell; the client can't jump again within half a second. */
+    static final long JUMP_GAP_TICKS = 10L;
 
     public static void onAction(EntityPlayerMP player, PacketGearAction.Action action) {
         Treasure needed = action == PacketGearAction.Action.DOUBLE_JUMP ? Treasure.CLOUD_FLASK
@@ -33,6 +40,7 @@ public final class GearMovement {
                 : action == PacketGearAction.Action.DASH ? Treasure.GALEHEART_BELT : Treasure.CLIMBING_CLAWS;
         if (ItemTreasureGear.worn(player, needed) == 0) return;
         long now = player.worldObj.getTotalWorldTime();
+        if (!plausible(player, action, now)) return;
         if (action == PacketGearAction.Action.DASH) {
             synchronized (LAST_DASH) {
                 Long last = LAST_DASH.get(player);
@@ -72,6 +80,47 @@ public final class GearMovement {
                         .nextFloat() * 0.3F);
                 break;
         }
+    }
+
+    /**
+     * Whether the action fits what the server sees of the player, so a tampered client can't use the gear's fall reset
+     * where the gear does nothing: a glide in the air, a climb at a wall, a double jump off the ground, none faster
+     * than
+     * the real client sends them. (Movement itself is the client's; this only guards what the server grants.)
+     */
+    static boolean plausible(EntityPlayer player, PacketGearAction.Action action, long now) {
+        switch (action) {
+            case GLIDE:
+                return !player.onGround && due(LAST_GLIDE, player, now, CONTINUOUS_GAP_TICKS);
+            case CLIMB:
+                return nearWall(player) && due(LAST_CLIMB, player, now, CONTINUOUS_GAP_TICKS);
+            case DOUBLE_JUMP:
+                return !player.onGround && due(LAST_JUMP, player, now, JUMP_GAP_TICKS);
+            default:
+                return true;
+        }
+    }
+
+    private static boolean due(Map<EntityPlayer, Long> last, EntityPlayer player, long now, long gap) {
+        synchronized (last) {
+            Long then = last.get(player);
+            if (then != null && now - then < gap) return false;
+            last.put(player, now);
+            return true;
+        }
+    }
+
+    /** A solid block beside the player's body, within a little of it (the server's view of a client's wall). */
+    private static boolean nearWall(EntityPlayer player) {
+        net.minecraft.util.AxisAlignedBB box = player.boundingBox.expand(0.35, 0.0, 0.35);
+        int x0 = (int) Math.floor(box.minX), x1 = (int) Math.floor(box.maxX);
+        int y0 = (int) Math.floor(box.minY), y1 = (int) Math.floor(box.maxY);
+        int z0 = (int) Math.floor(box.minZ), z1 = (int) Math.floor(box.maxZ);
+        for (int x = x0; x <= x1; x++)
+            for (int y = y0; y <= y1; y++) for (int z = z0; z <= z1; z++) if (player.worldObj.getBlock(x, y, z)
+                .getMaterial()
+                .blocksMovement()) return true;
+        return false;
     }
 
     private static boolean soundDue(EntityPlayer player, long now) {

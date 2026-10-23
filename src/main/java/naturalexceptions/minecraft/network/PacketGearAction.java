@@ -40,12 +40,29 @@ public final class PacketGearAction implements IMessage {
         buf.writeByte(action.ordinal());
     }
 
+    /** Gear actions waiting for the main thread, one per player and kind. */
+    private static final java.util.Set<Long> QUEUED = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
     public static final class Handler implements IMessageHandler<PacketGearAction, IMessage> {
 
         @Override
         public IMessage onMessage(PacketGearAction message, MessageContext ctx) {
-            EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            if (player != null && message != null) GearMovement.onAction(player, message.action);
+            final EntityPlayerMP player = ctx.getServerHandler().playerEntity;
+            if (player == null || message == null) return null;
+            final Action action = message.action;
+            if (action == null) return null;
+            // One waiting action of a kind per player: a flooding client can't fill the shared queue.
+            final long key = ((long) player.getEntityId() << 8) | action.ordinal();
+            if (!QUEUED.add(key)) return null;
+            // Moves the player and resets its fall: on the main thread (see MainThreadTasks).
+            if (!MainThreadTasks.submit(new Runnable() {
+
+                @Override
+                public void run() {
+                    QUEUED.remove(key);
+                    if (!player.isDead) GearMovement.onAction(player, action);
+                }
+            })) QUEUED.remove(key);
             return null;
         }
     }

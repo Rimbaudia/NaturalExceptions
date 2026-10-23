@@ -95,7 +95,7 @@ public final class NaturalExceptions {
             .register(new naturalexceptions.minecraft.knowledge.PlayerKnowledgeEvents());
         FMLCommonHandler.instance()
             .bus()
-            .register(new naturalexceptions.minecraft.knowledge.KnowledgeServerTasks());
+            .register(new naturalexceptions.minecraft.network.MainThreadTasks());
         FMLCommonHandler.instance()
             .bus()
             .register(new naturalexceptions.minecraft.worldgen.DungeonBeacons());

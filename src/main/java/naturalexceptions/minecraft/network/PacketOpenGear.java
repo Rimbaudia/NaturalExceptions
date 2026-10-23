@@ -22,9 +22,17 @@ public final class PacketOpenGear implements IMessage {
 
         @Override
         public IMessage onMessage(PacketOpenGear message, MessageContext ctx) {
-            EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            if (player == null || player.inventory.getItemStack() != null) return null;
-            player.openGui(NaturalExceptions.instance, NEGuiHandler.GUI_GEAR, player.worldObj, 0, 0, 0);
+            final EntityPlayerMP player = ctx.getServerHandler().playerEntity;
+            if (player == null) return null;
+            // Opening a container swaps the player's openContainer: on the main thread (see MainThreadTasks).
+            MainThreadTasks.submit(new Runnable() {
+
+                @Override
+                public void run() {
+                    if (player.isDead || player.inventory.getItemStack() != null) return;
+                    player.openGui(NaturalExceptions.instance, NEGuiHandler.GUI_GEAR, player.worldObj, 0, 0, 0);
+                }
+            });
             return null;
         }
     }
