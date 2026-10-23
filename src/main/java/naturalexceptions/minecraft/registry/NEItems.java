@@ -61,12 +61,38 @@ public final class NEItems {
     private NEItems() {}
 
     private static boolean bootstrapped = false;
+    /** Whether NE is loading in the game (FML had already set up its Loader), not in a unit test. */
+    private static boolean realFml;
 
+    /** Whether NE is loading under the real FML, where a registration failure must stop the game. */
+    public static boolean underRealFml() {
+        ensureBootstrapped();
+        return realFml;
+    }
+
+    /**
+     * A failure registering NE's items, blocks or recipes. In the game it stops loading with the cause, since NE half
+     * registered would leave client and server with different items. Unit tests, which have no real FML, carry on.
+     */
+    public static void registrationFailed(String what, Throwable cause) {
+        if (underRealFml()) throw new IllegalStateException("Natural Exceptions could not register its " + what, cause);
+    }
+
+    /**
+     * For unit tests, which run without FML: a stand-in Loader, mod container and load state, so the registries
+     * accept NE's things. In the game FML is already there, and only the lang file is read in.
+     */
     public static synchronized void ensureBootstrapped() {
         if (bootstrapped) return;
         bootstrapped = true;
 
         try {
+            java.lang.reflect.Field loaderField = cpw.mods.fml.common.Loader.class.getDeclaredField("instance");
+            loaderField.setAccessible(true);
+            realFml = loaderField.get(null) != null;
+        } catch (Throwable ignored) {}
+
+        if (!realFml) try {
             Class<?> unsafeClass = Class.forName("sun.misc.Unsafe");
             java.lang.reflect.Field theUnsafe = unsafeClass.getDeclaredField("theUnsafe");
             theUnsafe.setAccessible(true);
@@ -369,7 +395,7 @@ public final class NEItems {
                         handleStack));
             } catch (Throwable ignored) {}
         } catch (Throwable t) {
-            // Allows unit testing without LaunchClassLoader
+            registrationFailed("items and their recipes", t);
         }
 
         MaterialBindingRegistry.global()

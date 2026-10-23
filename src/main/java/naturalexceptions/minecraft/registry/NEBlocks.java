@@ -365,8 +365,7 @@ public final class NEBlocks {
             GameRegistry.registerBlock(wardenSeal, "warden_seal");
             GameRegistry.registerBlock(windbloom, "windbloom");
         } catch (Throwable t) {
-            System.out.println("DEBUG registerBlock caught: " + t);
-            t.printStackTrace();
+            NEItems.registrationFailed("blocks", t);
         }
 
         try {
@@ -523,10 +522,14 @@ public final class NEBlocks {
 
             GameRegistry
                 .addRecipe(new net.minecraft.item.ItemStack(refractoryBrick), "BB", "BB", 'B', NEItems.refractoryBrick);
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) {
+            NEItems.registrationFailed("block recipes", t);
+        }
         try {
             naturalexceptions.minecraft.recipe.SurvivalEquipmentRecipes.register();
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) {
+            NEItems.registrationFailed("survival equipment recipes", t);
+        }
 
         MaterialBindingRegistry.global()
             .bind(copperOre, BuiltinMaterials.COPPER.id());
