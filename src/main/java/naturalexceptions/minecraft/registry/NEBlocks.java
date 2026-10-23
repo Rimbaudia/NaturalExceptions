@@ -470,15 +470,17 @@ public final class NEBlocks {
                 new net.minecraft.item.ItemStack(net.minecraft.init.Blocks.planks, 1, 32767));
             naturalexceptions.minecraft.recipe.TreasureRecipes.register();
             naturalexceptions.minecraft.recipe.SkystoneRecipes.register();
+            // Copper ingots or cool cast copper ingots (RecipeCastCopper).
             if (NEItems.lumeniteShard != null && NEItems.copperIngot != null) GameRegistry.addRecipe(
-                new net.minecraft.item.ItemStack(lumeniteLamp),
-                " S ",
-                "SCS",
-                " S ",
-                'S',
-                NEItems.lumeniteShard,
-                'C',
-                NEItems.copperIngot);
+                new naturalexceptions.minecraft.recipe.RecipeCastCopper(
+                    new net.minecraft.item.ItemStack(lumeniteLamp),
+                    " S ",
+                    "SCS",
+                    " S ",
+                    'S',
+                    NEItems.lumeniteShard,
+                    'C',
+                    NEItems.copperIngot));
             if (NEItems.stormglassShard != null) GameRegistry.addRecipe(
                 new net.minecraft.item.ItemStack(stormglassLantern, 2),
                 "BSB",

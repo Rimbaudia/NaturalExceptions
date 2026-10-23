@@ -68,6 +68,25 @@ public final class ItemGenericComponent extends Item {
         return createStack(woodHandle);
     }
 
+    /**
+     * A cold casting of {@code geometry} in the given metal, as its mold makes it (the mold's mass of that metal), for
+     * showing what a cast part is (knowledge entries, examples).
+     */
+    public static ItemStack createCast(naturalexceptions.core.fabrication.GeometryId geometry,
+        naturalexceptions.core.material.MaterialRef ref,
+        naturalexceptions.core.composition.CanonicalComposition composition,
+        naturalexceptions.core.property.MaterialProperties properties) {
+        return createStack(
+            new ComponentInstance(
+                geometry,
+                ref,
+                naturalexceptions.core.material.CanonicalMaterialKey.of(composition)
+                    .asSolidified(),
+                naturalexceptions.core.fabrication.ComponentGeometry.forId(geometry)
+                    .requiredMass(properties.density()),
+                naturalexceptions.core.fabrication.ManufacturingState.AS_CAST));
+    }
+
     public static ItemStack createStack(ComponentInstance comp) {
         Item item = NEItems.genericComponent != null ? NEItems.genericComponent : new ItemGenericComponent();
         ItemStack stack = new ItemStack(item);

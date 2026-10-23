@@ -27,8 +27,8 @@ public final class TreasureRecipes {
         ItemStack anyWool = new ItemStack(Blocks.wool, 1, OreDictionary.WILDCARD_VALUE);
 
         // Cloudsilk Rope: three silk twisted into six lengths.
-        if (NEItems.cloudsilk != null && NEBlocks.cloudsilkRope != null) GameRegistry
-            .addRecipe(new ItemStack(NEBlocks.cloudsilkRope, 6), "S", "S", "S", 'S', NEItems.cloudsilk);
+        if (NEItems.cloudsilk != null && NEBlocks.cloudsilkRope != null)
+            GameRegistry.addRecipe(new ItemStack(NEBlocks.cloudsilkRope, 6), "S", "S", "S", 'S', NEItems.cloudsilk);
         // A bottled cloud; a cloak that catches the wind on Windbloom petals and a Cloudsilk sail.
         if (NEBlocks.cloud != null)
             add(Treasure.CLOUD_FLASK, " C ", "CBC", " L ", 'C', NEBlocks.cloud, 'B', Items.glass_bottle, 'L', shard);
@@ -84,7 +84,9 @@ public final class TreasureRecipes {
         // Skyfall is forged from a fallen star, not from Stormglass.
         if (NEItems.skyfall != null && NEItems.materialSample != null) GameRegistry.addRecipe(new RecipeSkyfall());
         if (NEItems.shardcaster != null)
-            GameRegistry.addRecipe(new ItemStack(NEItems.shardcaster), " LL", " CL", "C  ", 'L', shard, 'C', copper);
+            // Copper ingots or cool cast copper ingots.
+            GameRegistry.addRecipe(
+                new RecipeCastCopper(new ItemStack(NEItems.shardcaster), " LL", " CL", "C  ", 'L', shard, 'C', copper));
     }
 
     private static void add(Treasure treasure, Object... pattern) {

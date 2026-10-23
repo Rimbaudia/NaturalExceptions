@@ -28,8 +28,16 @@ public final class CraftingKnowledgeProvider implements IKnowledgeProvider {
         ItemStack assemblyStack = new ItemStack(
             NEBlocks.assemblyTable != null ? NEBlocks.assemblyTable : Blocks.crafting_table);
         ItemStack handleStack = ItemGenericComponent.createWoodenHandle();
-        ItemStack copperIngotStack = new ItemStack(
-            NEItems.copperIngot != null ? NEItems.copperIngot : Items.iron_ingot);
+        ItemStack copperIngotStack = naturalexceptions.minecraft.item.ItemGenericComponent.createCast(
+            naturalexceptions.core.fabrication.GeometryId.INGOT,
+            naturalexceptions.content.material.BuiltinMaterials.COPPER.ref(),
+            naturalexceptions.content.material.BuiltinMaterials.COPPER_COMPOSITION,
+            naturalexceptions.content.material.BuiltinMaterials.COPPER_PROPERTIES);
+        ItemStack copperRodStack = naturalexceptions.minecraft.item.ItemGenericComponent.createCast(
+            naturalexceptions.core.fabrication.GeometryId.ROD,
+            naturalexceptions.content.material.BuiltinMaterials.COPPER.ref(),
+            naturalexceptions.content.material.BuiltinMaterials.COPPER_COMPOSITION,
+            naturalexceptions.content.material.BuiltinMaterials.COPPER_PROPERTIES);
 
         // 1. Refractory Brick Block
         registry.registerEntry(
@@ -113,7 +121,7 @@ public final class CraftingKnowledgeProvider implements IKnowledgeProvider {
                         .operation("Crafting Table")
                         .machine(new ItemStack(Blocks.crafting_table), "Crafting Grid")
                         .addInput(brickStack, "2x Refractory Brick Blocks")
-                        .addInput(copperIngotStack, "1x cold cast metal rod")
+                        .addInput(copperRodStack, "1x cold cast metal rod")
                         .addOutput(tuyereStack, "Smelter Tuyere")
                         .addNote("Brick block, cast rod, brick block in a row. Cast the rod in a Rod mold.")
                         .build())

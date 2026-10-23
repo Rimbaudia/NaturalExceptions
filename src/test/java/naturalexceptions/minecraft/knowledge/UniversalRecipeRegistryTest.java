@@ -236,7 +236,7 @@ class UniversalRecipeRegistryTest {
                             .getItem() == Items.brick),
             "Clay Ball usages must include Furnace Brick");
 
-        // 3. Copper Ingot -> must find Smelter Tuyere
+        // 3. Copper Ingot -> must find the Lumenite Lamp (the Tuyere takes a cast rod, not an ingot)
         ItemStack copperIngot = new ItemStack(NEItems.copperIngot);
         List<UniversalRecipe> copperUsages = UniversalRecipeRegistry.instance()
             .findUsages(copperIngot);
@@ -245,8 +245,8 @@ class UniversalRecipeRegistryTest {
             copperUsages.stream()
                 .anyMatch(
                     r -> r.output() != null && r.output()
-                        .getItem() == new ItemStack(NEBlocks.smelterTuyere).getItem()),
-            "Copper Ingot usages must include Smelter Tuyere");
+                        .getItem() == new ItemStack(NEBlocks.lumeniteLamp).getItem()),
+            "Copper Ingot usages must include the Lumenite Lamp");
     }
 
     @Test

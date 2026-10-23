@@ -24,8 +24,12 @@ public final class MetallurgyKnowledgeProvider implements IKnowledgeProvider {
             NEBlocks.starterSmelter != null ? NEBlocks.starterSmelter : Blocks.furnace);
         ItemStack copperOreStack = new ItemStack(NEBlocks.copperOre != null ? NEBlocks.copperOre : Blocks.iron_ore);
         ItemStack ironOreStack = new ItemStack(Blocks.iron_ore);
-        ItemStack copperIngotStack = new ItemStack(
-            NEItems.copperIngot != null ? NEItems.copperIngot : Items.iron_ingot);
+        // What a player gets from molten copper: an ingot mold's casting.
+        ItemStack copperIngotStack = naturalexceptions.minecraft.item.ItemGenericComponent.createCast(
+            naturalexceptions.core.fabrication.GeometryId.INGOT,
+            naturalexceptions.content.material.BuiltinMaterials.COPPER.ref(),
+            naturalexceptions.content.material.BuiltinMaterials.COPPER_COMPOSITION,
+            naturalexceptions.content.material.BuiltinMaterials.COPPER_PROPERTIES);
         ItemStack slagStack = new ItemStack(NEItems.slagLump != null ? NEItems.slagLump : Items.clay_ball);
         ItemStack tuyereStack = new ItemStack(NEBlocks.smelterTuyere != null ? NEBlocks.smelterTuyere : Blocks.stone);
         ItemStack bellowsStack = new ItemStack(NEItems.bellows != null ? NEItems.bellows : Items.stick);
@@ -77,7 +81,7 @@ public final class MetallurgyKnowledgeProvider implements IKnowledgeProvider {
                         .addInput(new ItemStack(Items.coal), "Fuel (Coal/Charcoal)")
                         .addOutput(copperIngotStack, "Molten Copper (1.0 kg)")
                         .addOutput(slagStack, "Molten Slag")
-                        .addNote("Heats to 1085 \u00b0C. Copper separates below slag.")
+                        .addNote("Heats to 1085 \u00b0C. Copper separates below slag; pour it into an Ingot mold.")
                         .build())
                 .addUsage(
                     ProcessStep.builder()
@@ -88,6 +92,16 @@ public final class MetallurgyKnowledgeProvider implements IKnowledgeProvider {
                         .addInput(bellowsStack, "Hand Bellows")
                         .addOutput(new ItemStack(Items.iron_ingot), "Molten Iron")
                         .addNote("Requires forced draft to exceed 1538 \u00b0C.")
+                        .build())
+                .addUsage(
+                    ProcessStep.builder()
+                        .operation("Remelting")
+                        .machine(smelterStack, "Starter Smelter")
+                        .addInput(
+                            new ItemStack(NEItems.copperIngot != null ? NEItems.copperIngot : Items.iron_ingot),
+                            "Copper Ingot (found)")
+                        .addOutput(copperIngotStack, "Molten Copper (1.0 kg)")
+                        .addNote("Ingots found in caches and drops melt down like ore, ready to cast.")
                         .build())
                 .addRelated("refractory_brick")
                 .addRelated("smelter_outlet")
@@ -124,7 +138,7 @@ public final class MetallurgyKnowledgeProvider implements IKnowledgeProvider {
                         .addInput(copperOreStack)
                         .addOutput(copperIngotStack, "1.0 kg Molten Copper")
                         .addOutput(slagStack, "Molten Slag")
-                        .addNote("Melted in Starter Smelter at >= 1085 \u00b0C.")
+                        .addNote("Melted in Starter Smelter at >= 1085 \u00b0C; cast in an Ingot mold.")
                         .build())
                 .addRelated("starter_smelter")
                 .addRelated("copper_ingot")
