@@ -1009,7 +1009,21 @@ final class LandmarkMaterializer {
 
     // --- Giant terrain features ------------------------------------------------------------------------------
 
-    static int landmarks(World world, int chunkX, int chunkZ, Landmarks field) {
+    /**
+     * The overworld's landmarks through this chunk. Like the islands, carved straight into the chunk and lit once
+     * at the end: a chasm or sinkhole through world.setBlock relit its column and neighbours at every block.
+     */
+    static int landmarks(final World world, final int chunkX, final int chunkZ, final Landmarks field) {
+        return batched(world, chunkX, chunkZ, new java.util.function.IntSupplier() {
+
+            @Override
+            public int getAsInt() {
+                return carveLandmarks(world, chunkX, chunkZ, field);
+            }
+        });
+    }
+
+    private static int carveLandmarks(World world, int chunkX, int chunkZ, Landmarks field) {
         int x0 = chunkX * 16;
         int z0 = chunkZ * 16;
         int changed = 0;
@@ -1063,7 +1077,7 @@ final class LandmarkMaterializer {
         int changed = 0;
         for (int y = surface; y >= Landmarks.CHASM_FLOOR_Y; y--) {
             if (Landmarks.chasmOpen(here, y, surface)) {
-                world.setBlock(x, y, z, Blocks.air, 0, 2);
+                set(world, x, y, z, Blocks.air, 0);
                 changed++;
             } else if (world.getBlock(x, y, z) == Blocks.stone && here[1] < here[0]
                 * (0.45
@@ -1075,11 +1089,11 @@ final class LandmarkMaterializer {
                         : roll < 0.035 ? Blocks.iron_ore
                             : roll < 0.045 && NEBlocks.copperOre != null ? NEBlocks.copperOre
                                 : roll < 0.050 ? Blocks.gold_ore : null;
-                    if (ore != null) world.setBlock(x, y, z, ore, 0, 2);
+                    if (ore != null) set(world, x, y, z, ore, 0);
                 }
         }
         if (Landmarks.chasmOpen(here, Landmarks.CHASM_FLOOR_Y, surface)) {
-            world.setBlock(x, Landmarks.CHASM_FLOOR_Y - 1, z, Blocks.lava, 0, 2);
+            set(world, x, Landmarks.CHASM_FLOOR_Y - 1, z, Blocks.lava, 0);
             changed++;
         }
         return changed;
@@ -1100,7 +1114,7 @@ final class LandmarkMaterializer {
             if (!field.spireAt(spires, x, y, z, ground)) continue;
             boolean cap = !field.spireAt(spires, x, y + 1, z, ground);
             Block block = cap ? Blocks.grass : (y / 7) % 3 == 0 ? Blocks.cobblestone : Blocks.stone;
-            world.setBlock(x, y, z, block, 0, 2);
+            set(world, x, y, z, block, 0);
             changed++;
         }
         return changed;
@@ -1113,7 +1127,7 @@ final class LandmarkMaterializer {
         int changed = 0;
         for (int y = Landmarks.CAVERN_FLOOR_Y; y <= surface; y++) {
             if (!field.sinkholeOpen(sinkhole, x, y, z, surface)) continue;
-            world.setBlock(x, y, z, y <= Landmarks.CAVERN_WATER_TOP_Y ? Blocks.water : Blocks.air, 0, 2);
+            set(world, x, y, z, y <= Landmarks.CAVERN_WATER_TOP_Y ? Blocks.water : Blocks.air, 0);
             changed++;
         }
         return changed;
@@ -1128,7 +1142,7 @@ final class LandmarkMaterializer {
         for (int y = ground + 1; y <= top; y++) {
             if (!Landmarks.archAt(arch, x, y, z, ground)) continue;
             boolean cap = !Landmarks.archAt(arch, x, y + 1, z, ground);
-            world.setBlock(x, y, z, cap ? Blocks.grass : Blocks.stone, 0, 2);
+            set(world, x, y, z, cap ? Blocks.grass : Blocks.stone, 0);
             changed++;
         }
         return changed;
@@ -1136,7 +1150,39 @@ final class LandmarkMaterializer {
 
     // --- Deep layers ----------------------------------------------------------------------------------------
 
-    static int deepLayers(World world, int chunkX, int chunkZ, DeepLayers field) {
+    /** The deep pockets (Lumenite grottos, magma) through this chunk, carved and lit as {@link #landmarks} are. */
+    static int deepLayers(final World world, final int chunkX, final int chunkZ, final DeepLayers field) {
+        return batched(world, chunkX, chunkZ, new java.util.function.IntSupplier() {
+
+            @Override
+            public int getAsInt() {
+                return carveDeepLayers(world, chunkX, chunkZ, field);
+            }
+        });
+    }
+
+    /**
+     * Runs {@code work} with this chunk open for {@link #set} to write straight into, then lights it once if
+     * anything changed. Blocks outside the chunk, and any but plain ones, still go through world.setBlock.
+     */
+    private static int batched(World world, int chunkX, int chunkZ, java.util.function.IntSupplier work) {
+        if (batchChunk != null) return work.getAsInt(); // already inside a batch (an island's): its relight covers it
+        Chunk chunk = world.getChunkFromChunkCoords(chunkX, chunkZ);
+        List<int[]> glowing = new ArrayList<>();
+        batchChunk = chunk;
+        batchGlowing = glowing;
+        int changed;
+        try {
+            changed = work.getAsInt();
+        } finally {
+            batchChunk = null;
+            batchGlowing = null;
+        }
+        if (changed > 0) relight(world, chunk, glowing);
+        return changed;
+    }
+
+    private static int carveDeepLayers(World world, int chunkX, int chunkZ, DeepLayers field) {
         int x0 = chunkX * 16;
         int z0 = chunkZ * 16;
         int changed = 0;
@@ -1148,7 +1194,7 @@ final class LandmarkMaterializer {
                     for (int y = pocket.minY(); y <= pocket.maxY(); y++) {
                         Block block = deepBlock(world, field.partAt(pocket, x, y, z), x, y, z);
                         if (block == null) continue;
-                        world.setBlock(x, y, z, block, 0, 2);
+                        set(world, x, y, z, block, 0);
                         changed++;
                     }
                 }
