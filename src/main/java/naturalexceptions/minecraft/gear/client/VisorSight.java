@@ -68,12 +68,29 @@ public final class VisorSight {
         World world = player.worldObj;
         int px = MathHelper.floor_double(player.posX), py = MathHelper.floor_double(player.posY),
             pz = MathHelper.floor_double(player.posZ);
-        for (int x = px - RANGE; x <= px + RANGE; x++)
-            for (int y = py - RANGE; y <= py + RANGE; y++) for (int z = pz - RANGE; z <= pz + RANGE; z++) {
-                Block block = world.getBlock(x, y, z);
-                if (block == Blocks.air || block == Blocks.stone || block == Blocks.dirt) continue;
-                int colour = colour(block, world.getBlockMetadata(x, y, z));
-                if (colour != 0) seen.add(new int[] { x, y, z, colour });
+        // Section by section, straight from the chunks' storage: an empty (all-air) section is skipped whole, and the
+        // rest is read as arrays rather than a world lookup per block.
+        int y0 = Math.max(0, py - RANGE), y1 = Math.min(255, py + RANGE);
+        for (int cx = (px - RANGE) >> 4; cx <= (px + RANGE) >> 4; cx++)
+            for (int cz = (pz - RANGE) >> 4; cz <= (pz + RANGE) >> 4; cz++) {
+                if (!world.getChunkProvider()
+                    .chunkExists(cx, cz)) continue;
+                net.minecraft.world.chunk.storage.ExtendedBlockStorage[] sections = world
+                    .getChunkFromChunkCoords(cx, cz)
+                    .getBlockStorageArray();
+                int xa = Math.max(px - RANGE, cx << 4), xb = Math.min(px + RANGE, (cx << 4) + 15);
+                int za = Math.max(pz - RANGE, cz << 4), zb = Math.min(pz + RANGE, (cz << 4) + 15);
+                for (int sy = y0 >> 4; sy <= y1 >> 4; sy++) {
+                    net.minecraft.world.chunk.storage.ExtendedBlockStorage section = sections[sy];
+                    if (section == null || section.isEmpty()) continue;
+                    int ya = Math.max(y0, sy << 4), yb = Math.min(y1, (sy << 4) + 15);
+                    for (int x = xa; x <= xb; x++) for (int y = ya; y <= yb; y++) for (int z = za; z <= zb; z++) {
+                        Block block = section.getBlockByExtId(x & 15, y & 15, z & 15);
+                        if (block == Blocks.air || block == Blocks.stone || block == Blocks.dirt) continue;
+                        int colour = colour(block, section.getExtBlockMetadata(x & 15, y & 15, z & 15));
+                        if (colour != 0) seen.add(new int[] { x, y, z, colour });
+                    }
+                }
             }
     }
 
