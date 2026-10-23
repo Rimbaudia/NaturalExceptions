@@ -16,11 +16,7 @@ public final class StarterSmelterDefinition extends MultiblockDefinition {
     public static final StarterSmelterDefinition INSTANCE = new StarterSmelterDefinition();
 
     public StarterSmelterDefinition() {
-        super(
-            "starter_smelter",
-            "Starter Smelter",
-            MultiblockMaturity.EXPERIMENTAL,
-            "Experimental structure — layout may change during development.");
+        super("starter_smelter", "Starter Smelter", MultiblockMaturity.STABLE, null);
         buildPatterns();
     }
 

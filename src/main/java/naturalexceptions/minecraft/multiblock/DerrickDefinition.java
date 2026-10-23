@@ -27,11 +27,7 @@ public final class DerrickDefinition extends MultiblockDefinition {
     public static final int MIN_MAST = 3, MAX_MAST = 12, MIN_BOOM = 3, MAX_BOOM = 12, REACH = 5;
 
     private DerrickDefinition() {
-        super(
-            "derrick",
-            "Derrick",
-            MultiblockMaturity.EXPERIMENTAL,
-            "Experimental structure: the layout may change during development.");
+        super("derrick", "Derrick", MultiblockMaturity.STABLE, null);
         Block log = Blocks.log, sheave = NEBlocks.sheave != null ? NEBlocks.sheave : Blocks.planks;
         Block windlass = NEBlocks.hoistWindlass != null ? NEBlocks.hoistWindlass : Blocks.planks;
         Block pivot = NEBlocks.derrickPivot != null ? NEBlocks.derrickPivot : Blocks.planks;

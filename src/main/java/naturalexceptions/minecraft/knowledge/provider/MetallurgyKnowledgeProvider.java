@@ -57,7 +57,7 @@ public final class MetallurgyKnowledgeProvider implements IKnowledgeProvider {
         registry.registerEntry(
             KnowledgeEntry.builder("starter_smelter", "Starter Smelter", KnowledgeCategory.MULTIBLOCKS)
                 .icon(smelterStack)
-                .summary("Experimental refractory crucible furnace for thermal smelting and casting.")
+                .summary("Refractory crucible furnace for thermal smelting and casting.")
                 .description(
                     "The Starter Smelter is an experimental variable-size refractory vessel for melting feedstock and separating slag. "
                         + "Use an odd 3-7 block outer width and depth with 1-3 clear cavity layers. Open Structure for the minimum layout; "

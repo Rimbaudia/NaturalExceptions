@@ -29,11 +29,7 @@ public final class HeadframeDefinition extends MultiblockDefinition {
     public static final int REACH = 5;
 
     private HeadframeDefinition() {
-        super(
-            "headframe",
-            "Headframe",
-            MultiblockMaturity.EXPERIMENTAL,
-            "Experimental structure: the layout may change during development.");
+        super("headframe", "Headframe", MultiblockMaturity.STABLE, null);
         Block log = Blocks.log, sheave = NEBlocks.sheave != null ? NEBlocks.sheave : Blocks.planks;
         Block windlass = NEBlocks.hoistWindlass != null ? NEBlocks.hoistWindlass : Blocks.planks;
         addPattern(

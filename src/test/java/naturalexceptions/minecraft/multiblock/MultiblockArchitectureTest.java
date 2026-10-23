@@ -254,17 +254,14 @@ class MultiblockArchitectureTest {
     }
 
     @Test
-    void testMaturityIsExperimentalWithAuthoritativeNotice() {
+    void testMaturityIsStableWithAuthoritativeNotice() {
         StarterSmelterDefinition def = StarterSmelterDefinition.INSTANCE;
-        assertTrue(
+        assertFalse(
             def.maturity()
                 .isExperimental(),
-            "Starter Smelter must be marked EXPERIMENTAL");
-        assertEquals(MultiblockMaturity.EXPERIMENTAL, def.maturity());
-        assertNotNull(def.maturityNotice());
-        assertTrue(
-            def.maturityNotice()
-                .contains("Experimental structure — layout may change during development."));
+            "the Starter Smelter's layout is settled");
+        assertEquals(MultiblockMaturity.STABLE, def.maturity());
+        assertEquals(MultiblockMaturity.STABLE.notice(), def.maturityNotice());
     }
 
     @Test
@@ -328,7 +325,7 @@ class MultiblockArchitectureTest {
             StarterSmelterDefinition.INSTANCE,
             entry.multiblock(),
             "KnowledgeEntry and gameplay MUST share identical definition singleton");
-        assertEquals(MultiblockMaturity.EXPERIMENTAL, entry.maturity());
-        assertEquals("Experimental structure — layout may change during development.", entry.maturityNotice());
+        assertEquals(MultiblockMaturity.STABLE, entry.maturity());
+        assertFalse(entry.isExperimental(), "the browser shows no EXPERIMENTAL banner");
     }
 }
