@@ -53,18 +53,23 @@ public final class ContainerStarterSmelter extends Container {
         return tileEntity.isUseableByPlayer(player);
     }
 
+    private int sinceSent;
+    private net.minecraft.nbt.NBTTagCompound lastSent;
+
+    /** The smelter's state to the player with the screen open: four times a second, and only when it has moved. */
     @Override
     public void detectAndSendChanges() {
         super.detectAndSendChanges();
-        for (Object crafter : this.crafters) {
-            if (crafter instanceof EntityPlayerMP) {
-                EntityPlayerMP player = (EntityPlayerMP) crafter;
-                Packet pkt = tileEntity.getDescriptionPacket();
-                if (pkt != null) {
-                    player.playerNetServerHandler.sendPacket(pkt);
-                }
-            }
-        }
+        if (++sinceSent < 5) return;
+        sinceSent = 0;
+        net.minecraft.nbt.NBTTagCompound now = new net.minecraft.nbt.NBTTagCompound();
+        tileEntity.writeToNBT(now);
+        if (now.equals(lastSent)) return;
+        lastSent = now;
+        Packet pkt = tileEntity.getDescriptionPacket();
+        if (pkt == null) return;
+        for (Object crafter : this.crafters)
+            if (crafter instanceof EntityPlayerMP) ((EntityPlayerMP) crafter).playerNetServerHandler.sendPacket(pkt);
     }
 
     @Override

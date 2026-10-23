@@ -112,6 +112,9 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
         return temp;
     }
 
+    /** The state last sent to watching players by the periodic sync. */
+    private NBTTagCompound lastSynced;
+
     public VesselState vesselState() {
         return vesselState;
     }
@@ -419,9 +422,6 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
                 ItemGenericComponent.saveThermalState(hearthWorkpiece, newThermal);
                 markDirty();
             }
-            if (worldObj != null && worldObj.getTotalWorldTime() % 20L == 0L) {
-                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-            }
         }
 
         // 4. Only actively pumped, connected nozzles supply forced air. Draft expires even without fuel.
@@ -436,10 +436,10 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
             markDirty();
         }
 
-        // 5. Periodic network synchronization for tracking clients
-        if (worldObj != null && worldObj.getTotalWorldTime() % 10L == 0L) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        }
+        // 5. Periodic sync for the players who can see it, only when its state has moved (a cold smelter sends
+        // nothing), and without resending the block (its melt and workpiece are drawn by its special renderer).
+        if (worldObj != null && worldObj.getTotalWorldTime() % 10L == 0L)
+            lastSynced = naturalexceptions.minecraft.network.TileSync.toWatchersIfChanged(this, lastSynced);
     }
 
     public boolean insertFuel(ItemStack stack) {

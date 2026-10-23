@@ -100,7 +100,7 @@ public class TileEntityForgingAnvil extends TileEntity implements IInventory {
             coolWorkpiece(0.05); // 1 tick
             if (worldObj != null && worldObj.getTotalWorldTime() % 20L == 0L) {
                 markDirty();
-                worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+                naturalexceptions.minecraft.network.TileSync.toWatchers(this); // cooling: its renderer redraws it
             }
         }
     }
@@ -523,10 +523,8 @@ public class TileEntityForgingAnvil extends TileEntity implements IInventory {
 
     @Override
     public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity pkt) {
+        // Its workpiece is drawn by its special renderer; nothing in the chunk needs rebuilding.
         readFromNBT(pkt.func_148857_g());
-        if (worldObj != null) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        }
     }
 
     // --- IInventory Implementation (1 slot) ---

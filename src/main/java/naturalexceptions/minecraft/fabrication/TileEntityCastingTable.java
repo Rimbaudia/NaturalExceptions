@@ -9,15 +9,15 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
 
-import naturalexceptions.core.calendar.NaturalCalendar;
-import naturalexceptions.core.calendar.SeasonalContext;
-import naturalexceptions.core.worldgen.OverworldGeneration;
-import naturalexceptions.core.worldgen.OverworldSample;
 import naturalexceptions.core.anomaly.P8EnvironmentQuery;
 import naturalexceptions.core.anomaly.ResolvedEnvironmentalContext;
-import naturalexceptions.minecraft.persistence.NEWorldSavedData;
+import naturalexceptions.core.calendar.NaturalCalendar;
+import naturalexceptions.core.calendar.SeasonalContext;
 import naturalexceptions.core.thermal.ActiveThermalState;
+import naturalexceptions.core.worldgen.OverworldGeneration;
+import naturalexceptions.core.worldgen.OverworldSample;
 import naturalexceptions.minecraft.item.ItemCastingMold;
+import naturalexceptions.minecraft.persistence.NEWorldSavedData;
 
 /**
  * TileEntity hosting a physical casting mold on top of the casting table.
@@ -74,7 +74,7 @@ public class TileEntityCastingTable extends TileEntity implements IInventory {
                     worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
                 } else if (worldObj.getTotalWorldTime() % 20L == 0L) {
                     markDirty();
-                    worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+                    naturalexceptions.minecraft.network.TileSync.toWatchers(this); // cooling: its renderer redraws it
                 }
             }
         }
@@ -115,16 +115,32 @@ public class TileEntityCastingTable extends TileEntity implements IInventory {
         if (seasonalCache != null && seasonalCacheDay == day) return seasonalCache;
         NEWorldSavedData saved = NEWorldSavedData.get(worldObj);
         if (saved == null || saved.metadata() == null || saved.p8() == null) return null;
-        OverworldGeneration generation = new OverworldGeneration(worldObj.getSeed(), saved.metadata().worldgenEpoch());
+        OverworldGeneration generation = new OverworldGeneration(
+            worldObj.getSeed(),
+            saved.metadata()
+                .worldgenEpoch());
         OverworldSample sample = generation.sample(xCoord, zCoord);
         if (!nearbyP8SitesRefined) {
-            if (saved.p8().ensureAnomaliesNear(xCoord, zCoord)) saved.markDirty();
+            if (saved.p8()
+                .ensureAnomaliesNear(xCoord, zCoord)) saved.markDirty();
             nearbyP8SitesRefined = true;
         }
-        ResolvedEnvironmentalContext environmental = P8EnvironmentQuery.at(sample, xCoord, zCoord,
-            saved.p8().anomalies(), saved.p8().activeInfluencesAt(xCoord, zCoord, tick));
-        seasonalCache = SeasonalContext.query(sample, NaturalCalendar.at(tick), saved.p8().strangeSeasonAt(tick),
-            environmental.moisture(), environmental.waterAvailability(), environmental.nocturnalReactivity());
+        ResolvedEnvironmentalContext environmental = P8EnvironmentQuery.at(
+            sample,
+            xCoord,
+            zCoord,
+            saved.p8()
+                .anomalies(),
+            saved.p8()
+                .activeInfluencesAt(xCoord, zCoord, tick));
+        seasonalCache = SeasonalContext.query(
+            sample,
+            NaturalCalendar.at(tick),
+            saved.p8()
+                .strangeSeasonAt(tick),
+            environmental.moisture(),
+            environmental.waterAvailability(),
+            environmental.nocturnalReactivity());
         seasonalWaterReaction = environmental.waterReactionIntensity();
         seasonalCacheDay = day;
         return seasonalCache;
@@ -165,8 +181,8 @@ public class TileEntityCastingTable extends TileEntity implements IInventory {
         try {
             NEWorldSavedData saved = NEWorldSavedData.get(worldObj);
             if (saved == null) return false;
-            naturalexceptions.core.fluid.FluidParcel parcel = saved.fluids().parcelAt(
-                new naturalexceptions.core.fluid.FluidCellKey(worldObj.provider.dimensionId, x, y, z));
+            naturalexceptions.core.fluid.FluidParcel parcel = saved.fluids()
+                .parcelAt(new naturalexceptions.core.fluid.FluidCellKey(worldObj.provider.dimensionId, x, y, z));
             return P8EnvironmentQuery.qualifiesAsLiquidWater(parcel);
         } catch (RuntimeException ignored) {
             return false;
@@ -349,10 +365,8 @@ public class TileEntityCastingTable extends TileEntity implements IInventory {
 
     @Override
     public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity pkt) {
+        // Its contents are drawn by its special renderer; nothing in the chunk needs rebuilding.
         readFromNBT(pkt.func_148857_g());
-        if (worldObj != null) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        }
     }
 
     // --- IInventory Implementation (1 slot) ---
