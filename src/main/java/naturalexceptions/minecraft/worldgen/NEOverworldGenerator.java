@@ -72,7 +72,8 @@ public final class NEOverworldGenerator implements IWorldGenerator {
         adjustBaseTerrain(world, chunkX, chunkZ, samples);
         history.mark(WorldgenStage.BASE_TERRAIN);
 
-        applyGeology(world, chunkX, chunkZ, samples);
+        // Geology places no blocks of its own (a band of sandstone or cobblestone under the land looked wrong); its
+        // provinces still decide where copper lies (CopperDepositField).
         history.mark(WorldgenStage.GEOLOGY);
         // Hydrology is a coarse drainage/moisture context consumed by the surface derivation below.
         history.mark(WorldgenStage.HYDROLOGY);
@@ -166,28 +167,6 @@ public final class NEOverworldGenerator implements IWorldGenerator {
     }
 
     /** Materializes a thin province bed as recognizable vanilla stone-family blocks. */
-    private void applyGeology(World world, int chunkX, int chunkZ, OverworldSample[][] samples) {
-        int originX = chunkX * 16;
-        int originZ = chunkZ * 16;
-        for (int localX = 0; localX < 16; localX++) {
-            for (int localZ = 0; localZ < 16; localZ++) {
-                OverworldSample sample = samples[localX][localZ];
-                Block host = sample.geology() == naturalexceptions.core.worldgen.GeologicalProvince.SEDIMENTARY
-                    ? Blocks.sandstone
-                    : sample.geology() == naturalexceptions.core.worldgen.GeologicalProvince.GRANITIC
-                        ? Blocks.cobblestone
-                        : Blocks.stone;
-                int firstLayer = 32 + (int) Math.round(sample.elevationTendency() * 6.0);
-                for (int depth = 0; depth < 4; depth++) {
-                    int y = firstLayer + depth;
-                    if (world.getBlock(originX + localX, y, originZ + localZ) == Blocks.stone && host != Blocks.stone) {
-                        world.setBlock(originX + localX, y, originZ + localZ, host, 0, 2);
-                    }
-                }
-            }
-        }
-    }
-
     private void applySoilAndSurface(World world, int chunkX, int chunkZ, OverworldSample[][] samples) {
         int originX = chunkX * 16;
         int originZ = chunkZ * 16;
