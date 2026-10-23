@@ -985,6 +985,8 @@ final class LandmarkMaterializer {
                 return SkyCacheLoot.Tier.CHART;
             case QUARRY:
                 return SkyCacheLoot.Tier.QUARRY;
+            case HOUSEHOLD:
+                return SkyCacheLoot.Tier.HOUSEHOLD;
             case VAULT_TREASURE:
                 return SkyCacheLoot.Tier.VAULT_TREASURE;
             case VAULT_RICH:

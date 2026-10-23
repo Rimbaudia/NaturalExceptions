@@ -149,7 +149,7 @@ final class IslandLandmarks {
         int g = s.ground;
         level(s.x0, s.z0, s.x1, s.z1, g);
         building("woodcutters_hut", s.x0 + 2, s.z0 + 2, null, g);
-        shed(s.x0 + 16, s.z0 + 3, g, 1, Loot.STORE);
+        shed(s.x0 + 16, s.z0 + 3, g, 1, Loot.HOUSEHOLD);
         // The log pile, cut lengths lying east to west, stacked two high.
         for (int x = s.x0 + 4; x <= s.x0 + 10; x++) {
             for (int z = s.z1 - 5; z <= s.z1 - 3; z++) put(x, g + 1, z, Block.LOG, 1 | 16);
@@ -325,7 +325,7 @@ final class IslandLandmarks {
         put(tx + 2, g + 9, tz - 1, Block.BARREL);
         put(tx - 1, g + 17, tz + 1, Block.WOODEN_TABLE, 1);
         put(tx - 2, g + 17, tz + 1, Block.CHAIR, 1 << 2 | SkyDungeon.WEST);
-        put(tx + 2, g + 17, tz + 2, Block.CHEST, 0, Loot.STORE, null);
+        put(tx + 2, g + 17, tz + 2, Block.CHEST, 0, Loot.HOUSEHOLD, null);
         // A lantern hanging from the ceiling of each storey, in the middle of the room.
         for (int ceiling : new int[] { g + 7, g + 15, g + 23 })
             put(tx, ceiling, tz + 1, Block.LAMP, SkyDungeon.LAMP_HANGING);

@@ -241,7 +241,12 @@ public final class SkyDungeon {
         /** The entrance hall's chest: a Surveyor's Chart of the dungeon, and a few supplies. */
         CHART,
         /** A quarry's tool chest: a Mason's Chisel, a pick, rope and bread. */
-        QUARRY
+        QUARRY,
+        /**
+         * What the dead left in their houses and outbuildings: a pantry, a wardrobe, a workshop or a study's things,
+         * now and then something better, never a Sky Key (the key room stays the way in).
+         */
+        HOUSEHOLD
     }
 
     /** How a corridor looks. */

@@ -78,8 +78,7 @@ final class RoomWriter {
                     int wall = nearestSolid(template, rotation, tx, y, tz);
                     int front = wall < 0 ? SkyDungeon.SOUTH : (wall + 2) & 3;
                     d.put(x, wy, z, Block.CUTTING_BENCH, BENCHES.indexOf(c) | front << 3);
-                }
-                else if (c == '\u03c4') {
+                } else if (c == '\u03c4') {
                     int wall = nearestSolid(template, rotation, tx, y, tz);
                     d.put(x, wy, z, Block.TANNING_RACK, wall < 0 ? SkyDungeon.SOUTH : (wall + 2) & 3);
                 } else if (CHAIRS.indexOf(c) >= 0)
@@ -201,10 +200,10 @@ final class RoomWriter {
                 d.put(x, y, z, Block.WINDBLOOM);
                 break;
             case 'c':
-                chest(x, y, z, role, true);
+                chest(x, y, z, role, true, template.building);
                 break;
             case 'C':
-                chest(x, y, z, role, false);
+                chest(x, y, z, role, false, template.building);
                 break;
             case 's':
                 if (role == RoomTemplate.Role.GUARD) d.put(x, y, z, Block.SPAWNER, 0, null, mob(template, x, z));
@@ -467,13 +466,16 @@ final class RoomWriter {
         else d.put(x, wy, z, Block.BED, found);
     }
 
-    /** 'c' is the room's chest (whose loot the role decides); 'C' the second one, if the role has one. */
-    private void chest(int x, int y, int z, RoomTemplate.Role role, boolean primary) {
+    /**
+     * 'c' is the room's chest (whose loot the role decides); 'C' the second one, if the role has one. A store's chests
+     * in a building on the surface (a house, a shop) hold household things, not a dungeon store's.
+     */
+    private void chest(int x, int y, int z, RoomTemplate.Role role, boolean primary, boolean building) {
         Loot loot = null;
         switch (role) {
             case STORE:
             case SECRET:
-                loot = primary || d.noise.unit3(x, y, z, 25) < 0.5 ? Loot.STORE : null;
+                loot = primary || d.noise.unit3(x, y, z, 25) < 0.5 ? building ? Loot.HOUSEHOLD : Loot.STORE : null;
                 break;
             case KEY:
                 loot = primary ? Loot.KEY : null;

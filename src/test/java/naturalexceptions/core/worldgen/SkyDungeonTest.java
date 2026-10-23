@@ -94,6 +94,32 @@ final class SkyDungeonTest {
         return samples;
     }
 
+    /**
+     * A citadel's town houses and outbuildings hold household things, not dungeon store loot (which can hold a spare
+     * Sky Key): the town no longer leaks the way past its key room.
+     */
+    @Test
+    void aCitadelsHousesHoldHouseholdLootNotTheDungeonsStores() {
+        int citadels = 0;
+        for (Sample sample : samples()) {
+            if (sample.dungeon.kind() != SkyDungeon.Kind.CITADEL) continue;
+            citadels++;
+            int household = 0, store = 0;
+            for (Piece p : sample.dungeon.pieces()) {
+                if (p.loot == SkyDungeon.Loot.HOUSEHOLD) household++;
+                if (p.loot == SkyDungeon.Loot.STORE) store++;
+            }
+            assertTrue(household >= 10, "a citadel's town has household chests, found " + household);
+            assertTrue(
+                store < household,
+                "dungeon stores are its few rooms below, not every house: " + store
+                    + " stores, "
+                    + household
+                    + " houses");
+        }
+        assertTrue(citadels > 0, "the samples include a citadel");
+    }
+
     private static List<Sample> sanctums() {
         List<Sample> out = new ArrayList<>();
         for (Sample s : samples()) if (s.dungeon.kind() == SkyDungeon.Kind.SANCTUM) out.add(s);
