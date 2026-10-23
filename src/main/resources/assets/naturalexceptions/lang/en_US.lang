@@ -92,6 +92,7 @@ item.bandOfMending.name=Band of Mending
 item.skyfall.name=Skyfall
 item.shardcaster.name=Shardcaster
 entity.naturalexceptions.skyfall_star.name=Falling Star
+entity.naturalexceptions.fallen_star.name=Star Rain Meteor
 entity.naturalexceptions.stormglass_bolt.name=Stormglass Bolt
 entity.naturalexceptions.sky_warden.name=Sky Warden
 entity.naturalexceptions.stormwisp.name=Stormwisp

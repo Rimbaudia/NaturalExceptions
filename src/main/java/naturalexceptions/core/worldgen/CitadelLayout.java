@@ -1586,7 +1586,8 @@ final class CitadelLayout {
             }
         }
         for (int x = -1; x <= 1; x++) for (int z = -1; z <= 1; z++) d.put(tx + x, ground + 7, tz + z, Block.PLANKS, 1);
-        d.stone(tx, ground + 1, tz - 2);
+        // The ladder up to the floor, on a pillar of its own the whole way (a ladder on air drops off).
+        for (int y = ground + 1; y <= ground + 8; y++) d.stone(tx, y, tz - 2);
         for (int y = ground + 1; y <= ground + 7; y++) d.put(tx, y, tz - 1, Block.LADDER, 3);
         d.put(tx + 1, ground + 8, tz + 1, Block.CHEST, 0, Loot.STORE, null);
         for (int k = 0; k < 12; k++) {

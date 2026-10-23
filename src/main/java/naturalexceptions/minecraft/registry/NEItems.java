@@ -276,11 +276,11 @@ public final class NEItems {
             GameRegistry.registerItem(foundryNotes, "foundry_notes");
             GameRegistry.registerItem(fieldAssay, "field_assay");
             GameRegistry.registerItem(knowledgeRecord, "knowledge_record");
+            // Paper and a feather over two books. (A trailing blank row once made 1.7.10 read it two wide.)
             GameRegistry.addShapedRecipe(
                 new ItemStack(foundryNotes),
-                " PF",
-                " BB",
-                "  ",
+                "PF",
+                "BB",
                 'P',
                 net.minecraft.init.Items.paper,
                 'F',
