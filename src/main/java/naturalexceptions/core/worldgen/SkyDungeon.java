@@ -396,15 +396,74 @@ public final class SkyDungeon {
         }
     };
 
+    /**
+     * Layouts being worked out ahead of need, on a thread of their own: a citadel is some 360,000 pieces and a few
+     * hundred milliseconds of work, which on the server thread is a stall the moment a player first comes near.
+     */
+    private static final Map<String, java.util.concurrent.Future<SkyDungeon>> BUILDING = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.concurrent.ExecutorService BUILDER = java.util.concurrent.Executors
+        .newSingleThreadExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "Natural Exceptions dungeon layout");
+            thread.setDaemon(true);
+            thread.setPriority(Thread.MIN_PRIORITY);
+            return thread;
+        });
+
+    private static String key(SkyIslands field, SkyIslands.Island island) {
+        return field.seed() + ":" + island.cellX() + ":" + island.cellZ();
+    }
+
+    private static SkyDungeon cached(String key) {
+        synchronized (CACHE) {
+            return CACHE.get(key);
+        }
+    }
+
     /** The dungeon of a grand island (computed once, then reused by every chunk it touches), or null. */
     public static SkyDungeon of(SkyIslands field, SkyIslands.Island island) {
         Kind kind = field.dungeonKind(island);
         if (kind == null) return null;
-        String key = field.seed() + ":" + island.cellX() + ":" + island.cellZ();
-        synchronized (CACHE) {
-            SkyDungeon cached = CACHE.get(key);
-            if (cached != null) return cached;
+        String key = key(field, island);
+        SkyDungeon done = cached(key);
+        if (done != null) return done;
+        // Being worked out already: wait for that rather than doing it twice.
+        java.util.concurrent.Future<SkyDungeon> building = BUILDING.get(key);
+        if (building != null) try {
+            return building.get();
+        } catch (InterruptedException e) {
+            Thread.currentThread()
+                .interrupt();
+        } catch (java.util.concurrent.ExecutionException e) {
+            // Build it here instead, below, where a failure surfaces in the caller.
         }
+        return build(field, island, kind, key);
+    }
+
+    /** The dungeon if it is already worked out; else starts working it out and returns null, never waiting. */
+    public static SkyDungeon ifReady(SkyIslands field, SkyIslands.Island island) {
+        if (field.dungeonKind(island) == null) return null;
+        SkyDungeon done = cached(key(field, island));
+        if (done == null) prefetch(field, island);
+        return done;
+    }
+
+    /** Starts working out a grand island's dungeon on the layout thread, if it isn't known or under way. */
+    public static void prefetch(final SkyIslands field, final SkyIslands.Island island) {
+        final Kind kind = field.dungeonKind(island);
+        if (kind == null) return;
+        final String key = key(field, island);
+        if (cached(key) != null || BUILDING.containsKey(key)) return;
+        java.util.concurrent.FutureTask<SkyDungeon> task = new java.util.concurrent.FutureTask<>(() -> {
+            try {
+                return build(field, island, kind, key);
+            } finally {
+                BUILDING.remove(key);
+            }
+        });
+        if (BUILDING.putIfAbsent(key, task) == null) BUILDER.execute(task);
+    }
+
+    private static SkyDungeon build(SkyIslands field, SkyIslands.Island island, Kind kind, String key) {
         SkyDungeon dungeon = new SkyDungeon(field, island, kind);
         if (kind == Kind.SANCTUM) new SanctumLayout(dungeon).build();
         else new CitadelLayout(dungeon).build();

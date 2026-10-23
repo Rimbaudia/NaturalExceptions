@@ -27,9 +27,21 @@ public final class DungeonBeacons {
     public static final class Beacon {
 
         public final int[] gate, chest;
-        /** The dungeon itself, and its name for keeping what a player has walked of it. */
-        public SkyDungeon dungeon;
+        /** Its name, for keeping what a player has walked of it. */
         public String name;
+        /** Where it is: the layout itself is fetched when wanted, so a beacon doesn't keep a whole dungeon alive. */
+        private SkyIslands islands;
+        private SkyIslands.Island island;
+
+        /** The dungeon's layout (from the cache of a few, worked out again if it has fallen out). */
+        public SkyDungeon dungeon() {
+            return SkyDungeon.of(islands, island);
+        }
+
+        /** The layout if it is to hand now, without waiting; null if it has to be worked out again first. */
+        SkyDungeon dungeonIfReady() {
+            return SkyDungeon.ifReady(islands, island);
+        }
 
         Beacon(int[] gate, int[] chest) {
             this.gate = gate;
@@ -75,17 +87,37 @@ public final class DungeonBeacons {
         return best;
     }
 
+    /**
+     * The island's beacon, or null if it has none or its dungeon is still being worked out (it is then started,
+     * on the layout thread: the server thread never waits for it here).
+     */
     private static synchronized Beacon beacon(SkyIslands islands, SkyIslands.Island island) {
         String key = island.cellX() + ":" + island.cellZ();
         if (BEACONS.containsKey(key)) return BEACONS.get(key);
-        SkyDungeon dungeon = SkyDungeon.of(islands, island);
-        Beacon beacon = dungeon == null ? null : locate(dungeon);
+        SkyDungeon dungeon = SkyDungeon.ifReady(islands, island);
+        if (dungeon == null) return null; // not yet: asked again in a second
+        Beacon beacon = locate(dungeon);
         if (beacon != null) {
-            beacon.dungeon = dungeon;
             beacon.name = key;
+            beacon.islands = islands;
+            beacon.island = island;
         }
         BEACONS.put(key, beacon);
         return beacon;
+    }
+
+    /** How far out a dungeon's layout is started ahead of a player, so it's ready before anything needs it. */
+    static final int PREFETCH_REACH = 2 * REACH;
+
+    /** Starts the layouts of the dungeons near (x, z) on the layout thread. */
+    static void prefetchNear(World world, double x, double z) {
+        if (world == null || world.provider.dimensionId != 0) return;
+        SkyIslands islands = field(world);
+        for (SkyIslands.Island island : islands.near(
+            (int) x - PREFETCH_REACH,
+            (int) z - PREFETCH_REACH,
+            (int) x + PREFETCH_REACH,
+            (int) z + PREFETCH_REACH)) if (island.hasDungeon()) SkyDungeon.prefetch(islands, island);
     }
 
     /** The middle of the key gate and the key chest of a laid-out dungeon (null if it has either missing). */
@@ -139,10 +171,12 @@ public final class DungeonBeacons {
         if (event.phase != TickEvent.Phase.END || player.worldObj.isRemote) return;
         long tick = player.worldObj.getTotalWorldTime() + player.getEntityId();
         if (tick % 20 != 0) return;
+        if (tick % 100 == 0) prefetchNear(player.worldObj, player.posX, player.posZ);
         Beacon beacon = nearest(player.worldObj, player.posX, player.posZ);
         if (beacon == null) return;
-        // The room the player stands in goes on their chart.
-        int room = DungeonChart.roomAt(beacon.dungeon, player.posX, player.posY, player.posZ);
+        // The room the player stands in goes on their chart (once the layout is to hand; never waiting for it).
+        SkyDungeon here = beacon.dungeonIfReady();
+        int room = here == null ? -1 : DungeonChart.roomAt(here, player.posX, player.posY, player.posZ);
         if (room >= 0) DungeonChart.visit(charts(player), beacon.name, room);
         if (tick % CHIME_TICKS != 0) return;
         int[] c = beacon.chest;
@@ -168,7 +202,7 @@ public final class DungeonBeacons {
         Beacon beacon = nearest(player.worldObj, player.posX, player.posZ);
         if (beacon == null) return false;
         DungeonChart chart = DungeonChart.of(
-            beacon.dungeon,
+            beacon.dungeon(),
             DungeonChart.visited(charts(player), beacon.name),
             player.posX,
             player.posY,
