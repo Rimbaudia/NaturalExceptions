@@ -37,6 +37,8 @@ public final class NEBlocks {
     public static Block cloud;
     /** The glow of a Lamplighter's Cap (not in the creative tab). */
     public static Block lamplight;
+    /** A Gale Core sealed in an arch's keystone. */
+    public static Block galeKeystone;
     public static Block skystoneRock;
     public static Block skystoneBricks;
     public static Block skystoneDecor;
@@ -141,6 +143,7 @@ public final class NEBlocks {
         magmaRock = new naturalexceptions.minecraft.block.BlockMagmaRock().setCreativeTab(NECreativeTab.INSTANCE);
         cloud = new naturalexceptions.minecraft.block.BlockCloud().setCreativeTab(NECreativeTab.INSTANCE);
         lamplight = new naturalexceptions.minecraft.block.BlockLamplight();
+        galeKeystone = new naturalexceptions.minecraft.block.BlockGaleKeystone().setCreativeTab(NECreativeTab.INSTANCE);
         skystoneRock = new naturalexceptions.minecraft.block.BlockSkystoneRock().setCreativeTab(NECreativeTab.INSTANCE);
         skystoneBricks = new naturalexceptions.minecraft.block.BlockSkystoneBricks()
             .setCreativeTab(NECreativeTab.INSTANCE);
@@ -285,6 +288,7 @@ public final class NEBlocks {
             GameRegistry.registerBlock(magmaRock, "magma_rock");
             GameRegistry.registerBlock(cloud, "cloud");
             GameRegistry.registerBlock(lamplight, "lamplight");
+            GameRegistry.registerBlock(galeKeystone, "gale_keystone");
             GameRegistry.registerBlock(skystoneRock, "skystone");
             GameRegistry.registerBlock(
                 skystoneBricks,

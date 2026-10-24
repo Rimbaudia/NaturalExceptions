@@ -1042,7 +1042,7 @@ final class LandmarkMaterializer {
                             break;
                         case ARCH:
                         default:
-                            changed += archColumn(world, landmark, x, z);
+                            changed += archColumn(world, field, landmark, x, z);
                             break;
                     }
                 }
@@ -1117,7 +1117,100 @@ final class LandmarkMaterializer {
             set(world, x, y, z, block, 0);
             changed++;
         }
+        Landmarks.Pillar lookout = naturalexceptions.core.worldgen.HermitLookout.pillar(spires);
+        if (lookout != null) changed += lookoutColumn(world, spires, field, lookout, x, z, ground);
         return changed;
+    }
+
+    /**
+     * A Hermit's lookout in this column (see {@link naturalexceptions.core.worldgen.HermitLookout}): the post on
+     * top, and the ladder shaft down the pillar's heart with its passage out to the south at the foot.
+     */
+    private static int lookoutColumn(World world, Landmarks.Landmark spires, Landmarks field, Landmarks.Pillar pillar,
+        int x, int z, int ground) {
+        int dx = x - pillar.x, dz = z - pillar.z;
+        int floor = naturalexceptions.core.worldgen.HermitLookout.floorY(pillar);
+        int changed = 0;
+        if (dx == 0 && dz == 0) {
+            // The ladder hangs on the shaft's north wall, which the pillar always keeps.
+            for (int y = ground + 1; y < floor; y++) set(world, x, y, z, Blocks.ladder, 3);
+            changed += floor - ground - 1;
+        } else if (dx == 0 && dz > 0 && dz <= naturalexceptions.core.worldgen.HermitLookout.passageLength(pillar)) {
+            for (int y = ground + 1; y <= ground + 2; y++) {
+                if (!field.spireAt(spires, x, y, z, ground)) continue;
+                set(world, x, y, z, Blocks.air, 0);
+                changed++;
+            }
+        }
+        double columnRoll = fieldRoll(x, floor, z);
+        for (int dy = -1; dy <= naturalexceptions.core.worldgen.HermitLookout.ROOF_HEIGHT; dy++) {
+            int y = floor + dy;
+            naturalexceptions.core.worldgen.HermitLookout.Part part = naturalexceptions.core.worldgen.HermitLookout
+                .partAt(dx, dy, dz, columnRoll, fieldRoll(x, y, z));
+            switch (part) {
+                case NONE:
+                    continue;
+                case FOOTING:
+                    if (world.getBlock(x, y, z)
+                        .getMaterial()
+                        .isSolid()) continue;
+                    set(world, x, y, z, Blocks.stonebrick, 0);
+                    break;
+                case FLOOR:
+                    set(world, x, y, z, Blocks.stonebrick, 0);
+                    break;
+                case FLOOR_MOSSY:
+                    set(world, x, y, z, Blocks.stonebrick, 1);
+                    break;
+                case FLOOR_CRACKED:
+                    set(world, x, y, z, Blocks.stonebrick, 2);
+                    break;
+                case PARAPET:
+                    set(world, x, y, z, Blocks.cobblestone_wall, fieldRoll(z, y, x) < 0.5 ? 1 : 0);
+                    break;
+                case POST:
+                    set(world, x, y, z, Blocks.log, 1);
+                    break;
+                case ROOF:
+                    set(world, x, y, z, Blocks.wooden_slab, 1);
+                    break;
+                case HATCH:
+                    set(world, x, y, z, Blocks.trapdoor, 8); // shut, flush with the floor
+                    break;
+                case BED_FOOT:
+                    set(world, x, y, z, Blocks.bed, 0); // its head to the south
+                    break;
+                case BED_HEAD:
+                    set(world, x, y, z, Blocks.bed, 8);
+                    break;
+                case CHEST:
+                    lookoutChest(world, x, y, z);
+                    break;
+                case CLEAR:
+                default:
+                    set(world, x, y, z, Blocks.air, 0);
+                    break;
+            }
+            changed++;
+        }
+        return changed;
+    }
+
+    /** The lookout's chest: what the last watch left, and the log of bearings to the sky-halls. */
+    private static void lookoutChest(World world, int x, int y, int z) {
+        world.setBlock(x, y, z, Blocks.chest, 0, 2);
+        TileEntity tile = world.getTileEntity(x, y, z);
+        if (!(tile instanceof TileEntityChest)) return;
+        TileEntityChest chest = (TileEntityChest) tile;
+        SkyCacheLoot
+            .fill(chest, x * 0x9E3779B97F4A7C15L ^ y * 31L ^ z * 0x165667B19E3779F9L, SkyCacheLoot.Tier.HOUSEHOLD);
+        net.minecraft.item.ItemStack log = LookoutLog.write(world, x, z);
+        for (int slot = 0; slot < chest.getSizeInventory(); slot++) {
+            if (chest.getStackInSlot(slot) != null) continue;
+            chest.setInventorySlotContents(slot, log);
+            return;
+        }
+        chest.setInventorySlotContents(0, log);
     }
 
     private static int sinkholeColumn(World world, Landmarks field, Landmarks.Landmark sinkhole, int x, int z) {
@@ -1133,16 +1226,23 @@ final class LandmarkMaterializer {
         return changed;
     }
 
-    private static int archColumn(World world, Landmarks.Landmark arch, int x, int z) {
+    private static int archColumn(World world, Landmarks field, Landmarks.Landmark arch, int x, int z) {
         double dx = x + 0.5 - arch.x(), dz = z + 0.5 - arch.z();
         if (dx * dx + dz * dz > arch.reach() * arch.reach()) return 0;
         int ground = groundY(world, x, z);
         int top = Landmarks.ARCH_BASE_Y + (int) Math.ceil(arch.height() + arch.width() * 1.6) + 1;
+        int[] middle = Landmarks.archMiddle(arch);
+        // Some arches keep a Gale Core sealed in their keystone, set in the underside of the span's middle.
+        boolean keystone = x == middle[0] && z == middle[1]
+            && field.hasGaleKeystone(arch)
+            && NEBlocks.galeKeystone != null;
         int changed = 0;
         for (int y = ground + 1; y <= top; y++) {
             if (!Landmarks.archAt(arch, x, y, z, ground)) continue;
             boolean cap = !Landmarks.archAt(arch, x, y + 1, z, ground);
-            set(world, x, y, z, cap ? Blocks.grass : Blocks.stone, 0);
+            boolean underside = keystone && !Landmarks.archAt(arch, x, y - 1, z, ground);
+            if (underside) keystone = false;
+            set(world, x, y, z, underside ? NEBlocks.galeKeystone : cap ? Blocks.grass : Blocks.stone, 0);
             changed++;
         }
         return changed;

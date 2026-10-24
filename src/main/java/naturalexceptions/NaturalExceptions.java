@@ -90,6 +90,7 @@ public final class NaturalExceptions {
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.gear.GearEvents());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.gear.GearMovement());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.gear.HatAndShoeEffects());
+        MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.worldgen.WindGates());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.event.StarRainWorldMaterializer());
         FMLCommonHandler.instance()
             .bus()

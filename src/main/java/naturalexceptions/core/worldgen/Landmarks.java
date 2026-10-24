@@ -122,6 +122,10 @@ public final class Landmarks {
         this.noise = new LandmarkNoise(seed ^ 0x4749414e54464541L);
     }
 
+    public long seed() {
+        return noise.seed();
+    }
+
     public Landmark atCell(long cellX, long cellZ) {
         if (noise.unit(cellX, cellZ, 1) >= PRESENCE) return null;
         int x = (int) (cellX * CELL + MARGIN + noise.unit(cellX, cellZ, 2) * (CELL - 2 * MARGIN));
@@ -276,6 +280,40 @@ public final class Landmarks {
     }
 
     // --- Arch ----------------------------------------------------------------------------------------------
+
+    /** The share of arches with a Gale Core sealed in their keystone. */
+    public static final double KEYSTONE_SHARE = 0.35;
+
+    /** Whether this arch's keystone holds a sealed Gale Core. */
+    public boolean hasGaleKeystone(Landmark arch) {
+        return arch.kind == Kind.ARCH && noise.unit(arch.cellX, arch.cellZ, 31) < KEYSTONE_SHARE;
+    }
+
+    /** The column through the middle of an arch's span, {x, z}: where its keystone is. */
+    public static int[] archMiddle(Landmark arch) {
+        double[] a = arch.path[0], b = arch.path[1];
+        return new int[] { (int) Math.floor((a[0] + b[0]) / 2.0), (int) Math.floor((a[1] + b[1]) / 2.0) };
+    }
+
+    /**
+     * Whether (x, y, z) stands in the gateway under an arch: beneath the middle of its span (not near the legs),
+     * below the rock and no more than {@code GATE_DEPTH} under it.
+     */
+    public static boolean underSpan(Landmark arch, double x, double y, double z) {
+        if (arch.kind != Kind.ARCH) return false;
+        double[] a = arch.path[0], b = arch.path[1];
+        double dx = b[0] - a[0], dz = b[1] - a[1];
+        double t = ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz);
+        if (t < 0.25 || t > 0.75) return false;
+        double px = a[0] + dx * t - x, pz = a[1] + dz * t - z;
+        double r = arch.width * (1.0 + 0.6 * Math.abs(t - 0.5) * 2.0);
+        if (px * px + pz * pz >= r * r) return false;
+        double underside = ARCH_BASE_Y + arch.height * Math.sin(t * Math.PI) - r;
+        return y < underside && y > underside - GATE_DEPTH;
+    }
+
+    /** How far below an arch's span the Wind Gate still reaches. */
+    public static final double GATE_DEPTH = 40.0;
 
     /** The arch's feet stand at this height; the span rises {@link Landmark#height()} above it. */
     public static final int ARCH_BASE_Y = 66;
