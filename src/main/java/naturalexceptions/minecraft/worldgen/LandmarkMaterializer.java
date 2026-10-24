@@ -623,6 +623,11 @@ final class LandmarkMaterializer {
                 Block furnace = (meta & 8) != 0 ? Blocks.lit_furnace : Blocks.furnace;
                 set(world, x, y, z, furnace, meta & 7);
                 world.setBlockMetadataWithNotify(x, y, z, meta & 7, 2);
+                if ((meta & naturalexceptions.core.worldgen.SkyDungeon.MID_WORK) != 0
+                    && world.getTileEntity(x, y, z) instanceof net.minecraft.inventory.IInventory)
+                    Wares.leftMidWork(
+                        (net.minecraft.inventory.IInventory) world.getTileEntity(x, y, z),
+                        wareSeed(x, y, z));
                 break;
             }
             case CRAFTING_TABLE:

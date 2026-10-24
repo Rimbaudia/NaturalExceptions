@@ -83,6 +83,8 @@ final class CitadelLayout {
         stairsUp(); // last in the town: nothing is paved over the flights
         hangGates();
         machines(); // on what is finished: the streets as they are
+        collapse();
+        overgrow();
         sites = new CitadelSites(this::ground);
         int town = MOAT_OUT + 1;
         sites.reserve("town", -town, -town, town, town);
@@ -690,6 +692,7 @@ final class CitadelLayout {
         Role role = t.roles.iterator()
             .next();
         new RoomWriter(d).write(t, rotation, cx + minX, cz + minZ, b, role, false);
+        if (DWELLINGS.contains(t.name)) dwellings.add(new int[] { minX, minZ, sizeX, sizeZ, side, t.height });
         garden(side, along, w, dp + 1, front, back, -1);
         // A short paved path from its door to the road.
         int[] path = plotPoint(side, along + w / 2, 0, front);
@@ -1156,6 +1159,119 @@ final class CitadelLayout {
         int facing = ox > 0 ? SkyDungeon.WEST : ox < 0 ? SkyDungeon.EAST : oz > 0 ? SkyDungeon.NORTH : SkyDungeon.SOUTH;
         put(dx, b + 1, dz, Block.BROKEN_AUTOMATON, facing | (random.nextInt(3) == 0 ? 4 : 0));
     }
+
+    // --- An age gone by -------------------------------------------------------------------------------------
+
+    /** The houses that may have fallen in, and how many do. */
+    private static final java.util.Set<String> DWELLINGS = new java.util.HashSet<>(
+        java.util.Arrays.asList(
+            "house_small",
+            "house_timber",
+            "house_corner",
+            "house_tall",
+            "row_house",
+            "cottage",
+            "merchant_house"));
+    static final int COLLAPSED = 3;
+    /** {minX, minZ, sizeX, sizeZ, side, height} of each dwelling placed. */
+    private final List<int[]> dwellings = new ArrayList<>();
+
+    /**
+     * A few houses have partly fallen in: the back corner of each has lost its roof and upper floor, and their rubble
+     * lies on the floor below, a block high, so the house can still be walked through. Fronts and doors stand.
+     */
+    private void collapse() {
+        List<int[]> houses = new ArrayList<>(dwellings);
+        Collections.shuffle(houses, random);
+        for (int[] h : houses.subList(0, Math.min(COLLAPSED, houses.size()))) {
+            int minX = h[0], minZ = h[1], sizeX = h[2], sizeZ = h[3], side = h[4], height = h[5];
+            // The back half, away from the street the house faces; one end of it.
+            int x0 = minX, x1 = minX + sizeX - 1, z0 = minZ, z1 = minZ + sizeZ - 1;
+            boolean along = side == 0 || side == 2; // the front runs along x
+            boolean low = random.nextBoolean();
+            if (along) {
+                if (side == 0) z1 = minZ + sizeZ / 2;
+                else z0 = minZ + sizeZ / 2;
+                if (low) x1 = minX + sizeX / 2;
+                else x0 = minX + sizeX / 2;
+            } else {
+                if (side == 1) x0 = minX + sizeX / 2;
+                else x1 = minX + sizeX / 2;
+                if (low) z1 = minZ + sizeZ / 2;
+                else z0 = minZ + sizeZ / 2;
+            }
+            for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) {
+                for (int y = b + 5; y <= b + height + 2; y++)
+                    if (d.at(cx + x, y, cz + z) != null) put(x, y, z, Block.AIR);
+                boolean inside = x > minX && x < minX + sizeX - 1 && z > minZ && z < minZ + sizeZ - 1;
+                if (inside && open(x, b + 1, z) && open(x, b + 2, z) && open(x, b + 3, z) && random.nextDouble() < 0.35)
+                    put(x, b + 1, z, random.nextBoolean() ? Block.GRAVEL : Block.ROCK, 1);
+            }
+        }
+    }
+
+    private boolean open(int dx, int y, int dz) {
+        SkyDungeon.Piece p = d.at(cx + dx, y, cz + dz);
+        return p != null && p.block == Block.AIR;
+    }
+
+    /** Whether (dx, dz) lies on the town's streets: the ring road, the four main streets, the back streets. */
+    static boolean onStreet(int dx, int dz) {
+        int ring = Math.max(Math.abs(dx), Math.abs(dz)), across = Math.min(Math.abs(dx), Math.abs(dz));
+        if (ring >= ROAD_IN && ring <= ROAD_OUT) return true;
+        if (across <= 2 && ring > ROAD_OUT && ring <= OUTER - THICK) return true;
+        return ring >= BACK_STREET && ring < BACK_FRONT && across <= ROAD_OUT + 2;
+    }
+
+    /** Chances: a street tile given back to grass, a wall stretch with vines on it, Skystone gone mossy. */
+    static final double GRASS_THROUGH = 0.07, VINES = 0.04, MOSS = 0.15;
+
+    /** Grass through the paving, vines up the walls, moss on the Skystone: the town is going back to the island. */
+    private void overgrow() {
+        int reach = OUTER - THICK - 1;
+        for (int dx = -reach; dx <= reach; dx++) for (int dz = -reach; dz <= reach; dz++) {
+            if (!onStreet(dx, dz) || !clearStreet(dx, dz)) continue;
+            if (random.nextDouble() < GRASS_THROUGH) {
+                put(dx, b, dz, Block.GRASS);
+                if (random.nextBoolean()) put(dx, b + 1, dz, Block.TALL_GRASS, 1);
+                continue;
+            }
+            for (int facing = 0; facing < 4; facing++) {
+                int wx = dx + (facing == SkyDungeon.EAST ? 1 : facing == SkyDungeon.WEST ? -1 : 0);
+                int wz = dz + (facing == SkyDungeon.SOUTH ? 1 : facing == SkyDungeon.NORTH ? -1 : 0);
+                SkyDungeon.Piece wall = d.at(cx + wx, b + 1, cz + wz);
+                if (wall == null || !MASONRY.contains(wall.block)) continue;
+                if (random.nextDouble() < VINES) {
+                    int up = 1 + random.nextInt(3);
+                    for (int y = b + 1; y <= b + up; y++) {
+                        SkyDungeon.Piece here = d.at(cx + dx, y, cz + dz), behind = d.at(cx + wx, y, cz + wz);
+                        if (here == null || here.block != Block.AIR
+                            || behind == null
+                            || !MASONRY.contains(behind.block)) break;
+                        put(dx, y, dz, Block.VINE, facing);
+                    }
+                    break;
+                }
+                for (int y = b + 1; y <= b + 3; y++) {
+                    SkyDungeon.Piece stone = d.at(cx + wx, y, cz + wz);
+                    if (stone != null && stone.block == Block.SKYSTONE && stone.meta == 0 && random.nextDouble() < MOSS)
+                        put(wx, y, wz, Block.SKYSTONE, 2);
+                }
+            }
+        }
+    }
+
+    /** What vines can cling to and moss can grow on. */
+    private static final java.util.EnumSet<Block> MASONRY = java.util.EnumSet.of(
+        Block.SKYSTONE,
+        Block.POLISHED,
+        Block.CHISELED,
+        Block.PILLAR,
+        Block.TILES,
+        Block.PLANKS,
+        Block.LOG,
+        Block.SKYSLATE,
+        Block.ROCK);
 
     /** Whether (dx, dz) is open paved street: floor at the ground, air for a body's height over it. */
     private boolean clearStreet(int dx, int dz) {

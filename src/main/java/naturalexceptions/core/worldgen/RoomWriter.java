@@ -254,10 +254,15 @@ final class RoomWriter {
                 d.put(x, y, z, Block.CAULDRON);
                 break;
             case 'O':
-                d.put(x, y, z, Block.FURNACE, awayFromWall(tx, tz, w, dp));
-                break;
             case '"':
-                d.put(x, y, z, Block.FURNACE, awayFromWall(tx, tz, w, dp) | 8);
+                // No fire has burned here in an age: hearths are cold, and a forge's furnace still holds the
+                // work it was left at.
+                d.put(
+                    x,
+                    y,
+                    z,
+                    Block.FURNACE,
+                    awayFromWall(tx, tz, w, dp) | (forge(template) ? SkyDungeon.MID_WORK : 0));
                 break;
             case 'N':
                 d.put(x, y, z, Block.CRAFTING_TABLE);
@@ -470,6 +475,11 @@ final class RoomWriter {
      * 'c' is the room's chest (whose loot the role decides); 'C' the second one, if the role has one. A store's chests
      * in a building on the surface (a house, a shop) hold household things, not a dungeon store's.
      */
+    /** A smithy or a forge: where a furnace was left mid-work. */
+    private static boolean forge(RoomTemplate template) {
+        return "smithy".equals(template.name) || "forge".equals(template.name);
+    }
+
     private void chest(int x, int y, int z, RoomTemplate.Role role, boolean primary, boolean building) {
         Loot loot = null;
         switch (role) {

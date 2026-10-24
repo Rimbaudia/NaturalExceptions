@@ -152,6 +152,45 @@ final class SkyDungeonTest {
         assertTrue(citadels > 0, "the samples include a citadel");
     }
 
+    /**
+     * The town is long dead: grass through its paving, vines up its walls, moss on its Skystone; a few houses fallen
+     * in, their rubble low enough to walk over; no fire burning anywhere, and a forge's furnace left mid-work.
+     */
+    @Test
+    void aCitadelIsLongDead() {
+        int citadels = 0;
+        for (Sample sample : samples()) {
+            if (sample.dungeon.kind() != SkyDungeon.Kind.CITADEL) continue;
+            citadels++;
+            int grass = 0, vines = 0, moss = 0, rubble = 0, midWork = 0;
+            int b = sample.dungeon.island.centreY() + 1;
+            for (Piece p : sample.dungeon.pieces()) {
+                if (p.block == Block.FURNACE) {
+                    assertEquals(0, p.meta & 8, "no fire burns in a dead city");
+                    if ((p.meta & SkyDungeon.MID_WORK) != 0) midWork++;
+                }
+                if (p.y == b && p.block == Block.GRASS) grass++;
+                if (p.block == Block.VINE) vines++;
+                if (p.block == Block.SKYSTONE && p.meta == 2 && p.y > b && p.y <= b + 3) moss++;
+                if (p.y == b + 1 && (p.block == Block.GRAVEL || p.block == Block.ROCK && p.meta == 1)) {
+                    rubble++;
+                    for (int up = 1; up <= 2; up++) {
+                        Piece over = sample.dungeon.at(p.x, p.y + up, p.z);
+                        assertTrue(
+                            over == null || over.block == Block.AIR,
+                            "rubble is a block high: it can be walked over");
+                    }
+                }
+            }
+            assertTrue(grass > 50, "grass through the paving: " + grass);
+            assertTrue(vines > 10, "vines on the walls: " + vines);
+            assertTrue(moss > 20, "moss on the Skystone: " + moss);
+            assertTrue(rubble > 5, "a few houses fallen in: " + rubble);
+            assertTrue(midWork > 0, "the smithy's furnace left mid-work");
+        }
+        assertTrue(citadels > 0, "the samples include a citadel");
+    }
+
     private static List<Sample> sanctums() {
         List<Sample> out = new ArrayList<>();
         for (Sample s : samples()) if (s.dungeon.kind() == SkyDungeon.Kind.SANCTUM) out.add(s);
@@ -322,9 +361,16 @@ final class SkyDungeonTest {
             }
             if (s.dungeon.kind() == SkyDungeon.Kind.CITADEL) {
                 int cx = s.island.centreX(), cz = s.island.centreZ(), b = s.island.centreY() + 1;
-                Piece street = s.dungeon.at(cx, b, cz + CitadelLayout.ROAD_OUT + 2);
-                assertNotNull(street, s.name() + ": the south street");
-                assertEquals(Block.TILES, street.block, s.name() + ": the streets are paved with tiles");
+                int tiles = 0;
+                for (int t = CitadelLayout.ROAD_OUT + 2; t <= CitadelLayout.ROAD_OUT + 12; t++) {
+                    Piece street = s.dungeon.at(cx, b, cz + t);
+                    assertNotNull(street, s.name() + ": the south street");
+                    assertTrue(
+                        street.block == Block.TILES || street.block == Block.GRASS,
+                        s.name() + ": the streets are paved with tiles (grass coming through here and there)");
+                    if (street.block == Block.TILES) tiles++;
+                }
+                assertTrue(tiles >= 7, s.name() + ": mostly paving still: " + tiles + " of 11");
             }
         }
     }
@@ -578,7 +624,8 @@ final class SkyDungeonTest {
             || block == Block.TORCH
             || block == Block.TALL_GRASS
             || block == Block.FLOWER
-            || block == Block.WINDBLOOM;
+            || block == Block.WINDBLOOM
+            || block == Block.VINE; // walked through in the game
     }
 
     @Test
@@ -931,6 +978,7 @@ final class SkyDungeonTest {
         Piece p = s.dungeon.at(x, y, z);
         if (p != null) return p.block == Block.AIR || p.block == Block.DOOR
             || p.block == Block.GUARD
+            || p.block == Block.VINE
             || p.block == Block.CARPET
             || p.block == Block.TORCH
             || p.block == Block.TALL_GRASS

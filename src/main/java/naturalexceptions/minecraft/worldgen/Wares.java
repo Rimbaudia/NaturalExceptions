@@ -9,37 +9,40 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
 /**
- * What a citadel's pantries and market stalls hold when found: a few common, everyday things, never treasure. A stall
- * sells what its counter shows (produce, fish, pottery, cloth); a pantry keeps a little food.
+ * What a citadel's pantries and market stalls hold when found: a few common, everyday things, never treasure. The
+ * city has been dead an age, so its food is long rotten: a produce stall shows spoiled potatoes and withered stems
+ * (its seeds still keep), a fish stall bones; a pantry holds dry goods and what went bad. Pottery and cloth keep.
  */
 public final class Wares {
 
     private Wares() {}
 
-    private static final Object[][] PRODUCE = { { Items.apple, 2, 6 }, { Items.carrot, 3, 8 }, { Items.potato, 3, 8 },
-        { Items.bread, 1, 4 }, { Items.wheat, 4, 12 }, { Items.melon, 3, 8 }, { Items.pumpkin_pie, 1, 2 } };
-    private static final Object[][] FISH = { { Items.fish, 2, 6 }, { Items.cooked_fished, 1, 4 },
-        { Items.string, 2, 5 }, { Items.fishing_rod, 1, 1 } };
+    private static final Object[][] PRODUCE = { { Items.poisonous_potato, 2, 6 }, { Blocks.deadbush, 1, 3 },
+        { Items.wheat_seeds, 4, 12 }, { Items.pumpkin_seeds, 2, 6 }, { Items.melon_seeds, 2, 6 },
+        { Items.rotten_flesh, 1, 3 } };
+    private static final Object[][] FISH = { { Items.bone, 2, 6 }, { Items.rotten_flesh, 1, 4 }, { Items.string, 2, 5 },
+        { Items.fishing_rod, 1, 1 } };
     private static final Object[][] POTTERY = { { Items.flower_pot, 1, 3 }, { Items.bowl, 2, 6 },
         { Items.brick, 4, 10 }, { Items.clay_ball, 4, 10 }, { Items.glass_bottle, 2, 5 } };
     private static final Object[][] CLOTH = { { Blocks.wool, 2, 6 }, { Items.string, 3, 8 }, { Items.leather, 1, 4 },
         { Blocks.carpet, 2, 4 }, { Items.dye, 2, 5 } };
-    private static final Object[][] PANTRY = { { Items.bread, 1, 3 }, { Items.apple, 1, 3 },
-        { Items.baked_potato, 1, 3 }, { Items.cooked_fished, 1, 2 }, { Items.cookie, 2, 6 }, { Items.carrot, 1, 4 } };
+    private static final Object[][] PANTRY = { { Items.sugar, 1, 4 }, { Items.wheat, 1, 4 },
+        { Items.wheat_seeds, 2, 8 }, { Items.poisonous_potato, 1, 3 }, { Items.rotten_flesh, 1, 2 },
+        { Items.bowl, 1, 2 } };
 
     private static final Object[][] SHELF = { { Items.book, 1, 2 }, { Items.bowl, 1, 3 }, { Items.glass_bottle, 1, 3 },
-        { Items.flower_pot, 1, 1 }, { Items.paper, 1, 4 }, { Items.bread, 1, 2 }, { Items.string, 1, 3 } };
+        { Items.flower_pot, 1, 1 }, { Items.paper, 1, 4 }, { Items.string, 1, 3 } };
     private static final Object[][] RACK = { { Items.wooden_sword, 1, 1 }, { Items.stone_sword, 1, 1 },
         { Items.bow, 1, 1 }, { Items.stone_axe, 1, 1 }, { Items.wooden_axe, 1, 1 } };
 
     private static final Object[][] CRATE = { { Items.arrow, 8, 24 }, { Items.string, 3, 8 }, { Items.flint, 2, 6 },
         { Items.coal, 3, 10 }, { Blocks.torch, 4, 12 }, { Items.leather, 1, 4 }, { Blocks.wool, 2, 5 },
-        { Items.bread, 2, 5 }, { Items.potato, 3, 8 }, { Items.wheat, 4, 10 }, { Items.feather, 2, 8 },
-        { Items.paper, 2, 6 }, { Items.bone, 2, 6 }, { Items.iron_ingot, 1, 3 } };
+        { Items.wheat_seeds, 4, 12 }, { Items.wheat, 4, 10 }, { Items.feather, 2, 8 }, { Items.paper, 2, 6 },
+        { Items.bone, 2, 6 }, { Items.iron_ingot, 1, 3 } };
     /** Now and then a crate holds something of the mod's own: {item supplier index, least, most}. */
     private static final int[][] CRATE_EXTRAS = { { 0, 1, 2 }, { 1, 1, 3 }, { 2, 1, 3 } };
-    private static final Object[][] BARREL = { { Items.apple, 12, 32 }, { Items.carrot, 16, 40 },
-        { Items.potato, 16, 40 }, { Items.sugar, 8, 24 }, { Items.wheat_seeds, 16, 48 }, { Items.wheat, 12, 32 } };
+    private static final Object[][] BARREL = { { Items.poisonous_potato, 8, 24 }, { Items.pumpkin_seeds, 8, 24 },
+        { Items.melon_seeds, 8, 24 }, { Items.sugar, 8, 24 }, { Items.wheat_seeds, 16, 48 }, { Items.wheat, 12, 32 } };
 
     /** A crate's supplies: three to six kinds, and one time in four a bandage, copper or Stormglass besides. */
     public static void stockCrate(IInventory crate, long seed) {
@@ -90,7 +93,18 @@ public final class Wares {
         fill(counter, table, 2 + new Random(seed).nextInt(3), seed);
     }
 
-    /** A little food: one to three kinds. */
+    /**
+     * A forge's furnace left mid-work and gone cold: ore still in it, a bar or two already done, its fire burnt out
+     * (no fuel left in it, or it would light again). Fuel it, and the work goes on.
+     */
+    public static void leftMidWork(IInventory furnace, long seed) {
+        Random random = new Random(seed ^ 0x1B873593L);
+        if (furnace.getSizeInventory() < 3) return;
+        furnace.setInventorySlotContents(0, new ItemStack(Blocks.iron_ore, 2 + random.nextInt(5)));
+        furnace.setInventorySlotContents(2, new ItemStack(Items.iron_ingot, 1 + random.nextInt(2)));
+    }
+
+    /** A little food, long gone bad, and dry goods: one to three kinds. */
     public static void stockPantry(IInventory shelf, long seed) {
         fill(shelf, PANTRY, 1 + new Random(seed).nextInt(3), seed);
     }

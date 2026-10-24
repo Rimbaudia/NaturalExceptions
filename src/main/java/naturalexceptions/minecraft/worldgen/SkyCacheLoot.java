@@ -44,6 +44,8 @@ public final class SkyCacheLoot {
         HOUSEHOLD
     }
 
+    /** Chance that a household chest holds one of its people's last notes (a written book). */
+    public static final double NOTE_CHANCE = 0.3;
     /** Chance that a household chest holds something better than the household's things. */
     public static final double HOUSEHOLD_GOODIE_CHANCE = 0.06;
     /** Of those, the chance it is a treasure (so about 1 household chest in 80). */
@@ -114,6 +116,7 @@ public final class SkyCacheLoot {
                 break;
             case HOUSEHOLD:
                 household(chest, random);
+                if (random.nextDouble() < NOTE_CHANCE) putStack(chest, random, TownNotes.any(random));
                 break;
             case VAULT_TREASURE:
                 vanilla(chest, random, ChestGenHooks.STRONGHOLD_CROSSING);
@@ -133,15 +136,14 @@ public final class SkyCacheLoot {
      */
     private static void household(IInventory chest, Random random) {
         switch (random.nextInt(4)) {
-            case 0: // the pantry
-                put(chest, random, Items.bread, 1 + random.nextInt(4));
-                put(chest, random, Items.apple, random.nextInt(4));
-                put(chest, random, Items.potato, random.nextInt(5));
-                put(chest, random, Items.carrot, random.nextInt(5));
-                put(chest, random, Items.wheat, random.nextInt(6));
-                put(chest, random, Items.sugar, random.nextInt(3));
+            case 0: // the pantry, an age after: dry goods and seed keep, the rest has gone bad
+                put(chest, random, Items.wheat, 1 + random.nextInt(6));
+                put(chest, random, Items.sugar, random.nextInt(4));
+                put(chest, random, Items.wheat_seeds, random.nextInt(8));
+                put(chest, random, Items.poisonous_potato, random.nextInt(4));
+                put(chest, random, Items.rotten_flesh, random.nextInt(3));
                 put(chest, random, Items.bowl, random.nextInt(3));
-                if (random.nextInt(3) == 0) put(chest, random, Items.cookie, 2 + random.nextInt(6));
+                if (random.nextInt(3) == 0) put(chest, random, Items.pumpkin_seeds, 1 + random.nextInt(4));
                 break;
             case 1: // the wardrobe
                 putStack(chest, random, new ItemStack(Blocks.wool, 1 + random.nextInt(5), random.nextInt(16)));

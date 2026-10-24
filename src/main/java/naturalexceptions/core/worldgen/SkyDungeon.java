@@ -67,7 +67,7 @@ public final class SkyDungeon {
         FLOWER,
         WINDBLOOM,
         CAULDRON,
-        /** Meta: vanilla facing (2..5), plus 8 for one alight (a hearth's fire). */
+        /** Meta: vanilla facing (2..5), plus 8 for one alight, plus {@link #MID_WORK} for one left mid-work. */
         FURNACE,
         CRAFTING_TABLE,
         ANVIL,
@@ -212,6 +212,9 @@ public final class SkyDungeon {
          */
         BROKEN_AUTOMATON
     }
+
+    /** A furnace's meta bit: it was left mid-work, ore in it and its fuel unburnt, and went cold. */
+    public static final int MID_WORK = 16;
 
     /** A door piece's meta for its upper half (the lower half's meta is the way it faces). */
     public static final int DOOR_TOP = 8;
