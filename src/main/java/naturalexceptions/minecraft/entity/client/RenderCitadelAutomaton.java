@@ -13,7 +13,7 @@ import org.lwjgl.opengl.GL11;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
-import naturalexceptions.minecraft.entity.EntityCitadelAutomaton;
+import naturalexceptions.minecraft.entity.AutomatonPose;
 
 /**
  * A Citadel Automaton: Skystone plates on a brass and iron frame, a helm with a visor slit and a brass crest, its
@@ -56,9 +56,12 @@ public final class RenderCitadelAutomaton extends RenderBiped {
         GL11.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE);
         GL11.glDepthMask(!entity.isInvisible());
         OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240.0F, 240.0F);
-        boolean dormant = entity instanceof EntityCitadelAutomaton && ((EntityCitadelAutomaton) entity).dormant();
+        boolean dormant = entity instanceof AutomatonPose && ((AutomatonPose) entity).dormant();
+        boolean owned = entity instanceof AutomatonPose && ((AutomatonPose) entity).owned();
         float glow = dormant ? 0.25F : 0.8F + 0.2F * (float) Math.sin((entity.ticksExisted + partialTicks) * 0.15);
-        GL11.glColor4f(glow, glow, glow, 1.0F);
+        // The city's machines burn Stormglass-blue; one repaired by a player, green.
+        if (owned) GL11.glColor4f(glow * 0.45F, glow, glow * 0.4F, 1.0F);
+        else GL11.glColor4f(glow, glow, glow, 1.0F);
         return 1;
     }
 
@@ -138,11 +141,10 @@ public final class RenderCitadelAutomaton extends RenderBiped {
         @Override
         public void setRotationAngles(float swing, float swingAmount, float age, float headYaw, float headPitch,
             float scale, Entity entity) {
-            boolean dormant = entity instanceof EntityCitadelAutomaton && ((EntityCitadelAutomaton) entity).dormant();
+            boolean dormant = entity instanceof AutomatonPose && ((AutomatonPose) entity).dormant();
             if (dormant) swingAmount = 0.0F;
             super.setRotationAngles(swing, swingAmount, age, headYaw, headPitch, scale, entity);
-            boolean up = !dormant && entity instanceof EntityCitadelAutomaton
-                && ((EntityCitadelAutomaton) entity).shieldUp();
+            boolean up = !dormant && entity instanceof AutomatonPose && ((AutomatonPose) entity).shieldUp();
             shieldFront.showModel = up;
             shieldSide.showModel = !up;
             if (dormant) {

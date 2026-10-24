@@ -145,6 +145,51 @@ public final class BlockBrokenAutomaton extends Block implements PartModel {
         }
     }
 
+    /** Iron for new plates, to repair one. */
+    public static final int REPAIR_IRON = 4;
+
+    /**
+     * Repaired: with a Stormglass Heart in hand and {@link #REPAIR_IRON} iron ingots for its plates, it stands up,
+     * and takes whoever repaired it for its master.
+     */
+    @Override
+    public boolean onBlockActivated(World world, int x, int y, int z, net.minecraft.entity.player.EntityPlayer player,
+        int side, float hx, float hy, float hz) {
+        ItemStack held = player.getCurrentEquippedItem();
+        if (held == null || held.getItem() != NEItems.stormglassHeart) return false;
+        if (world.isRemote) return true;
+        boolean creative = player.capabilities.isCreativeMode;
+        if (!creative && countIron(player) < REPAIR_IRON) {
+            player.addChatMessage(
+                new net.minecraft.util.ChatComponentText(
+                    "\u00a77It needs new plates too: " + REPAIR_IRON + " iron ingots."));
+            return true;
+        }
+        double charge = naturalexceptions.minecraft.power.TileHeartSocket.heartCharge(held);
+        if (!creative) {
+            for (int i = 0; i < REPAIR_IRON; i++) player.inventory.consumeInventoryItem(Items.iron_ingot);
+            if (--held.stackSize <= 0) player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
+        }
+        naturalexceptions.minecraft.entity.EntityRepairedAutomaton automaton = new naturalexceptions.minecraft.entity.EntityRepairedAutomaton(
+            world);
+        automaton.setLocationAndAngles(x + 0.5, y, z + 0.5, player.rotationYaw + 180.0F, 0.0F);
+        automaton.repair(player, charge);
+        world.setBlockToAir(x, y, z);
+        world.spawnEntityInWorld(automaton);
+        world.playSoundAtEntity(automaton, "random.anvil_use", 0.8F, 1.2F);
+        world.playSoundAtEntity(automaton, "random.fizz", 0.8F, 1.4F);
+        player.addChatMessage(
+            new net.minecraft.util.ChatComponentText("\u00a7aThe Automaton stands, and takes you for its master."));
+        return true;
+    }
+
+    private static int countIron(net.minecraft.entity.player.EntityPlayer player) {
+        int n = 0;
+        for (ItemStack stack : player.inventory.mainInventory)
+            if (stack != null && stack.getItem() == Items.iron_ingot) n += stack.stackSize;
+        return n;
+    }
+
     /** Set down with its back to the wall behind it, facing whoever set it there; sitting or kneeling at random. */
     @Override
     public void onBlockPlacedBy(World world, int x, int y, int z, EntityLivingBase placer, ItemStack stack) {

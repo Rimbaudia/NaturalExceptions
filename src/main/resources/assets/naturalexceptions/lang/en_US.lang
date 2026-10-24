@@ -103,6 +103,7 @@ item.bellOfRest.name=Bell of Rest
 item.reliquaryLantern.name=Reliquary Lantern
 entity.naturalexceptions.gathered.name=The Gathered
 entity.naturalexceptions.gathered_shade.name=Shade
+entity.naturalexceptions.repaired_automaton.name=Repaired Automaton
 item.dungeonEgg.gathered.name=Spawn the Gathered
 item.dungeonEgg.foundryColossus.name=Spawn Foundry Colossus
 item.bandOfMending.name=Band of Mending

@@ -223,6 +223,14 @@ public final class NaturalExceptions {
             3,
             true);
         cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.entity.EntityRepairedAutomaton.class,
+            "repaired_automaton",
+            19,
+            this,
+            64,
+            3,
+            true);
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
             naturalexceptions.minecraft.entity.EntityCloudweaver.class,
             "cloudweaver",
             12,
@@ -331,6 +339,9 @@ public final class NaturalExceptions {
             new net.minecraft.client.renderer.entity.RenderArrow());
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
             naturalexceptions.minecraft.entity.EntityCitadelAutomaton.class,
+            new naturalexceptions.minecraft.entity.client.RenderCitadelAutomaton());
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.entity.EntityRepairedAutomaton.class,
             new naturalexceptions.minecraft.entity.client.RenderCitadelAutomaton());
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
             naturalexceptions.minecraft.entity.EntityFoundryColossus.class,

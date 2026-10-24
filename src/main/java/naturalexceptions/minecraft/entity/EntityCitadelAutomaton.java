@@ -37,7 +37,7 @@ import naturalexceptions.minecraft.registry.NEItems;
  * mostly): get round to its side. Its halberd reaches further than a sword. When it wakes it sounds an alarm, and every
  * machine within earshot wakes and comes. Losing you, it walks back to its post and goes dormant again.
  */
-public final class EntityCitadelAutomaton extends EntityMob implements CitadelMachine {
+public final class EntityCitadelAutomaton extends EntityMob implements CitadelMachine, AutomatonPose {
 
     public static final float MAX_HEALTH = 34.0F;
     public static final int ARMOUR = 10;
