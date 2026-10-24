@@ -130,6 +130,17 @@ public final class PowerRecipes {
             NEItems.stormglassShard,
             'B',
             Blocks.iron_bars);
+        if (NEBlocks.electricHeater != null && NEItems.refractoryBrick != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.electricHeater),
+            "RWR",
+            "WHW",
+            "RWR",
+            'R',
+            NEItems.refractoryBrick,
+            'W',
+            wire,
+            'H',
+            cable(Cable.HEAVY_BARE, 1));
         if (NEItems.multimeter != null) GameRegistry.addRecipe(
             new ItemStack(NEItems.multimeter),
             "IGI",

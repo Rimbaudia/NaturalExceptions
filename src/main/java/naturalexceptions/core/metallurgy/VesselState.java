@@ -638,6 +638,30 @@ public final class VesselState {
         addLayer(sampleLayer);
     }
 
+    /** An electric element's limit: it heats the charge no hotter than itself. */
+    public static final double ELEMENT_KELVIN = 1900.0;
+
+    /**
+     * Heat from an electric element in the charge: shared between the layers by mass, none past the element's own
+     * {@link #ELEMENT_KELVIN}; what the charge cannot take (or with no charge at all) goes to the surroundings.
+     * Returns the joules the charge took.
+     */
+    public double addElectricHeat(double joules) {
+        if (!(joules > 0.0)) return 0.0;
+        long totalMg = totalMass().milligrams();
+        double taken = 0.0;
+        if (!layers.isEmpty() && totalMg > 0L) for (AggregateLayer layer : layers) {
+            if (layer.temperatureKelvin() >= ELEMENT_KELVIN) continue;
+            double share = joules * layer.mass()
+                .milligrams() / (double) totalMg;
+            layer.thermalState()
+                .addEnergyJoules(share);
+            taken += share;
+        }
+        surroundingsHeatJoules += joules - taken;
+        return taken;
+    }
+
     public boolean isDormant(double ambientTempK) {
         if (fuelState.isBurning()) {
             return false;

@@ -154,6 +154,14 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
         }
     }
 
+    /** Heat from an Electric Heater in its shell, into its charge; returns what the charge took. */
+    public double heatElectrically(double joules) {
+        if (vesselState == null || !structureValid) return 0.0;
+        double taken = vesselState.addElectricHeat(joules);
+        if (taken > 0.0) markDirty();
+        return taken;
+    }
+
     /** How much a Colossus Crucible set into the shell breathes on the fire: unpumped, as if half-pumped. */
     public static final double CRUCIBLE_DRAFT = 1.3;
 

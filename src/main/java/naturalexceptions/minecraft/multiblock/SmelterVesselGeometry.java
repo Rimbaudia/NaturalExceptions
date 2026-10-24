@@ -51,6 +51,19 @@ public final class SmelterVesselGeometry {
         return interiorHeight;
     }
 
+    /** Whether (x, y, z) is in its shell (floor or walls, the controller aside). */
+    public boolean inShell(int x, int y, int z) {
+        int half = outerWidth / 2;
+        for (int dy = -1; dy <= interiorHeight; dy++)
+            for (int dx = -half; dx <= half; dx++) for (int dz = 0; dz < outerDepth; dz++) {
+                boolean floor = dy == -1, perimeter = dx == -half || dx == half || dz == 0 || dz == outerDepth - 1;
+                if (!floor && !perimeter) continue;
+                int[] pos = world(dx, dy, dz);
+                if (pos[0] == x && pos[1] == y && pos[2] == z) return true;
+            }
+        return false;
+    }
+
     /** How many Colossus Crucibles are set into its shell (each in place of a refractory brick). */
     public int crucibles() {
         return crucibles;
@@ -63,7 +76,7 @@ public final class SmelterVesselGeometry {
             crucibles++;
             return true;
         }
-        return false;
+        return actual != null && actual == NEBlocks.electricHeater;
     }
 
     public int cavityCellCount() {

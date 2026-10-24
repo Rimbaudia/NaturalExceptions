@@ -46,7 +46,7 @@ public final class NEBlocks {
     public static Block colossusCrucible;
     /** Power: cables, a switch, a relay, and the first machines. */
     public static Block cable, knifeSwitch, stormglassRelay, crankDynamo, arcLamp;
-    public static Block windmill, heartSocket, stormCell, lightningSpire;
+    public static Block windmill, heartSocket, stormCell, lightningSpire, electricHeater;
     public static Block skystoneRock;
     public static Block skystoneBricks;
     public static Block skystoneDecor;
@@ -172,6 +172,8 @@ public final class NEBlocks {
         stormCell = new naturalexceptions.minecraft.power.BlockPowerMachine.StormCell()
             .setCreativeTab(NECreativeTab.INSTANCE);
         lightningSpire = new naturalexceptions.minecraft.power.BlockPowerMachine.LightningSpire()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        electricHeater = new naturalexceptions.minecraft.power.BlockPowerMachine.ElectricHeater()
             .setCreativeTab(NECreativeTab.INSTANCE);
         skystoneRock = new naturalexceptions.minecraft.block.BlockSkystoneRock().setCreativeTab(NECreativeTab.INSTANCE);
         skystoneBricks = new naturalexceptions.minecraft.block.BlockSkystoneBricks()
@@ -329,6 +331,10 @@ public final class NEBlocks {
             GameRegistry.registerBlock(heartSocket, "heart_socket");
             GameRegistry.registerBlock(stormCell, "storm_cell");
             GameRegistry.registerBlock(lightningSpire, "lightning_spire");
+            GameRegistry.registerBlock(electricHeater, "electric_heater");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.power.TileElectricHeater.class,
+                "naturalexceptions:electric_heater");
             GameRegistry
                 .registerTileEntity(naturalexceptions.minecraft.power.TileWindmill.class, "naturalexceptions:windmill");
             GameRegistry.registerTileEntity(

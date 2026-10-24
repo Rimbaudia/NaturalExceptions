@@ -47,6 +47,17 @@ final class PowerRecipesTest {
         assertTrue(craftable(Item.getItemFromBlock(NEBlocks.heartSocket), -1));
         assertTrue(craftable(Item.getItemFromBlock(NEBlocks.stormCell), -1));
         assertTrue(craftable(Item.getItemFromBlock(NEBlocks.lightningSpire), -1));
+        assertTrue(craftable(Item.getItemFromBlock(NEBlocks.electricHeater), -1));
+    }
+
+    @Test
+    void aHeaterNeedsHeavyCableAndAStiffSource() {
+        double amps = TileElectricHeater.RATED_WATTS / TileElectricHeater.RATED_VOLTS;
+        assertTrue(amps > Cable.LIGHT_INSULATED.ratedAmps(), "light wire would char under it");
+        assertTrue(amps < Cable.HEAVY_INSULATED.ratedAmps(), "heavy cable carries it");
+        assertTrue(
+            TileCrankDynamo.EMF / (TileCrankDynamo.INTERNAL_OHMS + TileElectricHeater.OHMS) < amps / 2,
+            "a crank dynamo alone can barely warm it");
     }
 
     @Test

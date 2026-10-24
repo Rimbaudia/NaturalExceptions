@@ -167,6 +167,19 @@ class MultiblockArchitectureTest {
     }
 
     @Test
+    void anElectricHeaterStandsInTheShellForABrick() {
+        Map<Pos, Block> withHeater = new HashMap<>();
+        placeVariableVessel(withHeater, 3, 3, 1);
+        int[] wall = MultiblockDefinition.localToWorld(0, 64, 0, 2, -1, 0, 1);
+        withHeater.put(new Pos(wall[0], wall[1], wall[2]), NEBlocks.electricHeater);
+        SmelterVesselGeometry geometry = StarterSmelterDefinition.INSTANCE
+            .discoverVessel(createMockWorld(withHeater), 0, 64, 0, 2);
+        assertNotNull(geometry, "a heater in place of a wall brick still makes a vessel");
+        assertTrue(geometry.inShell(wall[0], wall[1], wall[2]), "and it is in the shell");
+        assertTrue(!geometry.inShell(0, 64, 1), "the cavity is not");
+    }
+
+    @Test
     void variableVesselDiscoveryRejectsBlockedCavityAndMissingFloor() {
         Map<Pos, Block> blocked = new HashMap<>();
         placeVariableVessel(blocked, 3, 3, 1);

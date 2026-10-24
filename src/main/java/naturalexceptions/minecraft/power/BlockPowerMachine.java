@@ -327,6 +327,77 @@ public abstract class BlockPowerMachine extends BlockContainer implements PowerB
         }
     }
 
+    /** An Electric Heater: refractory brick round a copper coil that glows with what it draws. A full block. */
+    public static final class ElectricHeater extends BlockPowerMachine {
+
+        private static final double[][] PARTS = { { 0, 0, 0, 1, 1, 1 } };
+        @SideOnly(Side.CLIENT)
+        private IIcon cold, warm, hot;
+
+        public ElectricHeater() {
+            super(Material.rock, "electricHeater", "naturalexceptions:electric_heater");
+            setHardness(3.0F);
+            setStepSound(soundTypeStone);
+        }
+
+        @Override
+        public TileEntity createNewTileEntity(World world, int meta) {
+            return new TileElectricHeater();
+        }
+
+        @Override
+        public boolean isOpaqueCube() {
+            return true;
+        }
+
+        @Override
+        public boolean renderAsNormalBlock() {
+            return true;
+        }
+
+        @Override
+        public int getRenderType() {
+            return 0;
+        }
+
+        @Override
+        public int getLightValue(IBlockAccess world, int x, int y, int z) {
+            return world.getBlock(x, y, z) == this ? (world.getBlockMetadata(x, y, z) & 3) * 5 : 0;
+        }
+
+        @Override
+        public double[][] parts(int meta) {
+            return PARTS;
+        }
+
+        @Override
+        public void setBlockBoundsBasedOnState(IBlockAccess world, int x, int y, int z) {
+            setBlockBounds(0.0F, 0.0F, 0.0F, 1.0F, 1.0F, 1.0F);
+        }
+
+        @Override
+        @SideOnly(Side.CLIENT)
+        public void registerBlockIcons(IIconRegister register) {
+            cold = register.registerIcon("naturalexceptions:electric_heater");
+            warm = register.registerIcon("naturalexceptions:electric_heater_warm");
+            hot = register.registerIcon("naturalexceptions:electric_heater_hot");
+            blockIcon = cold;
+        }
+
+        @Override
+        @SideOnly(Side.CLIENT)
+        public IIcon getIcon(int side, int meta) {
+            int glow = meta & 3;
+            return glow >= 2 ? hot : glow == 1 ? warm : cold;
+        }
+
+        @Override
+        @SideOnly(Side.CLIENT)
+        public IIcon partIcon(int index, int meta) {
+            return getIcon(0, meta);
+        }
+    }
+
     /** An arc lamp: a brass foot, a glass globe with the arc in it (dark, dim or blazing), a cap. */
     public static final class ArcLamp extends BlockPowerMachine {
 

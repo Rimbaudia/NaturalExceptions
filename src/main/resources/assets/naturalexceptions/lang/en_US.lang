@@ -154,6 +154,7 @@ tile.windmill.name=Windmill
 tile.heartSocket.name=Heart Socket
 tile.stormCell.name=Storm Cell
 tile.lightningSpire.name=Lightning Spire
+tile.electricHeater.name=Electric Heater
 item.multimeter.name=Multimeter
 death.attack.naturalexceptions.shock=%1$s was electrocuted
 entity.naturalexceptions.foundry_colossus.name=Foundry Colossus
