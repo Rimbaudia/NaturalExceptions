@@ -43,7 +43,8 @@ final class IconNamesResolveTest {
                         if ("minecraft".equals(domain)) {
                             if (!VANILLA.contains(name)) problems.add(file.getFileName() + ": minecraft:" + name);
                         } else if (!Files.isRegularFile(TEXTURES.resolve("items/" + name + ".png"))
-                            && !Files.isRegularFile(TEXTURES.resolve("blocks/" + name + ".png"))) {
+                            && !Files.isRegularFile(TEXTURES.resolve("blocks/" + name + ".png"))
+                            && !door(name)) {
                                 problems.add(file.getFileName() + ": naturalexceptions:" + name);
                             }
                     }
@@ -64,6 +65,12 @@ final class IconNamesResolveTest {
             check(name, "NEItems." + field.getName(), problems);
         }
         assertTrue(problems.isEmpty(), "Unresolved icon names: " + problems);
+    }
+
+    /** A door's name stands for its two halves, as vanilla's doors register them. */
+    private static boolean door(String name) {
+        return Files.isRegularFile(TEXTURES.resolve("blocks/" + name + "_upper.png"))
+            && Files.isRegularFile(TEXTURES.resolve("blocks/" + name + "_lower.png"));
     }
 
     private static void check(String icon, String where, List<String> problems) {
