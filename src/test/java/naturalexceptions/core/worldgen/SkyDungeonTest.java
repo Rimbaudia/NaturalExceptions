@@ -212,6 +212,35 @@ final class SkyDungeonTest {
         assertTrue(citadels > 0, "the samples include a citadel");
     }
 
+    /**
+     * A sanctum's deepest hall is the Gathered's: its seal wakes them, and four candelabra stand unlit in its corners.
+     * A citadel's catacomb still keeps the Castellan.
+     */
+    @Test
+    void aSanctumsHallIsTheGatheredsWithItsCandles() {
+        int sanctums = 0, citadels = 0;
+        for (Sample sample : samples()) {
+            int gatheredSeals = 0, castellanSeals = 0, unlit = 0;
+            for (Piece p : sample.dungeon.pieces()) {
+                if (p.block == Block.SEAL) {
+                    if (p.meta == SkyDungeon.SEAL_GATHERED) gatheredSeals++;
+                    else castellanSeals++;
+                }
+                if (p.block == Block.CANDELABRA && (p.meta & SkyDungeon.CANDLES_UNLIT) != 0) unlit++;
+            }
+            if (sample.dungeon.kind() == SkyDungeon.Kind.SANCTUM) {
+                sanctums++;
+                assertTrue(gatheredSeals > 0 && castellanSeals == 0, sample.name() + ": the Gathered's seal");
+                assertEquals(4, unlit, sample.name() + ": four candelabra unlit in its hall");
+            } else {
+                citadels++;
+                assertTrue(castellanSeals > 0 && gatheredSeals == 0, sample.name() + ": the Castellan keeps a citadel");
+                assertEquals(0, unlit, sample.name() + ": no unlit candles in a citadel");
+            }
+        }
+        assertTrue(sanctums > 0 && citadels > 0);
+    }
+
     private static List<Sample> sanctums() {
         List<Sample> out = new ArrayList<>();
         for (Sample s : samples()) if (s.dungeon.kind() == SkyDungeon.Kind.SANCTUM) out.add(s);

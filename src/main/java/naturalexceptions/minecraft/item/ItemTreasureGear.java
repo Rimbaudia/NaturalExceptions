@@ -117,6 +117,7 @@ public final class ItemTreasureGear extends Item implements IWearable {
         if (treasure.relic()) lines.add("\u00a75Castellan's Relic");
         if (treasure.source() == Treasure.Source.VAULT) lines.add("\u00a75Vault find");
         if (treasure.source() == Treasure.Source.SALVAGE) lines.add("\u00a75Automaton salvage");
+        if (treasure.source() == Treasure.Source.GATHERED) lines.add("\u00a75Relic of the Gathered");
         lines.add("\u00a77" + treasure.effect());
         lines.add(
             "\u00a78Worn: " + treasure.kind()

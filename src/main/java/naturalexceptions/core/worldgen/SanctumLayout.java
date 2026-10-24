@@ -870,6 +870,35 @@ final class SanctumLayout {
             if (!slot.small && slot.role != Role.VAULT) dress(slot, SkyDungeon.Theme.of(slot.level, levels));
         d.theme = SkyDungeon.Theme.UPPER;
         entrance(corridors);
+        if (d.kind() == SkyDungeon.Kind.SANCTUM) consecrate(warden());
+    }
+
+    /**
+     * A sanctum's deepest hall is holy ground, where the city's dead were gathered: its seal wakes the Gathered
+     * (rather than the Castellan, who keeps the citadels), and four candelabra stand unlit in its corners, two in from
+     * the walls (clear of the doorways), for whoever comes to light them.
+     */
+    private void consecrate(Slot hall) {
+        if (hall == null) return;
+        int floor = hall.floor();
+        for (int x = hall.minX(); x <= hall.maxX(); x++) for (int z = hall.minZ(); z <= hall.maxZ(); z++)
+            for (int y = floor; y <= floor + hall.template.height; y++) {
+                SkyDungeon.Piece p = d.at(x, y, z);
+                if (p != null && p.block == Block.SEAL) d.put(x, y, z, Block.SEAL, SkyDungeon.SEAL_GATHERED);
+            }
+        int inset = 2;
+        for (int[] c : new int[][] { { hall.minX() + inset, hall.minZ() + inset },
+            { hall.maxX() - inset, hall.minZ() + inset }, { hall.minX() + inset, hall.maxZ() - inset },
+            { hall.maxX() - inset, hall.maxZ() - inset } }) {
+            for (int[] o : new int[][] { { 0, 0 }, { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 } }) {
+                int x = c[0] + o[0], z = c[1] + o[1];
+                SkyDungeon.Piece at = d.at(x, floor + 1, z), under = d.at(x, floor, z);
+                if (at == null || at.block != Block.AIR || under == null || under.block == Block.AIR) continue;
+                d.put(x, floor + 1, z, Block.CANDELABRA, SkyDungeon.CANDLES_UNLIT);
+                break;
+            }
+        }
+        d.features.add("the Gathered's hall");
     }
 
     /**

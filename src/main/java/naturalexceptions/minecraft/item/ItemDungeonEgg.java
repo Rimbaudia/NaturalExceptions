@@ -24,7 +24,8 @@ public final class ItemDungeonEgg extends Item {
     static final Object[][] KINDS = { { "stormwisp", 0x5A3E96, 0xEDE4FF }, { "skystoneSentinel", 0xC8D2E0, 0x7A5AC0 },
         { "skyWarden", 0xAEB8CC, 0xD6AC3C }, { "galeHusk", 0x7E8A9A, 0xD8DCE0 },
         { "stormboneArcher", 0xD6D2C4, 0x8E62E0 }, { "citadelGuard", 0x4A5468, 0xC8D2E0 },
-        { "cloudweaver", 0xD8DCE4, 0x8A60D8 } };
+        { "cloudweaver", 0xD8DCE4, 0x8A60D8 }, { "foundryColossus", 0x3E3C40, 0xE07828 },
+        { "gathered", 0xC8C8C0, 0x8CD8F0 } };
 
     @SideOnly(Side.CLIENT)
     private IIcon spots;
@@ -49,6 +50,10 @@ public final class ItemDungeonEgg extends Item {
                 return new naturalexceptions.minecraft.entity.EntityCitadelAutomaton(world);
             case 6:
                 return new naturalexceptions.minecraft.entity.EntityCloudweaver(world);
+            case 7:
+                return new naturalexceptions.minecraft.entity.EntityFoundryColossus(world);
+            case 8:
+                return new naturalexceptions.minecraft.entity.EntityGathered(world);
             default:
                 return new EntityStormwisp(world);
         }

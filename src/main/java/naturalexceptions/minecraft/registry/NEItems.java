@@ -39,6 +39,9 @@ public final class NEItems {
     public static naturalexceptions.minecraft.item.ItemSkyKey skyKey;
     public static net.minecraft.item.Item galeCore;
     public static net.minecraft.item.Item stormglassHeart;
+    /** Relics of the Gathered (its worn ones are treasures). */
+    public static net.minecraft.item.Item bellOfRest;
+    public static net.minecraft.item.Item reliquaryLantern;
     public static net.minecraft.item.Item galeMaul;
     /** Sky-cache treasures, one item per {@link naturalexceptions.minecraft.gear.Treasure}. */
     public static final java.util.Map<naturalexceptions.minecraft.gear.Treasure, naturalexceptions.minecraft.item.ItemTreasureGear> TREASURES = new java.util.EnumMap<>(
@@ -240,6 +243,10 @@ public final class NEItems {
         galeCore.setCreativeTab(NECreativeTab.INSTANCE);
         stormglassHeart = new naturalexceptions.minecraft.item.ItemStormglassHeart();
         stormglassHeart.setCreativeTab(NECreativeTab.INSTANCE);
+        bellOfRest = new naturalexceptions.minecraft.item.ItemBellOfRest();
+        bellOfRest.setCreativeTab(NECreativeTab.INSTANCE);
+        reliquaryLantern = new naturalexceptions.minecraft.item.ItemReliquaryLantern();
+        reliquaryLantern.setCreativeTab(NECreativeTab.INSTANCE);
         galeMaul = new naturalexceptions.minecraft.weapon.ItemGaleMaul();
         galeMaul.setCreativeTab(NECreativeTab.INSTANCE);
         skyKey = new naturalexceptions.minecraft.item.ItemSkyKey();
@@ -284,6 +291,8 @@ public final class NEItems {
             GameRegistry.registerItem(skyKey, "sky_key");
             GameRegistry.registerItem(galeCore, "gale_core");
             GameRegistry.registerItem(stormglassHeart, "stormglass_heart");
+            GameRegistry.registerItem(bellOfRest, "bell_of_rest");
+            GameRegistry.registerItem(reliquaryLantern, "reliquary_lantern");
             GameRegistry.registerItem(galeMaul, "gale_maul");
             for (java.util.Map.Entry<naturalexceptions.minecraft.gear.Treasure, naturalexceptions.minecraft.item.ItemTreasureGear> entry : TREASURES
                 .entrySet())

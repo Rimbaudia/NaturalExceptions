@@ -492,7 +492,7 @@ final class LandmarkMaterializer {
                 set(world, x, y, z, orElse(NEBlocks.sealedAlcove, Blocks.stonebrick), meta);
                 break;
             case SEAL:
-                set(world, x, y, z, orElse(NEBlocks.wardenSeal, Blocks.stonebrick), 0);
+                set(world, x, y, z, orElse(NEBlocks.wardenSeal, Blocks.stonebrick), meta & 1);
                 break;
             case TNT:
                 set(world, x, y, z, Blocks.tnt, 0);
@@ -760,7 +760,7 @@ final class LandmarkMaterializer {
                 set(world, x, y, z, Blocks.vine, VINE_META[meta & 3]);
                 break;
             case CANDELABRA:
-                set(world, x, y, z, orElse(NEBlocks.candelabra, Blocks.torch), meta & 1);
+                set(world, x, y, z, orElse(NEBlocks.candelabra, Blocks.torch), meta & 3);
                 break;
             case BRAZIER:
                 set(world, x, y, z, orElse(NEBlocks.brazier, Blocks.glowstone), 0);

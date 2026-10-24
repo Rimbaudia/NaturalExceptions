@@ -94,8 +94,12 @@ public final class BlockLamplight extends Block {
     private static boolean wearerNear(World world, int x, int y, int z) {
         AxisAlignedBB around = AxisAlignedBB.getBoundingBox(x, y, z, x + 1, y + 1, z + 1)
             .expand(WEARER_REACH, WEARER_REACH, WEARER_REACH);
-        for (Object entity : (List<?>) world.getEntitiesWithinAABB(EntityPlayer.class, around))
-            if (ItemTreasureGear.worn((EntityPlayer) entity, Treasure.LAMPLIGHTERS_CAP) > 0) return true;
+        for (Object entity : (List<?>) world.getEntitiesWithinAABB(EntityPlayer.class, around)) {
+            EntityPlayer player = (EntityPlayer) entity;
+            if (ItemTreasureGear.worn(player, Treasure.LAMPLIGHTERS_CAP) > 0) return true;
+            if (player.getCurrentEquippedItem() != null && player.getCurrentEquippedItem()
+                .getItem() == naturalexceptions.minecraft.registry.NEItems.reliquaryLantern) return true;
+        }
         return false;
     }
 }

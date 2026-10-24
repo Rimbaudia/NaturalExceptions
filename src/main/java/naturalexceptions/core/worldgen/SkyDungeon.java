@@ -215,6 +215,11 @@ public final class SkyDungeon {
         COLOSSUS
     }
 
+    /** A seal's meta: it wakes the Gathered (a sanctum's), not the Castellan. */
+    public static final int SEAL_GATHERED = 1;
+    /** A candelabra's meta bit: its candles stand unlit. */
+    public static final int CANDLES_UNLIT = 2;
+
     /** A furnace's meta bit: it was left mid-work, ore in it and its fuel unburnt, and went cold. */
     public static final int MID_WORK = 16;
 

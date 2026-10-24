@@ -35,7 +35,11 @@ public enum Treasure {
     CLOUD_TREADS("cloudTreads", "cloud_treads", GearKind.SHOE,
         "You fall gently and land softly. With a pair, walk on water (sneak to sink)."),
     SENTRYS_CREST("sentrysCrest", "sentrys_crest", GearKind.HAT,
-        "The dead city's machines take you for one of their own, until you strike them.", Source.SALVAGE);
+        "The dead city's machines take you for one of their own, until you strike them.", Source.SALVAGE),
+    MOURNERS_VEIL("mournersVeil", "mourners_veil", GearKind.FACE,
+        "The restless dead glow faintly to you, and pass you by until you strike them.", Source.GATHERED),
+    GATHERED_HEART("gatheredHeart", "gathered_heart", GearKind.NECK,
+        "Once a day, when a blow would kill you, the dead hold you back.", Source.GATHERED);
 
     /** Where a treasure comes from. */
     public enum Source {
@@ -46,7 +50,9 @@ public enum Treasure {
         /** A Sky Warden's relic: dropped only by one, never in a chest, never crafted. */
         WARDEN,
         /** Salvaged from the dead city's machines only. */
-        SALVAGE
+        SALVAGE,
+        /** A relic of the Gathered: left only when it is laid to rest. */
+        GATHERED
     }
 
     private final String unlocalizedName;

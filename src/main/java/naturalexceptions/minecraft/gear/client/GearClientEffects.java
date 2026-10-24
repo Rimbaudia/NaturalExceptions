@@ -69,6 +69,7 @@ public final class GearClientEffects {
                 .applySync(pending);
         }
         footwear(player);
+        mourn(player);
         // Keys typed into chat or any other screen are text, not movement: space in chat is not a jump.
         if (mc.isGamePaused() || mc.currentScreen != null || player.capabilities.isFlying || player.isRiding()) {
             jumpWasDown = false;
@@ -147,6 +148,29 @@ public final class GearClientEffects {
             player.motionZ = vz;
             player.fallDistance = 0.0F;
             report(PacketGearAction.Action.GLIDE, false);
+        }
+    }
+
+    /** Mourner's Veil: the restless dead about you glow faintly. */
+    private static void mourn(EntityPlayerSP player) {
+        if (player.ticksExisted % 8 != 0 || ItemTreasureGear.worn(player, Treasure.MOURNERS_VEIL) == 0) return;
+        for (Object o : player.worldObj.getEntitiesWithinAABB(
+            net.minecraft.entity.EntityLivingBase.class,
+            player.boundingBox.expand(24.0, 12.0, 24.0))) {
+            net.minecraft.entity.EntityLivingBase living = (net.minecraft.entity.EntityLivingBase) o;
+            if (living == player || living.getCreatureAttribute() != net.minecraft.entity.EnumCreatureAttribute.UNDEAD)
+                continue;
+            for (int i = 0; i < 3; i++) player.worldObj.spawnParticle(
+                "instantSpell",
+                living.posX + (player.getRNG()
+                    .nextDouble() - 0.5) * living.width,
+                living.boundingBox.minY + player.getRNG()
+                    .nextDouble() * living.height,
+                living.posZ + (player.getRNG()
+                    .nextDouble() - 0.5) * living.width,
+                0.0,
+                0.0,
+                0.0);
         }
     }
 

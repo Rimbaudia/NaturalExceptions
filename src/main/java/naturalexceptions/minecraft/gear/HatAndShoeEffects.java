@@ -132,10 +132,57 @@ public final class HatAndShoeEffects {
     static boolean notices(EntityLivingBase mob, EntityPlayer player) {
         if (mob instanceof naturalexceptions.minecraft.entity.CitadelMachine
             && naturalexceptions.minecraft.entity.CitadelMachine.passes(player, mob)) return false; // Sentry's Crest
+        if (mournedBy(mob, player)) return false; // Mourner's Veil
         return notices(
             mob.getDistanceToEntity(player),
             ItemTreasureGear.worn(player, Treasure.FEATHERSTEP_SLIPPERS),
             mob.getAITarget() == player);
+    }
+
+    /** Mourner's Veil: the undead (not the great ones) pass its wearer by, until struck. */
+    public static boolean mournedBy(EntityLivingBase mob, EntityPlayer player) {
+        return mob.getCreatureAttribute() == net.minecraft.entity.EnumCreatureAttribute.UNDEAD
+            && !(mob instanceof net.minecraft.entity.boss.IBossDisplayData)
+            && mob.getAITarget() != player
+            && ItemTreasureGear.worn(player, Treasure.MOURNERS_VEIL) > 0;
+    }
+
+    /** How long the Gathered Heart must rest after holding its wearer back. */
+    public static final long HEART_REST = NaturalCalendar.TICKS_PER_DAY;
+
+    /** Gathered Heart: once a day, a blow that would kill its wearer does not; the dead hold them back. */
+    @SubscribeEvent(priority = cpw.mods.fml.common.eventhandler.EventPriority.LOWEST)
+    public void onHurt(net.minecraftforge.event.entity.living.LivingHurtEvent event) {
+        if (event == null || event.isCanceled() || !(event.entityLiving instanceof EntityPlayerMP)) return;
+        EntityPlayer player = (EntityPlayer) event.entityLiving;
+        if (event.ammount < player.getHealth() || event.source == net.minecraft.util.DamageSource.outOfWorld) return;
+        net.minecraft.item.ItemStack heart = null;
+        PlayerGear gear = PlayerGear.get(player);
+        for (GearSlot slot : GearSlot.values()) {
+            net.minecraft.item.ItemStack stack = gear.get(slot);
+            if (stack != null && stack.getItem()
+                == naturalexceptions.minecraft.registry.NEItems.TREASURES.get(Treasure.GATHERED_HEART)) heart = stack;
+        }
+        long now = player.worldObj.getTotalWorldTime();
+        if (heart == null || !heartReady(heart, now)) return;
+        if (!heart.hasTagCompound()) heart.setTagCompound(new net.minecraft.nbt.NBTTagCompound());
+        heart.getTagCompound()
+            .setLong("Held", now);
+        event.setCanceled(true);
+        player.setHealth(6.0F);
+        player.addPotionEffect(
+            new net.minecraft.potion.PotionEffect(net.minecraft.potion.Potion.regeneration.id, 100, 1));
+        player.addPotionEffect(new net.minecraft.potion.PotionEffect(net.minecraft.potion.Potion.resistance.id, 60, 2));
+        player.worldObj.playSoundAtEntity(player, "mob.ghast.moan", 1.0F, 1.6F);
+        player.addChatMessage(new ChatComponentText("\u00a7e\u00a7oThe dead hold you back."));
+    }
+
+    public static boolean heartReady(net.minecraft.item.ItemStack heart, long now) {
+        if (!heart.hasTagCompound() || !heart.getTagCompound()
+            .hasKey("Held")) return true;
+        long held = heart.getTagCompound()
+            .getLong("Held");
+        return now - held >= HEART_REST || now < held;
     }
 
     /** Whether a monster this far away notices a wearer of so many slippers; one struck by you always does. */
@@ -196,7 +243,9 @@ public final class HatAndShoeEffects {
         int[] last = lamps.get(id);
         World world = player.worldObj;
         int[] spot = null;
-        if (ItemTreasureGear.worn(player, Treasure.LAMPLIGHTERS_CAP) > 0 && NEBlocks.lamplight != null) {
+        boolean lantern = player.getCurrentEquippedItem() != null && player.getCurrentEquippedItem()
+            .getItem() == naturalexceptions.minecraft.registry.NEItems.reliquaryLantern;
+        if ((ItemTreasureGear.worn(player, Treasure.LAMPLIGHTERS_CAP) > 0 || lantern) && NEBlocks.lamplight != null) {
             int x = MathHelper.floor_double(player.posX), z = MathHelper.floor_double(player.posZ);
             int feet = MathHelper.floor_double(player.boundingBox.minY);
             int y = open(world, x, feet + 1, z) ? feet + 1 : open(world, x, feet, z) ? feet : Integer.MIN_VALUE;

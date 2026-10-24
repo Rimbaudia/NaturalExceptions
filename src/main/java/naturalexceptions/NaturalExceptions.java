@@ -204,6 +204,22 @@ public final class NaturalExceptions {
             10,
             true);
         cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.entity.EntityGathered.class,
+            "gathered",
+            17,
+            this,
+            80,
+            3,
+            true);
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.entity.EntityGatheredShade.class,
+            "gathered_shade",
+            18,
+            this,
+            64,
+            3,
+            true);
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
             naturalexceptions.minecraft.entity.EntityCloudweaver.class,
             "cloudweaver",
             12,
@@ -316,6 +332,12 @@ public final class NaturalExceptions {
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
             naturalexceptions.minecraft.entity.EntityFoundryColossus.class,
             new naturalexceptions.minecraft.entity.client.RenderFoundryColossus());
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.entity.EntityGathered.class,
+            new naturalexceptions.minecraft.entity.client.RenderGathered());
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.entity.EntityGatheredShade.class,
+            new naturalexceptions.minecraft.entity.client.RenderGathered.Shade());
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
             naturalexceptions.minecraft.entity.EntitySlagGlob.class,
             new net.minecraft.client.renderer.entity.RenderSnowball(
