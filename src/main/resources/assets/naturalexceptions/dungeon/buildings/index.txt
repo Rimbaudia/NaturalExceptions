@@ -30,3 +30,4 @@ barn
 windmill
 mortuary_chapel
 grand_keep
+foundry

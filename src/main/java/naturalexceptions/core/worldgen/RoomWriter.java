@@ -73,6 +73,8 @@ final class RoomWriter {
                 else if (c == '\u03a8' || c == '\u03c8')
                     d.put(x, wy, z, Block.CANDELABRA, (c == '\u03c8') == ((rotation & 1) == 0) ? 1 : 0);
                 else if (PEWS.indexOf(c) >= 0) d.put(x, wy, z, Block.PEW, (PEWS.indexOf(c) + rotation) & 3);
+                else if (c == '\u03a9') d.put(x, wy, z, Block.COLOSSUS, (SkyDungeon.SOUTH + rotation) & 3);
+                else if (c == '\u0394') d.put(x, wy, z, Block.CHEST, 0, Loot.FOUNDRY, null);
                 else if (BENCHES.indexOf(c) >= 0) {
                     // Its working front away from the wall beside it.
                     int wall = nearestSolid(template, rotation, tx, y, tz);
@@ -477,7 +479,7 @@ final class RoomWriter {
      */
     /** A smithy or a forge: where a furnace was left mid-work. */
     private static boolean forge(RoomTemplate template) {
-        return "smithy".equals(template.name) || "forge".equals(template.name);
+        return "smithy".equals(template.name) || "forge".equals(template.name) || "foundry".equals(template.name);
     }
 
     private void chest(int x, int y, int z, RoomTemplate.Role role, boolean primary, boolean building) {

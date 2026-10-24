@@ -26,6 +26,8 @@ public final class SmelterVesselGeometry {
     private final int controllerX;
     private final int controllerY;
     private final int controllerZ;
+    /** Colossus Crucibles set into the shell in place of bricks. */
+    private int crucibles;
 
     private SmelterVesselGeometry(int width, int depth, int height, int facing, int x, int y, int z) {
         outerWidth = width;
@@ -47,6 +49,21 @@ public final class SmelterVesselGeometry {
 
     public int interiorHeight() {
         return interiorHeight;
+    }
+
+    /** How many Colossus Crucibles are set into its shell (each in place of a refractory brick). */
+    public int crucibles() {
+        return crucibles;
+    }
+
+    /** A shell block: refractory brick, or a Colossus Crucible in its place. */
+    private boolean shell(Block actual, Block brick) {
+        if (actual == brick) return true;
+        if (actual != null && actual == NEBlocks.colossusCrucible) {
+            crucibles++;
+            return true;
+        }
+        return false;
     }
 
     public int cavityCellCount() {
@@ -106,11 +123,12 @@ public final class SmelterVesselGeometry {
     }
 
     private boolean matches(IBlockAccess world, Block brick, Block controller) {
+        crucibles = 0;
         int half = outerWidth / 2;
         for (int x = -half; x <= half; x++) {
             for (int z = 0; z < outerDepth; z++) {
                 int[] floor = world(x, -1, z);
-                if (world.getBlock(floor[0], floor[1], floor[2]) != brick) return false;
+                if (!shell(world.getBlock(floor[0], floor[1], floor[2]), brick)) return false;
             }
         }
         for (int y = 0; y <= interiorHeight; y++) {
@@ -123,7 +141,7 @@ public final class SmelterVesselGeometry {
                     if (isController) {
                         if (actual != controller) return false;
                     } else if (perimeter) {
-                        if (actual != brick) return false;
+                        if (!shell(actual, brick)) return false;
                     } else if (!world.isAirBlock(pos[0], pos[1], pos[2])) {
                         return false;
                     }

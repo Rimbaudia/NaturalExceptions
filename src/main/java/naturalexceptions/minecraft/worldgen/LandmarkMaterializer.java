@@ -804,6 +804,16 @@ final class LandmarkMaterializer {
                     NEBlocks.brokenAutomaton,
                     BROKEN_FACING[meta & 3] | meta & naturalexceptions.minecraft.block.BlockBrokenAutomaton.KNEELING);
                 break;
+            case COLOSSUS: {
+                // The Foundry Colossus, asleep before its cold furnace: no block, only it.
+                naturalexceptions.minecraft.entity.EntityFoundryColossus colossus = new naturalexceptions.minecraft.entity.EntityFoundryColossus(
+                    world);
+                colossus.setLocationAndAngles(x + 0.5, y, z + 0.5, SIDE_YAW[meta & 3], 0.0F);
+                colossus.rotationYawHead = colossus.renderYawOffset = SIDE_YAW[meta & 3];
+                colossus.post(x, y, z);
+                world.spawnEntityInWorld(colossus);
+                break;
+            }
             case GUARD: {
                 // A Citadel Automaton at its post, dormant: no block, only it.
                 naturalexceptions.minecraft.entity.EntityCitadelAutomaton guard = new naturalexceptions.minecraft.entity.EntityCitadelAutomaton(
@@ -1005,6 +1015,8 @@ final class LandmarkMaterializer {
                 return SkyCacheLoot.Tier.HOUSEHOLD;
             case VAULT_TREASURE:
                 return SkyCacheLoot.Tier.VAULT_TREASURE;
+            case FOUNDRY:
+                return SkyCacheLoot.Tier.FOUNDRY;
             case VAULT_RICH:
                 return SkyCacheLoot.Tier.VAULT_RICH;
             case STORE:

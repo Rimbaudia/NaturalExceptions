@@ -41,7 +41,9 @@ public final class SkyCacheLoot {
         /** A quarry's tool chest: a Mason's Chisel, a worn pick, string, torches and bread. */
         QUARRY,
         /** A dead household's chest: a pantry, a wardrobe, a workshop or a study, now and then a better find. */
-        HOUSEHOLD
+        HOUSEHOLD,
+        /** The foundry's chest: buckets of water for the Colossus's fire, a spare bucket, and a founder's things. */
+        FOUNDRY
     }
 
     /** Chance that a household chest holds one of its people's last notes (a written book). */
@@ -113,6 +115,14 @@ public final class SkyCacheLoot {
                     net.minecraft.item.Item.getItemFromBlock(net.minecraft.init.Blocks.torch),
                     8 + random.nextInt(8));
                 put(chest, random, net.minecraft.init.Items.bread, 2 + random.nextInt(3));
+                break;
+            case FOUNDRY:
+                chest.setInventorySlotContents(4, new ItemStack(Items.water_bucket));
+                chest.setInventorySlotContents(13, new ItemStack(Items.water_bucket));
+                chest.setInventorySlotContents(22, new ItemStack(Items.bucket));
+                put(chest, random, Items.coal, 3 + random.nextInt(6));
+                put(chest, random, Items.iron_ingot, 1 + random.nextInt(3));
+                if (NEItems.slagLump != null) put(chest, random, NEItems.slagLump, random.nextInt(4));
                 break;
             case HOUSEHOLD:
                 household(chest, random);

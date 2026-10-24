@@ -1037,12 +1037,15 @@ final class CitadelLayout {
         at.building("potters_shop", n - 10, 1, SkyDungeon.SOUTH);
         at.building("tannery", 1, n - 10, SkyDungeon.NORTH);
         at.building("glassworks", n - 10, m - 4, SkyDungeon.WEST);
+        // The foundry, its door on the well square; the Foundry Colossus sleeps inside.
+        at.building("foundry", m + 1, m + 6, SkyDungeon.NORTH);
+        d.features.add("foundry");
         at.well(m, m);
         for (int k = -1; k <= 1; k++) {
             at.put(m - 4, b + 1, m + k, Block.BENCH, at.facing(SkyDungeon.WEST));
             at.put(m + k, b + 1, m + 4, Block.BENCH, at.facing(SkyDungeon.SOUTH));
         }
-        for (int[] p : new int[][] { { m - 5, m - 5 }, { m + 5, m + 5 }, { m - 5, m + 5 } })
+        for (int[] p : new int[][] { { m - 5, m - 5 }, { m + 5, m + 4 }, { m - 5, m + 5 } })
             lampPost(at.dx(p[0]), at.dz(p[1]));
         d.features.add("artisans' quarter");
     }

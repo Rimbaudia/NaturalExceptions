@@ -97,7 +97,7 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
         double temp = 293.15;
         if (vesselState != null && vesselState.fuelState()
             .isBurning()) {
-            double flameTemp = forcedDraftTicks > 0 ? 1800.0 : 1300.0;
+            double flameTemp = (forcedDraftTicks > 0 ? 1800.0 : 1300.0) + (crucibleDraft() > 1.0 ? 150.0 : 0.0);
             if (flameTemp > temp) {
                 temp = flameTemp;
             }
@@ -152,6 +152,15 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
                     "Vessel contents exceed the repaired cavity capacity; remove material before restarting.");
             this.structureValid = structureValidationResult.isValid();
         }
+    }
+
+    /** How much a Colossus Crucible set into the shell breathes on the fire: unpumped, as if half-pumped. */
+    public static final double CRUCIBLE_DRAFT = 1.3;
+
+    /** The draft a Colossus Crucible in the shell adds (1 without one). */
+    public double crucibleDraft() {
+        naturalexceptions.minecraft.multiblock.SmelterVesselGeometry geometry = vesselGeometry();
+        return geometry != null && geometry.crucibles() > 0 ? CRUCIBLE_DRAFT : 1.0;
     }
 
     public void invalidateVesselGeometry() {
@@ -427,7 +436,7 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
         // 4. Only actively pumped, connected nozzles supply forced air. Draft expires even without fuel.
         if (worldObj != null && forcedDraftTicks > 0 && countAttachedTuyeres() == 0) forcedDraftTicks = 0;
         if (!vesselState.isDormant(293.15)) {
-            double airMultiplier = forcedDraftTicks > 0 ? 1.60 : 1.0;
+            double airMultiplier = (forcedDraftTicks > 0 ? 1.60 : 1.0) * crucibleDraft();
             vesselState.step(1, 293.15, airMultiplier);
             markDirty();
         }

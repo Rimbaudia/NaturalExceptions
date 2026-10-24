@@ -148,6 +148,25 @@ class MultiblockArchitectureTest {
     }
 
     @Test
+    void aColossusCrucibleStandsInTheShellForABrickAndIsCounted() {
+        Map<Pos, Block> plain = new HashMap<>();
+        placeVariableVessel(plain, 3, 3, 1);
+        assertEquals(
+            0,
+            StarterSmelterDefinition.INSTANCE.discoverVessel(createMockWorld(plain), 0, 64, 0, 2)
+                .crucibles());
+        Map<Pos, Block> withCrucible = new HashMap<>();
+        placeVariableVessel(withCrucible, 3, 3, 1);
+        int[] wall = MultiblockDefinition.localToWorld(0, 64, 0, 2, 1, 0, 1);
+        withCrucible.put(new Pos(wall[0], wall[1], wall[2]), NEBlocks.colossusCrucible);
+        SmelterVesselGeometry geometry = StarterSmelterDefinition.INSTANCE
+            .discoverVessel(createMockWorld(withCrucible), 0, 64, 0, 2);
+        assertNotNull(geometry, "a crucible in place of a wall brick still makes a vessel");
+        assertEquals(1, geometry.crucibles());
+        assertEquals(1, geometry.cavityCellCount());
+    }
+
+    @Test
     void variableVesselDiscoveryRejectsBlockedCavityAndMissingFloor() {
         Map<Pos, Block> blocked = new HashMap<>();
         placeVariableVessel(blocked, 3, 3, 1);

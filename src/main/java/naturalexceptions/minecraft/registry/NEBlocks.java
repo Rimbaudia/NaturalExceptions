@@ -41,6 +41,9 @@ public final class NEBlocks {
     public static Block galeKeystone;
     /** A Citadel Automaton that ran down long ago: salvage. */
     public static Block brokenAutomaton;
+    /** The Foundry Colossus's pour, and its crucible (a smelter part). */
+    public static Block moltenMetal;
+    public static Block colossusCrucible;
     public static Block skystoneRock;
     public static Block skystoneBricks;
     public static Block skystoneDecor;
@@ -147,6 +150,9 @@ public final class NEBlocks {
         lamplight = new naturalexceptions.minecraft.block.BlockLamplight();
         galeKeystone = new naturalexceptions.minecraft.block.BlockGaleKeystone().setCreativeTab(NECreativeTab.INSTANCE);
         brokenAutomaton = new naturalexceptions.minecraft.block.BlockBrokenAutomaton()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        moltenMetal = new naturalexceptions.minecraft.block.BlockMoltenMetal();
+        colossusCrucible = new naturalexceptions.minecraft.block.BlockColossusCrucible()
             .setCreativeTab(NECreativeTab.INSTANCE);
         skystoneRock = new naturalexceptions.minecraft.block.BlockSkystoneRock().setCreativeTab(NECreativeTab.INSTANCE);
         skystoneBricks = new naturalexceptions.minecraft.block.BlockSkystoneBricks()
@@ -294,6 +300,11 @@ public final class NEBlocks {
             GameRegistry.registerBlock(lamplight, "lamplight");
             GameRegistry.registerBlock(galeKeystone, "gale_keystone");
             GameRegistry.registerBlock(brokenAutomaton, "broken_automaton");
+            GameRegistry.registerBlock(moltenMetal, "molten_metal");
+            GameRegistry.registerBlock(
+                colossusCrucible,
+                naturalexceptions.minecraft.block.BlockColossusCrucible.Item.class,
+                "colossus_crucible");
             GameRegistry.registerBlock(skystoneRock, "skystone");
             GameRegistry.registerBlock(
                 skystoneBricks,

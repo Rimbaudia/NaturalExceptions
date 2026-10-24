@@ -210,7 +210,9 @@ public final class SkyDungeon {
          * A Citadel Automaton that ran down long ago; meta: bits 0-1 the way it faces ({@link #NORTH} ..), its back
          * to what is behind it; bit 2 kneeling rather than sitting.
          */
-        BROKEN_AUTOMATON
+        BROKEN_AUTOMATON,
+        /** The Foundry Colossus, asleep in its foundry (no block); meta: the way it faces ({@link #NORTH} ..). */
+        COLOSSUS
     }
 
     /** A furnace's meta bit: it was left mid-work, ore in it and its fuel unburnt, and went cold. */
@@ -250,6 +252,8 @@ public final class SkyDungeon {
         CHART,
         /** A quarry's tool chest: a Mason's Chisel, a pick, rope and bread. */
         QUARRY,
+        /** The foundry's chest by its door: buckets of water for the Colossus's fire, and a founder's things. */
+        FOUNDRY,
         /**
          * What the dead left in their houses and outbuildings: a pantry, a wardrobe, a workshop or a study's things,
          * now and then something better, never a Sky Key (the key room stays the way in).
@@ -579,7 +583,7 @@ public final class SkyDungeon {
     private Piece piece(int i) {
         long k = positions[i];
         int v = data[i];
-        int loot = (v >>> 16) & 0x7, mob = v >>> 19;
+        int loot = (v >>> 16) & 0xF, mob = v >>> 20;
         return new Piece(
             unpackX(k),
             unpackY(k),
@@ -652,7 +656,8 @@ public final class SkyDungeon {
                 mobIndex = mobNames.size();
             }
         }
-        int v = block.ordinal() | (meta & 0xFF) << 8 | (loot == null ? 0 : loot.ordinal() + 1) << 16 | mobIndex << 19;
+        // Block in bits 0-7, meta 8-15, loot (its kind + 1) 16-19, mob 20 up.
+        int v = block.ordinal() | (meta & 0xFF) << 8 | (loot == null ? 0 : loot.ordinal() + 1) << 16 | mobIndex << 20;
         int i = find(k);
         if (i >= 0) { // the latest write is the one that stands
             data[i] = v;

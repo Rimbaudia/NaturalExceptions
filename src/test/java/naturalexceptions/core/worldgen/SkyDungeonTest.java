@@ -191,6 +191,27 @@ final class SkyDungeonTest {
         assertTrue(citadels > 0, "the samples include a citadel");
     }
 
+    /** Every citadel's artisans' quarter has its foundry: the Foundry Colossus asleep in it, buckets by the door. */
+    @Test
+    void aCitadelsFoundryHoldsItsColossus() {
+        int citadels = 0;
+        for (Sample sample : samples()) {
+            if (sample.dungeon.kind() != SkyDungeon.Kind.CITADEL) continue;
+            citadels++;
+            int colossi = 0, chests = 0;
+            for (Piece p : sample.dungeon.pieces()) {
+                if (p.block == Block.COLOSSUS) colossi++;
+                if (p.block == Block.CHEST && p.loot == SkyDungeon.Loot.FOUNDRY) chests++;
+            }
+            assertEquals(1, colossi, sample.name() + ": one Foundry Colossus");
+            assertEquals(1, chests, sample.name() + ": its chest of buckets");
+            assertTrue(
+                sample.dungeon.features()
+                    .contains("foundry"));
+        }
+        assertTrue(citadels > 0, "the samples include a citadel");
+    }
+
     private static List<Sample> sanctums() {
         List<Sample> out = new ArrayList<>();
         for (Sample s : samples()) if (s.dungeon.kind() == SkyDungeon.Kind.SANCTUM) out.add(s);

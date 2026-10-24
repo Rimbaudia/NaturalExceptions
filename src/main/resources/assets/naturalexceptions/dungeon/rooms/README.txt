@@ -47,6 +47,7 @@ The sky's own (Greek letters, as the ASCII ones are all taken; ';' starts a comm
   ι ζ ε η θ  Mason's Bench, Sawmill, Loom, Potter's Wheel, Glassblower's Furnace      τ  tanning rack (faces out)
   α β γ δ  pew with its back to the north, east, south, west       π Π  Skystone bench along x / along z
   ξ  Stormglass hanging from the block above          >  Stormglass vein
+  Ω  the Foundry Colossus, asleep (facing south)       Δ  the foundry's chest: water buckets for its fire
 
 Headers for buildings: carpet, glass (colours); roof, timber, eaves; goods; awning. See RoomTemplate.java.
 
