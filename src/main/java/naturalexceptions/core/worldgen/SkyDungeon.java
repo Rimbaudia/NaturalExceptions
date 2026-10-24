@@ -196,7 +196,7 @@ public final class SkyDungeon {
         TRAINING_DUMMY,
         /** A well's winch; meta 0 its drum along x, 1 along z. */
         WELL_WINCH,
-        /** A Citadel Guard posted here (no block); meta: the way he faces ({@link #NORTH} ..). */
+        /** A Citadel Automaton posted here, dormant (no block); meta: the way it faces ({@link #NORTH} ..). */
         GUARD,
         /** A cut-stone pallet; meta: how many dressed blocks are stacked on it (0 to 8). */
         PALLET,
@@ -205,7 +205,12 @@ public final class SkyDungeon {
         /** A derrick's pivot. */
         DERRICK_PIVOT,
         /** A counterweight box waiting in its well; meta: the blocks of stone in it. */
-        COUNTERWEIGHT
+        COUNTERWEIGHT,
+        /**
+         * A Citadel Automaton that ran down long ago; meta: bits 0-1 the way it faces ({@link #NORTH} ..), its back
+         * to what is behind it; bit 2 kneeling rather than sitting.
+         */
+        BROKEN_AUTOMATON
     }
 
     /** A door piece's meta for its upper half (the lower half's meta is the way it faces). */

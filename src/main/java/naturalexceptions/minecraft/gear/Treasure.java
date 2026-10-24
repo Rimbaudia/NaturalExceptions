@@ -33,7 +33,9 @@ public enum Treasure {
     FEATHERSTEP_SLIPPERS("featherstepSlippers", "featherstep_slippers", GearKind.SHOE,
         "Trigger Stones and pressure plates don't feel you, and monsters notice you later. A pair, later still."),
     CLOUD_TREADS("cloudTreads", "cloud_treads", GearKind.SHOE,
-        "You fall gently and land softly. With a pair, walk on water (sneak to sink).");
+        "You fall gently and land softly. With a pair, walk on water (sneak to sink)."),
+    SENTRYS_CREST("sentrysCrest", "sentrys_crest", GearKind.HAT,
+        "The dead city's machines take you for one of their own, until you strike them.", Source.SALVAGE);
 
     /** Where a treasure comes from. */
     public enum Source {
@@ -42,7 +44,9 @@ public enum Treasure {
         /** A sky dungeon's vault only, never crafted. */
         VAULT,
         /** A Sky Warden's relic: dropped only by one, never in a chest, never crafted. */
-        WARDEN
+        WARDEN,
+        /** Salvaged from the dead city's machines only. */
+        SALVAGE
     }
 
     private final String unlocalizedName;

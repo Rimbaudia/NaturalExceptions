@@ -93,7 +93,10 @@ public final class TreasureRecipes {
                 'G',
                 NEItems.galeCore);
         }
-        // Skystone Sabatons are a vault find only.
+        // Skystone Sabatons are a vault find only, a Sentry's Crest salvage only.
+        // A Stormglass heart cracked open.
+        if (NEItems.stormglassHeart != null)
+            GameRegistry.addShapelessRecipe(new ItemStack(shard, 4), new ItemStack(NEItems.stormglassHeart));
         // A Warden's Gale Core: two Gale Vents; or the wind for a Cloud Flask or a Glider Cloak without the search.
         Item core = NEItems.galeCore;
         if (core != null && NEBlocks.galeVent != null && NEBlocks.skystoneBricks != null && NEBlocks.windbloom != null)

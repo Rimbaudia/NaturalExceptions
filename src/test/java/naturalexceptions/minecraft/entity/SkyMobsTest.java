@@ -39,7 +39,8 @@ final class SkyMobsTest {
         assertFalse(EntityGaleHusk.inLeap(9.0), "too far");
         boolean feathers = false;
         Random random = new Random(1);
-        for (int i = 0; i < 50; i++) for (ItemStack s : EntityGaleHusk.drops(random, 0)) feathers |= s.getItem() == Items.feather;
+        for (int i = 0; i < 50; i++)
+            for (ItemStack s : EntityGaleHusk.drops(random, 0)) feathers |= s.getItem() == Items.feather;
         assertTrue(feathers, "feathers in its wrappings");
     }
 
@@ -57,17 +58,17 @@ final class SkyMobsTest {
     }
 
     @Test
-    void aCitadelGuardsShieldTurnsWhatComesFromTheFront() {
+    void aCitadelAutomatonsShieldTurnsWhatComesFromTheFront() {
         // Facing south (+z): yaw 0.
-        assertEquals(0.0F, EntityCitadelGuard.through(0.0F, 0, 0, 0, 5, true, true), "an arrow from in front");
+        assertEquals(0.0F, EntityCitadelAutomaton.through(0.0F, 0, 0, 0, 5, true, true), "an arrow from in front");
         assertEquals(
-            EntityCitadelGuard.MELEE_THROUGH,
-            EntityCitadelGuard.through(0.0F, 0, 0, 0.5, 2, false, true),
+            EntityCitadelAutomaton.MELEE_THROUGH,
+            EntityCitadelAutomaton.through(0.0F, 0, 0, 0.5, 2, false, true),
             "a blow from in front, mostly");
-        assertEquals(1.0F, EntityCitadelGuard.through(0.0F, 0, 0, 5, 0, false, true), "from his side, all of it");
-        assertEquals(1.0F, EntityCitadelGuard.through(0.0F, 0, 0, 0, -5, true, true), "from behind, all of it");
-        assertEquals(1.0F, EntityCitadelGuard.through(0.0F, 0, 0, 0, 5, true, false), "shield down, all of it");
-        assertTrue(EntityCitadelGuard.REACH > 3.0, "a halberd's reach");
+        assertEquals(1.0F, EntityCitadelAutomaton.through(0.0F, 0, 0, 5, 0, false, true), "from his side, all of it");
+        assertEquals(1.0F, EntityCitadelAutomaton.through(0.0F, 0, 0, 0, -5, true, true), "from behind, all of it");
+        assertEquals(1.0F, EntityCitadelAutomaton.through(0.0F, 0, 0, 0, 5, true, false), "shield down, all of it");
+        assertTrue(EntityCitadelAutomaton.REACH > 3.0, "a halberd's reach");
     }
 
     @Test

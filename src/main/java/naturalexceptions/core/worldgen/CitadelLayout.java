@@ -82,6 +82,7 @@ final class CitadelLayout {
         square();
         stairsUp(); // last in the town: nothing is paved over the flights
         hangGates();
+        machines(); // on what is finished: the streets as they are
         sites = new CitadelSites(this::ground);
         int town = MOAT_OUT + 1;
         sites.reserve("town", -town, -town, town, town);
@@ -1096,6 +1097,77 @@ final class CitadelLayout {
      * lord's garden: a gravel walk round the keep, and beyond it a parterre of flower beds edged in low box hedges,
      * gravel paths between them, benches on the walk; open lawn along the inner wall, where its stairs go up.
      */
+    // --- The machines that are left --------------------------------------------------------------------------
+
+    /** Chances, per street spot, that a run-down Automaton sits there: the main streets, the ring road, the backs. */
+    static final double BROKEN_ON_STREET = 0.06, BROKEN_ON_RING = 0.03, BROKEN_ON_BACK = 0.015;
+
+    /**
+     * The city's machines as they are now: a few still standing guard inside the gates, dormant, and many more run
+     * down where they stopped, slumped or kneeling at the edges of the streets, their backs to the houses.
+     */
+    private void machines() {
+        int gate = OUTER - THICK - 2;
+        for (int side : new int[] { -2, 2 }) standGuard(side, gate, SkyDungeon.SOUTH);
+        for (int side : new int[] { -3, 3 }) standGuard(INNER + 2, side, SkyDungeon.EAST);
+        // The four main streets, out from the ring road to the outer wall, five wide: their edges.
+        for (int t = ROAD_OUT + 3; t <= OUTER - THICK - 3; t++) for (int edge : new int[] { -2, 2 }) {
+            runDown(edge, t, edge, 0, BROKEN_ON_STREET);
+            runDown(edge, -t, edge, 0, BROKEN_ON_STREET);
+            runDown(t, edge, 0, edge, BROKEN_ON_STREET);
+            runDown(-t, edge, 0, edge, BROKEN_ON_STREET);
+        }
+        // The ring road's outer edge, and both edges of the back streets.
+        for (int t = -ROAD_OUT; t <= ROAD_OUT; t++) {
+            runDown(t, ROAD_OUT, 0, 1, BROKEN_ON_RING);
+            runDown(t, -ROAD_OUT, 0, -1, BROKEN_ON_RING);
+            runDown(ROAD_OUT, t, 1, 0, BROKEN_ON_RING);
+            runDown(-ROAD_OUT, t, -1, 0, BROKEN_ON_RING);
+            for (int depth : new int[] { BACK_STREET, BACK_FRONT - 1 }) {
+                int out = depth == BACK_STREET ? -1 : 1;
+                runDown(t, depth, 0, out, BROKEN_ON_BACK);
+                runDown(t, -depth, 0, -out, BROKEN_ON_BACK);
+                runDown(depth, t, out, 0, BROKEN_ON_BACK);
+                runDown(-depth, t, -out, 0, BROKEN_ON_BACK);
+            }
+        }
+    }
+
+    /** A dormant Automaton at (dx, dz) facing {@code facing}, if the street is clear there. */
+    private void standGuard(int dx, int dz, int facing) {
+        if (clearStreet(dx, dz)) put(dx, b + 1, dz, Block.GUARD, facing);
+    }
+
+    /**
+     * Now and then, a run-down Automaton at (dx, dz), its back to whatever stands on the side (outX, outZ) (the
+     * edge of the street it sat down at), facing into the street. Never in front of a door or a gate.
+     */
+    private void runDown(int dx, int dz, int outX, int outZ, double chance) {
+        int ox = Integer.signum(outX), oz = Integer.signum(outZ);
+        if (random.nextDouble() >= chance || !clearStreet(dx, dz)) return;
+        for (int[] n : new int[][] { { ox, oz }, { -oz, ox }, { oz, -ox } }) {
+            SkyDungeon.Piece beside = d.at(cx + dx + n[0], b + 1, cz + dz + n[1]);
+            if (beside != null && (beside.block == Block.DOOR || beside.block == Block.GATE
+                || beside.block == Block.FENCE_GATE
+                || beside.block == Block.STAIRS
+                || beside.block == Block.GUARD
+                || beside.block == Block.BROKEN_AUTOMATON)) return;
+        }
+        int facing = ox > 0 ? SkyDungeon.WEST : ox < 0 ? SkyDungeon.EAST : oz > 0 ? SkyDungeon.NORTH : SkyDungeon.SOUTH;
+        put(dx, b + 1, dz, Block.BROKEN_AUTOMATON, facing | (random.nextInt(3) == 0 ? 4 : 0));
+    }
+
+    /** Whether (dx, dz) is open paved street: floor at the ground, air for a body's height over it. */
+    private boolean clearStreet(int dx, int dz) {
+        SkyDungeon.Piece floor = d.at(cx + dx, b, cz + dz);
+        if (floor == null || floor.block == Block.AIR) return false;
+        for (int y = b + 1; y <= b + 2; y++) {
+            SkyDungeon.Piece above = d.at(cx + dx, y, cz + dz);
+            if (above == null || above.block != Block.AIR) return false;
+        }
+        return true;
+    }
+
     private void square() {
         int inside = INNER - THICK - 1;
         int z0 = 13, z1 = inside;

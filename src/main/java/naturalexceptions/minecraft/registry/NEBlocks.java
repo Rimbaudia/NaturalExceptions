@@ -39,6 +39,8 @@ public final class NEBlocks {
     public static Block lamplight;
     /** A Gale Core sealed in an arch's keystone. */
     public static Block galeKeystone;
+    /** A Citadel Automaton that ran down long ago: salvage. */
+    public static Block brokenAutomaton;
     public static Block skystoneRock;
     public static Block skystoneBricks;
     public static Block skystoneDecor;
@@ -144,6 +146,8 @@ public final class NEBlocks {
         cloud = new naturalexceptions.minecraft.block.BlockCloud().setCreativeTab(NECreativeTab.INSTANCE);
         lamplight = new naturalexceptions.minecraft.block.BlockLamplight();
         galeKeystone = new naturalexceptions.minecraft.block.BlockGaleKeystone().setCreativeTab(NECreativeTab.INSTANCE);
+        brokenAutomaton = new naturalexceptions.minecraft.block.BlockBrokenAutomaton()
+            .setCreativeTab(NECreativeTab.INSTANCE);
         skystoneRock = new naturalexceptions.minecraft.block.BlockSkystoneRock().setCreativeTab(NECreativeTab.INSTANCE);
         skystoneBricks = new naturalexceptions.minecraft.block.BlockSkystoneBricks()
             .setCreativeTab(NECreativeTab.INSTANCE);
@@ -289,6 +293,7 @@ public final class NEBlocks {
             GameRegistry.registerBlock(cloud, "cloud");
             GameRegistry.registerBlock(lamplight, "lamplight");
             GameRegistry.registerBlock(galeKeystone, "gale_keystone");
+            GameRegistry.registerBlock(brokenAutomaton, "broken_automaton");
             GameRegistry.registerBlock(skystoneRock, "skystone");
             GameRegistry.registerBlock(
                 skystoneBricks,

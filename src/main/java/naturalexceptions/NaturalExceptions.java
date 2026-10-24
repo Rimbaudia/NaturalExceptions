@@ -180,7 +180,7 @@ public final class NaturalExceptions {
             20,
             true);
         cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
-            naturalexceptions.minecraft.entity.EntityCitadelGuard.class,
+            naturalexceptions.minecraft.entity.EntityCitadelAutomaton.class,
             "citadel_guard",
             11,
             this,
@@ -295,8 +295,8 @@ public final class NaturalExceptions {
             naturalexceptions.minecraft.entity.EntityStormArrow.class,
             new net.minecraft.client.renderer.entity.RenderArrow());
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
-            naturalexceptions.minecraft.entity.EntityCitadelGuard.class,
-            new naturalexceptions.minecraft.entity.client.RenderCitadelGuard());
+            naturalexceptions.minecraft.entity.EntityCitadelAutomaton.class,
+            new naturalexceptions.minecraft.entity.client.RenderCitadelAutomaton());
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
             naturalexceptions.minecraft.entity.EntityCloudweaver.class,
             new naturalexceptions.minecraft.entity.client.RenderCloudweaver());

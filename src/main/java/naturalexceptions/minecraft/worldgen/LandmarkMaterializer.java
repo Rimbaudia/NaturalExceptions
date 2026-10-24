@@ -790,9 +790,18 @@ final class LandmarkMaterializer {
             case ARCHERY_BUTT:
                 set(world, x, y, z, orElse(NEBlocks.archeryButt, Blocks.hay_block), SIDE_FACING[meta & 3]);
                 break;
+            case BROKEN_AUTOMATON:
+                if (NEBlocks.brokenAutomaton != null) set(
+                    world,
+                    x,
+                    y,
+                    z,
+                    NEBlocks.brokenAutomaton,
+                    BROKEN_FACING[meta & 3] | meta & naturalexceptions.minecraft.block.BlockBrokenAutomaton.KNEELING);
+                break;
             case GUARD: {
-                // A Citadel Guard at his post: no block, only him.
-                naturalexceptions.minecraft.entity.EntityCitadelGuard guard = new naturalexceptions.minecraft.entity.EntityCitadelGuard(
+                // A Citadel Automaton at its post, dormant: no block, only it.
+                naturalexceptions.minecraft.entity.EntityCitadelAutomaton guard = new naturalexceptions.minecraft.entity.EntityCitadelAutomaton(
                     world);
                 guard.setLocationAndAngles(x + 0.5, y, z + 0.5, SIDE_YAW[meta & 3], 0.0F);
                 guard.rotationYawHead = guard.renderYawOffset = SIDE_YAW[meta & 3];
@@ -884,6 +893,8 @@ final class LandmarkMaterializer {
 
     /** Vanilla side for a dungeon direction (north, east, south, west): what a shelf's front faces. */
     private static final int[] SIDE_FACING = { 2, 5, 3, 4 };
+    /** A broken Automaton's facing bits for the way it faces (north, east, south, west). */
+    private static final int[] BROKEN_FACING = { 1, 2, 0, 3 };
     /** An entity's yaw facing north, east, south, west. */
     private static final float[] SIDE_YAW = { 180.0F, 270.0F, 0.0F, 90.0F };
     /** Vine meta clinging to the wall on the north, east, south, west. */

@@ -130,6 +130,8 @@ public final class HatAndShoeEffects {
     }
 
     static boolean notices(EntityLivingBase mob, EntityPlayer player) {
+        if (mob instanceof naturalexceptions.minecraft.entity.CitadelMachine
+            && naturalexceptions.minecraft.entity.CitadelMachine.passes(player, mob)) return false; // Sentry's Crest
         return notices(
             mob.getDistanceToEntity(player),
             ItemTreasureGear.worn(player, Treasure.FEATHERSTEP_SLIPPERS),

@@ -120,6 +120,38 @@ final class SkyDungeonTest {
         assertTrue(citadels > 0, "the samples include a citadel");
     }
 
+    /**
+     * The dead city's machines: a few still stand guard, dormant, inside its gates; many more are run down at the
+     * edges of its streets, never in a doorway and always with room to walk past.
+     */
+    @Test
+    void aCitadelsStreetsHoldItsRunDownMachines() {
+        int citadels = 0;
+        for (Sample sample : samples()) {
+            if (sample.dungeon.kind() != SkyDungeon.Kind.CITADEL) continue;
+            citadels++;
+            int broken = 0, standing = 0;
+            for (Piece p : sample.dungeon.pieces()) {
+                if (p.block == SkyDungeon.Block.GUARD) standing++;
+                if (p.block != SkyDungeon.Block.BROKEN_AUTOMATON) continue;
+                broken++;
+                Piece floor = sample.dungeon.at(p.x, p.y - 1, p.z), over = sample.dungeon.at(p.x, p.y + 1, p.z);
+                assertTrue(floor != null && floor.block != SkyDungeon.Block.AIR, "it sits on the street");
+                assertTrue(over != null && over.block == SkyDungeon.Block.AIR, "nothing over it");
+                for (int[] n : new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                    Piece beside = sample.dungeon.at(p.x + n[0], p.y, p.z + n[1]);
+                    assertTrue(
+                        beside == null
+                            || beside.block != SkyDungeon.Block.DOOR && beside.block != SkyDungeon.Block.GATE,
+                        "not in a doorway");
+                }
+            }
+            assertTrue(broken >= 15, "many run down in its streets: " + broken);
+            assertTrue(standing >= 6 && standing < broken, "a few still on guard: " + standing);
+        }
+        assertTrue(citadels > 0, "the samples include a citadel");
+    }
+
     private static List<Sample> sanctums() {
         List<Sample> out = new ArrayList<>();
         for (Sample s : samples()) if (s.dungeon.kind() == SkyDungeon.Kind.SANCTUM) out.add(s);
@@ -380,8 +412,10 @@ final class SkyDungeonTest {
         for (Sample s : samples()) if (s.dungeon.features()
             .contains("guardhouse")) {
                 int guards = 0;
-                for (Piece p : s.dungeon.pieces()) if (p.block == Block.GUARD) guards++;
-                assertEquals(4, guards, s.name() + ": the guardhouse has its watch of four");
+                int cx = s.dungeon.island.centreX(), cz = s.dungeon.island.centreZ();
+                for (Piece p : s.dungeon.pieces()) if (p.block == Block.GUARD
+                    && Math.max(Math.abs(p.x - cx), Math.abs(p.z - cz)) > CitadelLayout.MOAT_OUT) guards++;
+                assertEquals(4, guards, s.name() + ": the guardhouse outside the walls has its watch of four");
             }
         for (Sample s : samples())
             if (s.dungeon.kind() == SkyDungeon.Kind.CITADEL) for (String district : new String[] { "market plaza",

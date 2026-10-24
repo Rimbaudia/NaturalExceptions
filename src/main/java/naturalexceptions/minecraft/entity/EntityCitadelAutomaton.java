@@ -30,13 +30,14 @@ import naturalexceptions.minecraft.registry.NEBlocks;
 import naturalexceptions.minecraft.registry.NEItems;
 
 /**
- * A Citadel Guard: one of the watch at the guardhouse on the road to a citadel's gate, in a Skystone-plated helm and
- * tabard, a halberd in one hand and a tower shield on the other arm. Once he has seen you his shield is up between
- * blows, and what comes at him from the front glances off it (arrows wholly, blows mostly): get round to his side.
- * His halberd reaches further than a sword. When he first sees you he shouts, and every guard within earshot comes
- * running. Guards keep to their post.
+ * A Citadel Automaton: one of the machines that still keep the watch for a city whose people are long dead. Skystone
+ * plates on a brass frame, a Stormglass heart, a halberd in one hand and a tower shield on the other arm. Posted, it
+ * stands dormant, head bowed, until someone comes near or strikes it; then it wakes with a hiss of steam. Once it has
+ * seen you its shield is up between blows, and what comes at it from the front glances off (arrows wholly, blows
+ * mostly): get round to its side. Its halberd reaches further than a sword. When it wakes it sounds an alarm, and every
+ * machine within earshot wakes and comes. Losing you, it walks back to its post and goes dormant again.
  */
-public final class EntityCitadelGuard extends EntityMob {
+public final class EntityCitadelAutomaton extends EntityMob implements CitadelMachine {
 
     public static final float MAX_HEALTH = 34.0F;
     public static final int ARMOUR = 10;
@@ -51,12 +52,18 @@ public final class EntityCitadelGuard extends EntityMob {
     /** What a blow from the front does through the shield; arrows from the front do nothing. */
     public static final float MELEE_THROUGH = 0.2F;
     public static final double HALBERD_CHANCE = 0.06;
+    /** Its heart, now and then whole enough to take; and the rarer crest of a sentry. */
+    public static final double HEART_CHANCE = 0.25, CREST_CHANCE = 0.03;
+    /** How near someone must come to wake it, and how long after losing them it goes dormant again. */
+    public static final double WAKE_RANGE = 6.0;
+    public static final int SETTLE_TICKS = 200;
 
-    private static final int SHIELD = 16;
-    private int cooldown, lastSwing = -100;
+    private static final int SHIELD = 16, DORMANT = 17;
+    private int cooldown, lastSwing = -100, idle;
     private int[] post;
+    private float postYaw;
 
-    public EntityCitadelGuard(World world) {
+    public EntityCitadelAutomaton(World world) {
         super(world);
         setSize(0.6F, 1.9F);
         experienceValue = 12;
@@ -74,6 +81,7 @@ public final class EntityCitadelGuard extends EntityMob {
     protected void entityInit() {
         super.entityInit();
         dataWatcher.addObject(SHIELD, (byte) 0);
+        dataWatcher.addObject(DORMANT, (byte) 0);
     }
 
     @Override
@@ -96,16 +104,57 @@ public final class EntityCitadelGuard extends EntityMob {
         return ARMOUR;
     }
 
-    /** Sets him at his post: he keeps within {@link #POST_RADIUS} of it, and goes back to it. */
+    /**
+     * Sets it at its post, facing the way it faces now: it keeps within {@link #POST_RADIUS} of it, goes back to it,
+     * and waits there dormant.
+     */
     public void post(int x, int y, int z) {
         post = new int[] { x, y, z };
+        postYaw = rotationYaw;
         setHomeArea(x, y, z, POST_RADIUS);
-        func_110163_bv(); // he stays: the guardhouse is his
+        func_110163_bv(); // it stays: the post is its
+        setDormant(true);
     }
 
-    /** Whether his shield is up (for the model). */
+    /** Whether its shield is up (for the model). */
     public boolean shieldUp() {
         return dataWatcher.getWatchableObjectByte(SHIELD) != 0;
+    }
+
+    /** Whether it stands dormant at its post, head bowed (for the model, too). */
+    public boolean dormant() {
+        return dataWatcher.getWatchableObjectByte(DORMANT) != 0;
+    }
+
+    private void setDormant(boolean dormant) {
+        dataWatcher.updateObject(DORMANT, (byte) (dormant ? 1 : 0));
+    }
+
+    /** It wakes: a hiss and a breath of steam, and it looks for who woke it. */
+    public void wake() {
+        if (!dormant()) return;
+        setDormant(false);
+        idle = 0;
+        worldObj.playSoundAtEntity(this, "random.fizz", 0.8F, 0.6F);
+        if (worldObj instanceof WorldServer) ((WorldServer) worldObj)
+            .func_147487_a("cloud", posX, posY + height * 0.55, posZ, 12, 0.25, 0.3, 0.25, 0.02);
+    }
+
+    /** Dormant, nothing in it moves; it only listens. */
+    @Override
+    protected void updateAITasks() {
+        if (!dormant()) {
+            super.updateAITasks();
+            return;
+        }
+        motionX = motionZ = 0.0;
+        rotationYaw = renderYawOffset = rotationYawHead = postYaw;
+        if (ticksExisted % 10 != 0) return;
+        EntityPlayer near = worldObj.getClosestVulnerablePlayerToEntity(this, WAKE_RANGE);
+        if (near != null && !CitadelMachine.passes(near, this) && canEntityBeSeen(near)) {
+            wake();
+            setAttackTarget(near);
+        }
     }
 
     // --- The shield -----------------------------------------------------------------------------------------
@@ -128,9 +177,17 @@ public final class EntityCitadelGuard extends EntityMob {
 
     @Override
     public boolean attackEntityFrom(DamageSource source, float amount) {
+        if (!worldObj.isRemote && source.getEntity() != null) wake();
         Entity from = source.getSourceOfDamage();
         if (from != null && !source.isUnblockable()) {
-            float through = through(renderYawOffset, posX, posZ, from.posX, from.posZ, source.isProjectile(), shieldUp());
+            float through = through(
+                renderYawOffset,
+                posX,
+                posZ,
+                from.posX,
+                from.posZ,
+                source.isProjectile(),
+                shieldUp());
             if (through < 1.0F) {
                 worldObj.playSoundAtEntity(this, "random.anvil_land", 0.3F, 1.8F);
                 if (worldObj instanceof WorldServer) ((WorldServer) worldObj)
@@ -157,11 +214,29 @@ public final class EntityCitadelGuard extends EntityMob {
         EntityLivingBase target = getAttackTarget();
         boolean up = target != null && ticksExisted - lastSwing > GUARD_AFTER_SWING;
         if (up != shieldUp()) dataWatcher.updateObject(SHIELD, (byte) (up ? 1 : 0));
+        settle(target);
         if (target != null && cooldown == 0 && getDistanceToEntity(target) <= REACH && canEntityBeSeen(target))
             attackEntityAsMob(target);
     }
 
-    /** A halberd's blow, from out of a sword's reach; it lowers his shield for a moment. */
+    /** Back at its post with no one to fight for a while, it goes dormant again. */
+    private void settle(EntityLivingBase target) {
+        if (post == null || dormant()) return;
+        if (target != null) {
+            idle = 0;
+            return;
+        }
+        if (++idle < SETTLE_TICKS) return;
+        double dx = posX - (post[0] + 0.5), dz = posZ - (post[2] + 0.5);
+        if (dx * dx + dz * dz > 2.25) {
+            if (getNavigator().noPath()) getNavigator().tryMoveToXYZ(post[0] + 0.5, post[1], post[2] + 0.5, 0.8);
+            return;
+        }
+        setDormant(true);
+        worldObj.playSoundAtEntity(this, "random.click", 0.5F, 0.5F);
+    }
+
+    /** A halberd's blow, from out of a sword's reach; it lowers its shield for a moment. */
     @Override
     public boolean attackEntityAsMob(Entity target) {
         if (cooldown > 0) return false;
@@ -173,25 +248,34 @@ public final class EntityCitadelGuard extends EntityMob {
         return hit;
     }
 
-    /** On first seeing someone, he shouts, and every guard within earshot takes up the same fight. */
+    /**
+     * On first seeing someone it sounds its alarm, a clang and a shriek of steam, and every machine within earshot
+     * wakes and takes up the same fight. One wearing a Sentry's Crest it takes for one of its own, until struck.
+     */
     @Override
     public void setAttackTarget(EntityLivingBase target) {
+        if (target instanceof EntityPlayer && CitadelMachine.passes((EntityPlayer) target, this)) target = null;
         boolean first = target != null && getAttackTarget() == null;
         super.setAttackTarget(target);
         if (!first || worldObj.isRemote) return;
-        worldObj.playSoundAtEntity(this, "mob.villager.no", 1.5F, 0.6F);
+        wake();
+        worldObj.playSoundAtEntity(this, "random.anvil_land", 1.2F, 1.6F);
+        worldObj.playSoundAtEntity(this, "random.fizz", 1.5F, 1.4F);
         @SuppressWarnings("unchecked")
-        List<EntityCitadelGuard> guards = worldObj
-            .getEntitiesWithinAABB(EntityCitadelGuard.class, boundingBox.expand(RALLY, 8.0, RALLY));
-        for (EntityCitadelGuard guard : guards) if (guard != this && guard.getAttackTarget() == null) guard.rally(target);
+        List<EntityCitadelAutomaton> machines = worldObj
+            .getEntitiesWithinAABB(EntityCitadelAutomaton.class, boundingBox.expand(RALLY, 8.0, RALLY));
+        for (EntityCitadelAutomaton machine : machines)
+            if (machine != this && machine.getAttackTarget() == null) machine.rally(target);
     }
 
-    /** Takes up a fight another guard called him to (without calling the rest again). */
+    /** Takes up a fight another machine called it to (without calling the rest again). */
     void rally(EntityLivingBase target) {
+        if (target instanceof EntityPlayer && CitadelMachine.passes((EntityPlayer) target, this)) return;
+        wake();
         super.setAttackTarget(target);
     }
 
-    /** He stands where he was posted, lit or not. */
+    /** It stands where it was posted, lit or not. */
     @Override
     public boolean getCanSpawnHere() {
         return worldObj.checkNoEntityCollision(boundingBox) && worldObj.getCollidingBoundingBoxes(this, boundingBox)
@@ -209,6 +293,8 @@ public final class EntityCitadelGuard extends EntityMob {
     public void writeEntityToNBT(NBTTagCompound tag) {
         super.writeEntityToNBT(tag);
         if (post != null) tag.setIntArray("Post", post);
+        tag.setFloat("PostYaw", postYaw);
+        tag.setBoolean("Dormant", dormant());
     }
 
     @Override
@@ -218,6 +304,8 @@ public final class EntityCitadelGuard extends EntityMob {
             int[] p = tag.getIntArray("Post");
             if (p.length == 3) post(p[0], p[1], p[2]);
         }
+        if (tag.hasKey("PostYaw")) postYaw = tag.getFloat("PostYaw");
+        setDormant(tag.getBoolean("Dormant"));
     }
 
     // --- Drops ----------------------------------------------------------------------------------------------
@@ -227,14 +315,17 @@ public final class EntityCitadelGuard extends EntityMob {
         for (ItemStack stack : drops(rand, looting)) entityDropItem(stack, 0.5F);
     }
 
-    /** Some iron, his bread, and now and then his halberd. */
+    /** Salvage: some iron from its frame, often its Stormglass heart, now and then its halberd or a sentry's crest. */
     public static List<ItemStack> drops(Random random, int looting) {
         List<ItemStack> drops = new ArrayList<>();
-        int iron = random.nextInt(3 + looting), bread = random.nextInt(2);
+        int iron = random.nextInt(3 + looting);
         if (iron > 0) drops.add(new ItemStack(Items.iron_ingot, iron));
-        if (bread > 0) drops.add(new ItemStack(Items.bread, bread));
+        if (NEItems.stormglassHeart != null && random.nextDouble() < HEART_CHANCE + looting * 0.05)
+            drops.add(new ItemStack(NEItems.stormglassHeart));
         if (NEItems.citadelHalberd != null && random.nextDouble() < HALBERD_CHANCE + looting * 0.02)
             drops.add(new ItemStack(NEItems.citadelHalberd));
+        Item crest = NEItems.TREASURES.get(naturalexceptions.minecraft.gear.Treasure.SENTRYS_CREST);
+        if (crest != null && random.nextDouble() < CREST_CHANCE + looting * 0.01) drops.add(new ItemStack(crest));
         return drops;
     }
 
@@ -252,16 +343,21 @@ public final class EntityCitadelGuard extends EntityMob {
 
     @Override
     protected String getHurtSound() {
-        return "game.player.hurt";
+        return "mob.irongolem.hit";
     }
 
     @Override
     protected String getDeathSound() {
-        return "game.player.die";
+        return "mob.irongolem.death";
+    }
+
+    @Override
+    protected float getSoundPitch() {
+        return 1.3F + (rand.nextFloat() - 0.5F) * 0.1F;
     }
 
     @Override
     protected void func_145780_a(int x, int y, int z, Block block) {
-        playSound("step.stone", 0.3F, 0.8F);
+        playSound("mob.irongolem.walk", 0.35F, 1.5F);
     }
 }

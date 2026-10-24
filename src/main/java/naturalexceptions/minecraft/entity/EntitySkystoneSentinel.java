@@ -31,7 +31,7 @@ import naturalexceptions.minecraft.registry.NEItems;
  * it; arrows glance off its plates. Close in, it lifts its fists (dust rising round it) and a second later brings them
  * down in a Ground Slam that hurts and throws back everyone within three blocks.
  */
-public final class EntitySkystoneSentinel extends EntityMob {
+public final class EntitySkystoneSentinel extends EntityMob implements CitadelMachine {
 
     public static final float MAX_HEALTH = 30.0F;
     public static final int ARMOUR = 8;
