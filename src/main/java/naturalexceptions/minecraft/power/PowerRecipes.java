@@ -82,6 +82,54 @@ public final class PowerRecipes {
             new ItemStack(Items.coal, 1, OreDictionary.WILDCARD_VALUE),
             'I',
             Items.gold_ingot);
+        ItemStack anyWool = new ItemStack(Blocks.wool, 1, OreDictionary.WILDCARD_VALUE);
+        if (NEBlocks.windmill != null && NEBlocks.crankDynamo != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.windmill),
+            "WSW",
+            "SDS",
+            "WSW",
+            'W',
+            anyWool,
+            'S',
+            Items.stick,
+            'D',
+            NEBlocks.crankDynamo);
+        if (NEBlocks.heartSocket != null) GameRegistry.addRecipe(
+            new RecipeCastCopper(
+                new ItemStack(NEBlocks.heartSocket),
+                "ICI",
+                "WGW",
+                "III",
+                'I',
+                Items.iron_ingot,
+                'C',
+                NEItems.copperIngot,
+                'W',
+                wire,
+                'G',
+                Blocks.glass));
+        if (NEBlocks.stormCell != null && NEItems.stormglassShard != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.stormCell),
+            "IGI",
+            "SSS",
+            "IWI",
+            'I',
+            Items.iron_ingot,
+            'G',
+            Blocks.glass,
+            'S',
+            NEItems.stormglassShard,
+            'W',
+            wire);
+        if (NEBlocks.lightningSpire != null && NEItems.stormglassShard != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.lightningSpire),
+            " S ",
+            "SBS",
+            " B ",
+            'S',
+            NEItems.stormglassShard,
+            'B',
+            Blocks.iron_bars);
         if (NEItems.multimeter != null) GameRegistry.addRecipe(
             new ItemStack(NEItems.multimeter),
             "IGI",

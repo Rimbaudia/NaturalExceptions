@@ -43,6 +43,10 @@ final class PowerRecipesTest {
         assertTrue(craftable(Item.getItemFromBlock(NEBlocks.crankDynamo), -1));
         assertTrue(craftable(Item.getItemFromBlock(NEBlocks.arcLamp), -1));
         assertTrue(craftable(NEItems.multimeter, -1));
+        assertTrue(craftable(Item.getItemFromBlock(NEBlocks.windmill), -1));
+        assertTrue(craftable(Item.getItemFromBlock(NEBlocks.heartSocket), -1));
+        assertTrue(craftable(Item.getItemFromBlock(NEBlocks.stormCell), -1));
+        assertTrue(craftable(Item.getItemFromBlock(NEBlocks.lightningSpire), -1));
     }
 
     @Test

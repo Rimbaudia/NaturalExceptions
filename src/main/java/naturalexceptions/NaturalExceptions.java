@@ -357,6 +357,9 @@ public final class NaturalExceptions {
         cpw.mods.fml.client.registry.RenderingRegistry
             .registerBlockHandler(new naturalexceptions.minecraft.power.client.CableRenderer());
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
+            naturalexceptions.minecraft.power.TileWindmill.class,
+            new naturalexceptions.minecraft.power.client.RenderWindmill());
+        cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
             naturalexceptions.minecraft.fabrication.TileEntityCastingTable.class,
             new naturalexceptions.minecraft.fabrication.client.RenderCastingTable());
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(

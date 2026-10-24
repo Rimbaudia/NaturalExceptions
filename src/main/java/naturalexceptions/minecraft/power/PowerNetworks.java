@@ -123,6 +123,18 @@ public final class PowerNetworks {
         return t == null ? Cable.AMBIENT_KELVIN : t;
     }
 
+    /** The machines on the network through (x, y, z). */
+    public List<TileEntity> devices(int x, int y, int z) {
+        List<TileEntity> out = new ArrayList<>();
+        Net net = byPos.get(PowerTopology.key(x, y, z));
+        if (net == null) return out;
+        for (int[] p : net.blocks) {
+            TileEntity tile = world.getTileEntity(p[0], p[1], p[2]);
+            if (tile instanceof PowerDevice) out.add(tile);
+        }
+        return out;
+    }
+
     /** How many blocks the network through (x, y, z) has (0 if none). */
     public int networkSize(int x, int y, int z) {
         Net net = byPos.get(PowerTopology.key(x, y, z));
@@ -180,19 +192,26 @@ public final class PowerNetworks {
         int n = net.blocks.size();
         Grid grid = new Grid(n);
         grid.warmStart(net.volts);
-        List<int[]> edges = new ArrayList<>(); // {a, b, resistor}
+        List<int[]> edges = new ArrayList<>(); // {a, b, resistor} (relays: {-1, -1, resistor, a, b})
+        edgeOhms.clear();
         double[] half = new double[n];
         for (int i = 0; i < n; i++) half[i] = ohms(net.blocks.get(i)) / 2.0;
         for (int i = 0; i < n; i++) {
             int[] p = net.blocks.get(i);
             for (int[] f : new int[][] { { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } }) {
                 Integer j = net.index.get(PowerTopology.key(p[0] + f[0], p[1] + f[1], p[2] + f[2]));
-                if (j != null) edges.add(new int[] { i, j, grid.resistor(i, j, half[i] + half[j]) });
+                if (j != null) {
+                    edges.add(new int[] { i, j, grid.resistor(i, j, half[i] + half[j]) });
+                    edgeOhms.add(half[i] + half[j]);
+                }
             }
             if (view.relay(p[0], p[1], p[2])) for (int[] r : PowerTopology.relayLinks(view, p)) {
                 Integer j = net.index.get(PowerTopology.key(r[0], r[1], r[2]));
-                if (j != null && j > i) edges.add(
-                    new int[] { -1, -1, grid.resistor(i, j, PowerTopology.relayOhms(PowerTopology.distance(p, r))) });
+                if (j != null && j > i) {
+                    double ohms = PowerTopology.relayOhms(PowerTopology.distance(p, r));
+                    edges.add(new int[] { -1, -1, grid.resistor(i, j, ohms), i, j });
+                    edgeOhms.add(ohms);
+                }
             }
         }
         List<PowerDevice> devices = new ArrayList<>();
@@ -203,19 +222,44 @@ public final class PowerNetworks {
             if (tile instanceof PowerDevice) {
                 devices.add((PowerDevice) tile);
                 deviceNodes.add(i);
-                ((PowerDevice) tile).stamp(grid, i);
             }
         }
+        for (int d = 0; d < devices.size(); d++) devices.get(d)
+            .stamp(grid, deviceNodes.get(d));
         boolean live = grid.hasSources();
         if (live) {
             grid.solve();
-            net.volts = grid.voltages();
-        } else java.util.Arrays.fill(net.volts, 0.0);
+            boolean again = false;
+            for (PowerDevice device : devices) again |= device.withdraws(grid);
+            if (again) {
+                // Solved once more, with what withdrew taken out: the same wiring, the devices stamped afresh.
+                grid = rewire(net, edges);
+                for (int d = 0; d < devices.size(); d++) devices.get(d)
+                    .stamp(grid, deviceNodes.get(d));
+                live = grid.hasSources();
+                if (live) grid.solve();
+            }
+        }
+        if (live) net.volts = grid.voltages();
+        else java.util.Arrays.fill(net.volts, 0.0);
         net.live = live;
         for (int d = 0; d < devices.size(); d++) devices.get(d)
             .powered(grid, deviceNodes.get(d), seconds);
         warm(net, grid, edges, half, seconds, live);
     }
+
+    /** The same network's wiring again, for a second solve (the edges keep their resistor indices). */
+    private Grid rewire(Net net, List<int[]> edges) {
+        Grid grid = new Grid(net.blocks.size());
+        grid.warmStart(net.volts);
+        for (int[] e : edges) {
+            if (e[0] >= 0) grid.resistor(e[0], e[1], edgeOhms.get(e[2]));
+            else grid.resistor(e[3], e[4], edgeOhms.get(e[2]));
+        }
+        return grid;
+    }
+
+    private final List<Double> edgeOhms = new ArrayList<>();
 
     /** Each cable warms by what it carries (half of each length it shares) and cools to the air; too hot, it fails. */
     private void warm(Net net, Grid grid, List<int[]> edges, double[] half, double seconds, boolean live) {

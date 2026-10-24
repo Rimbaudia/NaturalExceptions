@@ -46,6 +46,7 @@ public final class NEBlocks {
     public static Block colossusCrucible;
     /** Power: cables, a switch, a relay, and the first machines. */
     public static Block cable, knifeSwitch, stormglassRelay, crankDynamo, arcLamp;
+    public static Block windmill, heartSocket, stormCell, lightningSpire;
     public static Block skystoneRock;
     public static Block skystoneBricks;
     public static Block skystoneDecor;
@@ -163,6 +164,14 @@ public final class NEBlocks {
         crankDynamo = new naturalexceptions.minecraft.power.BlockPowerMachine.CrankDynamo()
             .setCreativeTab(NECreativeTab.INSTANCE);
         arcLamp = new naturalexceptions.minecraft.power.BlockPowerMachine.ArcLamp()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        windmill = new naturalexceptions.minecraft.power.BlockPowerMachine.Windmill()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        heartSocket = new naturalexceptions.minecraft.power.BlockPowerMachine.HeartSocket()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        stormCell = new naturalexceptions.minecraft.power.BlockPowerMachine.StormCell()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        lightningSpire = new naturalexceptions.minecraft.power.BlockPowerMachine.LightningSpire()
             .setCreativeTab(NECreativeTab.INSTANCE);
         skystoneRock = new naturalexceptions.minecraft.block.BlockSkystoneRock().setCreativeTab(NECreativeTab.INSTANCE);
         skystoneBricks = new naturalexceptions.minecraft.block.BlockSkystoneBricks()
@@ -316,6 +325,21 @@ public final class NEBlocks {
             GameRegistry.registerBlock(stormglassRelay, "stormglass_relay");
             GameRegistry.registerBlock(crankDynamo, "crank_dynamo");
             GameRegistry.registerBlock(arcLamp, "arc_lamp");
+            GameRegistry.registerBlock(windmill, "windmill");
+            GameRegistry.registerBlock(heartSocket, "heart_socket");
+            GameRegistry.registerBlock(stormCell, "storm_cell");
+            GameRegistry.registerBlock(lightningSpire, "lightning_spire");
+            GameRegistry
+                .registerTileEntity(naturalexceptions.minecraft.power.TileWindmill.class, "naturalexceptions:windmill");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.power.TileHeartSocket.class,
+                "naturalexceptions:heart_socket");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.power.TileStormCell.class,
+                "naturalexceptions:storm_cell");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.power.TileLightningSpire.class,
+                "naturalexceptions:lightning_spire");
             GameRegistry.registerTileEntity(
                 naturalexceptions.minecraft.power.BlockStormglassRelay.Tile.class,
                 "naturalexceptions:stormglass_relay");
