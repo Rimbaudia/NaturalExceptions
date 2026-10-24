@@ -42,7 +42,7 @@ public final class BlockVaultGate extends Block {
         float hitY, float hitZ) {
         if (world.getBlockMetadata(x, y, z) == WARDEN_BOUND) {
             if (!world.isRemote)
-                player.addChatMessage(new ChatComponentText("\u00a77This seal answers only to the Warden's fall."));
+                player.addChatMessage(new ChatComponentText("\u00a77This seal answers only to the Castellan's fall."));
             return true;
         }
         ItemStack held = player.getHeldItem();

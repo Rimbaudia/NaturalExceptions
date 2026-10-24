@@ -167,7 +167,7 @@ public final class GuiDungeonChart extends GuiScreen {
                 drawRect(px - 2, pz - 2, px + 2, pz + 2, YOU);
             }
         }
-        String legend = "▼ down   ▲ up   E entrance   K key   W Warden   V vault";
+        String legend = "▼ down   ▲ up   E entrance   K key   C Castellan   V vault";
         fontRendererObj
             .drawString(legend, (width - fontRendererObj.getStringWidth(legend)) / 2, top + sheetH - 10, 0x6A5030);
         super.drawScreen(mouseX, mouseY, partialTicks);
@@ -184,7 +184,7 @@ public final class GuiDungeonChart extends GuiScreen {
             case DungeonChart.KEY:
                 return "K";
             case DungeonChart.WARDEN:
-                return "W";
+                return "C";
             case DungeonChart.VAULT:
                 return "V";
             default:

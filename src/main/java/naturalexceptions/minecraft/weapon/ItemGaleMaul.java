@@ -153,7 +153,7 @@ public final class ItemGaleMaul extends ItemSword {
     @Override
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public void addInformation(ItemStack stack, EntityPlayer player, List lines, boolean advanced) {
-        lines.add("\u00a75Warden Relic");
+        lines.add("\u00a75Castellan's Relic");
         lines.add("\u00a77Hold right-click to gather the wind;");
         lines.add("\u00a77let go to slam a shockwave into the ground.");
     }

@@ -13,7 +13,7 @@ import net.minecraft.world.World;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
-import naturalexceptions.minecraft.entity.EntitySkyWarden;
+import naturalexceptions.minecraft.entity.EntityCastellan;
 import naturalexceptions.minecraft.entity.EntitySkystoneSentinel;
 import naturalexceptions.minecraft.entity.EntityStormwisp;
 
@@ -40,7 +40,7 @@ public final class ItemDungeonEgg extends Item {
             case 1:
                 return new EntitySkystoneSentinel(world);
             case 2:
-                return new EntitySkyWarden(world);
+                return new EntityCastellan(world);
             case 3:
                 return new naturalexceptions.minecraft.entity.EntityGaleHusk(world);
             case 4:

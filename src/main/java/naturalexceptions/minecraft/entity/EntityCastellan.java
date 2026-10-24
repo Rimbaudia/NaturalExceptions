@@ -36,12 +36,14 @@ import naturalexceptions.minecraft.weapon.EntityStormglassBolt;
 import naturalexceptions.minecraft.worldgen.SkyCacheLoot;
 
 /**
- * The Sky Warden: a guardian of Skystone and Stormglass left to keep a sky dungeon's vault. Slow and heavy; its danger
+ * The Castellan: the master machine of a dead city, left to keep a sky dungeon's vault. Tall and gaunt in its tarnished
+ * regalia, a crown on its helm and its Stormglass heart burning through ribbed armour (registered as the old Sky
+ * Warden, so worlds keep theirs). Slow and heavy; its danger
  * is wind. Every eight seconds it raises its fists and, a second later, a Gale Slam throws everyone near it back
  * (towards the pits of its hall). Below half health it comes Unbound: faster, firing fans of Stormglass bolts at anyone
  * keeping their distance, and it breaks open the hall's alcoves. Its big attacks are always telegraphed.
  */
-public final class EntitySkyWarden extends EntityMob implements IBossDisplayData {
+public final class EntityCastellan extends EntityMob implements IBossDisplayData {
 
     private static final int FLAGS = 16;
     static final int CHARGING_SLAM = 1;
@@ -53,9 +55,9 @@ public final class EntitySkyWarden extends EntityMob implements IBossDisplayData
     private int windup;
     private boolean alcovesOpened;
 
-    public EntitySkyWarden(World world) {
+    public EntityCastellan(World world) {
         super(world);
-        setSize(1.2F, 2.6F);
+        setSize(1.2F, 2.9F);
         isImmuneToFire = true;
         experienceValue = WardenRules.XP;
         func_110163_bv(); // it keeps its hall: never despawns

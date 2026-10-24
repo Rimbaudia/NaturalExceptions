@@ -12,31 +12,31 @@ import org.lwjgl.opengl.GL11;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
-import naturalexceptions.minecraft.entity.EntitySkyWarden;
+import naturalexceptions.minecraft.entity.EntityCastellan;
 
 /** Draws the Sky Warden 1.3 times player size, its core and visor glowing (and its cracks once Unbound). */
 @SideOnly(Side.CLIENT)
-public final class RenderSkyWarden extends RenderLiving {
+public final class RenderCastellan extends RenderLiving {
 
     static final float SCALE = 1.3F;
     private static final ResourceLocation SKIN = new ResourceLocation(
         "naturalexceptions",
-        "textures/entity/sky_warden.png");
+        "textures/entity/castellan.png");
     private static final ResourceLocation GLOW = new ResourceLocation(
         "naturalexceptions",
-        "textures/entity/sky_warden_glow.png");
+        "textures/entity/castellan_glow.png");
     private static final ResourceLocation CRACKS = new ResourceLocation(
         "naturalexceptions",
-        "textures/entity/sky_warden_cracks.png");
+        "textures/entity/castellan_cracks.png");
 
-    public RenderSkyWarden() {
-        super(new ModelSkyWarden(), 1.0F);
-        setRenderPassModel(new ModelSkyWarden());
+    public RenderCastellan() {
+        super(new ModelCastellan(), 1.0F);
+        setRenderPassModel(new ModelCastellan());
     }
 
     @Override
     public void doRender(EntityLiving entity, double x, double y, double z, float yaw, float partialTicks) {
-        if (entity instanceof EntitySkyWarden) BossStatus.setBossStatus((EntitySkyWarden) entity, true);
+        if (entity instanceof EntityCastellan) BossStatus.setBossStatus((EntityCastellan) entity, true);
         super.doRender(entity, x, y, z, yaw, partialTicks);
     }
 
@@ -48,7 +48,7 @@ public final class RenderSkyWarden extends RenderLiving {
     /** Pass 0: the core and visor, full bright. Pass 1: the cracks, once it is Unbound, pulsing. */
     @Override
     protected int shouldRenderPass(EntityLivingBase entity, int pass, float partialTicks) {
-        if (pass > 1 || pass == 1 && !(entity instanceof EntitySkyWarden && ((EntitySkyWarden) entity).unbound()))
+        if (pass > 1 || pass == 1 && !(entity instanceof EntityCastellan && ((EntityCastellan) entity).unbound()))
             return -1;
         bindTexture(pass == 0 ? GLOW : CRACKS);
         GL11.glEnable(GL11.GL_BLEND);

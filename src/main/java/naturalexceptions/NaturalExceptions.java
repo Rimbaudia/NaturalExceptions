@@ -130,7 +130,7 @@ public final class NaturalExceptions {
             1,
             true);
         cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
-            naturalexceptions.minecraft.entity.EntitySkyWarden.class,
+            naturalexceptions.minecraft.entity.EntityCastellan.class,
             "sky_warden",
             3,
             this,
@@ -277,8 +277,8 @@ public final class NaturalExceptions {
             naturalexceptions.minecraft.weapon.EntityStormglassBolt.class,
             new naturalexceptions.minecraft.weapon.client.RenderStormglassBolt());
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
-            naturalexceptions.minecraft.entity.EntitySkyWarden.class,
-            new naturalexceptions.minecraft.entity.client.RenderSkyWarden());
+            naturalexceptions.minecraft.entity.EntityCastellan.class,
+            new naturalexceptions.minecraft.entity.client.RenderCastellan());
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
             naturalexceptions.minecraft.entity.EntityStormwisp.class,
             new naturalexceptions.minecraft.entity.client.RenderStormwisp());

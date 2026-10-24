@@ -64,7 +64,7 @@ final class WardenAndRelicsTest {
         int mauls = 0, treasures = 0, rounds = 4000;
         Set<Item> pool = new HashSet<>(SkyCacheLoot.treasures());
         for (int i = 0; i < rounds; i++) {
-            List<ItemStack> drops = EntitySkyWarden.drops(random);
+            List<ItemStack> drops = EntityCastellan.drops(random);
             int relicCount = 0, cores = 0, diamonds = 0, stormglass = 0;
             for (ItemStack stack : drops) {
                 Item item = stack.getItem();
