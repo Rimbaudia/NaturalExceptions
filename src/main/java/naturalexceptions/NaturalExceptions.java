@@ -91,6 +91,9 @@ public final class NaturalExceptions {
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.gear.GearMovement());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.gear.HatAndShoeEffects());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.worldgen.WindGates());
+        cpw.mods.fml.common.FMLCommonHandler.instance()
+            .bus()
+            .register(new naturalexceptions.minecraft.power.PowerNetworks.Ticker());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.event.StarRainWorldMaterializer());
         FMLCommonHandler.instance()
             .bus()
@@ -351,6 +354,8 @@ public final class NaturalExceptions {
                 naturalexceptions.minecraft.registry.NEItems.cloudsilk));
         cpw.mods.fml.client.registry.RenderingRegistry
             .registerBlockHandler(new naturalexceptions.minecraft.client.model.PartModelRenderer());
+        cpw.mods.fml.client.registry.RenderingRegistry
+            .registerBlockHandler(new naturalexceptions.minecraft.power.client.CableRenderer());
         cpw.mods.fml.client.registry.ClientRegistry.bindTileEntitySpecialRenderer(
             naturalexceptions.minecraft.fabrication.TileEntityCastingTable.class,
             new naturalexceptions.minecraft.fabrication.client.RenderCastingTable());

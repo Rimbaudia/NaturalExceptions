@@ -44,6 +44,8 @@ public final class NEBlocks {
     /** The Foundry Colossus's pour, and its crucible (a smelter part). */
     public static Block moltenMetal;
     public static Block colossusCrucible;
+    /** Power: cables, a switch, a relay, and the first machines. */
+    public static Block cable, knifeSwitch, stormglassRelay, crankDynamo, arcLamp;
     public static Block skystoneRock;
     public static Block skystoneBricks;
     public static Block skystoneDecor;
@@ -153,6 +155,14 @@ public final class NEBlocks {
             .setCreativeTab(NECreativeTab.INSTANCE);
         moltenMetal = new naturalexceptions.minecraft.block.BlockMoltenMetal();
         colossusCrucible = new naturalexceptions.minecraft.block.BlockColossusCrucible()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        cable = new naturalexceptions.minecraft.power.BlockCable().setCreativeTab(NECreativeTab.INSTANCE);
+        knifeSwitch = new naturalexceptions.minecraft.power.BlockKnifeSwitch().setCreativeTab(NECreativeTab.INSTANCE);
+        stormglassRelay = new naturalexceptions.minecraft.power.BlockStormglassRelay()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        crankDynamo = new naturalexceptions.minecraft.power.BlockPowerMachine.CrankDynamo()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        arcLamp = new naturalexceptions.minecraft.power.BlockPowerMachine.ArcLamp()
             .setCreativeTab(NECreativeTab.INSTANCE);
         skystoneRock = new naturalexceptions.minecraft.block.BlockSkystoneRock().setCreativeTab(NECreativeTab.INSTANCE);
         skystoneBricks = new naturalexceptions.minecraft.block.BlockSkystoneBricks()
@@ -301,6 +311,19 @@ public final class NEBlocks {
             GameRegistry.registerBlock(galeKeystone, "gale_keystone");
             GameRegistry.registerBlock(brokenAutomaton, "broken_automaton");
             GameRegistry.registerBlock(moltenMetal, "molten_metal");
+            GameRegistry.registerBlock(cable, naturalexceptions.minecraft.power.BlockCable.ItemCable.class, "cable");
+            GameRegistry.registerBlock(knifeSwitch, "knife_switch");
+            GameRegistry.registerBlock(stormglassRelay, "stormglass_relay");
+            GameRegistry.registerBlock(crankDynamo, "crank_dynamo");
+            GameRegistry.registerBlock(arcLamp, "arc_lamp");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.power.BlockStormglassRelay.Tile.class,
+                "naturalexceptions:stormglass_relay");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.power.TileCrankDynamo.class,
+                "naturalexceptions:crank_dynamo");
+            GameRegistry
+                .registerTileEntity(naturalexceptions.minecraft.power.TileArcLamp.class, "naturalexceptions:arc_lamp");
             GameRegistry.registerBlock(
                 colossusCrucible,
                 naturalexceptions.minecraft.block.BlockColossusCrucible.Item.class,
@@ -492,6 +515,7 @@ public final class NEBlocks {
                 'P',
                 new net.minecraft.item.ItemStack(net.minecraft.init.Blocks.planks, 1, 32767));
             naturalexceptions.minecraft.recipe.TreasureRecipes.register();
+            naturalexceptions.minecraft.power.PowerRecipes.register();
             naturalexceptions.minecraft.recipe.SkystoneRecipes.register();
             // Nine copper ingots to a block and back, as Minecraft does iron. Only ingots, not castings: a block
             // melts as 9 kg, an ingot as 1 kg, a casting is about 0.22 kg, so castings in would make copper.
