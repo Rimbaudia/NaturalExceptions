@@ -40,6 +40,9 @@ public final class GearClientEffects {
     private int airJumpsLeft;
     private int ticksInAir;
     private int reportTimer;
+    private boolean raisedStep;
+    /** Cloud Treads: the fastest they let you fall, in blocks a tick. */
+    static final double CLOUD_TREAD_FALL_SPEED = -0.4;
 
     public static void register() {
         keyGearAbility = new net.minecraft.client.settings.KeyBinding(
@@ -50,6 +53,7 @@ public final class GearClientEffects {
         FMLCommonHandler.instance()
             .bus()
             .register(new GearClientEffects());
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new GearClientSight());
     }
 
     @SubscribeEvent
@@ -64,6 +68,7 @@ public final class GearClientEffects {
             PlayerGear.get(player)
                 .applySync(pending);
         }
+        footwear(player);
         // Keys typed into chat or any other screen are text, not movement: space in chat is not a jump.
         if (mc.isGamePaused() || mc.currentScreen != null || player.capabilities.isFlying || player.isRiding()) {
             jumpWasDown = false;
@@ -143,6 +148,50 @@ public final class GearClientEffects {
             player.fallDistance = 0.0F;
             report(PacketGearAction.Action.GLIDE, false);
         }
+    }
+
+    /** Gale Striders' higher step; Cloud Treads' gentle fall and, with a pair, footing on water. */
+    private void footwear(EntityPlayerSP player) {
+        if (ItemTreasureGear.worn(player, Treasure.GALE_STRIDERS) >= 2) {
+            player.stepHeight = naturalexceptions.minecraft.gear.HatAndShoeEffects.PAIR_STEP_HEIGHT;
+            raisedStep = true;
+        } else if (raisedStep) {
+            player.stepHeight = naturalexceptions.minecraft.gear.HatAndShoeEffects.NORMAL_STEP_HEIGHT;
+            raisedStep = false;
+        }
+        if (player.capabilities.isFlying || player.isRiding()) return;
+        int treads = ItemTreasureGear.worn(player, Treasure.CLOUD_TREADS);
+        if (treads == 0) return;
+        if (treads >= 2 && !player.isSneaking() && standOnWater(player)) return;
+        if (!player.onGround && !player.isInWater() && player.motionY < CLOUD_TREAD_FALL_SPEED) {
+            player.motionY = CLOUD_TREAD_FALL_SPEED;
+            player.fallDistance = 0.0F;
+        }
+    }
+
+    /** Holds the feet at the top of the water they are on or have just dropped into; sneaking sinks. */
+    private static boolean standOnWater(EntityPlayerSP player) {
+        if (player.motionY > 0.0) return false; // jumping off it
+        double feet = player.boundingBox.minY;
+        int x = net.minecraft.util.MathHelper.floor_double(player.posX);
+        int z = net.minecraft.util.MathHelper.floor_double(player.posZ);
+        int y = net.minecraft.util.MathHelper.floor_double(feet - 0.01);
+        net.minecraft.world.World world = player.worldObj;
+        if (world.getBlock(x, y, z)
+            .getMaterial() != net.minecraft.block.material.Material.water
+            || world.getBlock(x, y + 1, z)
+                .getMaterial() != net.minecraft.block.material.Material.air)
+            return false;
+        double lift = y + 1.0 - feet;
+        if (lift > 0.5) return false; // already under: swim up as usual
+        if (lift > 0.0) {
+            player.boundingBox.offset(0.0, lift, 0.0);
+            player.posY += lift;
+        }
+        player.motionY = 0.0;
+        player.onGround = true;
+        player.fallDistance = 0.0F;
+        return true;
     }
 
     /** Tells the server; continuous actions only every few ticks. */

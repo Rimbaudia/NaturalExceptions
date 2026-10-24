@@ -71,7 +71,7 @@ public final class ItemTreasureGear extends Item implements IWearable {
 
     @Override
     public EnumRarity getRarity(ItemStack stack) {
-        return treasure.relic() ? EnumRarity.epic : EnumRarity.rare;
+        return treasure.source() == Treasure.Source.CHEST ? EnumRarity.rare : EnumRarity.epic;
     }
 
     /** The Warden's Visor lends a soft Lumenite sight: night vision kept topped up while worn. */
@@ -115,6 +115,7 @@ public final class ItemTreasureGear extends Item implements IWearable {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public void addInformation(ItemStack stack, EntityPlayer player, List lines, boolean advanced) {
         if (treasure.relic()) lines.add("\u00a75Warden Relic");
+        if (treasure.source() == Treasure.Source.VAULT) lines.add("\u00a75Vault find");
         lines.add("\u00a77" + treasure.effect());
         lines.add(
             "\u00a78Worn: " + treasure.kind()

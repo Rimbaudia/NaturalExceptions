@@ -117,7 +117,7 @@ public final class SkyCacheLoot {
                 break;
             case VAULT_TREASURE:
                 vanilla(chest, random, ChestGenHooks.STRONGHOLD_CROSSING);
-                treasure(chest, random); // last, so nothing lands on top of it
+                vaultTreasure(chest, random); // last, so nothing lands on top of it
                 break;
             case VAULT_RICH:
             default:
@@ -233,13 +233,29 @@ public final class SkyCacheLoot {
     public static List<Item> treasures() {
         List<Item> pool = new ArrayList<>();
         for (Treasure treasure : Treasure.values()) {
-            if (treasure.relic()) continue; // Warden Relics are never in a chest
+            if (!treasure.crafted()) continue; // relics never, vault finds only in a vault (vaultTreasures)
             Item item = NEItems.TREASURES.get(treasure);
             if (item != null) pool.add(item);
         }
         if (NEItems.skyfall != null) pool.add(NEItems.skyfall);
         if (NEItems.shardcaster != null) pool.add(NEItems.shardcaster);
         return pool;
+    }
+
+    /** A vault's pool: the chest treasures, and the treasures found only in vaults. */
+    public static List<Item> vaultTreasures() {
+        List<Item> pool = treasures();
+        for (Treasure treasure : Treasure.values()) {
+            Item item = NEItems.TREASURES.get(treasure);
+            if (treasure.source() == Treasure.Source.VAULT && item != null) pool.add(item);
+        }
+        return pool;
+    }
+
+    private static void vaultTreasure(IInventory chest, Random random) {
+        List<Item> pool = vaultTreasures();
+        if (pool.isEmpty()) return;
+        chest.setInventorySlotContents(TREASURE_SLOT, new ItemStack(pool.get(random.nextInt(pool.size()))));
     }
 
     private static void treasure(IInventory chest, Random random) {

@@ -11,7 +11,8 @@
     "MixinEntityArrow",
     "EntityArrowAccessor",
     "MixinEntityPlayerArmor",
-    "MixinEntityLivingBaseArmor"
+    "MixinEntityLivingBaseArmor",
+    "MixinEntityFootfall"
   ],
   "client": [
     "GuiContainerCreativeAccessor",

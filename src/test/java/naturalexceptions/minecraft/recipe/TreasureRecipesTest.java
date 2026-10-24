@@ -43,7 +43,7 @@ final class TreasureRecipesTest {
     @Test
     void everyNewItemHasARecipe() {
         List<Item> items = new ArrayList<>();
-        for (Treasure treasure : Treasure.values()) if (!treasure.relic()) items.add(NEItems.TREASURES.get(treasure));
+        for (Treasure treasure : Treasure.values()) if (treasure.crafted()) items.add(NEItems.TREASURES.get(treasure));
         items.add(NEItems.skyfall);
         items.add(NEItems.shardcaster);
         items.add(Item.getItemFromBlock(NEBlocks.lumeniteLamp));
@@ -85,8 +85,8 @@ final class TreasureRecipesTest {
 
     @Test
     void wardenRelicsCannotBeCraftedButTheGaleCoreCraftsSkyGear() {
-        for (Treasure treasure : Treasure.values())
-            if (treasure.relic()) assertTrue(!craftable(NEItems.TREASURES.get(treasure)), treasure + " is Warden-only");
+        for (Treasure treasure : Treasure.values()) if (!treasure.crafted())
+            assertTrue(!craftable(NEItems.TREASURES.get(treasure)), treasure + " is only found");
         assertTrue(!craftable(NEItems.galeMaul), "the Gale Maul is Warden-only");
         assertTrue(usedIn(Item.getItemFromBlock(NEBlocks.galeVent), NEItems.galeCore));
         assertTrue(usedInShapeless(NEItems.TREASURES.get(Treasure.CLOUD_FLASK), NEItems.galeCore));
@@ -119,9 +119,16 @@ final class TreasureRecipesTest {
         net.minecraft.item.ItemStack silk = new net.minecraft.item.ItemStack(NEItems.cloudsilk);
         Item cloak = NEItems.TREASURES.get(Treasure.GLIDER_CLOAK);
         for (int[] wools : new int[][] { { 0, 0 }, { 14, 14 }, { 15, 15 }, { 11, 0 } }) {
-            net.minecraft.item.ItemStack a = new net.minecraft.item.ItemStack(net.minecraft.init.Blocks.wool, 1, wools[0]);
-            net.minecraft.item.ItemStack b = new net.minecraft.item.ItemStack(net.minecraft.init.Blocks.wool, 1, wools[1]);
-            net.minecraft.item.ItemStack made = craft(grid(a, leather, b, windbloom, silk, windbloom, silk, null, silk));
+            net.minecraft.item.ItemStack a = new net.minecraft.item.ItemStack(
+                net.minecraft.init.Blocks.wool,
+                1,
+                wools[0]);
+            net.minecraft.item.ItemStack b = new net.minecraft.item.ItemStack(
+                net.minecraft.init.Blocks.wool,
+                1,
+                wools[1]);
+            net.minecraft.item.ItemStack made = craft(
+                grid(a, leather, b, windbloom, silk, windbloom, silk, null, silk));
             org.junit.jupiter.api.Assertions.assertNotNull(made, "a cloak from wool " + wools[0]);
             org.junit.jupiter.api.Assertions.assertEquals(cloak, made.getItem());
             org.junit.jupiter.api.Assertions.assertEquals(

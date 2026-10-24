@@ -167,7 +167,8 @@ public final class GearMovement {
         }
         if (!(living instanceof EntityPlayer)) return;
         EntityPlayer player = (EntityPlayer) living;
-        if (ItemTreasureGear.worn(player, Treasure.HORSESHOE_PENDANT) > 0) {
+        if (ItemTreasureGear.worn(player, Treasure.HORSESHOE_PENDANT) > 0
+            || ItemTreasureGear.worn(player, Treasure.CLOUD_TREADS) > 0) {
             event.setCanceled(true);
             return;
         }

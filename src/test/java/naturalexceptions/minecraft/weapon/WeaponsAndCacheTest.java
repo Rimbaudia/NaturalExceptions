@@ -86,7 +86,7 @@ final class WeaponsAndCacheTest {
     @Test
     void islandCachesAreOrdinaryLootAndNeverATreasure() {
         Set<Item> pool = new HashSet<>(SkyCacheLoot.treasures());
-        assertEquals(7, pool.size(), "five wearables and two weapons");
+        assertEquals(13, pool.size(), "eleven wearables and two weapons");
         int vanilla = 0, other = 0;
         for (long seed = 0; seed < 200; seed++) {
             int[] c = count(filled(seed, SkyCacheLoot.Tier.ISLAND), pool);
@@ -107,18 +107,20 @@ final class WeaponsAndCacheTest {
         for (long seed = 0; seed < 2000; seed++) stores += count(filled(seed, SkyCacheLoot.Tier.STORE), pool)[0];
         assertTrue(stores >= 60 && stores <= 150, "about one storeroom in twenty: " + stores + " / 2000");
         Set<Item> seen = new HashSet<>();
-        for (long seed = 0; seed < 80; seed++) {
+        Set<Item> vaultPool = new HashSet<>(SkyCacheLoot.vaultTreasures());
+        for (long seed = 0; seed < 200; seed++) {
             InventoryBasic vault = filled(seed, SkyCacheLoot.Tier.VAULT_TREASURE);
-            assertEquals(1, count(vault, pool)[0], "the vault holds one treasure, seed " + seed);
-            for (int i = 0; i < vault.getSizeInventory(); i++) if (vault.getStackInSlot(i) != null && pool.contains(
-                vault.getStackInSlot(i)
-                    .getItem()))
-                seen.add(
+            assertEquals(1, count(vault, vaultPool)[0], "the vault holds one treasure, seed " + seed);
+            for (int i = 0; i < vault.getSizeInventory(); i++)
+                if (vault.getStackInSlot(i) != null && vaultPool.contains(
                     vault.getStackInSlot(i)
-                        .getItem());
+                        .getItem()))
+                    seen.add(
+                        vault.getStackInSlot(i)
+                            .getItem());
             assertEquals(0, count(filled(seed, SkyCacheLoot.Tier.VAULT_RICH), pool)[0], "riches, not treasure");
         }
-        assertEquals(pool, seen, "every treasure turns up somewhere");
+        assertEquals(vaultPool, seen, "every treasure turns up somewhere, the Sabatons too");
     }
 
     @Test

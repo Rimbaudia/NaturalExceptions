@@ -58,6 +58,42 @@ public final class TreasureRecipes {
         add(Treasure.HORSESHOE_PENDANT, "S S", "I I", "III", 'S', Items.string, 'I', Items.iron_ingot);
         add(Treasure.CLIMBING_CLAWS, "I I", "ILI", "LLL", 'I', Items.iron_ingot, 'L', Items.leather);
         add(Treasure.BAND_OF_MENDING, " G ", "GMG", " G ", 'G', Items.gold_ingot, 'M', Items.speckled_melon);
+        // Hats and shoes. The cap's wick is Lumenite: it is a miner's lamp, not sky gear.
+        Item cap = NEItems.TREASURES.get(Treasure.LAMPLIGHTERS_CAP);
+        if (cap != null && NEItems.lumeniteShard != null) GameRegistry.addRecipe(
+            new RecipeCastCopper(
+                new ItemStack(cap),
+                " W ",
+                "CLC",
+                'W',
+                NEItems.lumeniteShard,
+                'C',
+                copper,
+                'L',
+                Items.leather));
+        add(Treasure.WEATHERWISE_HOOD, " S ", "WFW", "W W", 'S', shard, 'W', anyWool, 'F', Items.feather);
+        Item helm = NEItems.TREASURES.get(Treasure.DIVERS_BELL_HELM);
+        if (helm != null) GameRegistry.addRecipe(
+            new RecipeCastCopper(new ItemStack(helm), "CCC", "CGC", 'C', copper, 'G', net.minecraft.init.Blocks.glass));
+        if (NEItems.cloudsilk != null) {
+            add(Treasure.FEATHERSTEP_SLIPPERS, "F F", "SWS", 'F', Items.feather, 'S', NEItems.cloudsilk, 'W', anyWool);
+            if (NEBlocks.cloud != null)
+                add(Treasure.CLOUD_TREADS, "S S", "CSC", 'S', NEItems.cloudsilk, 'C', NEBlocks.cloud);
+            // A Gale Core is a Warden's: one makes the pair.
+            Item striders = NEItems.TREASURES.get(Treasure.GALE_STRIDERS);
+            if (striders != null && NEItems.galeCore != null) GameRegistry.addRecipe(
+                new ItemStack(striders, 2),
+                "L L",
+                "SGS",
+                "L L",
+                'L',
+                Items.leather,
+                'S',
+                NEItems.cloudsilk,
+                'G',
+                NEItems.galeCore);
+        }
+        // Skystone Sabatons are a vault find only.
         // A Warden's Gale Core: two Gale Vents; or the wind for a Cloud Flask or a Glider Cloak without the search.
         Item core = NEItems.galeCore;
         if (core != null && NEBlocks.galeVent != null && NEBlocks.skystoneBricks != null && NEBlocks.windbloom != null)

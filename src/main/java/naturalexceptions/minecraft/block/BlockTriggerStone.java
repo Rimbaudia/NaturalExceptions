@@ -46,6 +46,8 @@ public final class BlockTriggerStone extends Block {
 
     private void press(World world, int x, int y, int z, Entity entity) {
         if (world.isRemote || !(entity instanceof EntityPlayer) || world.getBlockMetadata(x, y, z) == PRESSED) return;
+        if (naturalexceptions.minecraft.item.ItemTreasureGear
+            .worn((EntityPlayer) entity, naturalexceptions.minecraft.gear.Treasure.FEATHERSTEP_SLIPPERS) > 0) return;
         world.setBlockMetadataWithNotify(x, y, z, PRESSED, 2);
         world.scheduleBlockUpdate(x, y, z, this, REARM_TICKS);
         world.playSoundEffect(x + 0.5, y + 1.0, z + 0.5, "random.click", 0.5F, 0.5F);

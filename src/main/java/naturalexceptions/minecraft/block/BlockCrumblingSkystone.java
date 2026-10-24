@@ -30,12 +30,18 @@ public final class BlockCrumblingSkystone extends Block {
 
     @Override
     public void onEntityWalking(World world, int x, int y, int z, Entity entity) {
-        if (entity instanceof EntityPlayer) giveWay(world, x, y, z, DELAY_TICKS);
+        if (entity instanceof EntityPlayer && !sureFooted((EntityPlayer) entity)) giveWay(world, x, y, z, DELAY_TICKS);
     }
 
     @Override
     public void onFallenUpon(World world, int x, int y, int z, Entity entity, float fallDistance) {
-        if (entity instanceof EntityPlayer) giveWay(world, x, y, z, DELAY_TICKS);
+        if (entity instanceof EntityPlayer && !sureFooted((EntityPlayer) entity)) giveWay(world, x, y, z, DELAY_TICKS);
+    }
+
+    /** Skystone Sabatons are heavy and sure: a crumbling floor holds under them. */
+    private static boolean sureFooted(EntityPlayer player) {
+        return naturalexceptions.minecraft.item.ItemTreasureGear
+            .worn(player, naturalexceptions.minecraft.gear.Treasure.SKYSTONE_SABATONS) > 0;
     }
 
     private void giveWay(World world, int x, int y, int z, int delay) {
