@@ -141,6 +141,21 @@ public final class PowerRecipes {
             wire,
             'H',
             cable(Cable.HEAVY_BARE, 1));
+        if (NEBlocks.shockPlate != null)
+            GameRegistry.addRecipe(new ItemStack(NEBlocks.shockPlate), "WWW", "SSS", 'W', wire, 'S', Blocks.stone_slab);
+        if (NEBlocks.teslaCoil != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.teslaCoil),
+            " I ",
+            "WCW",
+            "III",
+            'I',
+            Items.iron_ingot,
+            'W',
+            wire,
+            'C',
+            cable(Cable.STANDARD_BARE, 1));
+        if (NEItems.poweredDoor != null) GameRegistry
+            .addRecipe(new ItemStack(NEItems.poweredDoor), "II", "IW", "II", 'I', Items.iron_ingot, 'W', wire);
         if (NEItems.multimeter != null) GameRegistry.addRecipe(
             new ItemStack(NEItems.multimeter),
             "IGI",

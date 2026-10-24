@@ -48,6 +48,9 @@ final class PowerRecipesTest {
         assertTrue(craftable(Item.getItemFromBlock(NEBlocks.stormCell), -1));
         assertTrue(craftable(Item.getItemFromBlock(NEBlocks.lightningSpire), -1));
         assertTrue(craftable(Item.getItemFromBlock(NEBlocks.electricHeater), -1));
+        assertTrue(craftable(Item.getItemFromBlock(NEBlocks.shockPlate), -1));
+        assertTrue(craftable(Item.getItemFromBlock(NEBlocks.teslaCoil), -1));
+        assertTrue(craftable(NEItems.poweredDoor, -1));
     }
 
     @Test
@@ -58,6 +61,16 @@ final class PowerRecipesTest {
         assertTrue(
             TileCrankDynamo.EMF / (TileCrankDynamo.INTERNAL_OHMS + TileElectricHeater.OHMS) < amps / 2,
             "a crank dynamo alone can barely warm it");
+    }
+
+    @Test
+    void theDefencesAreStrongerForMorePower() {
+        assertTrue(TileShockPlate.jolt(200.0) > TileShockPlate.jolt(50.0));
+        assertTrue(TileShockPlate.jolt(1.0e6) <= 12.0F, "it does not one-shot through any source");
+        assertTrue(TileTeslaCoil.CAPACITY >= 5 * TileTeslaCoil.ARC_JOULES, "a charged coil holds several arcs");
+        assertTrue(
+            BlockPoweredDoor.Tile.HOLD_WATTS < 24.0 * 24.0 / BlockPoweredDoor.Tile.OHMS,
+            "a 24 V network opens it");
     }
 
     @Test

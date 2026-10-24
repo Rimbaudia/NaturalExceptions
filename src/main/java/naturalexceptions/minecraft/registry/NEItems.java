@@ -43,6 +43,7 @@ public final class NEItems {
     public static net.minecraft.item.Item bellOfRest;
     public static net.minecraft.item.Item reliquaryLantern;
     public static net.minecraft.item.Item multimeter;
+    public static net.minecraft.item.Item poweredDoor;
     public static net.minecraft.item.Item galeMaul;
     /** Sky-cache treasures, one item per {@link naturalexceptions.minecraft.gear.Treasure}. */
     public static final java.util.Map<naturalexceptions.minecraft.gear.Treasure, naturalexceptions.minecraft.item.ItemTreasureGear> TREASURES = new java.util.EnumMap<>(
@@ -250,6 +251,8 @@ public final class NEItems {
         reliquaryLantern.setCreativeTab(NECreativeTab.INSTANCE);
         multimeter = new naturalexceptions.minecraft.power.ItemMultimeter();
         multimeter.setCreativeTab(NECreativeTab.INSTANCE);
+        poweredDoor = new naturalexceptions.minecraft.power.BlockPoweredDoor.ItemPoweredDoorPlacer();
+        poweredDoor.setCreativeTab(NECreativeTab.INSTANCE);
         galeMaul = new naturalexceptions.minecraft.weapon.ItemGaleMaul();
         galeMaul.setCreativeTab(NECreativeTab.INSTANCE);
         skyKey = new naturalexceptions.minecraft.item.ItemSkyKey();
@@ -297,6 +300,7 @@ public final class NEItems {
             GameRegistry.registerItem(bellOfRest, "bell_of_rest");
             GameRegistry.registerItem(reliquaryLantern, "reliquary_lantern");
             GameRegistry.registerItem(multimeter, "multimeter");
+            GameRegistry.registerItem(poweredDoor, "powered_door_item");
             GameRegistry.registerItem(galeMaul, "gale_maul");
             for (java.util.Map.Entry<naturalexceptions.minecraft.gear.Treasure, naturalexceptions.minecraft.item.ItemTreasureGear> entry : TREASURES
                 .entrySet())

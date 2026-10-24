@@ -47,6 +47,7 @@ public final class NEBlocks {
     /** Power: cables, a switch, a relay, and the first machines. */
     public static Block cable, knifeSwitch, stormglassRelay, crankDynamo, arcLamp;
     public static Block windmill, heartSocket, stormCell, lightningSpire, electricHeater;
+    public static Block shockPlate, teslaCoil, poweredDoor;
     public static Block skystoneRock;
     public static Block skystoneBricks;
     public static Block skystoneDecor;
@@ -175,6 +176,11 @@ public final class NEBlocks {
             .setCreativeTab(NECreativeTab.INSTANCE);
         electricHeater = new naturalexceptions.minecraft.power.BlockPowerMachine.ElectricHeater()
             .setCreativeTab(NECreativeTab.INSTANCE);
+        shockPlate = new naturalexceptions.minecraft.power.BlockPowerMachine.ShockPlate()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        teslaCoil = new naturalexceptions.minecraft.power.BlockPowerMachine.TeslaCoil()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        poweredDoor = new naturalexceptions.minecraft.power.BlockPoweredDoor();
         skystoneRock = new naturalexceptions.minecraft.block.BlockSkystoneRock().setCreativeTab(NECreativeTab.INSTANCE);
         skystoneBricks = new naturalexceptions.minecraft.block.BlockSkystoneBricks()
             .setCreativeTab(NECreativeTab.INSTANCE);
@@ -332,6 +338,18 @@ public final class NEBlocks {
             GameRegistry.registerBlock(stormCell, "storm_cell");
             GameRegistry.registerBlock(lightningSpire, "lightning_spire");
             GameRegistry.registerBlock(electricHeater, "electric_heater");
+            GameRegistry.registerBlock(shockPlate, "shock_plate");
+            GameRegistry.registerBlock(teslaCoil, "tesla_coil");
+            GameRegistry.registerBlock(poweredDoor, "powered_door");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.power.TileShockPlate.class,
+                "naturalexceptions:shock_plate");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.power.TileTeslaCoil.class,
+                "naturalexceptions:tesla_coil");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.power.BlockPoweredDoor.Tile.class,
+                "naturalexceptions:powered_door");
             GameRegistry.registerTileEntity(
                 naturalexceptions.minecraft.power.TileElectricHeater.class,
                 "naturalexceptions:electric_heater");

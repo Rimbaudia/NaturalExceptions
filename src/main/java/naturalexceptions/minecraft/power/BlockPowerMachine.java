@@ -398,6 +398,87 @@ public abstract class BlockPowerMachine extends BlockContainer implements PowerB
         }
     }
 
+    /** A Shock Plate: copper mesh in the floor, walked over (and through). */
+    public static final class ShockPlate extends BlockPowerMachine {
+
+        private static final double[][] PARTS = scaled(new double[][] { { 1, 0, 1, 15, 1, 15 } });
+
+        public ShockPlate() {
+            super(Material.iron, "shockPlate", "naturalexceptions:cable_copper");
+            setHardness(1.0F);
+            setStepSound(soundTypeMetal);
+        }
+
+        @Override
+        public TileEntity createNewTileEntity(World world, int meta) {
+            return new TileShockPlate();
+        }
+
+        @Override
+        public void onEntityCollidedWithBlock(World world, int x, int y, int z, Entity entity) {
+            if (world.isRemote || !(entity instanceof net.minecraft.entity.EntityLivingBase)
+                || entity.doesEntityNotTriggerPressurePlate()) return;
+            TileEntity tile = world.getTileEntity(x, y, z);
+            if (tile instanceof TileShockPlate) ((TileShockPlate) tile).touch();
+        }
+
+        @Override
+        public AxisAlignedBB getCollisionBoundingBoxFromPool(World world, int x, int y, int z) {
+            return null;
+        }
+
+        @Override
+        @SuppressWarnings({ "rawtypes", "unchecked" })
+        public void addCollisionBoxesToList(World world, int x, int y, int z, AxisAlignedBB mask, List boxes,
+            Entity entity) {}
+
+        @Override
+        public boolean canPlaceBlockAt(World world, int x, int y, int z) {
+            return super.canPlaceBlockAt(world, x, y, z) && World.doesBlockHaveSolidTopSurface(world, x, y - 1, z);
+        }
+
+        @Override
+        public double[][] parts(int meta) {
+            return PARTS;
+        }
+
+        @Override
+        @SideOnly(Side.CLIENT)
+        public IIcon partIcon(int index, int meta) {
+            return blockIcon;
+        }
+    }
+
+    /** A Tesla Coil: an iron base, a tall copper winding, an iron crown. */
+    public static final class TeslaCoil extends BlockPowerMachine {
+
+        private static final double[][] PARTS = scaled(
+            new double[][] { { 3, 0, 3, 13, 2, 13 }, { 5.5, 2, 5.5, 10.5, 20, 10.5 },
+                { 3.5, 20, 3.5, 12.5, 24, 12.5 } });
+
+        public TeslaCoil() {
+            super(Material.iron, "teslaCoil", "naturalexceptions:cable_copper");
+            setHardness(3.0F);
+            setStepSound(soundTypeMetal);
+        }
+
+        @Override
+        public TileEntity createNewTileEntity(World world, int meta) {
+            return new TileTeslaCoil();
+        }
+
+        @Override
+        public double[][] parts(int meta) {
+            return PARTS;
+        }
+
+        @Override
+        @SideOnly(Side.CLIENT)
+        public IIcon partIcon(int index, int meta) {
+            return index == 1 ? blockIcon : Blocks.iron_block.getIcon(2, 0);
+        }
+    }
+
     /** An arc lamp: a brass foot, a glass globe with the arc in it (dark, dim or blazing), a cap. */
     public static final class ArcLamp extends BlockPowerMachine {
 
