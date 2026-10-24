@@ -50,7 +50,7 @@ if [[ ! -x $PACKWIZ ]]; then
 fi
 
 if (( build )); then ./gradlew assemble -q; fi
-jar=$(ls -t build/libs/naturalexceptions-*.jar | grep -v -e '-dev\.jar$' -e '-sources\.jar$' | head -1)
+jar=$(ls -t build/libs/naturalexceptions-*.jar | grep -v -e '-dev\.jar$' -e '-sources\.jar$' | sed -n 1p)
 echo "Natural Exceptions: $jar"
 
 # The pack: its source (pack.toml and a metafile per required mod), the new jar, and packwiz's index of them.
