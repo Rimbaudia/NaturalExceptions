@@ -38,6 +38,15 @@ public final class PowerNetworks {
         return WORLDS.computeIfAbsent(world, PowerNetworks::new);
     }
 
+    /** A world closed: its networks go with it (each holds its world, so the weak map alone would keep it). */
+    static synchronized void forget(World world) {
+        WORLDS.remove(world);
+    }
+
+    private static long chunk(int x, int z) {
+        return ((long) (x >> 4) << 32) | ((z >> 4) & 0xFFFFFFFFL);
+    }
+
     /** Something at (x, y, z) changed: its network is found again before the next solve. */
     public static void dirty(World world, int x, int y, int z) {
         if (world != null && !world.isRemote) of(world).dirty.add(PowerTopology.key(x, y, z));
@@ -60,6 +69,8 @@ public final class PowerNetworks {
 
         final List<int[]> blocks;
         final Map<Long, Integer> index;
+        /** The chunks it lies in, each as {chunkX, chunkZ}. */
+        final List<int[]> chunks = new ArrayList<>();
         double[] volts;
         boolean live;
 
@@ -67,6 +78,9 @@ public final class PowerNetworks {
             this.blocks = blocks;
             this.index = PowerTopology.index(blocks);
             this.volts = new double[blocks.size()];
+            Set<Long> seen = new HashSet<>();
+            for (int[] b : blocks)
+                if (seen.add(chunk(b[0], b[2]))) chunks.add(new int[] { b[0] >> 4, b[2] >> 4 });
         }
     }
 
@@ -77,15 +91,23 @@ public final class PowerNetworks {
     private final Set<Long> relays = new HashSet<>();
     /** Cable temperatures that are not ambient. */
     private final Map<Long, Double> heat = new HashMap<>();
+    /**
+     * Where a network reached the edge of an unloaded chunk, by chunk: when that chunk loads, these are found again,
+     * so a run of bare cable rejoins what it was cut from.
+     */
+    private final Map<Long, Set<Long>> awaiting = new HashMap<>();
 
     private final PowerTopology.View view = new PowerTopology.View() {
 
         @Override
         public boolean node(int x, int y, int z) {
-            if (y < 0 || y > 255
-                || !world.getChunkProvider()
-                    .chunkExists(x >> 4, z >> 4))
+            if (y < 0 || y > 255) return false;
+            if (!world.getChunkProvider()
+                .chunkExists(x >> 4, z >> 4)) {
+                awaiting.computeIfAbsent(chunk(x, z), c -> new HashSet<>())
+                    .add(PowerTopology.key(x, y, z));
                 return false;
+            }
             Block block = world.getBlock(x, y, z);
             if (block instanceof PowerBlock) return ((PowerBlock) block).conducts(world, x, y, z);
             return world.getTileEntity(x, y, z) instanceof PowerDevice;
@@ -145,8 +167,40 @@ public final class PowerNetworks {
 
     public void tick() {
         if (world.getTotalWorldTime() % TICKS != 0) return;
+        for (Net net : new ArrayList<>(nets)) if (!loaded(net)) cut(net);
         if (!dirty.isEmpty()) rebuild();
         for (Net net : new ArrayList<>(nets)) solve(net, TICKS / 20.0);
+    }
+
+    /** A chunk loaded: what was cut at its edge is found again. */
+    void chunkLoaded(int chunkX, int chunkZ) {
+        Set<Long> keys = awaiting.remove(((long) chunkX << 32) | (chunkZ & 0xFFFFFFFFL));
+        if (keys != null) dirty.addAll(keys);
+    }
+
+    private boolean loaded(Net net) {
+        for (int[] c : net.chunks) if (!world.getChunkProvider()
+            .chunkExists(c[0], c[1])) return false;
+        return true;
+    }
+
+    /**
+     * Part of a network went with an unloaded chunk. Touching its blocks there would load the chunk back, so the
+     * network is dropped and found again from what is still loaded; the rest rejoins when the chunk comes back.
+     */
+    private void cut(Net net) {
+        nets.remove(net);
+        for (int[] b : net.blocks) {
+            long k = PowerTopology.key(b[0], b[1], b[2]);
+            byPos.remove(k);
+            if (world.getChunkProvider()
+                .chunkExists(b[0] >> 4, b[2] >> 4)) dirty.add(k);
+            else {
+                heat.remove(k);
+                awaiting.computeIfAbsent(chunk(b[0], b[2]), c -> new HashSet<>())
+                    .add(k);
+            }
+        }
     }
 
     private void rebuild() {
@@ -323,6 +377,26 @@ public final class PowerNetworks {
         @SubscribeEvent
         public void onWorldTick(TickEvent.WorldTickEvent event) {
             if (event.phase == TickEvent.Phase.END && !event.world.isRemote) of(event.world).tick();
+        }
+    }
+
+    /** Chunks coming back, and worlds closing (Forge bus). */
+    public static final class WorldEvents {
+
+        @SubscribeEvent
+        public void onChunkLoad(net.minecraftforge.event.world.ChunkEvent.Load event) {
+            World world = event.world;
+            if (world == null || world.isRemote) return;
+            PowerNetworks networks;
+            synchronized (PowerNetworks.class) {
+                networks = WORLDS.get(world);
+            }
+            if (networks != null) networks.chunkLoaded(event.getChunk().xPosition, event.getChunk().zPosition);
+        }
+
+        @SubscribeEvent
+        public void onWorldUnload(net.minecraftforge.event.world.WorldEvent.Unload event) {
+            if (!event.world.isRemote) forget(event.world);
         }
     }
 }

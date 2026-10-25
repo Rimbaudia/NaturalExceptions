@@ -94,6 +94,7 @@ public final class NaturalExceptions {
         cpw.mods.fml.common.FMLCommonHandler.instance()
             .bus()
             .register(new naturalexceptions.minecraft.power.PowerNetworks.Ticker());
+        MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.power.PowerNetworks.WorldEvents());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.event.StarRainWorldMaterializer());
         FMLCommonHandler.instance()
             .bus()
