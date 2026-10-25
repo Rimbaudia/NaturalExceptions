@@ -404,7 +404,11 @@ public final class SkyDungeon {
 
     // --- Cache ------------------------------------------------------------------------------------------------
 
-    private static final int CACHE_SIZE = 3;
+    /**
+     * Enough for a few players apart, each near a dungeon or two: with three, players in different places pushed each
+     * other's layouts out, and each came back as a few hundred milliseconds' stall. A citadel is some 13 MB packed.
+     */
+    private static final int CACHE_SIZE = 6;
     private static final Map<String, SkyDungeon> CACHE = new LinkedHashMap<String, SkyDungeon>(16, 0.75F, true) {
 
         @Override
