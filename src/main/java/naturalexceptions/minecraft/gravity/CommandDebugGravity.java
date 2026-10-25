@@ -24,7 +24,7 @@ public final class CommandDebugGravity extends CommandBase {
 
     @Override
     public int getRequiredPermissionLevel() {
-        return 0; // Accessible to developer / creative players
+        return 2; // Operators only: it floods the log
     }
 
     @Override

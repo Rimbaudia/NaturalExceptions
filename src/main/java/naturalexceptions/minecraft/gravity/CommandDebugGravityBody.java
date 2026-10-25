@@ -32,7 +32,7 @@ public final class CommandDebugGravityBody extends CommandBase {
 
     @Override
     public int getRequiredPermissionLevel() {
-        return 0; // Accessible to all players in creative / single-player dev
+        return 2; // Operators only: it rebuilds terrain and changes gravity for everyone
     }
 
     @Override
