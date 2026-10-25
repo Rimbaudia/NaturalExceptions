@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
+import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.IIcon;
@@ -224,6 +225,17 @@ public abstract class BlockPowerMachine extends BlockContainer implements PowerB
             return ((TileHeartSocket) tile).use(player);
         }
 
+        /** Broken, it lets go of its heart, and what charge is left in it. */
+        @Override
+        public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
+            TileEntity tile = world.getTileEntity(x, y, z);
+            if (!world.isRemote && tile instanceof TileHeartSocket) {
+                ItemStack heart = ((TileHeartSocket) tile).takeHeart();
+                if (heart != null) dropBlockAsItem(world, x, y, z, heart);
+            }
+            super.breakBlock(world, x, y, z, block, meta);
+        }
+
         @Override
         public int getLightValue(IBlockAccess world, int x, int y, int z) {
             return world.getBlock(x, y, z) == this && world.getBlockMetadata(x, y, z) == 1 ? 6 : 0;
@@ -269,6 +281,44 @@ public abstract class BlockPowerMachine extends BlockContainer implements PowerB
         @Override
         public TileEntity createNewTileEntity(World world, int meta) {
             return new TileStormCell();
+        }
+
+        // A cell taken up keeps its charge: it stays in the world until its drop is made (harvestBlock), so the drop
+        // can carry the charge, and setting it down again puts the charge back.
+
+        @Override
+        public boolean removedByPlayer(World world, EntityPlayer player, int x, int y, int z, boolean willHarvest) {
+            if (willHarvest) return true;
+            return super.removedByPlayer(world, player, x, y, z, willHarvest);
+        }
+
+        @Override
+        public void harvestBlock(World world, EntityPlayer player, int x, int y, int z, int meta) {
+            super.harvestBlock(world, player, x, y, z, meta);
+            world.setBlockToAir(x, y, z);
+        }
+
+        @Override
+        public java.util.ArrayList<ItemStack> getDrops(World world, int x, int y, int z, int meta, int fortune) {
+            java.util.ArrayList<ItemStack> drops = super.getDrops(world, x, y, z, meta, fortune);
+            TileEntity tile = world.getTileEntity(x, y, z);
+            if (tile instanceof TileStormCell && ((TileStormCell) tile).fraction() > 0.0) for (ItemStack stack : drops)
+                if (stack.getItem() == net.minecraft.item.Item.getItemFromBlock(this)) {
+                    if (!stack.hasTagCompound()) stack.setTagCompound(new net.minecraft.nbt.NBTTagCompound());
+                    stack.getTagCompound()
+                        .setDouble("Charge", ((TileStormCell) tile).charge());
+                }
+            return drops;
+        }
+
+        @Override
+        public void onBlockPlacedBy(World world, int x, int y, int z, net.minecraft.entity.EntityLivingBase placer,
+            ItemStack stack) {
+            super.onBlockPlacedBy(world, x, y, z, placer, stack);
+            TileEntity tile = world.getTileEntity(x, y, z);
+            if (tile instanceof TileStormCell && stack.hasTagCompound()) ((TileStormCell) tile).addCharge(
+                stack.getTagCompound()
+                    .getDouble("Charge"));
         }
 
         @Override

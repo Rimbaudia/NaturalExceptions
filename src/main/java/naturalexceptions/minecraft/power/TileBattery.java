@@ -28,6 +28,11 @@ public abstract class TileBattery extends TileSource {
         return true;
     }
 
+    /** The charge it holds (joules). */
+    public double charge() {
+        return charge;
+    }
+
     public double fraction() {
         return capacity() <= 0 ? 0.0 : charge / capacity();
     }

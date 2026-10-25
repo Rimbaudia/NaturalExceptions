@@ -64,17 +64,23 @@ public final class TileHeartSocket extends TileBattery {
             return true;
         }
         if (heart && held == null) {
-            ItemStack out = new ItemStack(NEItems.stormglassHeart);
-            out.setTagCompound(new NBTTagCompound());
-            out.getTagCompound()
-                .setDouble("Charge", charge);
-            heart = false;
-            charge = 0.0;
-            player.inventory.setInventorySlotContents(player.inventory.currentItem, out);
-            changedHeart();
+            player.inventory.setInventorySlotContents(player.inventory.currentItem, takeHeart());
             return true;
         }
         return false;
+    }
+
+    /** Takes the heart out, with what charge is left in it (null if there is none). */
+    public ItemStack takeHeart() {
+        if (!heart || NEItems.stormglassHeart == null) return null;
+        ItemStack out = new ItemStack(NEItems.stormglassHeart);
+        out.setTagCompound(new NBTTagCompound());
+        out.getTagCompound()
+            .setDouble("Charge", charge);
+        heart = false;
+        charge = 0.0;
+        changedHeart();
+        return out;
     }
 
     private void changedHeart() {
