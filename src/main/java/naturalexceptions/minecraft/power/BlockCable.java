@@ -96,6 +96,21 @@ public final class BlockCable extends Block implements PowerBlock {
         return meta;
     }
 
+    /** What bare copper at {@code volts} does to whoever touches it: nothing at 24 V, four hearts at 130 V. */
+    public static float shockDamage(double volts) {
+        if (Math.abs(volts) <= Cable.SHOCK_VOLTS) return 0.0F;
+        return (float) Math.min(8.0, 1.0 + (Math.abs(volts) - Cable.SHOCK_VOLTS) / 14.0);
+    }
+
+    /** Cut while it carries high tension, it arcs at whoever cut it. */
+    @Override
+    public void onBlockHarvested(World world, int x, int y, int z, int meta, net.minecraft.entity.player.EntityPlayer player) {
+        super.onBlockHarvested(world, x, y, z, meta, player);
+        if (world.isRemote || player.capabilities.isCreativeMode) return;
+        PowerNetworks networks = PowerNetworks.of(world);
+        Arc.at(world, x, y, z, networks.voltage(x, y, z), networks.current(x, y, z), player);
+    }
+
     /** Bare copper under voltage bites. */
     @Override
     public void onEntityCollidedWithBlock(World world, int x, int y, int z, Entity entity) {
@@ -105,7 +120,7 @@ public final class BlockCable extends Block implements PowerBlock {
             PowerNetworks.of(world)
                 .voltage(x, y, z));
         if (volts <= Cable.SHOCK_VOLTS) return;
-        if (entity.attackEntityFrom(SHOCK, (float) Math.min(12.0, 1.0 + (volts - Cable.SHOCK_VOLTS) / 8.0)))
+        if (entity.attackEntityFrom(SHOCK, shockDamage(volts)))
             world.playSoundEffect(x + 0.5, y + 0.5, z + 0.5, "random.fizz", 0.4F, 2.0F);
     }
 
@@ -202,10 +217,10 @@ public final class BlockCable extends Block implements PowerBlock {
                 String.format(
                     "§7%.1f mm² copper%s",
                     cable.gauge.crossSection * 1.0e6,
-                    cable.insulated ? ", cloth-wrapped" : ", bare"));
+                    cable.insulated ? ", in rubbered braid" : ", bare"));
             lines.add(
                 String.format("§8%.4f Ω a block; carries %.0f A steadily", cable.ohmsPerMetre(), cable.ratedAmps()));
-            if (!cable.insulated) lines.add("§cBare: it bites above 30 V.");
+            if (!cable.insulated) lines.add("§cBare: it bites above 30 V, and hard at high tension.");
         }
     }
 }

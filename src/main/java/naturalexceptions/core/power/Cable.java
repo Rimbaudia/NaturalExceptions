@@ -4,7 +4,7 @@ import naturalexceptions.content.material.BuiltinMaterials;
 import naturalexceptions.core.property.MaterialProperties;
 
 /**
- * Copper conductors, a metre to a block: three gauges, each bare or wrapped in cloth. Their resistance and how fast
+ * Copper conductors, a metre to a block: three gauges, each bare or wrapped in rubbered braid. Their resistance and how fast
  * they heat come from copper itself; they cool to the air round them. Cloth chars past {@link #CLOTH_LIMIT_KELVIN}
  * (and leaves the bare conductor); bare copper melts at its melting point. Bare copper carrying more than
  * {@link #SHOCK_VOLTS} bites whoever touches it.
@@ -36,8 +36,8 @@ public enum Cable {
     }
 
     public static final double AMBIENT_KELVIN = 293.15;
-    /** Cloth insulation chars past this. */
-    public static final double CLOTH_LIMIT_KELVIN = 360.0;
+    /** Rubbered braid chars past this (some 105 °C). */
+    public static final double CLOTH_LIMIT_KELVIN = 378.0;
     /** Cloth's own heat capacity per metre of cable (J / K). */
     static final double CLOTH_HEAT_PER_METRE = 30.0;
     /** Above this, bare copper bites. */

@@ -77,12 +77,15 @@ public final class PowerNetworks {
         /** The chunks it lies in, each as {chunkX, chunkZ}. */
         final List<int[]> chunks = new ArrayList<>();
         double[] volts;
+        /** The current through each block at the last solve (amperes; the largest of the lengths it joins). */
+        double[] amps;
         boolean live;
 
         Net(List<int[]> blocks) {
             this.blocks = blocks;
             this.index = PowerTopology.index(blocks);
             this.volts = new double[blocks.size()];
+            this.amps = new double[blocks.size()];
             Set<Long> seen = new HashSet<>();
             for (int[] b : blocks)
                 if (seen.add(chunk(b[0], b[2]))) chunks.add(new int[] { b[0] >> 4, b[2] >> 4 });
@@ -142,6 +145,15 @@ public final class PowerNetworks {
         if (net == null || !net.live) return 0.0;
         Integer i = net.index.get(k);
         return i == null ? 0.0 : net.volts[i];
+    }
+
+    /** The current through (x, y, z) at the last solve, in amperes (0 if it is in no live network). */
+    public double current(int x, int y, int z) {
+        long k = PowerTopology.key(x, y, z);
+        Net net = byPos.get(k);
+        if (net == null || !net.live) return 0.0;
+        Integer i = net.index.get(k);
+        return i == null ? 0.0 : net.amps[i];
     }
 
     /** A cable's temperature (kelvin). */
@@ -324,9 +336,13 @@ public final class PowerNetworks {
     private void warm(Net net, Grid grid, List<int[]> edges, double[] half, double seconds, boolean live) {
         int n = net.blocks.size();
         double[] watts = new double[n];
+        java.util.Arrays.fill(net.amps, 0.0);
         if (live) for (int[] e : edges) {
-            if (e[0] < 0) continue;
+            int a = e[0] >= 0 ? e[0] : e[3], b = e[0] >= 0 ? e[1] : e[4];
             double i = grid.current(e[2]);
+            net.amps[a] = Math.max(net.amps[a], Math.abs(i));
+            net.amps[b] = Math.max(net.amps[b], Math.abs(i));
+            if (e[0] < 0) continue;
             watts[e[0]] += i * i * half[e[0]];
             watts[e[1]] += i * i * half[e[1]];
         }
@@ -334,6 +350,10 @@ public final class PowerNetworks {
         for (int i = 0; i < n; i++) {
             int[] p = net.blocks.get(i);
             long k = PowerTopology.key(p[0], p[1], p[2]);
+            if (world.getBlock(p[0], p[1], p[2]) instanceof BlockFuse) {
+                if (fuse(p, k, net.amps[i])) changed = true;
+                continue;
+            }
             Double was = heat.get(k);
             if (watts[i] <= 0.0 && was == null) continue;
             Cable cable = cableAt(p);
@@ -353,6 +373,24 @@ public final class PowerNetworks {
             }
         }
         if (changed) net.live = false;
+    }
+
+    /** Solves each fuse has been carrying more than its rating. */
+    private final Map<Long, Integer> overloaded = new HashMap<>();
+
+    /** A fuse carrying past its rating for long enough melts its link and opens the line. Whether it blew. */
+    private boolean fuse(int[] p, long k, double amps) {
+        int meta = world.getBlockMetadata(p[0], p[1], p[2]);
+        if (BlockFuse.blown(meta) || amps <= BlockFuse.ratedAmps(meta)) {
+            overloaded.remove(k);
+            return false;
+        }
+        int over = overloaded.merge(k, 1, Integer::sum);
+        if (over < BlockFuse.BLOW_SOLVES) return false;
+        overloaded.remove(k);
+        BlockFuse.blow(world, p[0], p[1], p[2]);
+        dirty(world, p[0], p[1], p[2]);
+        return true;
     }
 
     /** Cloth chars off (leaving bare copper), or copper melts through (leaving nothing). */

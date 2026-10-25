@@ -25,14 +25,26 @@ public final class TileLightningSpire extends TileSource {
         strike();
     }
 
-    /** The lightning comes down on it: the cells on its network drink it. */
+    /** The lightning comes down on it: the cells on its network drink it, each racked cell its share. */
     public void strike() {
         worldObj.addWeatherEffect(new EntityLightningBolt(worldObj, xCoord + 0.5, yCoord + 1.0, zCoord + 0.5));
         strikes++;
-        java.util.List<TileStormCell> cells = new java.util.ArrayList<>();
+        java.util.List<TileBattery> stores = new java.util.ArrayList<>();
+        int cells = 0;
         for (TileEntity tile : PowerNetworks.of(worldObj)
-            .devices(xCoord, yCoord, zCoord)) if (tile instanceof TileStormCell) cells.add((TileStormCell) tile);
-        for (TileStormCell cell : cells) cell.addCharge(STRIKE_JOULES / cells.size());
+            .devices(xCoord, yCoord, zCoord)) {
+            int n = cellsIn(tile);
+            if (n == 0) continue;
+            stores.add((TileBattery) tile);
+            cells += n;
+        }
+        for (TileBattery store : stores) store.addCharge(STRIKE_JOULES * cellsIn(store) / cells);
+    }
+
+    /** How many Storm Cells a machine holds. */
+    private static int cellsIn(TileEntity tile) {
+        if (tile instanceof TileStormCell) return 1;
+        return tile instanceof TileBatteryRack ? ((TileBatteryRack) tile).cells() : 0;
     }
 
     @Override
@@ -45,7 +57,7 @@ public final class TileLightningSpire extends TileSource {
     public String readout() {
         int cells = 0;
         for (TileEntity tile : PowerNetworks.of(worldObj)
-            .devices(xCoord, yCoord, zCoord)) if (tile instanceof TileStormCell) cells++;
+            .devices(xCoord, yCoord, zCoord)) cells += cellsIn(tile);
         boolean open = worldObj.canBlockSeeTheSky(xCoord, yCoord + 1, zCoord);
         return String.format(
             "Lightning Spire: %s; %d Storm Cell%s on its network%s",

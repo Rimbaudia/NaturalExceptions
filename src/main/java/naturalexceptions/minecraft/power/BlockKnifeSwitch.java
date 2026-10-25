@@ -66,6 +66,16 @@ public final class BlockKnifeSwitch extends Block implements PowerBlock, PartMod
         double volts = Math.abs(
             PowerNetworks.of(world)
                 .voltage(x, y, z));
+        // Thrown open on a high-tension line under load, the current follows the blade out as an arc.
+        if (opening) Arc.at(
+            world,
+            x,
+            y,
+            z,
+            volts,
+            PowerNetworks.of(world)
+                .current(x, y, z),
+            player);
         world.setBlockMetadataWithNotify(x, y, z, meta ^ CLOSED, 3);
         world.playSoundEffect(x + 0.5, y + 0.3, z + 0.5, "random.click", 0.6F, opening ? 0.6F : 0.8F);
         if (opening && volts > 1.0 && world instanceof WorldServer) {

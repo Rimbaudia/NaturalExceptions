@@ -347,6 +347,112 @@ public abstract class BlockPowerMachine extends BlockContainer implements PowerB
         }
     }
 
+    /**
+     * A Battery Rack: an iron frame holding up to five Storm Cells under a copper busbar, and a two-way lever on top
+     * (left PARALLEL, right SERIES). Meta: bits 0-2 how many cells, bit 3 series. Use it with a Storm Cell to rack
+     * it, empty-handed to take one off, sneaking empty-handed to throw the lever.
+     */
+    public static final class BatteryRack extends BlockPowerMachine {
+
+        public static final int SERIES = 8;
+        private static final double[][] FRAME = { { 1, 0, 3, 15, 2, 13 }, { 1, 2, 3, 2.5, 13, 4.5 },
+            { 13.5, 2, 3, 15, 13, 4.5 }, { 1, 13, 3, 15, 14.5, 4.5 }, { 6.5, 14.5, 3, 9.5, 15.5, 4.5 } };
+        private static final double[] HANDLE_PARALLEL = { 3, 14.8, 3.4, 6.5, 15.4, 4.1 },
+            HANDLE_SERIES = { 9.5, 14.8, 3.4, 13, 15.4, 4.1 }, BUSBAR = { 2.5, 11, 7, 13.3, 11.5, 8 };
+        /** Frame (5), handle, busbar, then a jar and a cap for each cell. */
+        private static final int HANDLE = 5, BUSBAR_PART = 6, CELLS_FROM = 7;
+        @SideOnly(Side.CLIENT)
+        private net.minecraft.util.IIcon core;
+
+        public BatteryRack() {
+            super(Material.iron, "batteryRack", "naturalexceptions:cable_copper");
+            setHardness(2.0F);
+            setStepSound(soundTypeMetal);
+        }
+
+        public static int meta(int cells, boolean series) {
+            return Math.max(0, Math.min(TileBatteryRack.CELLS, cells)) | (series ? SERIES : 0);
+        }
+
+        @Override
+        public TileEntity createNewTileEntity(World world, int meta) {
+            return new TileBatteryRack();
+        }
+
+        @Override
+        public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer player, int side, float hx,
+            float hy, float hz) {
+            TileEntity tile = world.getTileEntity(x, y, z);
+            if (!(tile instanceof TileBatteryRack)) return false;
+            if (world.isRemote) return true;
+            TileBatteryRack rack = (TileBatteryRack) tile;
+            ItemStack held = player.getCurrentEquippedItem();
+            if (held != null) {
+                if (!rack.rack(held)) return false;
+                if (!player.capabilities.isCreativeMode && --held.stackSize <= 0)
+                    player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
+                world.playSoundEffect(x + 0.5, y + 0.5, z + 0.5, "random.glass", 0.4F, 1.6F);
+                return true;
+            }
+            if (player.isSneaking()) {
+                rack.throwLever(player);
+                return true;
+            }
+            ItemStack cell = rack.unrack();
+            if (cell == null) return false;
+            player.inventory.setInventorySlotContents(player.inventory.currentItem, cell);
+            return true;
+        }
+
+        /** Broken, it lets its cells go, each with its share of the charge. */
+        @Override
+        public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
+            TileEntity tile = world.getTileEntity(x, y, z);
+            if (!world.isRemote && tile instanceof TileBatteryRack) {
+                for (ItemStack cell = ((TileBatteryRack) tile).unrack(); cell != null; cell = ((TileBatteryRack) tile)
+                    .unrack()) dropBlockAsItem(world, x, y, z, cell);
+            }
+            super.breakBlock(world, x, y, z, block, meta);
+        }
+
+        @Override
+        public int inventoryMetadata() {
+            return meta(TileBatteryRack.CELLS, false);
+        }
+
+        @Override
+        public double[][] parts(int meta) {
+            int cells = meta & 7;
+            double[][] out = new double[CELLS_FROM + 2 * TileBatteryRack.CELLS][];
+            System.arraycopy(FRAME, 0, out, 0, FRAME.length);
+            out[HANDLE] = (meta & SERIES) != 0 ? HANDLE_SERIES : HANDLE_PARALLEL;
+            out[BUSBAR_PART] = cells > 0 ? BUSBAR : new double[6];
+            for (int i = 0; i < TileBatteryRack.CELLS; i++) {
+                double x0 = 2.5 + i * 2.2;
+                boolean here = i < cells;
+                out[CELLS_FROM + 2 * i] = here ? new double[] { x0, 2, 5.5, x0 + 2, 10, 9.5 } : new double[6];
+                out[CELLS_FROM + 2 * i + 1] = here ? new double[] { x0, 10, 5.5, x0 + 2, 11, 9.5 } : new double[6];
+            }
+            return scaled(out);
+        }
+
+        @Override
+        @SideOnly(Side.CLIENT)
+        public void registerBlockIcons(net.minecraft.client.renderer.texture.IIconRegister register) {
+            super.registerBlockIcons(register);
+            core = register.registerIcon("naturalexceptions:stormglass_lantern_core");
+        }
+
+        @Override
+        @SideOnly(Side.CLIENT)
+        public net.minecraft.util.IIcon partIcon(int index, int meta) {
+            if (index < HANDLE) return Blocks.iron_block.getIcon(2, 0);
+            if (index == HANDLE) return Blocks.hardened_clay.getIcon(0, 0);
+            if (index == BUSBAR_PART) return blockIcon;
+            return (index - CELLS_FROM) % 2 == 0 ? core : Blocks.gold_block.getIcon(1, 0);
+        }
+    }
+
     /** A Lightning Spire: a Stormglass crystal on an iron rod. */
     public static final class LightningSpire extends BlockPowerMachine {
 

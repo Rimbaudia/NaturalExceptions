@@ -7,6 +7,8 @@ package naturalexceptions.minecraft.power;
 public final class TileStormCell extends TileBattery {
 
     public static final double CAPACITY = 2_000_000.0;
+    /** Its EMF, flat and full; and what it holds back inside (low: five in series still drive two heaters). */
+    public static final double EMPTY_VOLTS = 21.0, FULL_VOLTS = 26.0, INTERNAL_OHMS = 0.02;
 
     @Override
     protected double capacity() {
@@ -15,17 +17,17 @@ public final class TileStormCell extends TileBattery {
 
     @Override
     protected double emptyVolts() {
-        return 21.0;
+        return EMPTY_VOLTS;
     }
 
     @Override
     protected double fullVolts() {
-        return 26.0;
+        return FULL_VOLTS;
     }
 
     @Override
     protected double internalOhms() {
-        return 0.05;
+        return INTERNAL_OHMS;
     }
 
     @Override

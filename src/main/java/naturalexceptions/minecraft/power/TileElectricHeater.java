@@ -8,12 +8,13 @@ import naturalexceptions.minecraft.metallurgy.TileEntityStarterSmelter;
 
 /**
  * An Electric Heater: a coil set into a Starter Smelter's refractory shell (in place of a brick). Everything it draws
- * goes into the smelter's charge as heat, no fuel and no bellows, up to its element's limit; rated {@link #RATED_WATTS}
- * at the network's 24 V, which takes heavy cable and a stiff source (Storm Cells).
+ * goes into the smelter's charge as heat, no fuel and no bellows, up to its element's limit. Its element is wound for
+ * high tension, {@link #RATED_WATTS} at {@link #RATED_VOLTS} (a Battery Rack in series): one keeps a charge near
+ * 1580 K, past copper's melting point; two, from a well-charged rack, past iron's. On a 24 V network it only warms.
  */
 public final class TileElectricHeater extends TileSource {
 
-    public static final double RATED_VOLTS = 24.0, RATED_WATTS = 1000.0;
+    public static final double RATED_VOLTS = 120.0, RATED_WATTS = 6000.0;
     public static final double OHMS = RATED_VOLTS * RATED_VOLTS / RATED_WATTS;
     static final int SEEK = 7;
 

@@ -30,12 +30,24 @@ public final class PowerRecipes {
         // Three wires twisted into a cable; six cables laid up into a heavy one.
         GameRegistry.addRecipe(cable(Cable.STANDARD_BARE, 1), "WWW", 'W', cable(Cable.LIGHT_BARE, 1));
         GameRegistry.addRecipe(cable(Cable.HEAVY_BARE, 1), "CCC", "CCC", 'C', cable(Cable.STANDARD_BARE, 1));
-        // Eight lengths round a block of wool: wrapped in cloth.
+        // Six lengths, wrapped in rubbered braid: wool for the braid, leather (or Cloudsilk) for the sheath.
         ItemStack wool = new ItemStack(Blocks.wool, 1, OreDictionary.WILDCARD_VALUE);
         for (Cable bare : Cable.values()) {
             if (bare.insulated) continue;
             Cable wrapped = Cable.values()[bare.ordinal() + 1];
-            GameRegistry.addRecipe(cable(wrapped, 8), "XXX", "XWX", "XXX", 'X', cable(bare, 1), 'W', wool);
+            GameRegistry
+                .addRecipe(cable(wrapped, 6), "XXX", "WLW", "XXX", 'X', cable(bare, 1), 'W', wool, 'L', Items.leather);
+            if (NEItems.cloudsilk != null) GameRegistry.addRecipe(
+                cable(wrapped, 6),
+                "XXX",
+                "WLW",
+                "XXX",
+                'X',
+                cable(bare, 1),
+                'W',
+                wool,
+                'L',
+                NEItems.cloudsilk);
         }
         ItemStack wire = cable(Cable.LIGHT_BARE, 1);
         if (NEBlocks.knifeSwitch != null) GameRegistry.addRecipe(
@@ -156,6 +168,29 @@ public final class PowerRecipes {
             cable(Cable.STANDARD_BARE, 1));
         if (NEItems.poweredDoor != null) GameRegistry
             .addRecipe(new ItemStack(NEItems.poweredDoor), "II", "IW", "II", 'I', Items.iron_ingot, 'W', wire);
+        // An iron frame, a copper busbar and a lever: the rack (its cells are racked in after).
+        if (NEBlocks.batteryRack != null) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.batteryRack),
+            "ILI",
+            "IHI",
+            "III",
+            'I',
+            Items.iron_ingot,
+            'L',
+            Blocks.lever,
+            'H',
+            cable(Cable.HEAVY_BARE, 1));
+        // A link of wire in a glass tube, between brass clips on a fired-clay base: the wire's gauge is its rating.
+        if (NEBlocks.fuse != null) for (int r = 0; r < 3; r++) GameRegistry.addRecipe(
+            new ItemStack(NEBlocks.fuse, 2, r),
+            "GPG",
+            "BBB",
+            'G',
+            Items.gold_nugget,
+            'P',
+            cable(new Cable[] { Cable.LIGHT_BARE, Cable.STANDARD_BARE, Cable.HEAVY_BARE }[r], 1),
+            'B',
+            Items.brick);
         if (NEItems.multimeter != null) GameRegistry.addRecipe(
             new ItemStack(NEItems.multimeter),
             "IGI",

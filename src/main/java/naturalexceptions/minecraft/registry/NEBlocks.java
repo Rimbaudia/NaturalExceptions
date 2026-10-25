@@ -47,7 +47,7 @@ public final class NEBlocks {
     /** Power: cables, a switch, a relay, and the first machines. */
     public static Block cable, knifeSwitch, stormglassRelay, crankDynamo, arcLamp;
     public static Block windmill, heartSocket, stormCell, lightningSpire, electricHeater;
-    public static Block shockPlate, teslaCoil, poweredDoor;
+    public static Block shockPlate, teslaCoil, poweredDoor, batteryRack, fuse;
     public static Block skystoneRock;
     public static Block skystoneBricks;
     public static Block skystoneDecor;
@@ -181,6 +181,9 @@ public final class NEBlocks {
         teslaCoil = new naturalexceptions.minecraft.power.BlockPowerMachine.TeslaCoil()
             .setCreativeTab(NECreativeTab.INSTANCE);
         poweredDoor = new naturalexceptions.minecraft.power.BlockPoweredDoor();
+        batteryRack = new naturalexceptions.minecraft.power.BlockPowerMachine.BatteryRack()
+            .setCreativeTab(NECreativeTab.INSTANCE);
+        fuse = new naturalexceptions.minecraft.power.BlockFuse().setCreativeTab(NECreativeTab.INSTANCE);
         skystoneRock = new naturalexceptions.minecraft.block.BlockSkystoneRock().setCreativeTab(NECreativeTab.INSTANCE);
         skystoneBricks = new naturalexceptions.minecraft.block.BlockSkystoneBricks()
             .setCreativeTab(NECreativeTab.INSTANCE);
@@ -341,6 +344,11 @@ public final class NEBlocks {
             GameRegistry.registerBlock(shockPlate, "shock_plate");
             GameRegistry.registerBlock(teslaCoil, "tesla_coil");
             GameRegistry.registerBlock(poweredDoor, "powered_door");
+            GameRegistry.registerBlock(batteryRack, "battery_rack");
+            GameRegistry.registerBlock(fuse, naturalexceptions.minecraft.power.BlockFuse.ItemFuse.class, "fuse");
+            GameRegistry.registerTileEntity(
+                naturalexceptions.minecraft.power.TileBatteryRack.class,
+                "naturalexceptions:battery_rack");
             GameRegistry.registerTileEntity(
                 naturalexceptions.minecraft.power.TileShockPlate.class,
                 "naturalexceptions:shock_plate");
