@@ -37,15 +37,39 @@ public final class StarRainWorldMaterializer {
     static final double CRUST_TEMPERATURE_K = 1150.0;
     static final double CORE_TEMPERATURE_K = 1780.0;
 
+    /** Chunks that loaded with an impact perhaps waiting in them, each as {chunkX, chunkZ}: looked at next tick. */
+    private final java.util.ArrayDeque<int[]> loaded = new java.util.ArrayDeque<>();
+    private World loadedWorld;
+
+    /**
+     * A chunk loaded: a crater waiting there is carved on the next tick, not now. Carving while a chunk loads would
+     * tell the blocks round its edge, and those can load (or generate) further chunks from inside the load.
+     */
     @SubscribeEvent
     public void onChunkLoad(ChunkEvent.Load event) {
         if (event == null || event.getChunk() == null
             || event.getChunk().worldObj == null
             || event.getChunk().worldObj.isRemote
             || event.getChunk().worldObj.provider.dimensionId != 0) return;
-        World world = event.getChunk().worldObj;
-        NEWorldSavedData saved = NEWorldSavedData.get(world);
-        if (saved != null) materializePending(world, saved, event.getChunk().xPosition, event.getChunk().zPosition, 4);
+        if (loadedWorld != event.getChunk().worldObj) loaded.clear();
+        loadedWorld = event.getChunk().worldObj;
+        loaded.add(new int[] { event.getChunk().xPosition, event.getChunk().zPosition });
+    }
+
+    /** Carves what waited in the chunks loaded since, a few chunks a tick. */
+    public final class Ticker {
+
+        @SubscribeEvent
+        public void onWorldTick(cpw.mods.fml.common.gameevent.TickEvent.WorldTickEvent event) {
+            if (event.phase != cpw.mods.fml.common.gameevent.TickEvent.Phase.END || event.world != loadedWorld
+                || loaded.isEmpty()) return;
+            NEWorldSavedData saved = NEWorldSavedData.get(event.world);
+            for (int i = 0; i < 16 && !loaded.isEmpty(); i++) {
+                int[] c = loaded.poll();
+                if (saved != null && event.world.getChunkProvider()
+                    .chunkExists(c[0], c[1])) materializePending(event.world, saved, c[0], c[1], 4);
+            }
+        }
     }
 
     public int materializePending(World world, NEWorldSavedData saved, int chunkX, int chunkZ, int budget) {
@@ -99,8 +123,9 @@ public final class StarRainWorldMaterializer {
         int x = impact.x();
         int z = impact.z();
         int reach = plan.horizontalReach();
-        for (int cx = (x - reach) >> 4; cx <= (x + reach) >> 4; cx++) {
-            for (int cz = (z - reach) >> 4; cz <= (z + reach) >> 4; cz++) {
+        // One block past the crater too: the blocks there are told of the change.
+        for (int cx = (x - reach - 1) >> 4; cx <= (x + reach + 1) >> 4; cx++) {
+            for (int cz = (z - reach - 1) >> 4; cz <= (z + reach + 1) >> 4; cz++) {
                 if (!world.getChunkProvider()
                     .chunkExists(cx, cz)) return false;
             }

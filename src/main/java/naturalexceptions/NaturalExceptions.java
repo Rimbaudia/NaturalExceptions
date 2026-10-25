@@ -95,7 +95,11 @@ public final class NaturalExceptions {
             .bus()
             .register(new naturalexceptions.minecraft.power.PowerNetworks.Ticker());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.power.PowerNetworks.WorldEvents());
-        MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.event.StarRainWorldMaterializer());
+        naturalexceptions.minecraft.event.StarRainWorldMaterializer starRain = new naturalexceptions.minecraft.event.StarRainWorldMaterializer();
+        MinecraftForge.EVENT_BUS.register(starRain);
+        FMLCommonHandler.instance()
+            .bus()
+            .register(starRain.new Ticker());
         FMLCommonHandler.instance()
             .bus()
             .register(new naturalexceptions.minecraft.knowledge.PlayerKnowledgeEvents());
