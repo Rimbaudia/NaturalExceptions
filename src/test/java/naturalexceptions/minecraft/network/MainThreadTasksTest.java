@@ -57,6 +57,18 @@ final class MainThreadTasksTest {
     }
 
     @Test
+    void oneFloodingPlayerCannotCrowdOutAnother() {
+        List<String> ran = new ArrayList<>();
+        int taken = 0;
+        for (int i = 0; i < 100; i++) if (MainThreadTasks.submit("flooder", () -> ran.add("flood"))) taken++;
+        assertEquals(MainThreadTasks.MAX_PER_PLAYER, taken, "a player's waiting work is capped");
+        assertTrue(MainThreadTasks.submit("other", () -> ran.add("other")), "someone else still gets in");
+        tick();
+        assertTrue(ran.contains("other"));
+        assertTrue(MainThreadTasks.submit("flooder", () -> {}), "once their work has run, the flooder may send again");
+    }
+
+    @Test
     void aFloodIsTurnedAwayRatherThanQueuedWithoutEnd() {
         int accepted = 0;
         for (int i = 0; i < 1000; i++) if (MainThreadTasks.submit(() -> {})) accepted++;

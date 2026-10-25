@@ -58,7 +58,7 @@ public class PacketApplyAlloyName implements IMessage {
             final String rawSubject = message.subjectString;
             // SimpleImpl handlers may run on Netty. Validate the live container and mutate player data on the world
             // thread.
-            naturalexceptions.minecraft.network.MainThreadTasks.submit(new Runnable() {
+            naturalexceptions.minecraft.network.MainThreadTasks.submit(player.getUniqueID(), new Runnable() {
 
                 @Override
                 public void run() {

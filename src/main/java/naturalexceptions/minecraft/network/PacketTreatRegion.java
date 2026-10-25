@@ -42,7 +42,7 @@ public final class PacketTreatRegion implements IMessage {
             if (player == null || message == null || message.regionId == null) return null;
             final String region = message.regionId;
             // Takes from the cursor stack and changes the body: on the main thread (see MainThreadTasks).
-            MainThreadTasks.submit(new Runnable() {
+            MainThreadTasks.submit(player.getUniqueID(), new Runnable() {
 
                 @Override
                 public void run() {

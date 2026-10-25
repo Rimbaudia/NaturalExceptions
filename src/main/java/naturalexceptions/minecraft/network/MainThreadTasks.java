@@ -6,7 +6,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 
-/** Bounded handoff from Forge 1.7 SimpleImpl's Netty handlers to the server tick thread. */
 /**
  * Work handed from a packet handler to the server's main thread. In 1.7.10, SimpleNetworkWrapper runs server-side
  * handlers on the network (Netty) thread, so a handler that changes the world, an entity, an inventory or a tile entity
@@ -19,6 +18,26 @@ public final class MainThreadTasks {
     private static final int MAX_PER_TICK = 64;
     private static final ConcurrentLinkedQueue<Runnable> TASKS = new ConcurrentLinkedQueue<>();
     private static final AtomicInteger PENDING = new AtomicInteger();
+    /** How much one player may have waiting at once, so a flooding client can't crowd everyone else out. */
+    static final int MAX_PER_PLAYER = 8;
+    private static final java.util.concurrent.ConcurrentHashMap<Object, AtomicInteger> BY_PLAYER = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Work for {@code player} (any key standing for them), turned away while they already have enough waiting. */
+    public static boolean submit(Object player, final Runnable task) {
+        if (player == null) return submit(task);
+        if (task == null) return false;
+        final AtomicInteger mine = BY_PLAYER.computeIfAbsent(player, p -> new AtomicInteger());
+        if (mine.incrementAndGet() > MAX_PER_PLAYER) {
+            mine.decrementAndGet();
+            return false;
+        }
+        boolean queued = submit(() -> {
+            mine.decrementAndGet();
+            task.run();
+        });
+        if (!queued) mine.decrementAndGet();
+        return queued;
+    }
 
     public static boolean submit(Runnable task) {
         if (task == null) return false;

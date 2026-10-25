@@ -42,7 +42,7 @@ public final class PacketHoistHaul implements IMessage {
             if (player == null || message == null) return null;
             final int way = message.way < 0 ? -1 : 1;
             // Drives the hoist the game tick is stepping: on the main thread (see MainThreadTasks).
-            MainThreadTasks.submit(new Runnable() {
+            MainThreadTasks.submit(player.getUniqueID(), new Runnable() {
 
                 @Override
                 public void run() {

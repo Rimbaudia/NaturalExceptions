@@ -25,7 +25,7 @@ public final class PacketOpenGear implements IMessage {
             final EntityPlayerMP player = ctx.getServerHandler().playerEntity;
             if (player == null) return null;
             // Opening a container swaps the player's openContainer: on the main thread (see MainThreadTasks).
-            MainThreadTasks.submit(new Runnable() {
+            MainThreadTasks.submit(player.getUniqueID(), new Runnable() {
 
                 @Override
                 public void run() {
