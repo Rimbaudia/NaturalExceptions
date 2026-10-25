@@ -29,7 +29,7 @@ public final class PowerNetworks {
 
     /** A contact's resistance: a machine's terminal, a switch's blade, a relay's post. */
     public static final double CONTACT_OHMS = 0.0005;
-    /** Solve every so many ticks. */
+    /** Solve every so many ticks (a live network; see {@link #IDLE_TICKS}). */
     public static final int TICKS = 4;
 
     private static final Map<World, PowerNetworks> WORLDS = new WeakHashMap<>();
@@ -80,6 +80,8 @@ public final class PowerNetworks {
         /** The current through each block at the last solve (amperes; the largest of the lengths it joins). */
         double[] amps;
         boolean live;
+        /** Not solved yet; and whether any of its cables is still warmer than the air. */
+        boolean fresh = true, hot;
 
         Net(List<int[]> blocks) {
             this.blocks = blocks;
@@ -186,8 +188,16 @@ public final class PowerNetworks {
         if (world.getTotalWorldTime() % TICKS != 0) return;
         for (Net net : new ArrayList<>(nets)) if (!loaded(net)) cut(net);
         if (!dirty.isEmpty()) rebuild();
-        for (Net net : new ArrayList<>(nets)) solve(net, TICKS / 20.0);
+        boolean second = world.getTotalWorldTime() % IDLE_TICKS == 0;
+        for (Net net : new ArrayList<>(nets)) {
+            // A dead network, cooled, is only looked at again once a second (a windmill catching the wind).
+            if (!net.live && !net.fresh && !net.hot && !second) continue;
+            solve(net, (net.live || net.fresh || net.hot ? TICKS : IDLE_TICKS) / 20.0);
+        }
     }
+
+    /** How often a dead, cold network is solved again, to see whether something now drives it. */
+    public static final int IDLE_TICKS = 20;
 
     /** A chunk loaded: what was cut at its edge is found again. */
     void chunkLoaded(int chunkX, int chunkZ) {
@@ -311,6 +321,7 @@ public final class PowerNetworks {
                 if (live) grid.solve();
             }
         }
+        net.fresh = false;
         if (live) net.volts = grid.voltages();
         else java.util.Arrays.fill(net.volts, 0.0);
         net.live = live;
@@ -347,6 +358,7 @@ public final class PowerNetworks {
             watts[e[1]] += i * i * half[e[1]];
         }
         boolean changed = false;
+        net.hot = false;
         for (int i = 0; i < n; i++) {
             int[] p = net.blocks.get(i);
             long k = PowerTopology.key(p[0], p[1], p[2]);
@@ -360,7 +372,10 @@ public final class PowerNetworks {
             if (cable == null) continue;
             double t = cable.step(was == null ? Cable.AMBIENT_KELVIN : was, watts[i], seconds);
             if (t < Cable.AMBIENT_KELVIN + 0.5 && watts[i] <= 0.0) heat.remove(k);
-            else heat.put(k, t);
+            else {
+                heat.put(k, t);
+                net.hot = true;
+            }
             if (t >= cable.limitKelvin()) {
                 fail(p, cable, t);
                 changed = true;

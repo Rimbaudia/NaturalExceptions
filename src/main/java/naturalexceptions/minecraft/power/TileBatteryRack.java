@@ -101,6 +101,7 @@ public final class TileBatteryRack extends TileBattery {
 
     private void changedCells() {
         if (worldObj == null) return;
+        PowerNetworks.dirty(worldObj, xCoord, yCoord, zCoord); // solved again at once, not at the idle pace
         int meta = BlockPowerMachine.BatteryRack.meta(cells, series);
         if (worldObj.getBlockMetadata(xCoord, yCoord, zCoord) != meta)
             worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, meta, 3);
