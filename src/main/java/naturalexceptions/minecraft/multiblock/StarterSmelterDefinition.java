@@ -5,12 +5,7 @@ import net.minecraft.item.ItemStack;
 
 import naturalexceptions.minecraft.registry.NEBlocks;
 
-/**
- * Authoritative multiblock rules and minimum reference layout for the variable Starter Smelter vessel.
- *
- * <p>
- * Marked EXPERIMENTAL as the layout is still in active development.
- */
+/** Authoritative multiblock rules and minimum reference layout for the variable Starter Smelter vessel. */
 public final class StarterSmelterDefinition extends MultiblockDefinition {
 
     public static final StarterSmelterDefinition INSTANCE = new StarterSmelterDefinition();

@@ -56,6 +56,12 @@ public final class NEWorldTickHandler {
         return workQueue;
     }
 
+    /** Someone left: what they were last told is forgotten, so rejoining they are told again (a Blood Night). */
+    @SubscribeEvent
+    public void onLoggedOut(cpw.mods.fml.common.gameevent.PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.player != null) p8Presence.forget(event.player.getUniqueID());
+    }
+
     @SubscribeEvent
     public void onWorldTick(TickEvent.WorldTickEvent event) {
         if (event.side != Side.SERVER || event.phase != TickEvent.Phase.END) {

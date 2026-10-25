@@ -102,6 +102,14 @@ public final class BlockKnifeSwitch extends Block implements PowerBlock, PartMod
         super.breakBlock(world, x, y, z, block, meta);
     }
 
+    /** It is screwed down to what is under it: with that gone, it comes away. */
+    @Override
+    public void onNeighborBlockChange(World world, int x, int y, int z, Block neighbor) {
+        if (world.isRemote || World.doesBlockHaveSolidTopSurface(world, x, y - 1, z)) return;
+        dropBlockAsItem(world, x, y, z, world.getBlockMetadata(x, y, z), 0);
+        world.setBlockToAir(x, y, z);
+    }
+
     @Override
     public boolean canPlaceBlockAt(World world, int x, int y, int z) {
         return super.canPlaceBlockAt(world, x, y, z) && World.doesBlockHaveSolidTopSurface(world, x, y - 1, z);

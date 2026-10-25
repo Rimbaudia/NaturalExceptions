@@ -52,6 +52,11 @@ public final class PowerNetworks {
         if (world != null && !world.isRemote) of(world).dirty.add(PowerTopology.key(x, y, z));
     }
 
+    /** The cable at (x, y, z) is gone: what heat it held goes with it. */
+    public static void cooled(World world, int x, int y, int z) {
+        if (world != null && !world.isRemote) of(world).heat.remove(PowerTopology.key(x, y, z));
+    }
+
     /** A relay was set or taken away: the relays it reached are joined anew. */
     public static void relay(World world, int x, int y, int z, boolean present) {
         if (world == null || world.isRemote) return;

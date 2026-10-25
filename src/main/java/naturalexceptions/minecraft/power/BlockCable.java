@@ -82,6 +82,7 @@ public final class BlockCable extends Block implements PowerBlock {
     @Override
     public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
         PowerNetworks.dirty(world, x, y, z);
+        PowerNetworks.cooled(world, x, y, z); // a new length laid here starts cold
         super.breakBlock(world, x, y, z, block, meta);
     }
 

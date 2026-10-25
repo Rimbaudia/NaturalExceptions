@@ -139,13 +139,15 @@ public final class MaterialAppearance {
         if (ref != null) {
             String idStr = ref.asString()
                 .toLowerCase();
-            if (idStr.contains("avel")) {
+            // By whole word of the id: "gravel" is not Avel.
+            java.util.List<String> words = java.util.Arrays.asList(idStr.split("[^a-z0-9]+"));
+            if (words.contains("avel")) {
                 return 0x55FFFF; // Radiant cyan
-            } else if (idStr.contains("rhel")) {
+            } else if (words.contains("rhel")) {
                 return 0xFF2255; // Incandescent crimson
-            } else if (idStr.contains("thren")) {
+            } else if (words.contains("thren")) {
                 return 0x66FF33; // Radiant emerald
-            } else if (idStr.contains("veyr")) {
+            } else if (words.contains("veyr")) {
                 return 0xC044FF; // Electric violet
             } else if (idStr.contains("stellar")) {
                 return 0x99FFFF; // Plasma cyan-white

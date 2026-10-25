@@ -45,6 +45,12 @@ public class TileEntityCastingTable extends TileEntity implements IInventory {
         }
     }
 
+    /** A puff seen by those watching: the table works on the server, so particles are sent out from there. */
+    private void particle(String name, double x, double y, double z, double vx, double vy, double vz) {
+        if (worldObj instanceof net.minecraft.world.WorldServer) ((net.minecraft.world.WorldServer) worldObj)
+            .func_147487_a(name, x, y, z, 1, 0.0, 0.0, 0.0, Math.abs(vy));
+    }
+
     @Override
     public void updateEntity() {
         if (worldObj == null || worldObj.isRemote) {
@@ -61,7 +67,7 @@ public class TileEntityCastingTable extends TileEntity implements IInventory {
                 if (wasSolid != nowSolid) {
                     worldObj.playSoundEffect(xCoord + 0.5D, yCoord + 1.0D, zCoord + 0.5D, "random.fizz", 0.7F, 1.5F);
                     for (int i = 0; i < 8; i++) {
-                        worldObj.spawnParticle(
+                        particle(
                             "smoke",
                             xCoord + 0.3D + worldObj.rand.nextDouble() * 0.4D,
                             yCoord + 1.05D,
@@ -278,7 +284,7 @@ public class TileEntityCastingTable extends TileEntity implements IInventory {
         if (raining) {
             hConv += 100.0;
             if (currentTempK > 373.15 && worldObj != null && worldObj.rand.nextInt(4) == 0) {
-                worldObj.spawnParticle("smoke", xCoord + 0.5D, yCoord + 1.05D, zCoord + 0.5D, 0.0D, 0.05D, 0.0D);
+                particle("smoke", xCoord + 0.5D, yCoord + 1.05D, zCoord + 0.5D, 0.0D, 0.05D, 0.0D);
             }
         } else if (openToSky) {
             hConv += 15.0;
@@ -294,14 +300,14 @@ public class TileEntityCastingTable extends TileEntity implements IInventory {
             // temporary host representation; this is not the later material-phase fluid system.
             hConv += 120.0 * seasonalWaterReaction;
             if (currentTempK > 373.15 && worldObj != null && worldObj.rand.nextInt(3) == 0) {
-                worldObj.spawnParticle("splash", xCoord + 0.5D, yCoord + 1.1D, zCoord + 0.5D, 0.0D, 0.08D, 0.0D);
+                particle("splash", xCoord + 0.5D, yCoord + 1.1D, zCoord + 0.5D, 0.0D, 0.08D, 0.0D);
                 worldObj.playSoundEffect(xCoord + 0.5D, yCoord + 1.0D, zCoord + 0.5D, "random.fizz", 0.5F, 1.8F);
             }
         } else if (waterBlocks > 0) {
             hConv += waterBlocks * 125.0;
             hConv += 120.0 * seasonalWaterReaction;
             if (currentTempK > 373.15 && worldObj != null && worldObj.rand.nextInt(6) == 0) {
-                worldObj.spawnParticle("cloud", xCoord + 0.5D, yCoord + 1.02D, zCoord + 0.5D, 0.0D, 0.03D, 0.0D);
+                particle("cloud", xCoord + 0.5D, yCoord + 1.02D, zCoord + 0.5D, 0.0D, 0.03D, 0.0D);
             }
         }
 
