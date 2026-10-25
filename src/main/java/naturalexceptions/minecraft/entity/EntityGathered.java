@@ -44,6 +44,10 @@ public final class EntityGathered extends EntityMob implements IBossDisplayData 
 
     private final List<int[]> candles = new ArrayList<>();
     private boolean candlesFound;
+    /** How many candles its hall held when it rose: breaking some does not make it kneel sooner. */
+    private int quota;
+    /** How long its hall has stood empty of the living. */
+    private int alone;
     private int windup, graspCooldown, wailTimer = GatheredRules.WAIL_INTERVAL / 2, kneel, shadeTimer;
     private boolean torn;
     private final List<EntityGatheredShade> shades = new ArrayList<>();
@@ -95,6 +99,7 @@ public final class EntityGathered extends EntityMob implements IBossDisplayData 
     /** The candelabra round its hall, found once. */
     private void findCandles() {
         candlesFound = true;
+        candles.clear();
         if (NEBlocks.candelabra == null) return;
         net.minecraft.util.ChunkCoordinates home = getHomePosition();
         int cx = hasHome() && home != null ? home.posX : MathHelper.floor_double(posX);
@@ -104,6 +109,27 @@ public final class EntityGathered extends EntityMob implements IBossDisplayData 
         for (int x = cx - r; x <= cx + r; x++)
             for (int z = cz - r; z <= cz + r; z++) for (int y = cy - 3; y <= cy + 4; y++)
                 if (worldObj.getBlock(x, y, z) == NEBlocks.candelabra) candles.add(new int[] { x, y, z });
+        quota = Math.max(quota, candles.size());
+    }
+
+    /** Where it rose (its home), or where it is. */
+    private double[] hall() {
+        net.minecraft.util.ChunkCoordinates home = getHomePosition();
+        if (hasHome() && home != null) return new double[] { home.posX + 0.5, home.posY, home.posZ + 0.5 };
+        return new double[] { posX, posY, posZ };
+    }
+
+    private boolean inHall(EntityPlayer player) {
+        double[] h = hall();
+        double dx = player.posX - h[0], dz = player.posZ - h[2];
+        return dx * dx + dz * dz <= GatheredRules.HALL_REACH * GatheredRules.HALL_REACH
+            && Math.abs(player.posY - h[1]) <= 8.0;
+    }
+
+    /** The living near it, but only those in its hall: it does not follow anyone out. */
+    private EntityPlayer quarry() {
+        EntityPlayer near = worldObj.getClosestVulnerablePlayerToEntity(this, 32.0);
+        return near != null && inHall(near) ? near : null;
     }
 
     private int litCandles() {
@@ -149,7 +175,7 @@ public final class EntityGathered extends EntityMob implements IBossDisplayData 
     @Override
     protected void updateEntityActionState() {
         // It drifts at whoever troubles it (see onLivingUpdate); no walking paths.
-        entityToAttack = worldObj.getClosestVulnerablePlayerToEntity(this, 32.0);
+        entityToAttack = quarry();
         if (entityToAttack != null) faceEntity(entityToAttack, 10.0F, 20.0F);
     }
 
@@ -179,12 +205,14 @@ public final class EntityGathered extends EntityMob implements IBossDisplayData 
             return;
         }
         if (!candlesFound) findCandles();
+        else if (ticksExisted % 100 == 0 && standingCandles() < quota) findCandles(); // a candelabra set anew
         hover();
+        if (rests()) return;
         if (kneeling()) {
             if (--kneel <= 0) rise();
             return;
         }
-        if (GatheredRules.kneels(standingCandles(), litCandles())) {
+        if (GatheredRules.kneels(quota, litCandles())) {
             kneelDown();
             return;
         }
@@ -194,7 +222,7 @@ public final class EntityGathered extends EntityMob implements IBossDisplayData 
             loose(GatheredRules.SHADES_LATER);
         }
         if (graspCooldown > 0) graspCooldown--;
-        EntityPlayer target = worldObj.getClosestVulnerablePlayerToEntity(this, 32.0);
+        EntityPlayer target = quarry();
         if (windup > 0) {
             if (--windup == 0) strike(target);
             return;
@@ -204,10 +232,46 @@ public final class EntityGathered extends EntityMob implements IBossDisplayData 
             wailTimer = torn ? GatheredRules.WAIL_INTERVAL_TORN : GatheredRules.WAIL_INTERVAL;
             return;
         }
-        if (target == null) return;
+        if (target == null) {
+            double[] h = hall();
+            if ((h[0] - posX) * (h[0] - posX) + (h[2] - posZ) * (h[2] - posZ) > 4.0)
+                drift(h[0], h[2], GatheredRules.SPEED);
+            return;
+        }
         double d = getDistanceToEntity(target);
         if (graspCooldown == 0 && d <= GatheredRules.GRASP_REACH) begin(GRASP, GatheredRules.GRASP_WINDUP);
         else if (d > 2.5) drift(target.posX, target.posZ, GatheredRules.SPEED);
+    }
+
+    /**
+     * With nobody left in its hall for a while it settles back: whole again, its shades called home, its candles out.
+     * Whoever comes back starts the rite from the beginning.
+     */
+    private boolean rests() {
+        if (!hasHome()) return false;
+        boolean anyone = false;
+        for (Object o : worldObj.playerEntities)
+            if (o instanceof EntityPlayer && !((EntityPlayer) o).capabilities.disableDamage && inHall((EntityPlayer) o))
+                anyone = true;
+        if (anyone) {
+            alone = 0;
+            return false;
+        }
+        if (alone < GatheredRules.REST_TICKS) alone++;
+        if (alone < GatheredRules.REST_TICKS) return false;
+        if (getHealth() < getMaxHealth() || torn || kneeling()) {
+            setHealth(getMaxHealth());
+            torn = false;
+            windup = 0;
+            wind(NONE);
+            dataWatcher.updateObject(KNEELING, (byte) 0);
+            for (EntityGatheredShade shade : shades) shade.setDead();
+            shades.clear();
+            snuff(candles.size());
+        }
+        double[] h = hall();
+        if ((h[0] - posX) * (h[0] - posX) + (h[2] - posZ) * (h[2] - posZ) > 4.0) drift(h[0], h[2], GatheredRules.SPEED);
+        return true;
     }
 
     /** It hangs a little above the floor beneath it, bobbing. */
@@ -370,6 +434,14 @@ public final class EntityGathered extends EntityMob implements IBossDisplayData 
         return null;
     }
 
+    /** Peaceful clears monsters away, but not this one: there is only one, and its vault opens with it. */
+    @Override
+    public void setDead() {
+        if (!worldObj.isRemote && worldObj.difficultySetting == net.minecraft.world.EnumDifficulty.PEACEFUL
+            && getHealth() > 0.0F) return;
+        super.setDead();
+    }
+
     @Override
     protected boolean canDespawn() {
         return false;
@@ -384,12 +456,18 @@ public final class EntityGathered extends EntityMob implements IBossDisplayData 
     public void writeEntityToNBT(NBTTagCompound tag) {
         super.writeEntityToNBT(tag);
         tag.setBoolean("Torn", torn);
+        tag.setInteger("Quota", quota);
+        net.minecraft.util.ChunkCoordinates home = getHomePosition();
+        if (hasHome() && home != null) tag.setIntArray("Home", new int[] { home.posX, home.posY, home.posZ });
     }
 
     @Override
     public void readEntityFromNBT(NBTTagCompound tag) {
         super.readEntityFromNBT(tag);
         torn = tag.getBoolean("Torn");
+        quota = tag.getInteger("Quota");
+        int[] home = tag.getIntArray("Home");
+        if (home.length == 3) setHomeArea(home[0], home[1], home[2], GatheredRules.CANDLE_REACH);
     }
 
     // --- Sounds ---------------------------------------------------------------------------------------------

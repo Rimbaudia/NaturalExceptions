@@ -52,7 +52,8 @@ public final class TileTeslaCoil extends TileSource {
         EntityLiving best = null;
         double bestD = REACH * REACH;
         for (EntityLiving e : near) {
-            if (!(e instanceof IMob) || e.isDead) continue;
+            // Not the guardians of the dungeons: their halls are fought in person, not wired.
+            if (!(e instanceof IMob) || e.isDead || e instanceof net.minecraft.entity.boss.IBossDisplayData) continue;
             double d = e.getDistanceSq(xCoord + 0.5, yCoord + 2.0, zCoord + 0.5);
             if (d < bestD) {
                 bestD = d;

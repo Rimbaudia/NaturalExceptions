@@ -39,6 +39,13 @@ final class FoundryColossusTest {
     }
 
     @Test
+    void itCannotBeKeptDousedInItsOwnTroughs() {
+        assertTrue(
+            ColossusRules.KINDLE_TICKS >= ColossusRules.QUENCH_TICKS,
+            "rekindled, it stays too hot to douse for at least as long as it was open");
+    }
+
+    @Test
     void thePourRunsStraightOutFromItsFeet() {
         int[][] line = ColossusRules.pourLine(0.5, 0.5, 0.5, 20.5);
         assertEquals(ColossusRules.POUR_LENGTH, line.length);

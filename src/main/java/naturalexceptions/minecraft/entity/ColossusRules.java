@@ -22,6 +22,8 @@ public final class ColossusRules {
     public static final float HOT_SHARE = 0.2F;
     /** How long its heart stays open after a dousing. */
     public static final int QUENCH_TICKS = 100;
+    /** Once its fire comes back, how long it burns too hot to be doused again. */
+    public static final int KINDLE_TICKS = 160;
 
     /** The hammer: how far it reaches, how hard it falls, how long it is raised first, and between blows. */
     public static final double SLAM_REACH = 3.5;

@@ -288,6 +288,14 @@ public final class EntityCastellan extends EntityMob implements IBossDisplayData
     @Override
     protected void fall(float distance) {}
 
+    /** Peaceful clears monsters away, but not this one: there is only one, and its vault opens with it. */
+    @Override
+    public void setDead() {
+        if (!worldObj.isRemote && worldObj.difficultySetting == net.minecraft.world.EnumDifficulty.PEACEFUL
+            && getHealth() > 0.0F) return;
+        super.setDead();
+    }
+
     @Override
     protected boolean canDespawn() {
         return false;

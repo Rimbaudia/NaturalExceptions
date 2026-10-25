@@ -15,6 +15,10 @@ public final class GatheredRules {
     public static final double HOVER = 0.6;
     /** How far round its hall it finds the candles. */
     public static final int CANDLE_REACH = 14;
+    /** How far from where it rose it goes for anyone: past that, they have left its hall. */
+    public static final double HALL_REACH = 22.0;
+    /** How long its hall must stand empty before it settles back, whole. */
+    public static final int REST_TICKS = 600;
 
     /** What gets through to it standing, and kneeling before the lit candles. */
     public static final float SHROUDED_SHARE = 0.15F;
@@ -45,7 +49,7 @@ public final class GatheredRules {
         return torn ? 2 : 1;
     }
 
-    /** Whether it kneels: there are candles, and every one is lit. */
+    /** Whether it kneels: there are candles, and as many are lit as its hall held when it rose. */
     public static boolean kneels(int candles, int lit) {
         return candles > 0 && lit >= candles;
     }

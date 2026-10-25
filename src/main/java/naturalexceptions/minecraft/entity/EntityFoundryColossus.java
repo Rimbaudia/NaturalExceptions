@@ -44,6 +44,8 @@ public final class EntityFoundryColossus extends EntityMob implements IBossDispl
     private static final int STATE = 16, WINDING = 17;
 
     private int windup, slamCooldown, pourCooldown = ColossusRules.POUR_COOLDOWN / 2, throwCooldown, quenched, idle;
+    /** Rekindled, it burns too hot for water to douse it again for a while. */
+    private int kindled;
     private double[] pourAt;
     private int[] post;
 
@@ -125,6 +127,11 @@ public final class EntityFoundryColossus extends EntityMob implements IBossDispl
     /** Doused: its fire hisses out and its heart opens, for a few seconds. */
     public void quench() {
         if (worldObj.isRemote || state() == QUENCHED) return;
+        if (kindled > 0) {
+            worldObj.playSoundAtEntity(this, "random.fizz", 1.5F, 1.4F);
+            burst("cloud", 8);
+            return;
+        }
         wake();
         setState(QUENCHED);
         quenched = ColossusRules.QUENCH_TICKS;
@@ -154,8 +161,9 @@ public final class EntityFoundryColossus extends EntityMob implements IBossDispl
         ItemStack held = player.getCurrentEquippedItem();
         if (held == null || held.getItem() != Items.water_bucket || state() == QUENCHED) return false;
         if (!worldObj.isRemote) {
+            boolean took = kindled == 0;
             quench();
-            if (!player.capabilities.isCreativeMode)
+            if (took && !player.capabilities.isCreativeMode)
                 player.inventory.setInventorySlotContents(player.inventory.currentItem, new ItemStack(Items.bucket));
         }
         return true;
@@ -220,10 +228,12 @@ public final class EntityFoundryColossus extends EntityMob implements IBossDispl
                 0.0);
             return;
         }
-        if (isInWater()) quench();
+        if (kindled > 0) kindled--;
+        if (isInWater() && kindled == 0) quench();
         if (state() == QUENCHED) {
             if (--quenched <= 0) {
                 setState(AWAKE);
+                kindled = ColossusRules.KINDLE_TICKS;
                 worldObj.playSoundAtEntity(this, "mob.ghast.fireball", 1.5F, 0.6F);
                 burst("flame", 20);
             }
@@ -354,6 +364,14 @@ public final class EntityFoundryColossus extends EntityMob implements IBossDispl
     @Override
     public boolean attackEntityAsMob(Entity target) {
         return false;
+    }
+
+    /** Peaceful clears monsters away, but not this one: there is only one, and its vault opens with it. */
+    @Override
+    public void setDead() {
+        if (!worldObj.isRemote && worldObj.difficultySetting == net.minecraft.world.EnumDifficulty.PEACEFUL
+            && getHealth() > 0.0F) return;
+        super.setDead();
     }
 
     @Override

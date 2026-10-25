@@ -64,7 +64,10 @@ public final class EntityRepairedAutomaton extends EntityCreature implements Aut
                 0,
                 true,
                 false,
-                e -> !(e instanceof EntityCreeper)));
+                // Not creepers, nor what sleeps: a boss, or a Citadel Automaton dormant at its post, is left be
+                // unless it comes at us.
+                e -> !(e instanceof EntityCreeper) && !(e instanceof net.minecraft.entity.boss.IBossDisplayData)
+                    && !(e instanceof EntityCitadelAutomaton && ((EntityCitadelAutomaton) e).dormant())));
     }
 
     /** Stands a repaired Automaton up for {@code master}, with {@code charge} joules in its new heart. */

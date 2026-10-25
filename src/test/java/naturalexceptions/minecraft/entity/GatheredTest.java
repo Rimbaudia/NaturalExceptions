@@ -51,6 +51,13 @@ final class GatheredTest {
     }
 
     @Test
+    void itKeepsToItsHallAndItsCandles() {
+        assertTrue(GatheredRules.HALL_REACH > GatheredRules.CANDLE_REACH, "every candle it counts lies in its hall");
+        assertTrue(!GatheredRules.kneels(4, 1), "a hall of four candles is not won by lighting one");
+        assertTrue(GatheredRules.REST_TICKS >= 200, "stepping out for a moment does not undo the fight");
+    }
+
+    @Test
     void itLeavesTheVeilAndOneMoreRelic() {
         Item veil = NEItems.TREASURES.get(Treasure.MOURNERS_VEIL);
         Set<Item> others = new HashSet<>();
