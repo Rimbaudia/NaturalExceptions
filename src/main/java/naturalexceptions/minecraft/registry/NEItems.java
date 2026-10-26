@@ -366,6 +366,7 @@ public final class NEItems {
             } catch (Throwable ignored) {}
 
             GameRegistry.addRecipe(new naturalexceptions.minecraft.recipe.RecipeToolAssembly());
+            GameRegistry.addRecipe(new naturalexceptions.minecraft.recipe.RecipeToolEdge());
             GameRegistry.addShapelessRecipe(
                 new ItemStack(refractoryMix, 2),
                 net.minecraft.init.Items.clay_ball,
@@ -395,6 +396,11 @@ public final class NEItems {
                 net.minecraftforge.oredict.RecipeSorter.register(
                     "naturalexceptions:tool_assembly",
                     naturalexceptions.minecraft.recipe.RecipeToolAssembly.class,
+                    net.minecraftforge.oredict.RecipeSorter.Category.SHAPELESS,
+                    "after:minecraft:shapeless");
+                net.minecraftforge.oredict.RecipeSorter.register(
+                    "naturalexceptions:tool_edge",
+                    naturalexceptions.minecraft.recipe.RecipeToolEdge.class,
                     net.minecraftforge.oredict.RecipeSorter.Category.SHAPELESS,
                     "after:minecraft:shapeless");
             } catch (Throwable ignored) {}

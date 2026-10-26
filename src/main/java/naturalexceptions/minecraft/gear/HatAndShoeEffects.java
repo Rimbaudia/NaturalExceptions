@@ -244,7 +244,8 @@ public final class HatAndShoeEffects {
         World world = player.worldObj;
         int[] spot = null;
         boolean lantern = player.getCurrentEquippedItem() != null && player.getCurrentEquippedItem()
-            .getItem() == naturalexceptions.minecraft.registry.NEItems.reliquaryLantern;
+            .getItem() == naturalexceptions.minecraft.registry.NEItems.reliquaryLantern
+            || naturalexceptions.minecraft.item.ToolEdge.glowsIn(player);
         if ((ItemTreasureGear.worn(player, Treasure.LAMPLIGHTERS_CAP) > 0 || lantern) && NEBlocks.lamplight != null) {
             int x = MathHelper.floor_double(player.posX), z = MathHelper.floor_double(player.posZ);
             int feet = MathHelper.floor_double(player.boundingBox.minY);

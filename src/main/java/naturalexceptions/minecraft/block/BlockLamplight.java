@@ -27,6 +27,11 @@ public final class BlockLamplight extends Block {
     static final int CHECK_TICKS = 40;
     /** How near a wearer must stand for it to stay lit. */
     static final double WEARER_REACH = 2.5;
+    /**
+     * Meta of the faint light a Lumenite edge leaves where it cuts: it needs no wearer, and fades out by itself, one
+     * step a minute ({@link #TRAIL_STEP_TICKS}) until {@link #TRAIL_LAST}.
+     */
+    public static final int TRAIL = 1, TRAIL_LAST = 10, TRAIL_STEP_TICKS = 1200;
 
     private static final Material GLOW = new MaterialTransparent(MapColor.airColor);
 
@@ -37,6 +42,11 @@ public final class BlockLamplight extends Block {
         setLightLevel(14.0F / 15.0F);
         setLightOpacity(0);
         setHardness(0.0F);
+    }
+
+    @Override
+    public int getLightValue(IBlockAccess world, int x, int y, int z) {
+        return world.getBlockMetadata(x, y, z) >= TRAIL ? 8 : 14;
     }
 
     @Override
@@ -82,11 +92,25 @@ public final class BlockLamplight extends Block {
 
     @Override
     public void onBlockAdded(World world, int x, int y, int z) {
-        if (!world.isRemote) world.scheduleBlockUpdate(x, y, z, this, CHECK_TICKS);
+        if (!world.isRemote) world.scheduleBlockUpdate(
+            x,
+            y,
+            z,
+            this,
+            world.getBlockMetadata(x, y, z) >= TRAIL ? TRAIL_STEP_TICKS : CHECK_TICKS);
     }
 
     @Override
     public void updateTick(World world, int x, int y, int z, Random random) {
+        int meta = world.getBlockMetadata(x, y, z);
+        if (meta >= TRAIL) {
+            if (meta >= TRAIL_LAST) world.setBlockToAir(x, y, z);
+            else {
+                world.setBlockMetadataWithNotify(x, y, z, meta + 1, 4);
+                world.scheduleBlockUpdate(x, y, z, this, TRAIL_STEP_TICKS);
+            }
+            return;
+        }
         if (wearerNear(world, x, y, z)) world.scheduleBlockUpdate(x, y, z, this, CHECK_TICKS);
         else world.setBlockToAir(x, y, z);
     }
@@ -99,6 +123,7 @@ public final class BlockLamplight extends Block {
             if (ItemTreasureGear.worn(player, Treasure.LAMPLIGHTERS_CAP) > 0) return true;
             if (player.getCurrentEquippedItem() != null && player.getCurrentEquippedItem()
                 .getItem() == naturalexceptions.minecraft.registry.NEItems.reliquaryLantern) return true;
+            if (naturalexceptions.minecraft.item.ToolEdge.glowsIn(player)) return true;
         }
         return false;
     }

@@ -276,7 +276,7 @@ public final class ItemGenericAssembly extends Item {
 
         TargetMaterialProfile target = mapBlockToTarget(block);
         if (effective) {
-            return (float) capability.miningSpeed(target);
+            return (float) capability.miningSpeed(target) * (ToolEdge.of(stack) != null ? ToolEdge.SPEED : 1.0F);
         }
         return 1.0F;
     }
@@ -456,6 +456,12 @@ public final class ItemGenericAssembly extends Item {
             if (capability != null) {
                 TargetMaterialProfile target = mapBlockToTarget(block);
                 capability.interactWith(target);
+                ToolEdge edge = ToolEdge.of(stack);
+                if (edge != null && player instanceof EntityPlayer) {
+                    // A shatter wears the head for every block it breaks.
+                    int more = edge.cut(stack, world, block, x, y, z, (EntityPlayer) player);
+                    for (int i = 0; i < more; i++) capability.interactWith(target);
+                }
                 saveAssembly(stack, assembly);
                 checkToolBreak(stack, world, player);
             }
@@ -549,6 +555,10 @@ public final class ItemGenericAssembly extends Item {
             list.add("\u00a77Empty assembly");
             return;
         }
+        ToolEdge edge = ToolEdge.of(stack);
+        if (edge != null) {
+            list.add("\u00a7b" + edge.prefix + ": \u00a77" + edge.effect);
+        }
 
         String headMat = naturalexceptions.minecraft.knowledge.KnowledgePresentation.materialName(
             player,
@@ -638,7 +648,11 @@ public final class ItemGenericAssembly extends Item {
                 .materialRef(),
             assembly.head()
                 .stateKey());
-        return (assembly.isBroken() ? "Broken " : "") + material + " " + geometry;
+        ToolEdge edge = ToolEdge.of(stack);
+        return (assembly.isBroken() ? "Broken " : "") + (edge == null ? "" : edge.prefix + " ")
+            + material
+            + " "
+            + geometry;
     }
 
     @Override
