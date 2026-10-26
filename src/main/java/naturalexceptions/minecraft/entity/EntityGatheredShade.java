@@ -103,13 +103,13 @@ public final class EntityGatheredShade extends EntityMob {
         if (d < 1.2 && touchCooldown == 0) {
             target.attackEntityFrom(DamageSource.causeMobDamage(this), TOUCH);
             touchCooldown = 25;
-            worldObj.playSoundAtEntity(this, "mob.ghast.scream", 0.4F, 1.6F);
+            worldObj.playSoundAtEntity(this, "naturalexceptions:shade.shriek", 0.4F, 1.0F);
         }
     }
 
     @Override
     protected String getLivingSound() {
-        return "mob.ghast.moan";
+        return "naturalexceptions:shade.whisper";
     }
 
     @Override
@@ -124,12 +124,12 @@ public final class EntityGatheredShade extends EntityMob {
 
     @Override
     protected String getHurtSound() {
-        return "mob.ghast.scream";
+        return "naturalexceptions:shade.shriek";
     }
 
     @Override
     protected String getDeathSound() {
-        return "mob.ghast.death";
+        return "naturalexceptions:shade.fade";
     }
 
     @Override

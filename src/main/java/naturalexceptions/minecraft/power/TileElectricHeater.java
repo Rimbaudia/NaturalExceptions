@@ -62,6 +62,14 @@ public final class TileElectricHeater extends TileSource {
             worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, glow, 2);
             worldObj.func_147451_t(xCoord, yCoord, zCoord);
         }
+        // A loaded element hums, deeper and louder the harder it works.
+        if (glow > 0 && worldObj.getTotalWorldTime() % 40 < PowerNetworks.TICKS) worldObj.playSoundEffect(
+            xCoord + 0.5,
+            yCoord + 0.5,
+            zCoord + 0.5,
+            "naturalexceptions:power.hum",
+            0.15F * glow,
+            0.8F);
         if (glow > 0 && worldObj instanceof WorldServer && worldObj.getTotalWorldTime() % 20 == 0)
             ((WorldServer) worldObj)
                 .func_147487_a("flame", xCoord + 0.5, yCoord + 1.0, zCoord + 0.5, 1, 0.2, 0.0, 0.2, 0.0);

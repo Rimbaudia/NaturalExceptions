@@ -1,4 +1,154 @@
 {
+  "automaton.clank": {
+    "category": "hostile",
+    "sounds": [
+      "automaton/clank"
+    ]
+  },
+  "automaton.hurt": {
+    "category": "hostile",
+    "sounds": [
+      "automaton/hurt"
+    ]
+  },
+  "automaton.servo": {
+    "category": "hostile",
+    "sounds": [
+      "automaton/servo"
+    ]
+  },
+  "automaton.step": {
+    "category": "hostile",
+    "sounds": [
+      "automaton/step"
+    ]
+  },
+  "automaton.wake": {
+    "category": "hostile",
+    "sounds": [
+      "automaton/wake"
+    ]
+  },
+  "automaton.winddown": {
+    "category": "hostile",
+    "sounds": [
+      "automaton/winddown"
+    ]
+  },
+  "colossus.clang": {
+    "category": "hostile",
+    "sounds": [
+      "colossus/clang"
+    ]
+  },
+  "colossus.fall": {
+    "category": "hostile",
+    "sounds": [
+      "colossus/fall"
+    ]
+  },
+  "colossus.furnace": {
+    "category": "hostile",
+    "sounds": [
+      "colossus/furnace"
+    ]
+  },
+  "colossus.heave": {
+    "category": "hostile",
+    "sounds": [
+      "colossus/heave"
+    ]
+  },
+  "colossus.hurt": {
+    "category": "hostile",
+    "sounds": [
+      "colossus/hurt"
+    ]
+  },
+  "colossus.quench": {
+    "category": "hostile",
+    "sounds": [
+      "colossus/quench"
+    ]
+  },
+  "colossus.rekindle": {
+    "category": "hostile",
+    "sounds": [
+      "colossus/rekindle"
+    ]
+  },
+  "colossus.slam": {
+    "category": "hostile",
+    "sounds": [
+      "colossus/slam"
+    ]
+  },
+  "colossus.step": {
+    "category": "hostile",
+    "sounds": [
+      "colossus/step"
+    ]
+  },
+  "colossus.wake": {
+    "category": "hostile",
+    "sounds": [
+      "colossus/wake"
+    ]
+  },
+  "gathered.drone": {
+    "category": "hostile",
+    "sounds": [
+      "gathered/drone"
+    ]
+  },
+  "gathered.grasp": {
+    "category": "hostile",
+    "sounds": [
+      "gathered/grasp"
+    ]
+  },
+  "gathered.hurt": {
+    "category": "hostile",
+    "sounds": [
+      "gathered/hurt"
+    ]
+  },
+  "gathered.kneel": {
+    "category": "hostile",
+    "sounds": [
+      "gathered/kneel"
+    ]
+  },
+  "gathered.reach": {
+    "category": "hostile",
+    "sounds": [
+      "gathered/reach"
+    ]
+  },
+  "gathered.rest": {
+    "category": "hostile",
+    "sounds": [
+      "gathered/rest"
+    ]
+  },
+  "gathered.rise": {
+    "category": "hostile",
+    "sounds": [
+      "gathered/rise"
+    ]
+  },
+  "gathered.tear": {
+    "category": "hostile",
+    "sounds": [
+      "gathered/tear"
+    ]
+  },
+  "gathered.wail": {
+    "category": "hostile",
+    "sounds": [
+      "gathered/wail"
+    ]
+  },
   "gear.aegis": {
     "category": "player",
     "sounds": [
@@ -69,6 +219,54 @@
     "category": "block",
     "sounds": [
       "hoist/slew"
+    ]
+  },
+  "power.arc": {
+    "category": "block",
+    "sounds": [
+      "power/arc"
+    ]
+  },
+  "power.burnout": {
+    "category": "block",
+    "sounds": [
+      "power/burnout"
+    ]
+  },
+  "power.fuse": {
+    "category": "block",
+    "sounds": [
+      "power/fuse"
+    ]
+  },
+  "power.hum": {
+    "category": "block",
+    "sounds": [
+      "power/hum"
+    ]
+  },
+  "power.zap": {
+    "category": "block",
+    "sounds": [
+      "power/zap"
+    ]
+  },
+  "shade.fade": {
+    "category": "hostile",
+    "sounds": [
+      "shade/fade"
+    ]
+  },
+  "shade.shriek": {
+    "category": "hostile",
+    "sounds": [
+      "shade/shriek"
+    ]
+  },
+  "shade.whisper": {
+    "category": "hostile",
+    "sounds": [
+      "shade/whisper"
     ]
   },
   "trap.crumble": {

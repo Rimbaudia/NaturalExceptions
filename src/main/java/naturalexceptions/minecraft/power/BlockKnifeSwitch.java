@@ -89,7 +89,7 @@ public final class BlockKnifeSwitch extends Block implements PowerBlock, PartMod
                 0.1,
                 0.1,
                 0.05);
-            world.playSoundEffect(x + 0.5, y + 0.3, z + 0.5, "random.fizz", 0.4F, 2.0F);
+            world.playSoundEffect(x + 0.5, y + 0.3, z + 0.5, "naturalexceptions:power.zap", 0.5F, 1.0F);
         }
         PowerNetworks.dirty(world, x, y, z);
         return true;

@@ -71,8 +71,7 @@ public final class BlockFuse extends Block implements PowerBlock, PartModel {
     static void blow(World world, int x, int y, int z) {
         int meta = world.getBlockMetadata(x, y, z);
         world.setBlockMetadataWithNotify(x, y, z, meta | BLOWN, 3);
-        world.playSoundEffect(x + 0.5, y + 0.2, z + 0.5, "random.fizz", 0.8F, 1.6F);
-        world.playSoundEffect(x + 0.5, y + 0.2, z + 0.5, "random.glass", 0.3F, 2.0F);
+        world.playSoundEffect(x + 0.5, y + 0.2, z + 0.5, "naturalexceptions:power.fuse", 0.9F, 1.0F);
         if (world instanceof WorldServer) ((WorldServer) world)
             .func_147487_a("smoke", x + 0.5, y + 0.25, z + 0.5, 6, 0.1, 0.05, 0.1, 0.01);
     }

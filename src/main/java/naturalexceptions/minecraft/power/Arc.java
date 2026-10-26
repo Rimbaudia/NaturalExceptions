@@ -36,8 +36,7 @@ public final class Arc {
     /** It arcs at (x, y, z), if it would; {@code maker} (who broke the line) takes the burn. Whether it did. */
     public static boolean at(World world, int x, int y, int z, double volts, double amps, EntityLivingBase maker) {
         if (world == null || world.isRemote || !strikes(volts, amps)) return false;
-        world.playSoundEffect(x + 0.5, y + 0.5, z + 0.5, "fireworks.blast", 1.2F, 0.6F);
-        world.playSoundEffect(x + 0.5, y + 0.5, z + 0.5, "random.fizz", 1.0F, 0.6F);
+        world.playSoundEffect(x + 0.5, y + 0.5, z + 0.5, "naturalexceptions:power.arc", 1.5F, 0.9F + world.rand.nextFloat() * 0.2F);
         if (world instanceof WorldServer) {
             WorldServer server = (WorldServer) world;
             server.func_147487_a("fireworksSpark", x + 0.5, y + 0.5, z + 0.5, 30, 0.2, 0.2, 0.2, 0.15);

@@ -59,7 +59,7 @@ public final class TileShockPlate extends TileSource {
             living.addPotionEffect(new PotionEffect(Potion.moveSlowdown.id, 20, 3));
         }
         if (!on.isEmpty()) {
-            worldObj.playSoundEffect(xCoord + 0.5, yCoord + 0.2, zCoord + 0.5, "random.fizz", 0.7F, 1.8F);
+            worldObj.playSoundEffect(xCoord + 0.5, yCoord + 0.2, zCoord + 0.5, "naturalexceptions:power.zap", 0.7F, 1.0F);
             if (worldObj instanceof WorldServer) ((WorldServer) worldObj)
                 .func_147487_a("fireworksSpark", xCoord + 0.5, yCoord + 0.3, zCoord + 0.5, 8, 0.3, 0.1, 0.3, 0.08);
         }

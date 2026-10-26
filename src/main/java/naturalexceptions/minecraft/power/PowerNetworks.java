@@ -411,7 +411,7 @@ public final class PowerNetworks {
     /** Cloth chars off (leaving bare copper), or copper melts through (leaving nothing). */
     private void fail(int[] p, Cable cable, double t) {
         Cable left = cable.failed();
-        world.playSoundEffect(p[0] + 0.5, p[1] + 0.5, p[2] + 0.5, "random.fizz", 0.8F, left == null ? 0.6F : 1.4F);
+        world.playSoundEffect(p[0] + 0.5, p[1] + 0.5, p[2] + 0.5, "naturalexceptions:power.burnout", 0.8F, left == null ? 0.8F : 1.2F);
         if (world instanceof WorldServer) ((WorldServer) world).func_147487_a(
             left == null ? "lava" : "largesmoke",
             p[0] + 0.5,

@@ -63,6 +63,14 @@ public final class TileArcLamp extends TileEntity implements PowerDevice, PowerR
             return;
         }
         int step = brightness(watts);
+        // A burning arc hums and hisses.
+        if (step > 0 && worldObj.getTotalWorldTime() % 40 < PowerNetworks.TICKS) worldObj.playSoundEffect(
+            xCoord + 0.5,
+            yCoord + 0.5,
+            zCoord + 0.5,
+            "naturalexceptions:power.hum",
+            0.1F * step,
+            1.2F);
         if (worldObj.getBlockMetadata(xCoord, yCoord, zCoord) != step) {
             worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, step, 2);
             worldObj.func_147451_t(xCoord, yCoord, zCoord);
@@ -71,6 +79,7 @@ public final class TileArcLamp extends TileEntity implements PowerDevice, PowerR
 
     private void burst() {
         worldObj.playSoundEffect(xCoord + 0.5, yCoord + 0.5, zCoord + 0.5, "random.glass", 1.0F, 1.2F);
+        worldObj.playSoundEffect(xCoord + 0.5, yCoord + 0.5, zCoord + 0.5, "naturalexceptions:power.zap", 1.0F, 0.8F);
         if (worldObj instanceof WorldServer) ((WorldServer) worldObj)
             .func_147487_a("fireworksSpark", xCoord + 0.5, yCoord + 0.5, zCoord + 0.5, 30, 0.2, 0.2, 0.2, 0.15);
         worldObj.func_147480_a(xCoord, yCoord, zCoord, true); // breaks, and drops itself

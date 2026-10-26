@@ -135,7 +135,7 @@ public final class EntityCitadelAutomaton extends EntityMob implements CitadelMa
         if (!dormant()) return;
         setDormant(false);
         idle = 0;
-        worldObj.playSoundAtEntity(this, "random.fizz", 0.8F, 0.6F);
+        worldObj.playSoundAtEntity(this, "naturalexceptions:automaton.wake", 0.8F, 1.0F);
         if (worldObj instanceof WorldServer) ((WorldServer) worldObj)
             .func_147487_a("cloud", posX, posY + height * 0.55, posZ, 12, 0.25, 0.3, 0.25, 0.02);
     }
@@ -189,7 +189,7 @@ public final class EntityCitadelAutomaton extends EntityMob implements CitadelMa
                 source.isProjectile(),
                 shieldUp());
             if (through < 1.0F) {
-                worldObj.playSoundAtEntity(this, "random.anvil_land", 0.3F, 1.8F);
+                worldObj.playSoundAtEntity(this, "naturalexceptions:automaton.clank", 0.6F, 1.0F);
                 if (worldObj instanceof WorldServer) ((WorldServer) worldObj)
                     .func_147487_a(chips(), posX, posY + height * 0.6, posZ, 6, 0.3, 0.3, 0.3, 0.1);
                 if (through <= 0.0F) return false; // it glances off (an arrow springs back)
@@ -233,7 +233,7 @@ public final class EntityCitadelAutomaton extends EntityMob implements CitadelMa
             return;
         }
         setDormant(true);
-        worldObj.playSoundAtEntity(this, "random.click", 0.5F, 0.5F);
+        worldObj.playSoundAtEntity(this, "naturalexceptions:automaton.servo", 0.5F, 0.9F);
     }
 
     /** A halberd's blow, from out of a sword's reach; it lowers its shield for a moment. */
@@ -259,8 +259,7 @@ public final class EntityCitadelAutomaton extends EntityMob implements CitadelMa
         super.setAttackTarget(target);
         if (!first || worldObj.isRemote) return;
         wake();
-        worldObj.playSoundAtEntity(this, "random.anvil_land", 1.2F, 1.6F);
-        worldObj.playSoundAtEntity(this, "random.fizz", 1.5F, 1.4F);
+        worldObj.playSoundAtEntity(this, "naturalexceptions:automaton.wake", 1.5F, 1.1F);
         @SuppressWarnings("unchecked")
         List<EntityCitadelAutomaton> machines = worldObj
             .getEntitiesWithinAABB(EntityCitadelAutomaton.class, boundingBox.expand(RALLY, 8.0, RALLY));
@@ -343,12 +342,12 @@ public final class EntityCitadelAutomaton extends EntityMob implements CitadelMa
 
     @Override
     protected String getHurtSound() {
-        return "mob.irongolem.hit";
+        return "naturalexceptions:automaton.hurt";
     }
 
     @Override
     protected String getDeathSound() {
-        return "mob.irongolem.death";
+        return "naturalexceptions:automaton.winddown";
     }
 
     @Override
@@ -358,6 +357,6 @@ public final class EntityCitadelAutomaton extends EntityMob implements CitadelMa
 
     @Override
     protected void func_145780_a(int x, int y, int z, Block block) {
-        playSound("mob.irongolem.walk", 0.35F, 1.5F);
+        playSound("naturalexceptions:automaton.step", 0.5F, 1.0F);
     }
 }

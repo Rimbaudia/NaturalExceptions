@@ -163,7 +163,7 @@ public final class EntityGathered extends EntityMob implements IBossDisplayData 
         if (source.isFireDamage() || source == DamageSource.inWall || source == DamageSource.drown) return false;
         boolean flesh = kneeling();
         if (!flesh && !worldObj.isRemote && source.getEntity() != null) {
-            worldObj.playSoundAtEntity(this, "mob.ghast.moan", 0.5F, 1.8F);
+            worldObj.playSoundAtEntity(this, "naturalexceptions:shade.whisper", 0.6F, 1.0F);
             if (worldObj instanceof WorldServer) ((WorldServer) worldObj)
                 .func_147487_a("instantSpell", posX, posY + height * 0.5, posZ, 6, 0.4, 0.6, 0.4, 0.02);
         }
@@ -294,7 +294,7 @@ public final class EntityGathered extends EntityMob implements IBossDisplayData 
     private void begin(int what, int ticks) {
         wind(what);
         windup = ticks;
-        worldObj.playSoundAtEntity(this, what == WAIL ? "mob.ghast.moan" : "mob.ghast.affectionate_scream", 2.0F, 0.5F);
+        worldObj.playSoundAtEntity(this, "naturalexceptions:gathered.reach", 2.0F, what == WAIL ? 0.8F : 1.1F);
     }
 
     private void strike(EntityPlayer target) {
@@ -308,7 +308,7 @@ public final class EntityGathered extends EntityMob implements IBossDisplayData 
 
     /** Its arms close on everyone near it: they are struck and held back. */
     private void grasp() {
-        worldObj.playSoundAtEntity(this, "mob.ghast.scream", 1.5F, 0.4F);
+        worldObj.playSoundAtEntity(this, "naturalexceptions:gathered.grasp", 1.5F, 1.0F);
         for (EntityLivingBase living : near(GatheredRules.GRASP_REACH)) {
             living.attackEntityFrom(DamageSource.causeMobDamage(this), GatheredRules.GRASP_DAMAGE);
             living.addPotionEffect(new PotionEffect(Potion.moveSlowdown.id, 60, 1));
@@ -317,7 +317,7 @@ public final class EntityGathered extends EntityMob implements IBossDisplayData 
 
     /** It wails: everyone in its hall is hurt and weakened, and candles go out. */
     private void wail() {
-        worldObj.playSoundAtEntity(this, "mob.ghast.death", 3.0F, 0.3F);
+        worldObj.playSoundAtEntity(this, "naturalexceptions:gathered.wail", 3.0F, 1.0F);
         if (worldObj instanceof WorldServer) ((WorldServer) worldObj)
             .func_147487_a("mobSpellAmbient", posX, posY + height * 0.6, posZ, 60, 3.0, 1.5, 3.0, 0.1);
         for (EntityLivingBase living : near(GatheredRules.WAIL_REACH)) {
@@ -347,7 +347,7 @@ public final class EntityGathered extends EntityMob implements IBossDisplayData 
         windup = 0;
         wind(NONE);
         motionX = motionZ = 0.0;
-        worldObj.playSoundAtEntity(this, "mob.ghast.moan", 2.5F, 0.3F);
+        worldObj.playSoundAtEntity(this, "naturalexceptions:gathered.kneel", 2.5F, 1.0F);
         for (EntityPlayer player : players(40.0))
             player.addChatMessage(new ChatComponentText("§eThe Gathered kneel before the candles."));
     }
@@ -357,14 +357,14 @@ public final class EntityGathered extends EntityMob implements IBossDisplayData 
         dataWatcher.updateObject(KNEELING, (byte) 0);
         snuff(candles.size());
         wailTimer = GatheredRules.WAIL_INTERVAL;
-        worldObj.playSoundAtEntity(this, "mob.ghast.death", 3.0F, 0.5F);
+        worldObj.playSoundAtEntity(this, "naturalexceptions:gathered.rise", 3.0F, 1.0F);
     }
 
     /** Torn to half: faces tear loose from it and fly. */
     private void tear() {
         torn = true;
         shadeTimer = GatheredRules.SHADE_INTERVAL;
-        worldObj.playSoundAtEntity(this, "mob.ghast.scream", 3.0F, 0.6F);
+        worldObj.playSoundAtEntity(this, "naturalexceptions:gathered.tear", 3.0F, 1.0F);
         loose(GatheredRules.SHADES_AT_TEAR);
     }
 
@@ -474,7 +474,7 @@ public final class EntityGathered extends EntityMob implements IBossDisplayData 
 
     @Override
     protected String getLivingSound() {
-        return "mob.ghast.moan";
+        return "naturalexceptions:gathered.drone";
     }
 
     @Override
@@ -484,11 +484,11 @@ public final class EntityGathered extends EntityMob implements IBossDisplayData 
 
     @Override
     protected String getHurtSound() {
-        return "mob.ghast.scream";
+        return "naturalexceptions:gathered.hurt";
     }
 
     @Override
     protected String getDeathSound() {
-        return "mob.ghast.death";
+        return "naturalexceptions:gathered.rest";
     }
 }

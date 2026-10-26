@@ -161,7 +161,7 @@ public final class EntityRepairedAutomaton extends EntityCreature implements Aut
                 charge = 0.0;
                 setDormant(true);
                 setAttackTarget(null);
-                worldObj.playSoundAtEntity(this, "random.fizz", 0.6F, 0.5F);
+                worldObj.playSoundAtEntity(this, "naturalexceptions:automaton.winddown", 0.6F, 1.2F);
                 EntityPlayer master = master();
                 if (master != null && master.getDistanceSqToEntity(this) < 64 * 64)
                     master.addChatMessage(new ChatComponentText("§7Your Automaton's heart has run down; it kneels."));
@@ -217,7 +217,7 @@ public final class EntityRepairedAutomaton extends EntityCreature implements Aut
             if (!player.capabilities.isCreativeMode && --held.stackSize <= 0)
                 player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
             setDormant(false);
-            worldObj.playSoundAtEntity(this, "random.fizz", 0.8F, 1.4F);
+            worldObj.playSoundAtEntity(this, "naturalexceptions:automaton.wake", 0.8F, 1.1F);
             if (worldObj instanceof WorldServer)
                 ((WorldServer) worldObj).func_147487_a("cloud", posX, posY + 1.2, posZ, 8, 0.2, 0.3, 0.2, 0.02);
             player.addChatMessage(
@@ -248,7 +248,7 @@ public final class EntityRepairedAutomaton extends EntityCreature implements Aut
             if (staying) setHomeArea((int) Math.floor(posX), (int) Math.floor(posY), (int) Math.floor(posZ), 6);
             else detachHome();
             player.addChatMessage(new ChatComponentText(staying ? "§7It holds this spot." : "§7It follows you."));
-            worldObj.playSoundAtEntity(this, "random.click", 0.5F, 0.8F);
+            worldObj.playSoundAtEntity(this, "naturalexceptions:automaton.servo", 0.5F, 1.0F);
             return true;
         }
         return false;
@@ -293,12 +293,12 @@ public final class EntityRepairedAutomaton extends EntityCreature implements Aut
 
     @Override
     protected String getHurtSound() {
-        return "mob.irongolem.hit";
+        return "naturalexceptions:automaton.hurt";
     }
 
     @Override
     protected String getDeathSound() {
-        return "mob.irongolem.death";
+        return "naturalexceptions:automaton.winddown";
     }
 
     @Override
@@ -308,6 +308,6 @@ public final class EntityRepairedAutomaton extends EntityCreature implements Aut
 
     @Override
     protected void func_145780_a(int x, int y, int z, net.minecraft.block.Block block) {
-        playSound("mob.irongolem.walk", 0.3F, 1.5F);
+        playSound("naturalexceptions:automaton.step", 0.5F, 1.0F);
     }
 }

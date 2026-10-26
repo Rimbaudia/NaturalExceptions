@@ -88,8 +88,8 @@ public final class TileTeslaCoil extends TileSource {
                     0.0);
             }
         }
-        worldObj.playSoundEffect(x0, y0, z0, "fireworks.blast", 1.2F, 1.6F);
-        worldObj.playSoundEffect(x1, y1, z1, "random.fizz", 0.8F, 1.6F);
+        worldObj.playSoundEffect(x0, y0, z0, "naturalexceptions:power.arc", 1.2F, 1.2F);
+        worldObj.playSoundEffect(x1, y1, z1, "naturalexceptions:power.zap", 0.8F, 1.0F);
     }
 
     @Override

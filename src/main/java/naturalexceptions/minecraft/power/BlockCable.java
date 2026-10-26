@@ -121,7 +121,7 @@ public final class BlockCable extends Block implements PowerBlock {
                 .voltage(x, y, z));
         if (volts <= Cable.SHOCK_VOLTS) return;
         if (entity.attackEntityFrom(SHOCK, shockDamage(volts)))
-            world.playSoundEffect(x + 0.5, y + 0.5, z + 0.5, "random.fizz", 0.4F, 2.0F);
+            world.playSoundEffect(x + 0.5, y + 0.5, z + 0.5, "naturalexceptions:power.zap", 0.5F, 1.0F);
     }
 
     // --- Shape ----------------------------------------------------------------------------------------------

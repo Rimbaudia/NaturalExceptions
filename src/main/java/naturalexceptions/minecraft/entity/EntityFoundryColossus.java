@@ -119,8 +119,7 @@ public final class EntityFoundryColossus extends EntityMob implements IBossDispl
     private void wake() {
         if (state() != ASLEEP) return;
         setState(AWAKE);
-        worldObj.playSoundAtEntity(this, "mob.ghast.fireball", 2.0F, 0.5F);
-        worldObj.playSoundAtEntity(this, "mob.irongolem.death", 2.0F, 0.4F);
+        worldObj.playSoundAtEntity(this, "naturalexceptions:colossus.wake", 2.0F, 1.0F);
         burst("flame", 30);
     }
 
@@ -128,7 +127,7 @@ public final class EntityFoundryColossus extends EntityMob implements IBossDispl
     public void quench() {
         if (worldObj.isRemote || state() == QUENCHED) return;
         if (kindled > 0) {
-            worldObj.playSoundAtEntity(this, "random.fizz", 1.5F, 1.4F);
+            worldObj.playSoundAtEntity(this, "naturalexceptions:colossus.quench", 0.6F, 1.6F);
             burst("cloud", 8);
             return;
         }
@@ -138,7 +137,7 @@ public final class EntityFoundryColossus extends EntityMob implements IBossDispl
         windup = 0;
         wind(NONE);
         getNavigator().clearPathEntity();
-        worldObj.playSoundAtEntity(this, "random.fizz", 2.5F, 0.5F);
+        worldObj.playSoundAtEntity(this, "naturalexceptions:colossus.quench", 2.5F, 1.0F);
         burst("cloud", 40);
     }
 
@@ -175,7 +174,7 @@ public final class EntityFoundryColossus extends EntityMob implements IBossDispl
         if (!worldObj.isRemote && source.getEntity() != null) wake();
         boolean doused = state() == QUENCHED;
         if (!doused && !worldObj.isRemote && source.getEntity() != null) {
-            worldObj.playSoundAtEntity(this, "random.anvil_land", 0.4F, 1.6F);
+            worldObj.playSoundAtEntity(this, "naturalexceptions:colossus.clang", 0.8F, 1.0F);
             burst("lava", 3);
         }
         return super.attackEntityFrom(source, amount * ColossusRules.through(doused));
@@ -234,7 +233,7 @@ public final class EntityFoundryColossus extends EntityMob implements IBossDispl
             if (--quenched <= 0) {
                 setState(AWAKE);
                 kindled = ColossusRules.KINDLE_TICKS;
-                worldObj.playSoundAtEntity(this, "mob.ghast.fireball", 1.5F, 0.6F);
+                worldObj.playSoundAtEntity(this, "naturalexceptions:colossus.rekindle", 1.5F, 1.0F);
                 burst("flame", 20);
             }
             return;
@@ -284,7 +283,7 @@ public final class EntityFoundryColossus extends EntityMob implements IBossDispl
         windup = ticks;
         worldObj.playSoundAtEntity(
             this,
-            what == SLAM ? "random.anvil_use" : what == POUR ? "fire.fire" : "mob.blaze.breathe",
+            what == SLAM ? "naturalexceptions:colossus.heave" : what == POUR ? "fire.fire" : "mob.blaze.breathe",
             1.5F,
             what == SLAM ? 0.5F : 0.7F);
     }
@@ -313,7 +312,7 @@ public final class EntityFoundryColossus extends EntityMob implements IBossDispl
 
     /** The hammer comes down before it: everyone in reach is struck and thrown back. */
     private void slam() {
-        worldObj.playSoundAtEntity(this, "random.explode", 1.2F, 0.6F);
+        worldObj.playSoundAtEntity(this, "naturalexceptions:colossus.slam", 1.5F, 1.0F);
         burst("largesmoke", 20);
         double fx = -Math.sin(Math.toRadians(renderYawOffset)), fz = Math.cos(Math.toRadians(renderYawOffset));
         @SuppressWarnings("unchecked")
@@ -424,17 +423,17 @@ public final class EntityFoundryColossus extends EntityMob implements IBossDispl
 
     @Override
     protected String getLivingSound() {
-        return state() == AWAKE ? "fire.fire" : null;
+        return state() == AWAKE ? "naturalexceptions:colossus.furnace" : null;
     }
 
     @Override
     protected String getHurtSound() {
-        return "mob.irongolem.hit";
+        return "naturalexceptions:colossus.hurt";
     }
 
     @Override
     protected String getDeathSound() {
-        return "mob.irongolem.death";
+        return "naturalexceptions:colossus.fall";
     }
 
     @Override
@@ -444,6 +443,6 @@ public final class EntityFoundryColossus extends EntityMob implements IBossDispl
 
     @Override
     protected void func_145780_a(int x, int y, int z, net.minecraft.block.Block block) {
-        playSound("mob.irongolem.walk", 1.0F, 0.6F);
+        playSound("naturalexceptions:colossus.step", 1.0F, 1.0F);
     }
 }
