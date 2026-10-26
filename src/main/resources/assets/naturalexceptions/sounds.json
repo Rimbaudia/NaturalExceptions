@@ -35,6 +35,12 @@
       "automaton/winddown"
     ]
   },
+  "balloon.burner": {
+    "category": "neutral",
+    "sounds": [
+      "balloon/burner"
+    ]
+  },
   "colossus.clang": {
     "category": "hostile",
     "sounds": [

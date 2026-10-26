@@ -170,7 +170,14 @@ public final class WorldKnowledgeProvider implements IKnowledgeProvider {
                         + "to a little over the island's top, just off its rock; wisps of mist drifting up show where. "
                         + "Stand in it and it carries you slowly up; hold jump with a Glider Cloak on and it carries you "
                         + "fast. At the top, step off onto the island: the cloud rim leaves a gap there. Step out on "
-                        + "the way up, and you fall.")
+                        + "the way up, and you fall.\n\n"
+                        + "Or fly up. A Hot-Air Balloon is a Balloon Envelope (twelve wool sewn at the Loom) on Hoist "
+                        + "Rope over a hoist's Basket, with a Brazier: set it down where its envelope has open sky, feed "
+                        + "the brazier charcoal or coal, and climb in. Hold jump to open the burner and the air in the "
+                        + "envelope warms and lifts you; let it be and the brazier burns low and you sink; hold back to "
+                        + "pull the vent and come down faster. You cannot steer it: it goes with the wind, and the wind "
+                        + "blows a different way at each height, so climb or sink to find the wind that goes your way. "
+                        + "Land gently: a hard landing jars you. Strike it, empty, to fold it up.")
                 .addRelated("sky_islands")
                 .build());
         registry.registerEntry(

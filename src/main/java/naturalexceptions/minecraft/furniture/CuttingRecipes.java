@@ -153,6 +153,13 @@ public final class CuttingRecipes {
                     -1,
                     2,
                     new ItemStack(naturalexceptions.minecraft.registry.NEBlocks.packedCloud)));
+        // Wool sewn into a balloon's envelope: gores of cloth, a crown, a mouth.
+        if (naturalexceptions.minecraft.registry.NEItems.balloonEnvelope != null) out.add(
+            new Recipe(
+                Item.getItemFromBlock(net.minecraft.init.Blocks.wool),
+                -1,
+                12,
+                new ItemStack(naturalexceptions.minecraft.registry.NEItems.balloonEnvelope)));
         // String laid up into a coil of hoist rope.
         if (naturalexceptions.minecraft.registry.NEItems.hoistRope != null) out.add(
             new Recipe(Items.string, -1, 6, new ItemStack(naturalexceptions.minecraft.registry.NEItems.hoistRope)));

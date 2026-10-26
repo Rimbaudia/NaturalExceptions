@@ -162,6 +162,24 @@ public final class SkystoneRecipes {
             shard,
             'B',
             skystone);
+        // A hot-air balloon: its envelope on ropes over a hoist's basket, a brazier in the basket.
+        if (NEItems.hotAirBalloon != null && NEItems.balloonEnvelope != null
+            && NEItems.hoistRope != null
+            && NEBlocks.hoistBasket != null
+            && NEBlocks.brazier != null)
+            GameRegistry.addRecipe(
+                new ItemStack(NEItems.hotAirBalloon),
+                " E ",
+                "RBR",
+                " F ",
+                'E',
+                NEItems.balloonEnvelope,
+                'R',
+                NEItems.hoistRope,
+                'B',
+                NEBlocks.hoistBasket,
+                'F',
+                NEBlocks.brazier);
         // On the ground, without the sky's stone: a copper coil at its heart chills the rain's vapour together.
         if (NEBlocks.cloudCondenser != null) GameRegistry.addRecipe(
             new RecipeCastCopper(

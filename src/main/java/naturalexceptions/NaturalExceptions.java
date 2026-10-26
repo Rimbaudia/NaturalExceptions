@@ -274,6 +274,14 @@ public final class NaturalExceptions {
             96,
             1,
             false);
+        cpw.mods.fml.common.registry.EntityRegistry.registerModEntity(
+            naturalexceptions.minecraft.flight.EntityBalloon.class,
+            "balloon",
+            20,
+            this,
+            160,
+            2,
+            true);
         MinecraftForge.EVENT_BUS.register(new NEChunkGenerationHistory());
         cpw.mods.fml.common.network.NetworkRegistry.INSTANCE
             .registerGuiHandler(this, new naturalexceptions.minecraft.gui.NEGuiHandler());
@@ -320,6 +328,9 @@ public final class NaturalExceptions {
 
     @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
     private void registerClientRenderers() {
+        cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
+            naturalexceptions.minecraft.flight.EntityBalloon.class,
+            new naturalexceptions.minecraft.flight.client.RenderBalloon());
         cpw.mods.fml.client.registry.RenderingRegistry.registerEntityRenderingHandler(
             naturalexceptions.minecraft.event.EntityFallingStar.class,
             new naturalexceptions.minecraft.event.client.RenderFallingStar());
