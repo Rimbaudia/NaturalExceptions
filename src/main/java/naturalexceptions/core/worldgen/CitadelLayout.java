@@ -1486,25 +1486,71 @@ final class CitadelLayout {
     }
 
     /**
-     * The citadel's lands between the moat and the rim, each on its own site (see {@link CitadelSites}): a farmstead
-     * to the west, a windmill farm to the east, the graveyard to the north, a pasture to the north-west, an orchard
-     * to the south-east, and a ruined watchtower out towards the north-eastern rim. Each goes only where the island
-     * will take it; what stands on the island is then kept clear of its wild growth.
+     * The citadel's lands between the moat and the rim, each on its own site (see {@link CitadelSites}): a farmstead,
+     * a windmill farm, the graveyard, a pasture and an orchard near the moat; a ruined watchtower, the quarry, a
+     * lumber camp, the condensers, the spire and the lighthouse out towards the rim. Which way each lies is the
+     * citadel's own (the bearings are dealt out among them), so no two look alike from the air; only the south, where
+     * the road comes in to the gate, is left to the road, and the quarry is never by it. Each goes only where the
+     * island will take it; what stands on the island is then kept clear of its wild growth.
      */
     private void outskirts() {
         int near = near(), far = far();
+        double[][] inner = bearings(new double[][] { { 160, 200 }, { -25, 25 }, { 250, 290 }, { 205, 245 }, { 35, 70 } }, -1);
+        double[][] outer = bearings(
+            new double[][] { { 290, 340 }, { 110, 155 }, { 185, 250 }, { -35, 35 }, { 240, 300 }, { 55, 110 } },
+            1);
         CitadelSites.Site s;
-        if ((s = sites.fit("farmstead", 28, 33, 160, 200, near, near + 40, false)) != null) farmstead(s);
-        if ((s = sites.fit("windmill", 29, 25, -25, 25, near, near + 40, false)) != null) windmillFarm(s);
-        if ((s = sites.fit("graveyard", 23, 21, 250, 290, near, near + 30, false)) != null) graveyard(s);
-        if ((s = sites.fit("pasture", 21, 17, 205, 245, near, near + 50, false)) != null) pasture(s);
-        if ((s = sites.fit("orchard", 23, 19, 35, 70, near, near + 40, false)) != null) orchard(s);
-        if ((s = sites.fit("watchtower", 15, 15, 290, 340, near + 30, far, true)) != null) watchtower(s);
-        if ((s = sites.fit("quarry", 33, 29, 110, 155, near + 40, far, true)) != null) quarry(s);
-        if ((s = sites.fit("lumber camp", 27, 23, 185, 250, near + 40, far, true)) != null) land.lumberCamp(s);
-        if ((s = sites.fit("condensers", 26, 15, -35, 35, near + 40, far + 10, true)) != null) land.condensers(s);
-        if ((s = sites.fit("spire", 25, 25, 240, 300, near + 40, far, true)) != null) land.spire(s);
-        if ((s = sites.fit("lighthouse", 21, 17, 55, 110, near + 40, far + 15, true)) != null) land.lighthouse(s);
+        if ((s = sites.fit("farmstead", 28, 33, inner[0][0], inner[0][1], near, near + 40, false)) != null)
+            farmstead(s);
+        if ((s = sites.fit("windmill", 29, 25, inner[1][0], inner[1][1], near, near + 40, false)) != null)
+            windmillFarm(s);
+        if ((s = sites.fit("graveyard", 23, 21, inner[2][0], inner[2][1], near, near + 30, false)) != null)
+            graveyard(s);
+        if ((s = sites.fit("pasture", 21, 17, inner[3][0], inner[3][1], near, near + 50, false)) != null) pasture(s);
+        if ((s = sites.fit("orchard", 23, 19, inner[4][0], inner[4][1], near, near + 40, false)) != null) orchard(s);
+        if ((s = sites.fit("watchtower", 15, 15, outer[0][0], outer[0][1], near + 30, far, true)) != null)
+            watchtower(s);
+        if ((s = sites.fit("quarry", 33, 29, outer[1][0], outer[1][1], near + 40, far, true)) != null) quarry(s);
+        if ((s = sites.fit("lumber camp", 27, 23, outer[2][0], outer[2][1], near + 40, far, true)) != null)
+            land.lumberCamp(s);
+        if ((s = sites.fit("condensers", 26, 15, outer[3][0], outer[3][1], near + 40, far + 10, true)) != null)
+            land.condensers(s);
+        if ((s = sites.fit("spire", 25, 25, outer[4][0], outer[4][1], near + 40, far, true)) != null) land.spire(s);
+        if ((s = sites.fit("lighthouse", 21, 17, outer[5][0], outer[5][1], near + 40, far + 15, true)) != null)
+            land.lighthouse(s);
+    }
+
+    /** South, where the road comes in to the gate (degrees; 0 is east, 90 south). */
+    static final double GATE_BEARING = 90.0;
+    /** How far from the gate's bearing the quarry's must lie. */
+    static final double QUARRY_FROM_GATE = 40.0;
+
+    /**
+     * The bearing windows dealt out afresh for this citadel, each turned a little (up to 10 degrees either way).
+     * The window at {@code keepFromGate} (-1 for none) is dealt only one whose middle lies well away from the gate.
+     */
+    double[][] bearings(double[][] windows, int keepFromGate) {
+        java.util.List<double[]> deck = new java.util.ArrayList<>();
+        for (double[] w : windows) deck.add(w.clone());
+        for (int tries = 0; tries < 16; tries++) {
+            java.util.Collections.shuffle(deck, random);
+            if (keepFromGate < 0 || fromGate(deck.get(keepFromGate)) >= QUARRY_FROM_GATE) break;
+        }
+        if (keepFromGate >= 0 && fromGate(deck.get(keepFromGate)) < QUARRY_FROM_GATE) {
+            deck.clear(); // never dealt a fit one: as authored
+            for (double[] w : windows) deck.add(w.clone());
+        }
+        double[][] out = new double[deck.size()][];
+        for (int i = 0; i < out.length; i++) {
+            double turn = (random.nextDouble() * 2.0 - 1.0) * 10.0;
+            out[i] = new double[] { deck.get(i)[0] + turn, deck.get(i)[1] + turn };
+        }
+        return out;
+    }
+
+    private static double fromGate(double[] window) {
+        double mid = (window[0] + window[1]) / 2.0, d = Math.abs(((mid - GATE_BEARING) % 360 + 540) % 360 - 180);
+        return d;
     }
 
     /**

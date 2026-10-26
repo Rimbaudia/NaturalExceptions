@@ -29,7 +29,7 @@ import naturalexceptions.minecraft.gear.Treasure;
 import naturalexceptions.minecraft.item.ItemTreasureGear;
 
 /**
- * The Warden's Visor: outlines what a dungeon hides within twelve blocks, seen through walls. Trigger Stones and
+ * The Castellan's Visor: outlines what a dungeon hides within twelve blocks, seen through walls. Trigger Stones and
  * buried TNT in red, crumbling floor in amber, Sealed Alcoves in violet, loose secret walls in sky blue.
  */
 @SideOnly(Side.CLIENT)

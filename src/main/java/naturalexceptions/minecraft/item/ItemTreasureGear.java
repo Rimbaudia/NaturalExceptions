@@ -74,7 +74,7 @@ public final class ItemTreasureGear extends Item implements IWearable {
         return treasure.source() == Treasure.Source.CHEST ? EnumRarity.rare : EnumRarity.epic;
     }
 
-    /** The Warden's Visor lends a soft Lumenite sight: night vision kept topped up while worn. */
+    /** The Castellan's Visor lends a soft Lumenite sight: night vision kept topped up while worn. */
     @Override
     public void onWornTick(EntityPlayer player, ItemStack stack) {
         if (treasure != Treasure.WARDENS_VISOR) return;

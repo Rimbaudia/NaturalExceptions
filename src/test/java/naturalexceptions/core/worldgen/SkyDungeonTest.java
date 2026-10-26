@@ -445,6 +445,32 @@ final class SkyDungeonTest {
     }
 
     @Test
+    void eachCitadelsLandsLieTheirOwnWayAndTheQuarryKeepsOffTheGate() {
+        List<Double> bearings = new ArrayList<>();
+        for (Sample s : samples()) {
+            if (s.dungeon.kind() != SkyDungeon.Kind.CITADEL) continue;
+            int cx = s.island.centreX(), cz = s.island.centreZ();
+            double sx = 0, sz = 0;
+            int seams = 0;
+            for (Piece p : s.dungeon.pieces()) if (p.block == Block.SEAM) {
+                sx += p.x - cx;
+                sz += p.z - cz;
+                seams++;
+            }
+            if (seams == 0) continue;
+            double bearing = Math.toDegrees(Math.atan2(sz / seams, sx / seams));
+            double fromGate = Math.abs(((bearing - CitadelLayout.GATE_BEARING) % 360 + 540) % 360 - 180);
+            assertTrue(fromGate >= CitadelLayout.QUARRY_FROM_GATE - 25, s.name() + ": the quarry by the gate road");
+            bearings.add(bearing);
+        }
+        assertTrue(bearings.size() >= 2, "enough quarries to judge: " + bearings);
+        double spread = 0;
+        for (double a : bearings) for (double b : bearings)
+            spread = Math.max(spread, Math.abs(((a - b) % 360 + 540) % 360 - 180));
+        assertTrue(spread > 30, "the quarries do not all lie the same way: " + bearings);
+    }
+
+    @Test
     void citadelsHaveAWetMoatAClearWallLaneAndLandsOutside() {
         int citadels = 0, quarries = 0;
         for (Sample s : samples()) {
