@@ -235,6 +235,16 @@ public final class FeedstockItemRegistry {
         if (NEItems.copperIngot != null) {
             registerItem(NEItems.copperIngot, -1, copper.feedstockId(), InputKind.METALLIC_PRODUCT);
         }
+        // Charcoal fed to the crucible (not the firebox) is carbon for steel: it lies in the charge until molten
+        // iron takes it up.
+        registerItem(
+            net.minecraft.init.Items.coal,
+            1,
+            OreFeedstockDefinition.charcoalCarbon()
+                .feedstockId(),
+            InputKind.RAW_ORE,
+            OreFeedstockDefinition.charcoalCarbon()
+                .standardChunkMass());
         if (NEBlocks.copperOre != null) {
             registerBlock(NEBlocks.copperOre, copper.feedstockId(), InputKind.RAW_ORE);
         }

@@ -85,6 +85,8 @@ public final class BuiltinContent {
         MATERIALS.register(BuiltinMaterials.STELLAR_MATTER);
         MATERIALS.register(BuiltinMaterials.IMPACT_CRUST);
         MATERIALS.register(BuiltinMaterials.LUMENITE);
+        MATERIALS.register(BuiltinMaterials.CARBON);
+        MATERIALS.register(BuiltinMaterials.STEEL);
         registered = true;
     }
 

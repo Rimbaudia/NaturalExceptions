@@ -350,13 +350,7 @@ public final class ItemGenericAssembly extends Item {
             .geometryId();
         DerivedCapability cap = getCapability(assembly);
         if (cap == null) return -1;
-        double p = cap.penetration();
-
-        int level;
-        if (p >= 6.0) level = 3; // Diamond-equivalent
-        else if (p >= 4.0) level = 2; // Iron-equivalent
-        else if (p >= 2.0) level = 1; // Stone-equivalent
-        else level = 0; // Wood/Gold equivalent
+        int level = cap.harvestLevel();
 
         if ("pickaxe".equals(toolClass) && geom == GeometryId.PICK_HEAD) {
             return level;

@@ -88,6 +88,7 @@ public final class OreFeedstockDefinition {
         registerInto(definitions, createLeadOreChunk());
         registerInto(definitions, createIronOreChunk());
         registerInto(definitions, createGoldOreChunk());
+        registerInto(definitions, createCharcoalCarbon());
         return definitions;
     }
 
@@ -182,6 +183,22 @@ public final class OreFeedstockDefinition {
 
     public static OreFeedstockDefinition goldOreChunk() {
         return forFeedstockId(ResourceId.of("naturalexceptions", "gold_ore_chunk"));
+    }
+
+    /** A piece of charcoal in the crucible: some 20 g of carbon, enough to make one to ten ingots of iron steel. */
+    public static OreFeedstockDefinition charcoalCarbon() {
+        return forFeedstockId(BuiltinMaterials.CARBON_RESOURCE_ID);
+    }
+
+    private static OreFeedstockDefinition createCharcoalCarbon() {
+        return new OreFeedstockDefinition(
+            BuiltinMaterials.CARBON_RESOURCE_ID,
+            MaterialQuantity.ofGrams(20.0),
+            1.0,
+            0.0,
+            0.0,
+            BuiltinMaterials.CARBON.ref(),
+            BuiltinMaterials.CARBON_PROPERTIES);
     }
 
     private static OreFeedstockDefinition createGoldOreChunk() {

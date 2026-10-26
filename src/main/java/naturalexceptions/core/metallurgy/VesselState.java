@@ -319,6 +319,9 @@ public final class VesselState {
         // 4. Metallurgical process rules & reduction
         processSolidCharges();
 
+        // 4b. Molten iron takes up the carbon of charcoal in the charge
+        dissolveCarbon();
+
         // 5. Molten mixing of compatible metallic layers
         mixMoltenMetalLayers();
 
@@ -459,7 +462,50 @@ public final class VesselState {
         if (moltenMetals.size() < 2) {
             return;
         }
+        merge(moltenMetals);
+    }
 
+    /** The most carbon molten iron takes up from charcoal (by share), a little past cast iron's eutectic. */
+    public static final double MAX_CARBON_IN_IRON = 0.045;
+
+    /**
+     * Charcoal's carbon does not melt, but molten iron dissolves it: each lump of carbon lying in the charge goes into
+     * the molten iron whole while the iron can take it, cooling it a little. Iron that takes up a little becomes
+     * steel; much more, cast iron.
+     */
+    private void dissolveCarbon() {
+        AggregateLayer iron = null;
+        for (AggregateLayer l : layers) {
+            if (l.phaseType() != AggregatePhaseType.MOLTEN_METAL || l.physicalPhase() != MaterialPhase.LIQUID) continue;
+            CanonicalComposition c = l.composition();
+            if (!c.contains(naturalexceptions.content.material.BuiltinMaterials.IRON_RESOURCE_ID)
+                || c.fraction(naturalexceptions.content.material.BuiltinMaterials.IRON_RESOURCE_ID) < 0.9) continue;
+            if (iron == null || l.mass()
+                .compareTo(iron.mass()) > 0) iron = l;
+        }
+        if (iron == null) return;
+        for (AggregateLayer lump : new ArrayList<>(layers)) {
+            if (lump.phaseType() != AggregatePhaseType.SOLID_CHARGE || !lump.composition()
+                .equals(naturalexceptions.content.material.BuiltinMaterials.CARBON_COMPOSITION)) continue;
+            long ironMg = iron.mass()
+                .milligrams();
+            long lumpMg = lump.mass()
+                .milligrams();
+            double carbonMg = ironMg * (iron.composition()
+                .contains(naturalexceptions.content.material.BuiltinMaterials.CARBON_RESOURCE_ID)
+                    ? iron.composition()
+                        .fraction(naturalexceptions.content.material.BuiltinMaterials.CARBON_RESOURCE_ID)
+                    : 0.0);
+            if ((carbonMg + lumpMg) / (ironMg + lumpMg) > MAX_CARBON_IN_IRON) return;
+            List<AggregateLayer> pair = new ArrayList<>();
+            pair.add(iron);
+            pair.add(lump);
+            iron = merge(pair);
+        }
+    }
+
+    /** Combines {@code parts} into one molten alloy layer, conserving mass and heat; returns it. */
+    private AggregateLayer merge(List<AggregateLayer> moltenMetals) {
         // Combine all molten metals into one unified alloy layer
         layers.removeAll(moltenMetals);
 
@@ -515,6 +561,7 @@ public final class VesselState {
             mixedThermal,
             AggregatePhaseType.MOLTEN_METAL);
         layers.add(mergedLayer);
+        return mergedLayer;
     }
 
     private static MaterialRef resolveMixedRef(CanonicalComposition comp, CanonicalMaterialKey key) {
@@ -530,6 +577,9 @@ public final class VesselState {
         }
         if (comp.equals(naturalexceptions.content.material.BuiltinMaterials.BRONZE_COMPOSITION)) {
             return naturalexceptions.content.material.BuiltinMaterials.BRONZE.ref();
+        }
+        if (naturalexceptions.content.material.BuiltinMaterials.isSteel(comp)) {
+            return naturalexceptions.content.material.BuiltinMaterials.STEEL.ref();
         }
         return MaterialRef.generatedFrom(key);
     }

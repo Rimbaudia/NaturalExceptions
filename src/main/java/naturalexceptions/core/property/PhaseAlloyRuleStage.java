@@ -30,5 +30,23 @@ public final class PhaseAlloyRuleStage implements PropertyResolverStage {
                 context.addTrace("phase:alpha_bronze");
             }
         }
+
+        // Iron and carbon: a little carbon makes steel, hard and tough; past some two parts in a hundred it is cast
+        // iron, which melts far lower (the eutectic) but is brittle.
+        if (comp.constituentCount() == 2 && comp.contains(ConstituentData.ID_FE)
+            && comp.contains(ConstituentData.ID_C)) {
+            double carbon = comp.fraction(ConstituentData.ID_C);
+            if (carbon >= 0.002 && carbon <= 0.021) {
+                context.add(MaterialProperties.KEY_HARDNESS, 2.0);
+                context.add(MaterialProperties.KEY_MELTING_POINT, -80.0);
+                context.addTrait("tough");
+                context.addTrace("phase:steel");
+            } else if (carbon > 0.021) {
+                context.add(MaterialProperties.KEY_HARDNESS, 1.0);
+                context.add(MaterialProperties.KEY_MELTING_POINT, -400.0);
+                context.addTrait("brittle");
+                context.addTrace("phase:cast_iron");
+            }
+        }
     }
 }

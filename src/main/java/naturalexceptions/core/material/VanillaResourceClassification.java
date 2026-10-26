@@ -85,6 +85,11 @@ public final class VanillaResourceClassification {
         return null;
     }
 
+    /** Charcoal (not coal): clean carbon, what iron is made steel with. */
+    public static boolean isCharcoal(ItemStack stack) {
+        return stack != null && stack.getItem() == Items.coal && stack.getItemDamage() == 1;
+    }
+
     /**
      * Checks if the resource can be smelted / melted in a metallurgical crucible.
      */
@@ -98,6 +103,8 @@ public final class VanillaResourceClassification {
      * Returns null if the resource is meltable or unclassified.
      */
     public static String getRejectionReason(ItemStack stack) {
+        // Charcoal in the crucible is not fuel but carbon, for molten iron to take up as steel.
+        if (isCharcoal(stack)) return null;
         ResourceMaterialClass classification = getClassification(stack);
         if (classification == null || classification.isMeltable()) {
             return null;

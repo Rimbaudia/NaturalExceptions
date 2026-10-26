@@ -29,6 +29,32 @@ public final class DerivedCapability {
     }
 
     /**
+     * The hardness of the head's material, whatever its shape. Wear dulls a head (it mines slower, see
+     * {@link #penetration()}) but does not lower what it can mine.
+     */
+    public double headHardness() {
+        if (assembly.isBroken()) {
+            return 0.1;
+        }
+        return headProps.hardness();
+    }
+
+    /**
+     * The tier it mines at, by its head's hardness: copper's mines like stone, bronze's and iron's like iron, steel's
+     * like diamond; soft gold and tin, like wood.
+     */
+    public int harvestLevel() {
+        return harvestLevel(headHardness());
+    }
+
+    public static int harvestLevel(double hardness) {
+        if (hardness >= 6.0) return 3;
+        if (hardness >= 4.0) return 2;
+        if (hardness >= 2.8) return 1;
+        return 0;
+    }
+
+    /**
      * Penetration capability (concentrated hardness and point sharpness).
      */
     public double penetration() {

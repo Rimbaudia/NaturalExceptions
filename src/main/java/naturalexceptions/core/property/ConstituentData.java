@@ -109,6 +109,7 @@ public final class ConstituentData {
     public static final ResourceId ID_FE = ResourceId.of("naturalexceptions", "iron");
     public static final ResourceId ID_AU = ResourceId.of("naturalexceptions", "gold");
     public static final ResourceId ID_STELLAR = ResourceId.of("naturalexceptions", "stellar_matter");
+    public static final ResourceId ID_C = ResourceId.of("naturalexceptions", "carbon");
 
     static {
         register(
@@ -208,6 +209,20 @@ public final class ConstituentData {
                 800000.0,
                 2.0e-8,
                 Collections.singleton("stellar_radiant")));
+
+        register(
+            new ConstituentData(
+                ID_C,
+                1.9, // g/cm³ (charcoal's carbon)
+                1.5, // Mohs hardness
+                2.0,
+                120.0,
+                710.0,
+                2000.0,
+                3900.0, // K: it does not melt in any smelter
+                1.0e7,
+                1.0e-5,
+                Collections.singleton("combustible")));
     }
 
     private static void register(ConstituentData data) {

@@ -97,6 +97,12 @@ public final class MaterialNameResolver {
             if (isBronzeComposition(comp)) {
                 return getLocalizedOrCapitalized("material.naturalexceptions.bronze", "bronze");
             }
+            if (BuiltinMaterials.isSteel(comp)) {
+                return getLocalizedOrCapitalized("material.naturalexceptions.steel", "steel");
+            }
+            if (BuiltinMaterials.isCastIron(comp)) {
+                return getLocalizedOrCapitalized("material.naturalexceptions.cast_iron", "cast iron");
+            }
 
             // 4. Deterministic Generated Composition Fallback (e.g. "Fe70Cu30 Alloy")
             return formatCompositionFallback(comp);

@@ -175,6 +175,78 @@ public final class BuiltinMaterials {
         IRON_COMPOSITION,
         IRON_PROPERTIES);
 
+    /** Charcoal's carbon: it never melts in a smelter, but molten iron takes it up. */
+    public static final ResourceId CARBON_RESOURCE_ID = ResourceId.of("naturalexceptions", "carbon");
+    public static final MaterialId CARBON_MATERIAL_ID = MaterialId.of("naturalexceptions", "carbon");
+    public static final CanonicalComposition CARBON_COMPOSITION = CanonicalComposition.of(CARBON_RESOURCE_ID);
+    public static final MaterialProperties CARBON_PROPERTIES = MaterialProperties.builder()
+        .density(1.9)
+        .hardness(1.5)
+        .conductivity(2.0)
+        .thermalConductivity(120.0)
+        .specificHeatSolid(710.0)
+        .specificHeatLiquid(2000.0)
+        .meltingPointKelvin(3900.0)
+        .latentHeatOfFusion(1.0e7)
+        .electricalResistivity(1.0e-5)
+        .addTrait("combustible")
+        .build();
+    public static final MaterialDefinition CARBON = new MaterialDefinition(
+        CARBON_MATERIAL_ID,
+        "material.naturalexceptions.carbon",
+        CARBON_COMPOSITION,
+        CARBON_PROPERTIES);
+
+    /**
+     * Steel: iron that has taken up a little carbon (some 0.2 to 2 parts in a hundred) from charcoal while molten.
+     * Harder than iron by far, and it melts a little lower.
+     */
+    public static final ResourceId STEEL_RESOURCE_ID = ResourceId.of("naturalexceptions", "steel");
+    public static final MaterialId STEEL_MATERIAL_ID = MaterialId.of("naturalexceptions", "steel");
+    public static final CanonicalComposition STEEL_COMPOSITION = CanonicalComposition.builder()
+        .add(IRON_RESOURCE_ID, 0.99)
+        .add(CARBON_RESOURCE_ID, 0.01)
+        .build();
+    public static final MaterialProperties STEEL_PROPERTIES = MaterialProperties.builder()
+        .density(7.85)
+        .hardness(6.5)
+        .conductivity(14.0)
+        .thermalConductivity(50.0)
+        .specificHeatSolid(490.0)
+        .specificHeatLiquid(820.0)
+        .meltingPointKelvin(1750.0)
+        .latentHeatOfFusion(250000.0)
+        .electricalResistivity(1.7e-7)
+        .addTrait("ferromagnetic")
+        .addTrait("structural")
+        .addTrait("tough")
+        .build();
+    public static final MaterialDefinition STEEL = new MaterialDefinition(
+        STEEL_MATERIAL_ID,
+        "material.naturalexceptions.steel",
+        STEEL_COMPOSITION,
+        STEEL_PROPERTIES);
+
+    /** Carbon in iron, by share: steel between these; past the upper, brittle cast iron. */
+    public static final double STEEL_CARBON_MIN = 0.002, STEEL_CARBON_MAX = 0.021;
+
+    /** Whether a composition is iron and carbon in the steel window. */
+    public static boolean isSteel(CanonicalComposition comp) {
+        return carbonInIron(comp) >= STEEL_CARBON_MIN && carbonInIron(comp) <= STEEL_CARBON_MAX;
+    }
+
+    /** Whether a composition is iron with more carbon than steel holds: cast iron. */
+    public static boolean isCastIron(CanonicalComposition comp) {
+        return carbonInIron(comp) > STEEL_CARBON_MAX;
+    }
+
+    /** The carbon share of a composition of iron and carbon alone (0 for anything else). */
+    public static double carbonInIron(CanonicalComposition comp) {
+        if (comp == null || comp.constituentCount() != 2 || !comp.contains(IRON_RESOURCE_ID)
+            || !comp.contains(CARBON_RESOURCE_ID)) return 0.0;
+        return comp.fraction(CARBON_RESOURCE_ID);
+    }
+
     public static final ResourceId GOLD_RESOURCE_ID = ResourceId.of("naturalexceptions", "gold");
     public static final MaterialId GOLD_MATERIAL_ID = MaterialId.of("naturalexceptions", "gold");
     public static final CanonicalComposition GOLD_COMPOSITION = CanonicalComposition.of(GOLD_RESOURCE_ID);
