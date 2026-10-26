@@ -165,7 +165,12 @@ public final class WorldKnowledgeProvider implements IKnowledgeProvider {
                         + "Loose cloud is no floor, but two pressed together at the Loom make Packed Cloud, which bears "
                         + "weight. Used toward open air, Packed Cloud sets itself there touching another, up to "
                         + naturalexceptions.minecraft.block.BlockPackedCloud.REACH
-                        + " blocks out from anything solid: a stair can lean out over the drop.")
+                        + " blocks out from anything solid: a stair can lean out over the drop.\n\n"
+                        + "Beside every great island, and some smaller ones, warm air rises in a column from low down "
+                        + "to a little over the island's top, just off its rock; wisps of mist drifting up show where. "
+                        + "Stand in it and it carries you slowly up; hold jump with a Glider Cloak on and it carries you "
+                        + "fast. At the top, step off onto the island: the cloud rim leaves a gap there. Step out on "
+                        + "the way up, and you fall.")
                 .addRelated("sky_islands")
                 .build());
         registry.registerEntry(

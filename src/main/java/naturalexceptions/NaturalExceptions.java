@@ -91,6 +91,11 @@ public final class NaturalExceptions {
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.gear.GearMovement());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.gear.HatAndShoeEffects());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.worldgen.WindGates());
+        naturalexceptions.minecraft.worldgen.UpdraftWinds updraftWinds = new naturalexceptions.minecraft.worldgen.UpdraftWinds();
+        MinecraftForge.EVENT_BUS.register(updraftWinds);
+        FMLCommonHandler.instance()
+            .bus()
+            .register(updraftWinds);
         cpw.mods.fml.common.FMLCommonHandler.instance()
             .bus()
             .register(new naturalexceptions.minecraft.power.PowerNetworks.Ticker());

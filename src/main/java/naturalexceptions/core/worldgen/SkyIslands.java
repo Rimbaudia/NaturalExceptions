@@ -418,7 +418,7 @@ public final class SkyIslands {
     public int[] cloud(Island island, int x, int z) {
         double d = reach(island, x, z);
         double fluff = noise.smooth(x, z, 3.5, island.cellX * 5 + island.cellZ + 77);
-        if (d >= CLOUD_RIM_INNER && d < CLOUD_RIM_OUTER && fluff > 0.42) {
+        if (d >= CLOUD_RIM_INNER && d < CLOUD_RIM_OUTER && fluff > 0.42 && !inUpdraftGap(island, x, z)) {
             int top = island.centreY - (d < 1.0 ? 1 : 0);
             return new int[] { top - (fluff > 0.7 ? 2 : 1), top };
         }
@@ -427,6 +427,32 @@ public final class SkyIslands {
             if (column != null) return new int[] { column[0] - (fluff > 0.8 ? 2 : 1), column[0] - 1 };
         }
         return null;
+    }
+
+    /**
+     * The bearing (radians, from east toward south) of the island's updraft, or NaN if it has none: every great
+     * island has one, and a third of the rest (see {@link Updrafts}).
+     */
+    public double updraftBearing(Island island) {
+        long h = seed() ^ island.cellX * 0x2545F4914F6CDD1DL ^ island.cellZ * 0x9E3779B97F4A7C15L ^ 0x55504452L;
+        h ^= h >>> 29;
+        h *= 0xBF58476D1CE4E5B9L;
+        h ^= h >>> 32;
+        if (island.tier() != Tier.GRAND && Math.floorMod(h, 3) != 0) return Double.NaN;
+        return Math.floorMod(h >>> 8, 3600) / 1800.0 * Math.PI;
+    }
+
+    /** How wide a gap the cloud rim leaves where an updraft rises past it, either side of the bearing (blocks). */
+    static final double UPDRAFT_GAP = 5.0;
+
+    /** Whether (x, z) lies in the gap the island's cloud rim leaves for its updraft. */
+    boolean inUpdraftGap(Island island, int x, int z) {
+        double bearing = updraftBearing(island);
+        if (Double.isNaN(bearing)) return false;
+        double dx = x + 0.5 - island.centreX, dz = z + 0.5 - island.centreZ;
+        double along = dx * Math.cos(bearing) + dz * Math.sin(bearing);
+        double across = -dx * Math.sin(bearing) + dz * Math.cos(bearing);
+        return along > 0 && Math.abs(across) < UPDRAFT_GAP;
     }
 
     private double waterfallHeading(Island island) {

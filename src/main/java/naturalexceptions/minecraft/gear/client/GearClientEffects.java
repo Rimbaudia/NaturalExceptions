@@ -70,6 +70,7 @@ public final class GearClientEffects {
         }
         footwear(player);
         cloudClimb(player, mc);
+        updraft(player, mc);
         mourn(player);
         // Keys typed into chat or any other screen are text, not movement: space in chat is not a jump.
         if (mc.isGamePaused() || mc.currentScreen != null || player.capabilities.isFlying || player.isRiding()) {
@@ -174,6 +175,24 @@ public final class GearClientEffects {
                 0.0);
         }
     }
+
+    /** Rising air carries the player up: slowly, or fast with a Glider Cloak open (jump held). */
+    private static void updraft(EntityPlayerSP player, Minecraft mc) {
+        long now = player.worldObj.getTotalWorldTime();
+        if (naturalexceptions.minecraft.network.PacketUpdraft.clientUntil == -1)
+            naturalexceptions.minecraft.network.PacketUpdraft.clientUntil = now
+                + naturalexceptions.minecraft.network.PacketUpdraft.HOLDS;
+        if (now > naturalexceptions.minecraft.network.PacketUpdraft.clientUntil || player.capabilities.isFlying
+            || player.isRiding()
+            || player.boundingBox.minY >= naturalexceptions.minecraft.network.PacketUpdraft.clientTop) return;
+        boolean gliding = mc.currentScreen == null && player.movementInput.jump
+            && ItemTreasureGear.worn(player, Treasure.GLIDER_CLOAK) > 0;
+        player.motionY = Math.max(player.motionY, gliding ? UPDRAFT_GLIDING : UPDRAFT);
+        player.fallDistance = 0.0F;
+    }
+
+    /** How fast rising air carries a player up, in blocks a tick: as they are, and with a Glider Cloak open. */
+    static final double UPDRAFT = 0.22, UPDRAFT_GLIDING = 0.6;
 
     /** In cloud, holding jump climbs back up out of it, as one swims up through water. */
     private static void cloudClimb(EntityPlayerSP player, Minecraft mc) {

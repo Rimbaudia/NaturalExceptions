@@ -40,6 +40,7 @@ public final class NENetwork {
         CHANNEL.registerMessage(PacketGearAction.Handler.class, PacketGearAction.class, 8, Side.SERVER);
         CHANNEL.registerMessage(PacketDungeonChart.Handler.class, PacketDungeonChart.class, 9, Side.CLIENT);
         CHANNEL.registerMessage(PacketHoistHaul.Handler.class, PacketHoistHaul.class, 10, Side.SERVER);
+        CHANNEL.registerMessage(PacketUpdraft.Handler.class, PacketUpdraft.class, 11, Side.CLIENT);
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
