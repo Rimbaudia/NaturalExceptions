@@ -127,8 +127,10 @@ public final class WorldKnowledgeProvider implements IKnowledgeProvider {
                 .description(
                     "Islands float over the land, from some y 130 up. Their rock is Skystone, which a Mason's Bench "
                         + "dresses into building stone; Stormglass grows in veins in it, the sky's own crystal, the heart "
-                        + "of most of its machines. Cloud gathers on their rims, soft to land on, and Windbloom grows "
-                        + "on them (steeped, it keeps falls from hurting for a while).\n\n"
+                        + "of most of its machines. Cloud gathers on their rims and under them: it is no floor. Step onto "
+                        + "it and you sink slowly through, unhurt, and below it is the long drop; hold jump to climb "
+                        + "back up out of it. Only a pair of Cloud Treads stands on cloud. Windbloom grows "
+                        + "on the islands (steeped, it keeps falls from hurting for a while).\n\n"
                         + "Up there the wind blows full (it is still on the ground and rises from y " + Wind.CALM_Y
                         + "), so windmills give their best. Nothing lives on the islands of itself: what you meet "
                         + "there keeps the dungeons.")

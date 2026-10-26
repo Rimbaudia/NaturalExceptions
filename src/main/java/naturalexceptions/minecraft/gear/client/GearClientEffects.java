@@ -69,6 +69,7 @@ public final class GearClientEffects {
                 .applySync(pending);
         }
         footwear(player);
+        cloudClimb(player, mc);
         mourn(player);
         // Keys typed into chat or any other screen are text, not movement: space in chat is not a jump.
         if (mc.isGamePaused() || mc.currentScreen != null || player.capabilities.isFlying || player.isRiding()) {
@@ -174,7 +175,22 @@ public final class GearClientEffects {
         }
     }
 
-    /** Gale Striders' higher step; Cloud Treads' gentle fall and, with a pair, footing on water. */
+    /** In cloud, holding jump climbs back up out of it, as one swims up through water. */
+    private static void cloudClimb(EntityPlayerSP player, Minecraft mc) {
+        if (naturalexceptions.minecraft.registry.NEBlocks.cloud == null || mc.currentScreen != null
+            || !player.movementInput.jump) return;
+        int x = net.minecraft.util.MathHelper.floor_double(player.posX);
+        int z = net.minecraft.util.MathHelper.floor_double(player.posZ);
+        int feet = net.minecraft.util.MathHelper.floor_double(player.boundingBox.minY + 0.1);
+        net.minecraft.block.Block cloud = naturalexceptions.minecraft.registry.NEBlocks.cloud;
+        if (player.worldObj.getBlock(x, feet, z) == cloud || player.worldObj.getBlock(x, feet + 1, z) == cloud)
+            player.motionY = CLOUD_CLIMB;
+    }
+
+    /** How fast holding jump climbs up through cloud, in blocks a tick. */
+    static final double CLOUD_CLIMB = 0.12;
+
+    /** Gale Striders' higher step; Cloud Treads' gentle fall and, with a pair, footing on water and on cloud. */
     private void footwear(EntityPlayerSP player) {
         if (ItemTreasureGear.worn(player, Treasure.GALE_STRIDERS) >= 2) {
             player.stepHeight = naturalexceptions.minecraft.gear.HatAndShoeEffects.PAIR_STEP_HEIGHT;

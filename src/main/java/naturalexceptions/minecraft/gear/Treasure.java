@@ -33,7 +33,7 @@ public enum Treasure {
     FEATHERSTEP_SLIPPERS("featherstepSlippers", "featherstep_slippers", GearKind.SHOE,
         "Trigger Stones and pressure plates don't feel you, and monsters notice you later. A pair, later still."),
     CLOUD_TREADS("cloudTreads", "cloud_treads", GearKind.SHOE,
-        "You fall gently and land softly. With a pair, walk on water (sneak to sink)."),
+        "You fall gently and land softly. With a pair, walk on water and on cloud (sneak to sink)."),
     SENTRYS_CREST("sentrysCrest", "sentrys_crest", GearKind.HAT,
         "The dead city's machines take you for one of their own, until you strike them.", Source.SALVAGE),
     MOURNERS_VEIL("mournersVeil", "mourners_veil", GearKind.FACE,
