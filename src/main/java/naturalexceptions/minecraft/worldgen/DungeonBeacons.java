@@ -58,7 +58,7 @@ public final class DungeonBeacons {
     private static SkyIslands field;
     private static final Map<String, Beacon> BEACONS = new HashMap<>();
 
-    static synchronized SkyIslands field(World world) {
+    public static synchronized SkyIslands field(World world) {
         long seed = NEOverworldGenerator.landmarkSeed(world);
         if (field == null || field.seed() != seed) {
             field = new SkyIslands(seed);
@@ -151,7 +151,7 @@ public final class DungeonBeacons {
         return (distance < 3 ? "right here" : way + ", " + distance + " blocks") + ", " + level;
     }
 
-    static String compass(double dx, double dz) {
+    public static String compass(double dx, double dz) {
         // Minecraft's north is -Z, east +X.
         double angle = Math.toDegrees(Math.atan2(dx, -dz));
         String[] names = { "north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west" };

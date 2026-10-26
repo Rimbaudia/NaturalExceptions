@@ -144,6 +144,15 @@ public final class CuttingRecipes {
         Item silk = naturalexceptions.minecraft.registry.NEItems.cloudsilk;
         if (silk != null && naturalexceptions.minecraft.registry.NEItems.bandage != null)
             out.add(new Recipe(silk, -1, 1, new ItemStack(naturalexceptions.minecraft.registry.NEItems.bandage, 4)));
+        // Cloud pressed and bound into Packed Cloud: two to one.
+        if (naturalexceptions.minecraft.registry.NEBlocks.cloud != null
+            && naturalexceptions.minecraft.registry.NEBlocks.packedCloud != null)
+            out.add(
+                new Recipe(
+                    Item.getItemFromBlock(naturalexceptions.minecraft.registry.NEBlocks.cloud),
+                    -1,
+                    2,
+                    new ItemStack(naturalexceptions.minecraft.registry.NEBlocks.packedCloud)));
         // String laid up into a coil of hoist rope.
         if (naturalexceptions.minecraft.registry.NEItems.hoistRope != null) out.add(
             new Recipe(Items.string, -1, 6, new ItemStack(naturalexceptions.minecraft.registry.NEItems.hoistRope)));

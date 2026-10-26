@@ -37,6 +37,7 @@ public final class NEItems {
     public static naturalexceptions.minecraft.weapon.ItemShardcaster shardcaster;
     public static naturalexceptions.minecraft.item.ItemWindbloomTea windbloomTea;
     public static naturalexceptions.minecraft.item.ItemSkyKey skyKey;
+    public static naturalexceptions.minecraft.item.ItemWeatherGlass weatherGlass;
     public static net.minecraft.item.Item galeCore;
     public static net.minecraft.item.Item stormglassHeart;
     /** Relics of the Gathered (its worn ones are treasures). */
@@ -256,6 +257,8 @@ public final class NEItems {
         galeMaul = new naturalexceptions.minecraft.weapon.ItemGaleMaul();
         galeMaul.setCreativeTab(NECreativeTab.INSTANCE);
         skyKey = new naturalexceptions.minecraft.item.ItemSkyKey();
+        weatherGlass = new naturalexceptions.minecraft.item.ItemWeatherGlass();
+        weatherGlass.setCreativeTab(NECreativeTab.INSTANCE);
         skyKey.setCreativeTab(NECreativeTab.INSTANCE);
         for (naturalexceptions.minecraft.gear.Treasure treasure : naturalexceptions.minecraft.gear.Treasure.values()) {
             naturalexceptions.minecraft.item.ItemTreasureGear item = new naturalexceptions.minecraft.item.ItemTreasureGear(
@@ -295,6 +298,7 @@ public final class NEItems {
             GameRegistry.registerItem(shardcaster, "shardcaster");
             GameRegistry.registerItem(windbloomTea, "windbloom_tea");
             GameRegistry.registerItem(skyKey, "sky_key");
+            GameRegistry.registerItem(weatherGlass, "weather_glass");
             GameRegistry.registerItem(galeCore, "gale_core");
             GameRegistry.registerItem(stormglassHeart, "stormglass_heart");
             GameRegistry.registerItem(bellOfRest, "bell_of_rest");

@@ -153,6 +153,22 @@ public final class WorldKnowledgeProvider implements IKnowledgeProvider {
                 .addRelated("gear_screen")
                 .build());
         registry.registerEntry(
+            KnowledgeEntry.builder("reaching_the_sky", "Reaching the Sky", KnowledgeCategory.SKY)
+                .icon(icon(NEItems.weatherGlass))
+                .summary("Finding the islands from the ground, and getting up to them.")
+                .description(
+                    "A Weather Glass (glass round a water bottle, a copper cap) finds the sky from the ground: held, a "
+                        + "drift of mist runs from it toward the nearest island overhead, violet if something is built "
+                        + "in it; used, it says which way, how far and how high.\n\n"
+                        + "A Cloud Condenser gathers Cloud: high in the sky always, and on the ground while rain falls "
+                        + "on it (made with a copper coil and stone bricks on the ground, or Stormglass and Skystone). "
+                        + "Loose cloud is no floor, but two pressed together at the Loom make Packed Cloud, which bears "
+                        + "weight. Used toward open air, Packed Cloud sets itself there touching another, up to "
+                        + naturalexceptions.minecraft.block.BlockPackedCloud.REACH
+                        + " blocks out from anything solid: a stair can lean out over the drop.")
+                .addRelated("sky_islands")
+                .build());
+        registry.registerEntry(
             KnowledgeEntry.builder("wind_gates", "Wind Gates", KnowledgeCategory.SKY)
                 .icon(new ItemStack(Blocks.stonebrick))
                 .summary("The great stone arches of the land: the wind runs through them.")

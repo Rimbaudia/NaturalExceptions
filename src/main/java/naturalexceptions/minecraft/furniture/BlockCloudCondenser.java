@@ -18,8 +18,9 @@ import naturalexceptions.minecraft.registry.NEBlocks;
 /**
  * A Cloud Condenser: an open frame on a Skystone plinth, a Stormglass point at its heart that draws the sky's vapour
  * together. High in the sky (from {@link #MIN_Y} up) and open to it, it gathers a block of Cloud now and then (about
- * every five minutes, twice as fast in rain) until it holds {@link #MAX}; right-click to take them. Meta is how many
- * it holds, and you can see them fill it.
+ * every five minutes, twice as fast in rain) until it holds {@link #MAX}; right-click to take them. Lower down there is
+ * vapour enough only while rain falls on it, and then it gathers at the slow pace. Meta is how many it holds, and you
+ * can see them fill it.
  */
 public final class BlockCloudCondenser extends BlockParts {
 
@@ -58,9 +59,10 @@ public final class BlockCloudCondenser extends BlockParts {
         return 3;
     }
 
-    /** Whether a condenser at (x, y, z) is high enough and open to the sky to gather. */
+    /** Whether a condenser at (x, y, z) gathers: open to the sky, and high in it or rained on. */
     public static boolean gathers(World world, int x, int y, int z) {
-        return y >= MIN_Y && world.canBlockSeeTheSky(x, y + 1, z);
+        if (!world.canBlockSeeTheSky(x, y + 1, z)) return false;
+        return y >= MIN_Y || world.canLightningStrikeAt(x, y + 1, z);
     }
 
     @Override
@@ -68,7 +70,7 @@ public final class BlockCloudCondenser extends BlockParts {
         if (world.isRemote) return;
         int held = world.getBlockMetadata(x, y, z);
         if (held >= MAX || !gathers(world, x, y, z)) return;
-        int chance = world.isRaining() ? GATHER / 2 : GATHER;
+        int chance = world.isRaining() && y >= MIN_Y ? GATHER / 2 : GATHER;
         if (random.nextInt(chance) == 0) world.setBlockMetadataWithNotify(x, y, z, held + 1, 3);
     }
 

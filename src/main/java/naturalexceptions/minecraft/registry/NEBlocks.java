@@ -35,6 +35,7 @@ public final class NEBlocks {
     public static Block stormglassLantern;
     public static Block magmaRock;
     public static Block cloud;
+    public static Block packedCloud;
     /** The glow of a Lamplighter's Cap (not in the creative tab). */
     public static Block lamplight;
     /** A Gale Core sealed in an arch's keystone. */
@@ -257,6 +258,7 @@ public final class NEBlocks {
         trainingDummy = new naturalexceptions.minecraft.furniture.BlockTrainingDummy()
             .setCreativeTab(NECreativeTab.INSTANCE);
         wellWinch = new naturalexceptions.minecraft.furniture.BlockWellWinch().setCreativeTab(NECreativeTab.INSTANCE);
+        packedCloud = new naturalexceptions.minecraft.block.BlockPackedCloud().setCreativeTab(NECreativeTab.INSTANCE);
         cloudsilkRope = new naturalexceptions.minecraft.block.BlockCloudsilkRope()
             .setCreativeTab(NECreativeTab.INSTANCE);
         fountain = new naturalexceptions.minecraft.furniture.BlockFountain().setCreativeTab(NECreativeTab.INSTANCE);
@@ -327,6 +329,10 @@ public final class NEBlocks {
                 "stormglass_lantern");
             GameRegistry.registerBlock(magmaRock, "magma_rock");
             GameRegistry.registerBlock(cloud, "cloud");
+            GameRegistry.registerBlock(
+                packedCloud,
+                naturalexceptions.minecraft.block.BlockPackedCloud.ItemPackedCloud.class,
+                "packed_cloud");
             GameRegistry.registerBlock(lamplight, "lamplight");
             GameRegistry.registerBlock(galeKeystone, "gale_keystone");
             GameRegistry.registerBlock(brokenAutomaton, "broken_automaton");

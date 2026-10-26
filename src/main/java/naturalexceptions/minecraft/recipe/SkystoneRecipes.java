@@ -13,6 +13,7 @@ import naturalexceptions.minecraft.block.BlockSkystoneDecor;
 import naturalexceptions.minecraft.block.BlockSkystoneSlab;
 import naturalexceptions.minecraft.furniture.BlockWoodenTable;
 import naturalexceptions.minecraft.registry.NEBlocks;
+import naturalexceptions.minecraft.registry.NEItems;
 
 /**
  * Dressing Skystone Bricks into the rest of the family (tiles, polished, chiseled, pillars, stairs, slabs), darkening
@@ -23,6 +24,20 @@ public final class SkystoneRecipes {
     private SkystoneRecipes() {}
 
     public static void register() {
+        // A Weather Glass: a tube of glass round water, sealed with a copper cap. Made on the ground, it finds the sky.
+        if (NEItems.weatherGlass != null) GameRegistry.addRecipe(
+            new RecipeCastCopper(
+                new ItemStack(NEItems.weatherGlass),
+                " C ",
+                "GWG",
+                " G ",
+                'C',
+                NEItems.copperIngot,
+                'G',
+                Blocks.glass,
+                'W',
+                new ItemStack(Items.potionitem, 1, 0)));
+
         Block bricks = NEBlocks.skystoneBricks, decor = NEBlocks.skystoneDecor, slab = NEBlocks.skystoneSlab;
         if (bricks == null || decor == null
             || slab == null
@@ -147,6 +162,19 @@ public final class SkystoneRecipes {
             shard,
             'B',
             skystone);
+        // On the ground, without the sky's stone: a copper coil at its heart chills the rain's vapour together.
+        if (NEBlocks.cloudCondenser != null) GameRegistry.addRecipe(
+            new RecipeCastCopper(
+                new ItemStack(NEBlocks.cloudCondenser),
+                "I I",
+                "ICI",
+                "BBB",
+                'I',
+                Items.iron_ingot,
+                'C',
+                NEItems.copperIngot,
+                'B',
+                new ItemStack(Blocks.stonebrick, 1, OreDictionary.WILDCARD_VALUE)));
         if (NEBlocks.lighthouseLamp != null && NEBlocks.stormglassLantern != null && shard != null)
             GameRegistry.addRecipe(
                 new ItemStack(NEBlocks.lighthouseLamp),
