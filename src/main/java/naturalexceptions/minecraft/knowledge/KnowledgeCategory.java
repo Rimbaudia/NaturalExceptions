@@ -10,7 +10,11 @@ public enum KnowledgeCategory {
     CASTING("Casting", "Casting molds, molten pouring, and component cooling"),
     ASSEMBLY("Assembly", "Tool construction, component fitting, and maintenance"),
     MULTIBLOCKS("Multiblocks", "Furnace layouts, structural chambers, and machinery"),
-    MATERIALS("Materials", "Elemental properties, thermal requirements, and behaviors");
+    MATERIALS("Materials", "Elemental properties, thermal requirements, and behaviors"),
+    POWER("Power", "Electricity: sources, cable, machines, and high tension"),
+    SKY("The Sky", "The sky islands, their dungeons, and the land's wind"),
+    GEAR("Gear", "Worn things with effects, and where they are found"),
+    SURVIVAL("Survival", "Thirst, wounds, and what the sky brings down");
 
     private final String displayName;
     private final String description;
