@@ -135,6 +135,17 @@ public final class BlockForgingAnvil extends BlockContainer implements naturalex
             return true;
         }
 
+        // 3. A casting laid on a pile of the same metal's castings (warm castings are best held in tongs)
+        if (currentWorkpiece != null && held != null && CastingFold.isCasting(held)) {
+            ItemStack one = held.copy();
+            one.stackSize = 1;
+            if (anvil.layOn(player, one)) {
+                if (--held.stackSize <= 0) player.setCurrentItemOrArmor(0, null);
+                player.inventoryContainer.detectAndSendChanges();
+                return true;
+            }
+        }
+
         // 4. Place workpiece onto empty anvil
         if (currentWorkpiece == null && held != null) {
             boolean valid = held.getItem() instanceof ItemGenericComponent;

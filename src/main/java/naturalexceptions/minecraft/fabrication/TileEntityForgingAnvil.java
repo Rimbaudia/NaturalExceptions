@@ -142,6 +142,9 @@ public class TileEntityForgingAnvil extends TileEntity implements IInventory {
             return false;
         }
 
+        // A pile of castings an ingot's worth: the hammer folds an ingot off it.
+        if (CastingFold.ready(workpiece)) return foldStrike(player);
+
         // Convert standard ingot/feedstock to blank component if placed directly
         naturalexceptions.minecraft.metallurgy.FeedstockItemRegistry.ResolvedInput input = naturalexceptions.minecraft.metallurgy.FeedstockItemRegistry
             .resolve(workpiece);
@@ -441,9 +444,70 @@ public class TileEntityForgingAnvil extends TileEntity implements IInventory {
         return true;
     }
 
+    /** Blows struck on the pile toward its next ingot. */
+    private int foldBlows;
+
+    /** A blow on a pile of castings: hot, it gives an ingot; cold, it takes a few. */
+    private boolean foldStrike(EntityPlayer player) {
+        if (worldObj != null) worldObj.playSoundEffect(
+            xCoord + 0.5D,
+            yCoord + 1.0D,
+            zCoord + 0.5D,
+            "random.anvil_land",
+            0.5F,
+            1.6F + (worldObj.rand.nextFloat() - 0.5F) * 0.2F);
+        if (++foldBlows < CastingFold.blows(workpiece)) {
+            if (player != null && (worldObj == null || !worldObj.isRemote)) player.addChatMessage(
+                new ChatComponentText("\u00a77[Forging Anvil] The cold castings give a little under the hammer."));
+            markDirty();
+            return true;
+        }
+        foldBlows = 0;
+        ItemStack[] out = CastingFold.fold(workpiece);
+        setWorkpiece(out[1]);
+        if (worldObj != null && !worldObj.isRemote) {
+            net.minecraft.entity.item.EntityItem dropped = new net.minecraft.entity.item.EntityItem(
+                worldObj,
+                xCoord + 0.5D,
+                yCoord + 1.1D,
+                zCoord + 0.5D,
+                out[0]);
+            dropped.motionX = dropped.motionY = dropped.motionZ = 0.0D;
+            worldObj.spawnEntityInWorld(dropped);
+            if (player != null) player.addChatMessage(
+                new ChatComponentText(
+                    "\u00a7a[Forging Anvil] The castings fold into one: \u00a7f" + out[0].getDisplayName()
+                        + (out[1] == null ? "" : "\u00a7a; the rest stays on the anvil.")));
+        }
+        return true;
+    }
+
+    /** Lays a casting on the pile already on the anvil. Whether it could. */
+    public boolean layOn(EntityPlayer player, ItemStack casting) {
+        if (workpiece == null || !CastingFold.joins(workpiece, casting)) return false;
+        setWorkpiece(CastingFold.join(workpiece, casting));
+        foldBlows = 0;
+        if (worldObj != null) {
+            worldObj.playSoundEffect(xCoord + 0.5D, yCoord + 0.8D, zCoord + 0.5D, "step.stone", 1.0F, 0.8F);
+            if (!worldObj.isRemote && player != null) player.addChatMessage(
+                new ChatComponentText(
+                    CastingFold.ready(workpiece) ? "\u00a7a[Forging Anvil] An ingot's worth: strike it."
+                        : "\u00a77[Forging Anvil] Laid on the pile; it wants more for an ingot."));
+        }
+        return true;
+    }
+
     public boolean tongsInteract(EntityPlayer player, ItemStack tongs) {
         if (tongs == null || !(tongs.getItem() instanceof ItemBlacksmithTongs)) {
             return false;
+        }
+
+        // 0. Tongs holding a casting & a pile of the same on the anvil -> lay it on
+        if (ItemBlacksmithTongs.hasWorkpiece(tongs) && workpiece != null
+            && layOn(player, ItemBlacksmithTongs.getWorkpiece(tongs))) {
+            ItemBlacksmithTongs.clearWorkpiece(tongs);
+            if (player != null) player.inventoryContainer.detectAndSendChanges();
+            return true;
         }
 
         // 1. Tongs holding workpiece & Anvil empty -> Place workpiece on anvil
