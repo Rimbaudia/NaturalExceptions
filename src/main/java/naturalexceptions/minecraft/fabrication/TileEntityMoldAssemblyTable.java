@@ -18,6 +18,11 @@ public final class TileEntityMoldAssemblyTable extends TileEntity implements IIn
     private final ItemStack[] slots = new ItemStack[2];
     private static final List<GeometryId> SELECTABLE = ItemCastingMold.shapes();
 
+    @Override
+    public boolean canUpdate() {
+        return false;
+    }
+
     public static List<GeometryId> selectableGeometries() {
         return SELECTABLE;
     }

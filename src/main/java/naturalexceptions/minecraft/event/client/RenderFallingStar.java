@@ -27,6 +27,7 @@ public final class RenderFallingStar extends Render {
     public void doRender(Entity entity, double x, double y, double z, float yaw, float partialTicks) {
         float size = entity instanceof GlowingStar ? ((GlowingStar) entity).starSize() : 1.0F;
         float spin = (entity.ticksExisted + partialTicks) * 9.0F;
+        float prevLX = OpenGlHelper.lastBrightnessX, prevLY = OpenGlHelper.lastBrightnessY;
 
         GL11.glPushMatrix();
         GL11.glTranslated(x, y, z);
@@ -62,7 +63,9 @@ public final class RenderFallingStar extends Render {
         GL11.glEnable(GL11.GL_TEXTURE_2D);
         GL11.glEnable(GL11.GL_FOG);
         GL11.glEnable(GL11.GL_LIGHTING);
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         GL11.glPopMatrix();
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, prevLX, prevLY);
     }
 
     private static void drawCube(IIcon icon) {
@@ -128,8 +131,8 @@ public final class RenderFallingStar extends Render {
         double dx = -mx / speed * length, dy = -my / speed * length, dz = -mz / speed * length;
         Tessellator t = Tessellator.instance;
         double w = size * 0.45;
+        t.startDrawingQuads();
         for (int plane = 0; plane < 2; plane++) {
-            t.startDrawingQuads();
             double ox = plane == 0 ? w : 0.0, oz = plane == 0 ? 0.0 : w;
             t.setColorRGBA_F(0.75F, 0.98F, 1.0F, 0.55F);
             t.addVertex(-ox, 0.0, -oz);
@@ -137,8 +140,8 @@ public final class RenderFallingStar extends Render {
             t.setColorRGBA_F(0.30F, 0.70F, 1.0F, 0.0F);
             t.addVertex(dx + ox * 0.2, dy, dz + oz * 0.2);
             t.addVertex(dx - ox * 0.2, dy, dz - oz * 0.2);
-            t.draw();
         }
+        t.draw();
     }
 
     @Override

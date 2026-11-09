@@ -51,11 +51,14 @@ public final class NEEntityRenderHandler {
         }
         NEGravityService service = NEGravityService.global();
         if (!service.isNonstandardGravityActive()) {
-            return false;
+            return NEPlayerPresentationService.instance()
+                .hasActiveSmoothing(entity);
         }
         GravitySample sample = service.sampleFor(entity);
         Vector3d localUp = sample.localUp();
-        return Vector3d.UP.dot(localUp) <= 0.99999;
+        return Vector3d.UP.dot(localUp) <= 0.99999
+            || NEPlayerPresentationService.instance()
+                .hasActiveSmoothing(entity);
     }
 
     /**
@@ -69,13 +72,13 @@ public final class NEEntityRenderHandler {
         }
 
         NEGravityService service = NEGravityService.global();
-        if (!service.isNonstandardGravityActive()) {
+        NEPlayerPresentationService presentation = NEPlayerPresentationService.instance();
+        if (!service.isNonstandardGravityActive() && !presentation.hasActiveSmoothing(entity)) {
             applyStandardOrientation(entity, bodyYaw, partialTicks);
             return;
         }
 
-        NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
-            .getPresentationFrame(entity, partialTicks);
+        NEPlayerPresentationFrame frame = presentation.getPresentationFrame(entity, partialTicks, false);
         Vector3d localUp = frame.renderedUp();
         Vector3d worldUp = Vector3d.UP;
         double dot = worldUp.dot(localUp);
@@ -150,12 +153,16 @@ public final class NEEntityRenderHandler {
         if (model == null || entity == null) {
             return;
         }
+        NEGravityService service = NEGravityService.global();
+        NEPlayerPresentationService presentation = NEPlayerPresentationService.instance();
+        if (!service.isNonstandardGravityActive() && !presentation.hasActiveSmoothing(entity)) {
+            return;
+        }
         if (!shouldApplyCustomOrientation(entity)) {
             return;
         }
 
-        NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
-            .getPresentationFrame(entity, lastPartialTicks);
+        NEPlayerPresentationFrame frame = presentation.getPresentationFrame(entity, lastPartialTicks, false);
 
         float[] angles = computeLocalHeadAngles(
             frame.computeLookVector(),

@@ -184,6 +184,8 @@ public final class ItemCastingMold extends Item {
         return null;
     }
 
+    private static final MaterialPropertyResolver SHARED_RESOLVER = new MaterialPropertyResolver();
+
     public static ActiveThermalState getThermalState(ItemStack stack) {
         if (!hasMetal(stack)) {
             return null;
@@ -195,7 +197,7 @@ public final class ItemCastingMold extends Item {
             return null;
         }
         double massKg = (double) massMg / MaterialQuantity.MILLIGRAMS_PER_KILOGRAM;
-        MaterialProperties defaults = resolveContainedProperties(stack);
+        MaterialProperties defaults = hasThermalPayload(nbt) ? null : resolveContainedProperties(stack);
         double density = nbt.hasKey(KEY_DENSITY) ? nbt.getDouble(KEY_DENSITY) : defaults.density();
         double spHeat = nbt.hasKey(KEY_SPECIFIC_HEAT) ? nbt.getDouble(KEY_SPECIFIC_HEAT) : defaults.specificHeatSolid();
         double spHeatLiq = nbt.hasKey(KEY_SPECIFIC_HEAT_LIQUID) ? nbt.getDouble(KEY_SPECIFIC_HEAT_LIQUID)
@@ -224,7 +226,7 @@ public final class ItemCastingMold extends Item {
                 try {
                     CanonicalMaterialKey key = CanonicalMaterialKey.parse(stateKeyString);
                     MaterialRef effectiveRef = ref != null ? ref : MaterialRef.generatedFrom(key);
-                    return new MaterialPropertyResolver().resolve(effectiveRef, key.composition(), key.phase())
+                    return SHARED_RESOLVER.resolve(effectiveRef, key.composition(), key.phase())
                         .properties();
                 } catch (RuntimeException ignored) {
                     // Fall through to a neutral physical fallback for malformed legacy payloads.
@@ -233,7 +235,7 @@ public final class ItemCastingMold extends Item {
             if (ref.isAuthored()) {
                 try {
                     CanonicalComposition composition = CanonicalComposition.of(ref.authoredId());
-                    return new MaterialPropertyResolver().resolve(ref, composition, MaterialPhase.SOLID)
+                    return SHARED_RESOLVER.resolve(ref, composition, MaterialPhase.SOLID)
                         .properties();
                 } catch (RuntimeException ignored) {
                     // Fall through to a neutral physical fallback for unknown authored materials.
@@ -330,7 +332,10 @@ public final class ItemCastingMold extends Item {
         if (!hasMetal(stack)) {
             return false;
         }
-        ActiveThermalState thermal = getThermalState(stack);
+        return isSolidified(getThermalState(stack));
+    }
+
+    private static boolean isSolidified(ActiveThermalState thermal) {
         if (thermal == null) {
             return true;
         }
@@ -683,7 +688,7 @@ public final class ItemCastingMold extends Item {
                 double fillPct = req.isPositive() ? (double) mass.milligrams() / (double) req.milligrams() * 100.0
                     : 0.0;
                 list.add("  \u00a7eStatus: Partially filled; needs more metal");
-            } else if (isSolidified(stack)) {
+            } else if (isSolidified(thermal)) {
                 list.add("  \u00a7aStatus: Solidified! (Right-click to extract)");
             } else {
                 double meltPct = thermal != null ? thermal.meltFraction() * 100.0 : 100.0;
@@ -777,7 +782,7 @@ public final class ItemCastingMold extends Item {
         CanonicalMaterialKey key = getContainedStateKey(stack);
         ActiveThermalState thermal = getThermalState(stack);
         double temp = thermal != null ? thermal.temperatureKelvin() : 300.0;
-        if (isSolidified(stack)) {
+        if (isSolidified(thermal)) {
             return MaterialAppearance.getSolidColor(ref, key);
         } else {
             return MaterialAppearance.getMoltenColor(ref, key, temp);

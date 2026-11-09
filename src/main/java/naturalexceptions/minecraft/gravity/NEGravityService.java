@@ -29,6 +29,7 @@ public final class NEGravityService {
     public static final double DEFAULT_ITEM_GRAVITY = 0.04;
     public static final double DEFAULT_ARROW_GRAVITY = 0.05;
 
+    private static final int MAX_CACHED_ENTITIES = 512;
     private static final NEGravityService GLOBAL = new NEGravityService();
 
     private final Map<Long, LocalEntityFrame> entityFrames = new ConcurrentHashMap<>();
@@ -54,6 +55,10 @@ public final class NEGravityService {
 
     public synchronized void setActiveField(GravityField field) {
         this.activeField = field != null ? field : UniformGravityField.STANDARD_MINECRAFT;
+        if (this.activeField == UniformGravityField.STANDARD_MINECRAFT) {
+            this.entityFrames.clear();
+            this.entityLastYaw.clear();
+        }
     }
 
     public synchronized void resetToDefault() {
@@ -80,6 +85,10 @@ public final class NEGravityService {
 
     public synchronized void setEnabled(boolean enabled) {
         this.enabled = enabled;
+        if (!enabled) {
+            this.entityFrames.clear();
+            this.entityLastYaw.clear();
+        }
     }
 
     private boolean debugLogging = false;
@@ -145,9 +154,22 @@ public final class NEGravityService {
     public LocalEntityFrame getOrUpdateLocalFrame(EntityLivingBase entity) {
         Objects.requireNonNull(entity, "entity");
         GravitySample sample = sampleFor(entity);
-        long key = entityKey(entity);
-
         float currentYaw = entity.rotationYaw;
+        if (!isNonstandardGravityActive()) {
+            if (!entityFrames.isEmpty()) {
+                long key = entityKey(entity);
+                entityFrames.remove(key);
+                entityLastYaw.remove(key);
+            }
+            return LocalEntityFrame.deriveFrom(sample, currentYaw);
+        }
+
+        long key = entityKey(entity);
+        if (entityFrames.size() >= MAX_CACHED_ENTITIES) {
+            entityFrames.clear();
+            entityLastYaw.clear();
+        }
+
         Float lastYaw = entityLastYaw.get(key);
         float yawDelta = 0.0F;
         if (lastYaw != null) {

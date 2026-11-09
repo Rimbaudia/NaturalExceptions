@@ -63,7 +63,13 @@ public final class DerrickDefinition extends MultiblockDefinition {
     }
 
     /** The derrick standing on the pivot at (px, py, pz), if it is whole; null if not. */
+    public static HoistFrame at(IBlockAccess world, int px, int py, int pz) {
+        return INSTANCE.frame(world, px, py, pz);
+    }
+
+    /** The derrick standing on the pivot at (px, py, pz), if it is whole; null if not. */
     public HoistFrame frame(IBlockAccess world, int px, int py, int pz) {
+        if (world == null || !(world.getBlock(px, py, pz) instanceof BlockDerrickPivot)) return null;
         int top = py;
         while (top < py + MAX_MAST && world.getBlock(px, top + 1, pz) instanceof BlockLog) top++;
         int mast = top - py;

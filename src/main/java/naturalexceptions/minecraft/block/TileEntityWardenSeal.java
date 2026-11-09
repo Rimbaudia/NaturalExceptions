@@ -15,6 +15,11 @@ public final class TileEntityWardenSeal extends TileEntity {
     static final double WAKE_RANGE = 8.0;
 
     @Override
+    public boolean canUpdate() {
+        return false;
+    }
+
+    @Override
     public void updateEntity() {
         if (worldObj == null || worldObj.isRemote || worldObj.getTotalWorldTime() % 10 != 0) return;
         EntityPlayer near = worldObj.getClosestPlayer(xCoord + 0.5, yCoord + 1.0, zCoord + 0.5, WAKE_RANGE);

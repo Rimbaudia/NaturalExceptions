@@ -65,4 +65,41 @@ public interface PartModel {
         }
         return result;
     }
+
+    java.util.Map<PartModel, double[][][]> PARTS_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    java.util.Map<PartModel, double[][]> BOUNDS_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Cached boxes for {@code metadata & 15}, avoiding per-call rotation array allocations. */
+    static double[][] cachedParts(PartModel model, int metadata) {
+        int m = metadata & 15;
+        double[][][] byMeta = PARTS_CACHE.get(model);
+        if (byMeta == null) {
+            byMeta = new double[16][][];
+            double[][][] existing = PARTS_CACHE.putIfAbsent(model, byMeta);
+            if (existing != null) byMeta = existing;
+        }
+        double[][] parts = byMeta[m];
+        if (parts == null) {
+            parts = model.parts(m);
+            byMeta[m] = parts;
+        }
+        return parts;
+    }
+
+    /** Cached bounding box for {@code metadata & 15}, avoiding per-call bounds computation and allocation. */
+    static double[] cachedBounds(PartModel model, int metadata) {
+        int m = metadata & 15;
+        double[][] byMeta = BOUNDS_CACHE.get(model);
+        if (byMeta == null) {
+            byMeta = new double[16][];
+            double[][] existing = BOUNDS_CACHE.putIfAbsent(model, byMeta);
+            if (existing != null) byMeta = existing;
+        }
+        double[] b = byMeta[m];
+        if (b == null) {
+            b = bounds(cachedParts(model, m));
+            byMeta[m] = b;
+        }
+        return b;
+    }
 }

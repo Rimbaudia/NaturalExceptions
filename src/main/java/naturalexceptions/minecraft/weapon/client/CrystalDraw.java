@@ -1,7 +1,5 @@
 package naturalexceptions.minecraft.weapon.client;
 
-import java.util.Random;
-
 import net.minecraft.client.renderer.Tessellator;
 
 import org.lwjgl.opengl.GL11;
@@ -21,14 +19,25 @@ public final class CrystalDraw {
         SHADE = { 0.56F, 0.42F, 0.92F }, REAR_LIT = { 0.44F, 0.32F, 0.78F }, REAR_SHADE = { 0.3F, 0.2F, 0.62F },
         BACK = { 0.86F, 0.8F, 1.0F };
 
+    private static final float[] GIRDLE_COS = { 1.0F, 0.0F, -1.0F, 0.0F, 1.0F };
+    private static final float[] GIRDLE_SIN = { 0.0F, 1.0F, 0.0F, -1.0F, 0.0F };
+    private static final double[] DISC_COS = new double[17];
+    private static final double[] DISC_SIN = new double[17];
+
+    static {
+        for (int i = 0; i <= 16; i++) {
+            double a = i * Math.PI / 8;
+            DISC_COS[i] = Math.cos(a);
+            DISC_SIN[i] = Math.sin(a);
+        }
+    }
+
     private CrystalDraw() {}
 
     /**
-     * Untextured, unlit, two-sided and blended; with {@code GL_ENABLE_BIT} and friends pushed so {@link #end} undoes
-     * it.
+     * Untextured, unlit, two-sided and blended; {@link #end} undoes it without pushing attribute bits.
      */
     public static void begin() {
-        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT | GL11.GL_LINE_BIT);
         GL11.glDisable(GL11.GL_TEXTURE_2D);
         GL11.glDisable(GL11.GL_LIGHTING);
         GL11.glDisable(GL11.GL_CULL_FACE);
@@ -38,7 +47,14 @@ public final class CrystalDraw {
 
     public static void end() {
         GL11.glShadeModel(GL11.GL_FLAT);
-        GL11.glPopAttrib();
+        GL11.glDepthMask(true);
+        GL11.glLineWidth(1.0F);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GL11.glDisable(GL11.GL_BLEND);
+        GL11.glEnable(GL11.GL_CULL_FACE);
+        GL11.glEnable(GL11.GL_LIGHTING);
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
     }
 
     /**
@@ -51,10 +67,9 @@ public final class CrystalDraw {
         Tessellator t = Tessellator.instance;
         t.startDrawing(GL11.GL_TRIANGLES);
         for (int i = 0; i < 4; i++) {
-            double a0 = i * Math.PI / 2, a1 = (i + 1) * Math.PI / 2;
-            float x0 = (float) Math.cos(a0) * radius, y0 = (float) Math.sin(a0) * radius;
-            float x1 = (float) Math.cos(a1) * radius, y1 = (float) Math.sin(a1) * radius;
-            boolean lit = i % 2 == 0;
+            float x0 = GIRDLE_COS[i] * radius, y0 = GIRDLE_SIN[i] * radius;
+            float x1 = GIRDLE_COS[i + 1] * radius, y1 = GIRDLE_SIN[i + 1] * radius;
+            boolean lit = (i & 1) == 0;
             colour(t, TIP, bright, 0.95F);
             t.addVertex(0.0, 0.0, length);
             colour(t, lit ? LIT : SHADE, bright, 0.9F);
@@ -84,22 +99,22 @@ public final class CrystalDraw {
     public static void glow(float radius, float strength) {
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
         GL11.glDepthMask(false);
-        disc(radius, 0.45F * strength, 0.7F, 0.56F, 1.0F);
-        disc(radius * 0.43F, 0.8F * strength, 0.93F, 0.88F, 1.0F);
+        Tessellator t = Tessellator.instance;
+        t.startDrawing(GL11.GL_TRIANGLES);
+        emitDiscTriangles(t, radius, 0.45F * strength, 0.7F, 0.56F, 1.0F);
+        emitDiscTriangles(t, radius * 0.43F, 0.8F * strength, 0.93F, 0.88F, 1.0F);
+        t.draw();
         GL11.glDepthMask(true);
     }
 
-    private static void disc(float radius, float alpha, float r, float g, float b) {
-        Tessellator t = Tessellator.instance;
-        t.startDrawing(GL11.GL_TRIANGLE_FAN);
-        t.setColorRGBA_F(r, g, b, alpha);
-        t.addVertex(0.0, 0.0, 0.0);
-        t.setColorRGBA_F(r, g, b, 0.0F);
-        for (int i = 0; i <= 16; i++) {
-            double a = i * Math.PI / 8;
-            t.addVertex(Math.cos(a) * radius, Math.sin(a) * radius, 0.0);
+    private static void emitDiscTriangles(Tessellator t, float radius, float alpha, float r, float g, float b) {
+        for (int i = 0; i < 16; i++) {
+            t.setColorRGBA_F(r, g, b, alpha);
+            t.addVertex(0.0, 0.0, 0.0);
+            t.setColorRGBA_F(r, g, b, 0.0F);
+            t.addVertex(DISC_COS[i] * radius, DISC_SIN[i] * radius, 0.0);
+            t.addVertex(DISC_COS[i + 1] * radius, DISC_SIN[i + 1] * radius, 0.0);
         }
-        t.draw();
     }
 
     /**
@@ -107,28 +122,60 @@ public final class CrystalDraw {
      * shape each time {@code seed} changes (give it the tick), so they flicker.
      */
     public static void arcs(long seed, int count, float reach, float alpha) {
-        Random random = new Random(seed);
+        if (count <= 0) return;
+        long state = seed ^ 0x9E3779B97F4A7C15L;
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
         GL11.glDepthMask(false);
         GL11.glLineWidth(2.0F);
         Tessellator t = Tessellator.instance;
+        t.startDrawing(GL11.GL_LINES);
+        int steps = 4;
         for (int n = 0; n < count; n++) {
-            double yaw = random.nextDouble() * Math.PI * 2, pitch = (random.nextDouble() - 0.5) * Math.PI;
-            double dx = Math.cos(pitch) * Math.cos(yaw), dy = Math.sin(pitch), dz = Math.cos(pitch) * Math.sin(yaw);
-            t.startDrawing(GL11.GL_LINE_STRIP);
-            int steps = 4;
-            for (int s = 0; s <= steps; s++) {
+            state = mix64(state);
+            double yaw = toUnitDouble(state) * (Math.PI * 2.0);
+            state = mix64(state);
+            double pitch = (toUnitDouble(state) - 0.5) * Math.PI;
+            double cosPitch = Math.cos(pitch);
+            double dx = cosPitch * Math.cos(yaw), dy = Math.sin(pitch), dz = cosPitch * Math.sin(yaw);
+            double prevX = dx * (reach * 0.25);
+            double prevY = dy * (reach * 0.25);
+            double prevZ = dz * (reach * 0.25);
+            float prevFade = 1.0F;
+            double jitter = reach * 0.18;
+            for (int s = 1; s <= steps; s++) {
                 double along = reach * (0.25 + 0.75 * s / steps);
-                double jitter = s == 0 ? 0.0 : reach * 0.18;
-                float fade = 1.0F - (float) s / (steps + 1);
-                t.setColorRGBA_F(0.9F, 0.84F, 1.0F, alpha * fade);
-                t.addVertex(
-                    dx * along + (random.nextDouble() - 0.5) * jitter,
-                    dy * along + (random.nextDouble() - 0.5) * jitter,
-                    dz * along + (random.nextDouble() - 0.5) * jitter);
+                state = mix64(state);
+                double jx = (toUnitDouble(state) - 0.5) * jitter;
+                state = mix64(state);
+                double jy = (toUnitDouble(state) - 0.5) * jitter;
+                state = mix64(state);
+                double jz = (toUnitDouble(state) - 0.5) * jitter;
+                double curX = dx * along + jx;
+                double curY = dy * along + jy;
+                double curZ = dz * along + jz;
+                float curFade = 1.0F - (float) s / (steps + 1);
+                t.setColorRGBA_F(0.9F, 0.84F, 1.0F, alpha * prevFade);
+                t.addVertex(prevX, prevY, prevZ);
+                t.setColorRGBA_F(0.9F, 0.84F, 1.0F, alpha * curFade);
+                t.addVertex(curX, curY, curZ);
+                prevX = curX;
+                prevY = curY;
+                prevZ = curZ;
+                prevFade = curFade;
             }
-            t.draw();
         }
+        t.draw();
         GL11.glDepthMask(true);
+    }
+
+    private static long mix64(long z) {
+        z += 0x9E3779B97F4A7C15L;
+        z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9L;
+        z = (z ^ (z >>> 27)) * 0x94D049BB133111EBL;
+        return z ^ (z >>> 31);
+    }
+
+    private static double toUnitDouble(long z) {
+        return (z >>> 11) * 0x1.0p-53;
     }
 }

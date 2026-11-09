@@ -82,7 +82,7 @@ public final class HatAndShoeEffects {
             // A player is updated once per movement packet, not once a tick: pace by the clock.
             long now = player.worldObj.getTotalWorldTime();
             long[] last = paced.computeIfAbsent(player.getUniqueID(), k -> new long[] { -1_000_000L, -1_000_000L });
-            if (now - last[0] >= 5 || now < last[0]) {
+            if (now - last[0] >= 10 || now < last[0]) {
                 last[0] = now;
                 lamp(player);
             }
@@ -133,18 +133,20 @@ public final class HatAndShoeEffects {
         if (mob instanceof naturalexceptions.minecraft.entity.CitadelMachine
             && naturalexceptions.minecraft.entity.CitadelMachine.passes(player, mob)) return false; // Sentry's Crest
         if (mournedBy(mob, player)) return false; // Mourner's Veil
+        int slippers = ItemTreasureGear.worn(player, Treasure.FEATHERSTEP_SLIPPERS);
+        if (slippers <= 0) return true;
         return notices(
             mob.getDistanceToEntity(player),
-            ItemTreasureGear.worn(player, Treasure.FEATHERSTEP_SLIPPERS),
+            slippers,
             mob.getAITarget() == player);
     }
 
     /** Mourner's Veil: the undead (not the great ones) pass its wearer by, until struck. */
     public static boolean mournedBy(EntityLivingBase mob, EntityPlayer player) {
-        return mob.getCreatureAttribute() == net.minecraft.entity.EnumCreatureAttribute.UNDEAD
+        return ItemTreasureGear.worn(player, Treasure.MOURNERS_VEIL) > 0
+            && mob.getCreatureAttribute() == net.minecraft.entity.EnumCreatureAttribute.UNDEAD
             && !(mob instanceof net.minecraft.entity.boss.IBossDisplayData)
-            && mob.getAITarget() != player
-            && ItemTreasureGear.worn(player, Treasure.MOURNERS_VEIL) > 0;
+            && mob.getAITarget() != player;
     }
 
     /** How long the Gathered Heart must rest after holding its wearer back. */
@@ -156,9 +158,10 @@ public final class HatAndShoeEffects {
         if (event == null || event.isCanceled() || !(event.entityLiving instanceof EntityPlayerMP)) return;
         EntityPlayer player = (EntityPlayer) event.entityLiving;
         if (event.ammount < player.getHealth() || event.source == net.minecraft.util.DamageSource.outOfWorld) return;
-        net.minecraft.item.ItemStack heart = null;
         PlayerGear gear = PlayerGear.get(player);
-        for (GearSlot slot : GearSlot.values()) {
+        if (gear == null || !gear.isWearing(Treasure.GATHERED_HEART)) return;
+        net.minecraft.item.ItemStack heart = null;
+        for (GearSlot slot : GearSlot.VALUES) {
             net.minecraft.item.ItemStack stack = gear.get(slot);
             if (stack != null && stack.getItem()
                 == naturalexceptions.minecraft.registry.NEItems.TREASURES.get(Treasure.GATHERED_HEART)) heart = stack;
@@ -251,9 +254,25 @@ public final class HatAndShoeEffects {
             int feet = MathHelper.floor_double(player.boundingBox.minY);
             int y = open(world, x, feet + 1, z) ? feet + 1 : open(world, x, feet, z) ? feet : Integer.MIN_VALUE;
             if (y != Integer.MIN_VALUE && world.getSavedLightValue(EnumSkyBlock.Sky, x, y, z) - world.skylightSubtracted
-                < LAMP_SKY_LIGHT_BELOW) spot = new int[] { world.provider.dimensionId, x, y, z };
+                < LAMP_SKY_LIGHT_BELOW) spot = new int[] { world.provider.dimensionId, x, y, z, x, y, z };
         }
-        if (last != null && spot != null && java.util.Arrays.equals(last, spot)) return;
+        if (last != null && spot != null && last[0] == spot[0]) {
+            if (last[1] == spot[1] && last[2] == spot[2] && last[3] == spot[3]) {
+                last[4] = spot[1];
+                last[5] = spot[2];
+                last[6] = spot[3];
+                return;
+            }
+            int dx = spot[1] - last[1], dy = spot[2] - last[2], dz = spot[3] - last[3];
+            boolean stoodStill = last.length >= 7 && last[4] == spot[1] && last[5] == spot[2] && last[6] == spot[3];
+            if (dx * dx + dy * dy + dz * dz < 16 && !stoodStill
+                && world.getBlock(last[1], last[2], last[3]) == NEBlocks.lamplight) {
+                last[4] = spot[1];
+                last[5] = spot[2];
+                last[6] = spot[3];
+                return;
+            }
+        }
         if (last != null && last[0] == world.provider.dimensionId
             && world.getBlock(last[1], last[2], last[3]) == NEBlocks.lamplight)
             world.setBlockToAir(last[1], last[2], last[3]);

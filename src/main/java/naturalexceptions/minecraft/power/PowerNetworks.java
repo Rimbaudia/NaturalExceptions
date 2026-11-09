@@ -271,6 +271,22 @@ public final class PowerNetworks {
 
     private void solve(Net net, double seconds) {
         int n = net.blocks.size();
+        List<PowerDevice> devices = new ArrayList<>();
+        List<Integer> deviceNodes = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            int[] p = net.blocks.get(i);
+            TileEntity tile = world.getTileEntity(p[0], p[1], p[2]);
+            if (tile instanceof PowerDevice) {
+                devices.add((PowerDevice) tile);
+                deviceNodes.add(i);
+            }
+        }
+        if (!net.live && !net.fresh && !net.hot) {
+            Grid probe = new Grid(n);
+            for (int d = 0; d < devices.size(); d++) devices.get(d)
+                .stamp(probe, deviceNodes.get(d));
+            if (!probe.hasSources()) return;
+        }
         Grid grid = new Grid(n);
         grid.warmStart(net.volts);
         List<int[]> edges = new ArrayList<>(); // {a, b, resistor} (relays: {-1, -1, resistor, a, b})
@@ -295,18 +311,10 @@ public final class PowerNetworks {
                 }
             }
         }
-        List<PowerDevice> devices = new ArrayList<>();
-        List<Integer> deviceNodes = new ArrayList<>();
-        for (int i = 0; i < n; i++) {
-            int[] p = net.blocks.get(i);
-            TileEntity tile = world.getTileEntity(p[0], p[1], p[2]);
-            if (tile instanceof PowerDevice) {
-                devices.add((PowerDevice) tile);
-                deviceNodes.add(i);
-            }
-        }
         for (int d = 0; d < devices.size(); d++) devices.get(d)
             .stamp(grid, deviceNodes.get(d));
+        boolean wasLive = net.live;
+        boolean wasFresh = net.fresh;
         boolean live = grid.hasSources();
         if (live) {
             grid.solve();
@@ -323,11 +331,15 @@ public final class PowerNetworks {
         }
         net.fresh = false;
         if (live) net.volts = grid.voltages();
-        else java.util.Arrays.fill(net.volts, 0.0);
+        else if (wasLive || wasFresh) java.util.Arrays.fill(net.volts, 0.0);
         net.live = live;
-        for (int d = 0; d < devices.size(); d++) devices.get(d)
-            .powered(grid, deviceNodes.get(d), seconds);
-        warm(net, grid, edges, half, seconds, live);
+        if (live || wasLive || wasFresh) {
+            for (int d = 0; d < devices.size(); d++) devices.get(d)
+                .powered(grid, deviceNodes.get(d), seconds);
+        }
+        if (live || wasLive || wasFresh || net.hot) {
+            warm(net, grid, edges, half, seconds, live);
+        }
     }
 
     /** The same network's wiring again, for a second solve (the edges keep their resistor indices). */

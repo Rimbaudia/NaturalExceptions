@@ -54,6 +54,7 @@ public final class RenderCastingTable extends TileEntitySpecialRenderer {
             .getLightBrightnessForSkyBlocks(te.xCoord, te.yCoord + 1, te.zCoord, 0) : 15728880;
         int l1 = brightness % 65536;
         int l2 = brightness / 65536;
+        float prevLX = OpenGlHelper.lastBrightnessX, prevLY = OpenGlHelper.lastBrightnessY;
 
         // --- Pass 0: Base Mold Clay Body ---
         OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, (float) l1, (float) l2);
@@ -89,7 +90,7 @@ public final class RenderCastingTable extends TileEntitySpecialRenderer {
         // Metal sits recessed below the mold rim (yRim = 1.025D)
         double yMetal = hasMetal ? y + 1.004D + (fillFraction * 0.016D) : yBase;
 
-        // 1. Exterior side walls and base floor of the clay mold body
+        // 1. Exterior side walls and base floor of the clay mold body (batched into a single draw call)
         if (baseIcon != null) {
             double minU = baseIcon.getMinU();
             double maxU = baseIcon.getMaxU();
@@ -98,22 +99,20 @@ public final class RenderCastingTable extends TileEntitySpecialRenderer {
             double uW = maxU - minU;
             double vH = maxV - minV;
 
-            // Base floor (inside cavity)
             tessellator.startDrawingQuads();
+            // Base floor (inside cavity)
             tessellator.setNormal(0.0F, 1.0F, 0.0F);
-            GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+            tessellator.setColorRGBA_F(1.0F, 1.0F, 1.0F, 1.0F);
             tessellator.addVertexWithUV(minX, yBase, minZ, minU, minV);
             tessellator.addVertexWithUV(minX, yBase, maxZ, minU, maxV);
             tessellator.addVertexWithUV(maxX, yBase, maxZ, maxU, maxV);
             tessellator.addVertexWithUV(maxX, yBase, minZ, maxU, minV);
-            tessellator.draw();
 
             // Exterior walls: a thin strip of the texture, proportional to the wall height, not the whole icon.
             double wallV = maxV - vH * Math.min(1.0, (yRim - yBase) / Math.max(1.0e-6, maxX - minX));
-            tessellator.startDrawingQuads();
             // North exterior wall (-Z)
             tessellator.setNormal(0.0F, 0.0F, -1.0F);
-            GL11.glColor4f(0.75F, 0.72F, 0.68F, 1.0F);
+            tessellator.setColorRGBA_F(0.75F, 0.72F, 0.68F, 1.0F);
             tessellator.addVertexWithUV(minX, yBase, minZ, minU, maxV);
             tessellator.addVertexWithUV(maxX, yBase, minZ, maxU, maxV);
             tessellator.addVertexWithUV(maxX, yRim, minZ, maxU, wallV);
@@ -121,7 +120,7 @@ public final class RenderCastingTable extends TileEntitySpecialRenderer {
 
             // South exterior wall (+Z)
             tessellator.setNormal(0.0F, 0.0F, 1.0F);
-            GL11.glColor4f(0.85F, 0.82F, 0.78F, 1.0F);
+            tessellator.setColorRGBA_F(0.85F, 0.82F, 0.78F, 1.0F);
             tessellator.addVertexWithUV(minX, yRim, maxZ, minU, wallV);
             tessellator.addVertexWithUV(maxX, yRim, maxZ, maxU, wallV);
             tessellator.addVertexWithUV(maxX, yBase, maxZ, maxU, maxV);
@@ -129,7 +128,7 @@ public final class RenderCastingTable extends TileEntitySpecialRenderer {
 
             // West exterior wall (-X)
             tessellator.setNormal(-1.0F, 0.0F, 0.0F);
-            GL11.glColor4f(0.65F, 0.62F, 0.58F, 1.0F);
+            tessellator.setColorRGBA_F(0.65F, 0.62F, 0.58F, 1.0F);
             tessellator.addVertexWithUV(minX, yBase, minZ, minU, maxV);
             tessellator.addVertexWithUV(minX, yRim, minZ, minU, wallV);
             tessellator.addVertexWithUV(minX, yRim, maxZ, maxU, wallV);
@@ -137,16 +136,14 @@ public final class RenderCastingTable extends TileEntitySpecialRenderer {
 
             // East exterior wall (+X)
             tessellator.setNormal(1.0F, 0.0F, 0.0F);
-            GL11.glColor4f(0.70F, 0.68F, 0.64F, 1.0F);
+            tessellator.setColorRGBA_F(0.70F, 0.68F, 0.64F, 1.0F);
             tessellator.addVertexWithUV(maxX, yBase, maxZ, maxU, maxV);
             tessellator.addVertexWithUV(maxX, yRim, maxZ, maxU, wallV);
             tessellator.addVertexWithUV(maxX, yRim, minZ, minU, wallV);
             tessellator.addVertexWithUV(maxX, yBase, minZ, minU, maxV);
-            tessellator.draw();
 
             // Mold top rim perimeter strips (leaving cavity opening in center)
-            GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
-            tessellator.startDrawingQuads();
+            tessellator.setColorRGBA_F(1.0F, 1.0F, 1.0F, 1.0F);
             tessellator.setNormal(0.0F, 1.0F, 0.0F);
             // North rim strip
             tessellator.addVertexWithUV(minX, yRim, minZ, minU, minV);
@@ -171,11 +168,9 @@ public final class RenderCastingTable extends TileEntitySpecialRenderer {
             tessellator.addVertexWithUV(cavMaxX, yRim, cavMaxZ, maxU - uW * 0.05D, maxV - vH * 0.05D);
             tessellator.addVertexWithUV(maxX, yRim, cavMaxZ, maxU, maxV - vH * 0.05D);
             tessellator.addVertexWithUV(maxX, yRim, cavMinZ, maxU, minV + vH * 0.05D);
-            tessellator.draw();
 
             // Inner cavity bevels sloping down to metal surface (or base floor)
-            GL11.glColor4f(0.55F, 0.52F, 0.48F, 0.90F);
-            tessellator.startDrawingQuads();
+            tessellator.setColorRGBA_F(0.55F, 0.52F, 0.48F, 0.90F);
             // North inner bevel
             tessellator.addVertexWithUV(cavMinX, yRim, cavMinZ, minU, minV);
             tessellator.addVertexWithUV(cavMaxX, yRim, cavMinZ, maxU, minV);
@@ -238,6 +233,7 @@ public final class RenderCastingTable extends TileEntitySpecialRenderer {
             }
         }
 
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, prevLX, prevLY);
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         GL11.glEnable(GL11.GL_CULL_FACE);
         GL11.glDisable(GL11.GL_BLEND);

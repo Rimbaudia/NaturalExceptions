@@ -67,8 +67,8 @@ public final class CableRenderer implements ISimpleBlockRenderingHandler {
         GL11.glTranslatef(-0.5F, -0.5F, -0.5F);
         renderer.setRenderBounds(0.0, lo, lo, 1.0, hi, hi);
         Tessellator tess = Tessellator.instance;
+        tess.startDrawingQuads();
         for (int side = 0; side < 6; side++) {
-            tess.startDrawingQuads();
             tess.setNormal(
                 side == 4 ? -1 : side == 5 ? 1 : 0,
                 side == 0 ? -1 : side == 1 ? 1 : 0,
@@ -93,8 +93,8 @@ public final class CableRenderer implements ISimpleBlockRenderingHandler {
                     renderer.renderFaceXPos(block, 0, 0, 0, icon);
                     break;
             }
-            tess.draw();
         }
+        tess.draw();
         GL11.glPopMatrix();
         renderer.setRenderBounds(0, 0, 0, 1, 1, 1);
     }

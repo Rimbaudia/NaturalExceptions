@@ -6,9 +6,8 @@ import java.util.List;
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityClientPlayerMP;
-import net.minecraft.client.renderer.RenderGlobal;
+import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.init.Blocks;
-import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
@@ -103,7 +102,6 @@ public final class VisorSight {
         double cx = player.lastTickPosX + (player.posX - player.lastTickPosX) * t;
         double cy = player.lastTickPosY + (player.posY - player.lastTickPosY) * t;
         double cz = player.lastTickPosZ + (player.posZ - player.lastTickPosZ) * t;
-        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_LINE_BIT | GL11.GL_COLOR_BUFFER_BIT);
         GL11.glDisable(GL11.GL_TEXTURE_2D);
         GL11.glDisable(GL11.GL_LIGHTING);
         GL11.glDisable(GL11.GL_DEPTH_TEST);
@@ -111,22 +109,59 @@ public final class VisorSight {
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GL11.glLineWidth(2.0F);
         float pulse = 0.55F + 0.25F * (float) Math.sin((player.ticksExisted + t) * 0.15);
+        Tessellator tess = Tessellator.instance;
+        tess.startDrawing(GL11.GL_LINES);
         for (int[] s : seen) {
-            GL11.glColor4f(
+            tess.setColorRGBA_F(
                 ((s[3] >> 16) & 0xFF) / 255.0F,
                 ((s[3] >> 8) & 0xFF) / 255.0F,
                 (s[3] & 0xFF) / 255.0F,
                 pulse);
-            AxisAlignedBB box = AxisAlignedBB.getBoundingBox(
+            emitBoxLines(
+                tess,
                 s[0] - cx + 0.02,
                 s[1] - cy + 0.02,
                 s[2] - cz + 0.02,
                 s[0] - cx + 0.98,
                 s[1] - cy + 0.98,
                 s[2] - cz + 0.98);
-            RenderGlobal.drawOutlinedBoundingBox(box, -1);
         }
-        GL11.glPopAttrib();
+        tess.draw();
+        GL11.glLineWidth(1.0F);
+        GL11.glDisable(GL11.GL_BLEND);
+        GL11.glEnable(GL11.GL_DEPTH_TEST);
+        GL11.glEnable(GL11.GL_LIGHTING);
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+    }
+
+    private static void emitBoxLines(Tessellator t, double x0, double y0, double z0, double x1, double y1, double z1) {
+        // Bottom face
+        t.addVertex(x0, y0, z0);
+        t.addVertex(x1, y0, z0);
+        t.addVertex(x1, y0, z0);
+        t.addVertex(x1, y0, z1);
+        t.addVertex(x1, y0, z1);
+        t.addVertex(x0, y0, z1);
+        t.addVertex(x0, y0, z1);
+        t.addVertex(x0, y0, z0);
+        // Top face
+        t.addVertex(x0, y1, z0);
+        t.addVertex(x1, y1, z0);
+        t.addVertex(x1, y1, z0);
+        t.addVertex(x1, y1, z1);
+        t.addVertex(x1, y1, z1);
+        t.addVertex(x0, y1, z1);
+        t.addVertex(x0, y1, z1);
+        t.addVertex(x0, y1, z0);
+        // Vertical edges
+        t.addVertex(x0, y0, z0);
+        t.addVertex(x0, y1, z0);
+        t.addVertex(x1, y0, z0);
+        t.addVertex(x1, y1, z0);
+        t.addVertex(x1, y0, z1);
+        t.addVertex(x1, y1, z1);
+        t.addVertex(x0, y0, z1);
+        t.addVertex(x0, y1, z1);
     }
 }

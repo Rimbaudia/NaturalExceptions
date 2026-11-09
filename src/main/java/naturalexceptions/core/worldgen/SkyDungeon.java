@@ -381,7 +381,6 @@ public final class SkyDungeon {
     private long[] positions = new long[1 << 12];
     private int[] data = new int[1 << 12];
     private int count;
-    private long[] table = new long[1 << 13];
     private int[] tableIndex = new int[1 << 13];
     private final List<String> mobNames = new ArrayList<>();
     final List<Room> rooms = new ArrayList<>();
@@ -391,6 +390,8 @@ public final class SkyDungeon {
     int[] entrance;
     /** {minX, minZ, maxX, maxZ} of each thing standing on the island's surface (the town, a farm, the road ...). */
     final List<int[]> surfaces = new ArrayList<>();
+    private int surfaceMinX = Integer.MIN_VALUE, surfaceMinZ = Integer.MIN_VALUE;
+    private int surfaceMaxX = Integer.MAX_VALUE, surfaceMaxZ = Integer.MAX_VALUE;
     /** {minX, minZ, maxX, maxZ} of each landmark's site out on a citadel's island (not the town or the road). */
     final List<int[]> sites = new ArrayList<>();
     private volatile Map<Long, int[]> byChunk;
@@ -488,10 +489,30 @@ public final class SkyDungeon {
         SkyDungeon dungeon = new SkyDungeon(field, island, kind);
         if (kind == Kind.SANCTUM) new SanctumLayout(dungeon).build();
         else new CitadelLayout(dungeon).build();
+        dungeon.finishBuild();
         synchronized (CACHE) {
             CACHE.put(key, dungeon);
         }
         return dungeon;
+    }
+
+    private void finishBuild() {
+        if (count < positions.length) {
+            positions = java.util.Arrays.copyOf(positions, count);
+            data = java.util.Arrays.copyOf(data, count);
+        }
+        int minX = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+        for (int[] s : surfaces) {
+            if (s[0] < minX) minX = s[0];
+            if (s[1] < minZ) minZ = s[1];
+            if (s[2] > maxX) maxX = s[2];
+            if (s[3] > maxZ) maxZ = s[3];
+        }
+        surfaceMinX = minX;
+        surfaceMinZ = minZ;
+        surfaceMaxX = maxX;
+        surfaceMaxZ = maxZ;
     }
 
     public Kind kind() {
@@ -580,6 +601,7 @@ public final class SkyDungeon {
 
     /** Whether the dungeon stands on this column of the island's surface (no plants or trees there). */
     public boolean coversSurface(int x, int z) {
+        if (x < surfaceMinX || x > surfaceMaxX || z < surfaceMinZ || z > surfaceMaxZ) return false;
         for (int[] s : surfaces) if (x >= s[0] && x <= s[2] && z >= s[1] && z <= s[3]) return true;
         return false;
     }
@@ -620,11 +642,11 @@ public final class SkyDungeon {
 
     /** Index of the piece at a packed position, or -1. */
     private int find(long k) {
-        int mask = table.length - 1;
+        int mask = tableIndex.length - 1;
         for (int h = mix(k) & mask;; h = (h + 1) & mask) {
             int i = tableIndex[h];
             if (i == 0) return -1;
-            if (table[h] == k) return i - 1;
+            if (positions[i - 1] == k) return i - 1;
         }
     }
 
@@ -634,17 +656,15 @@ public final class SkyDungeon {
     }
 
     private void grow() {
-        long[] oldTable = table;
         int[] oldIndex = tableIndex;
-        table = new long[oldTable.length * 2];
         tableIndex = new int[oldIndex.length * 2];
-        int mask = table.length - 1;
-        for (int h = 0; h < oldTable.length; h++) {
-            if (oldIndex[h] == 0) continue;
-            int n = mix(oldTable[h]) & mask;
+        int mask = tableIndex.length - 1;
+        for (int h = 0; h < oldIndex.length; h++) {
+            int idx = oldIndex[h];
+            if (idx == 0) continue;
+            int n = mix(positions[idx - 1]) & mask;
             while (tableIndex[n] != 0) n = (n + 1) & mask;
-            table[n] = oldTable[h];
-            tableIndex[n] = oldIndex[h];
+            tableIndex[n] = idx;
         }
     }
 
@@ -679,11 +699,10 @@ public final class SkyDungeon {
         positions[count] = k;
         data[count] = v;
         count++;
-        if (count * 2 > table.length) grow();
-        int mask = table.length - 1;
+        if (count * 2 > tableIndex.length) grow();
+        int mask = tableIndex.length - 1;
         int h = mix(k) & mask;
         while (tableIndex[h] != 0) h = (h + 1) & mask;
-        table[h] = k;
         tableIndex[h] = count;
     }
 

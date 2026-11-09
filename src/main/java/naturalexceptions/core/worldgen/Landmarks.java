@@ -116,10 +116,67 @@ public final class Landmarks {
         }
     }
 
+    private static final int SEED_CACHE_SIZE = 8;
+    private static final int CELL_CACHE_SIZE = 4096;
+    private static final Object EMPTY_CELL = new Object();
+
+    private static final java.util.Map<Long, Landmarks> BY_SEED = new java.util.LinkedHashMap<Long, Landmarks>(
+        16,
+        0.75F,
+        true) {
+
+        @Override
+        protected boolean removeEldestEntry(java.util.Map.Entry<Long, Landmarks> eldest) {
+            return size() > SEED_CACHE_SIZE;
+        }
+    };
+
+    private static final java.util.Map<Long, java.util.Map<Long, Object>> CELL_CACHES = new java.util.LinkedHashMap<Long, java.util.Map<Long, Object>>(
+        16,
+        0.75F,
+        true) {
+
+        @Override
+        protected boolean removeEldestEntry(java.util.Map.Entry<Long, java.util.Map<Long, Object>> eldest) {
+            return size() > SEED_CACHE_SIZE;
+        }
+    };
+
+    private static java.util.Map<Long, Object> cellCacheFor(long seed) {
+        synchronized (CELL_CACHES) {
+            java.util.Map<Long, Object> cache = CELL_CACHES.get(seed);
+            if (cache == null) {
+                cache = new java.util.LinkedHashMap<Long, Object>(512, 0.75F, true) {
+
+                    @Override
+                    protected boolean removeEldestEntry(java.util.Map.Entry<Long, Object> eldest) {
+                        return size() > CELL_CACHE_SIZE;
+                    }
+                };
+                CELL_CACHES.put(seed, cache);
+            }
+            return cache;
+        }
+    }
+
+    /** Returns a cached {@link Landmarks} field for {@code seed}. */
+    public static Landmarks of(long seed) {
+        synchronized (BY_SEED) {
+            Landmarks field = BY_SEED.get(seed);
+            if (field == null) {
+                field = new Landmarks(seed);
+                BY_SEED.put(seed, field);
+            }
+            return field;
+        }
+    }
+
     private final LandmarkNoise noise;
+    private final java.util.Map<Long, Object> cells;
 
     public Landmarks(long seed) {
         this.noise = new LandmarkNoise(seed ^ 0x4749414e54464541L);
+        this.cells = cellCacheFor(this.noise.seed());
     }
 
     public long seed() {
@@ -127,6 +184,20 @@ public final class Landmarks {
     }
 
     public Landmark atCell(long cellX, long cellZ) {
+        long key = (cellX << 32) ^ (cellZ & 0xffffffffL);
+        Object cached;
+        synchronized (cells) {
+            cached = cells.get(key);
+        }
+        if (cached != null) return cached == EMPTY_CELL ? null : (Landmark) cached;
+        Landmark computed = computeAtCell(cellX, cellZ);
+        synchronized (cells) {
+            cells.put(key, computed == null ? EMPTY_CELL : computed);
+        }
+        return computed;
+    }
+
+    private Landmark computeAtCell(long cellX, long cellZ) {
         if (noise.unit(cellX, cellZ, 1) >= PRESENCE) return null;
         int x = (int) (cellX * CELL + MARGIN + noise.unit(cellX, cellZ, 2) * (CELL - 2 * MARGIN));
         int z = (int) (cellZ * CELL + MARGIN + noise.unit(cellX, cellZ, 3) * (CELL - 2 * MARGIN));

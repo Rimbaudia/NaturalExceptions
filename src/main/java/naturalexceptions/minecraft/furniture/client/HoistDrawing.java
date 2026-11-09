@@ -10,7 +10,21 @@ import cpw.mods.fml.relauncher.SideOnly;
 @SideOnly(Side.CLIENT)
 final class HoistDrawing {
 
+    private static boolean batching = false;
+
     private HoistDrawing() {}
+
+    public static void beginBatch() {
+        Tessellator.instance.startDrawingQuads();
+        batching = true;
+    }
+
+    public static void endBatch() {
+        if (batching) {
+            batching = false;
+            Tessellator.instance.draw();
+        }
+    }
 
     /** A box {minX, minY, minZ, maxX, maxY, maxZ}, each face its share of {@code icon}, shaded as blocks are. */
     static void box(IIcon icon, double[] b) {
@@ -18,7 +32,7 @@ final class HoistDrawing {
         double u0 = icon.getInterpolatedU(clamp(b[0]) * 16), u1 = icon.getInterpolatedU(clamp(b[3]) * 16);
         double w0 = icon.getInterpolatedU(clamp(b[2]) * 16), w1 = icon.getInterpolatedU(clamp(b[5]) * 16);
         double v0 = icon.getInterpolatedV(16 - Math.min(16, (b[4] - b[1]) * 16)), v1 = icon.getInterpolatedV(16);
-        t.startDrawingQuads();
+        if (!batching) t.startDrawingQuads();
         t.setColorOpaque_F(1.0F, 1.0F, 1.0F);
         t.setNormal(0, 1, 0);
         t.addVertexWithUV(b[0], b[4], b[2], u0, w0);
@@ -53,7 +67,7 @@ final class HoistDrawing {
         t.addVertexWithUV(b[3], b[4], b[2], w1, v0);
         t.addVertexWithUV(b[3], b[4], b[5], w0, v0);
         t.addVertexWithUV(b[3], b[1], b[5], w0, v1);
-        t.draw();
+        if (!batching) t.draw();
     }
 
     private static double clamp(double v) {
@@ -78,7 +92,7 @@ final class HoistDrawing {
         e2 = scale(e2, half);
         double u0 = icon.getMinU(), u1 = icon.getInterpolatedU(2), v0 = icon.getMinV(), v1 = icon.getMaxV();
         Tessellator t = Tessellator.instance;
-        t.startDrawingQuads();
+        if (!batching) t.startDrawingQuads();
         double[][] corners = { add(e1, e2, 1, 1), add(e1, e2, -1, 1), add(e1, e2, -1, -1), add(e1, e2, 1, -1) };
         for (int k = 0; k < 4; k++) {
             double[] c0 = corners[k], c1 = corners[(k + 1) % 4];
@@ -99,7 +113,7 @@ final class HoistDrawing {
                 new double[][] { { u0, v0 }, { u1, v0 }, { u1, v1 }, { u0, v1 } },
                 out);
         }
-        t.draw();
+        if (!batching) t.draw();
     }
 
     /**
@@ -109,7 +123,7 @@ final class HoistDrawing {
     static void prism(IIcon icon, int sides, double radius, double from, double to, boolean aboutX) {
         tint = tintFor(icon);
         Tessellator t = Tessellator.instance;
-        t.startDrawingQuads();
+        if (!batching) t.startDrawingQuads();
         double vTop = icon.getInterpolatedV(16 - Math.min(16, (to - from) * 16)), vBottom = icon.getMaxV();
         double[] axis = aboutX ? new double[] { 1, 0, 0 } : new double[] { 0, 0, 1 };
         for (int i = 0; i < sides; i++) {
@@ -133,7 +147,7 @@ final class HoistDrawing {
                     end == 0 ? scale(axis, -1) : axis);
             }
         }
-        t.draw();
+        if (!batching) t.draw();
     }
 
     /**
@@ -144,7 +158,7 @@ final class HoistDrawing {
     static void ring(IIcon icon, int sides, double inner, double outer, double half) {
         tint = tintFor(icon);
         Tessellator t = Tessellator.instance;
-        t.startDrawingQuads();
+        if (!batching) t.startDrawingQuads();
         double u0 = icon.getMinU(), u1 = icon.getInterpolatedU(16 * Math.min(1, 2 * half)), vA = icon.getMinV();
         for (int i = 0; i < sides; i++) {
             double a0 = 2 * Math.PI * i / sides, a1 = 2 * Math.PI * (i + 1) / sides, mid = (a0 + a1) / 2;
@@ -176,7 +190,7 @@ final class HoistDrawing {
                 face,
                 new double[] { 0, 0, -1 });
         }
-        t.draw();
+        if (!batching) t.draw();
     }
 
     /**

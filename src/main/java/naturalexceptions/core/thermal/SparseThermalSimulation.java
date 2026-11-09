@@ -55,12 +55,16 @@ public final class SparseThermalSimulation {
         private final ActiveThermalState state;
         private final double conductance;
         private long lastUpdateTick;
+        private final String payload;
+        private final DeterministicId eventId;
 
         public ActiveRecord(long id, ActiveThermalState state, double conductance, long startTick) {
             this.id = id;
             this.state = state;
             this.conductance = conductance;
             this.lastUpdateTick = startTick;
+            this.payload = String.valueOf(id);
+            this.eventId = DeterministicId.derive("thermal", this.payload);
         }
 
         public long id() {
@@ -82,6 +86,10 @@ public final class SparseThermalSimulation {
         public void setLastUpdateTick(long tick) {
             this.lastUpdateTick = tick;
         }
+
+        public DeterministicId eventId() {
+            return eventId;
+        }
     }
 
     /**
@@ -97,10 +105,8 @@ public final class SparseThermalSimulation {
         ActiveRecord record = new ActiveRecord(sampleId, state, conductance, currentTick);
         activeRecords.put(sampleId, record);
 
-        DeterministicId eventId = DeterministicId.derive("thermal", String.valueOf(sampleId));
-        if (!scheduler.contains(eventId)) {
-            scheduler
-                .schedule(new ScheduledEvent(eventId, EVENT_TYPE_THERMAL, currentTick + 1, String.valueOf(sampleId)));
+        if (!scheduler.contains(record.eventId)) {
+            scheduler.schedule(new ScheduledEvent(record.eventId, EVENT_TYPE_THERMAL, currentTick + 1, record.payload));
         }
     }
 
@@ -145,9 +151,8 @@ public final class SparseThermalSimulation {
                 activeRecords.remove(sampleId);
             } else {
                 // Schedule next evaluation
-                DeterministicId nextEventId = DeterministicId.derive("thermal", String.valueOf(sampleId));
                 scheduler.schedule(
-                    new ScheduledEvent(nextEventId, EVENT_TYPE_THERMAL, currentTick + 5, String.valueOf(sampleId)));
+                    new ScheduledEvent(record.eventId, EVENT_TYPE_THERMAL, currentTick + 5, record.payload));
             }
         });
     }

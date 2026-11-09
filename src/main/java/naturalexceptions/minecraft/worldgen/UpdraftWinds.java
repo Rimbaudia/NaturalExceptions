@@ -46,14 +46,23 @@ public final class UpdraftWinds {
         Long checked = lastChecked.get(player.getUniqueID());
         if (checked != null && now - checked < CHECK_TICKS && now >= checked) return;
         lastChecked.put(player.getUniqueID(), now);
-        SkyIslands field = DungeonBeacons.field(player.worldObj);
+        SkyIslands field = SkyIslands.of(NEOverworldGenerator.landmarkSeed(player.worldObj));
         Updrafts drafts = updrafts(field);
-        Updrafts.Column in = drafts.at(player.posX, player.boundingBox.minY, player.posZ);
+        int x = (int) Math.floor(player.posX), z = (int) Math.floor(player.posZ);
+        java.util.List<SkyIslands.Island> nearby = field.near(x - SEEN, z - SEEN, x + SEEN, z + SEEN);
+        Updrafts.Column in = null;
+        for (SkyIslands.Island island : nearby) {
+            Updrafts.Column column = drafts.of(island);
+            if (column != null && column.holds(player.posX, player.boundingBox.minY, player.posZ)) {
+                in = column;
+                break;
+            }
+        }
         if (in != null) {
             NENetwork.CHANNEL.sendTo(new PacketUpdraft(in.top), player);
             grounded(player);
         }
-        mist(player, drafts, field);
+        mist(player, drafts, nearby);
     }
 
     /**
@@ -73,11 +82,10 @@ public final class UpdraftWinds {
     }
 
     /** Wisps of mist drifting up the columns near the player, about their height. */
-    private static void mist(EntityPlayerMP player, Updrafts drafts, SkyIslands field) {
+    private static void mist(EntityPlayerMP player, Updrafts drafts, java.util.List<SkyIslands.Island> nearby) {
         if (!(player.worldObj instanceof WorldServer)) return;
         WorldServer world = (WorldServer) player.worldObj;
-        int x = (int) Math.floor(player.posX), z = (int) Math.floor(player.posZ);
-        for (SkyIslands.Island island : field.near(x - SEEN, z - SEEN, x + SEEN, z + SEEN)) {
+        for (SkyIslands.Island island : nearby) {
             Updrafts.Column column = drafts.of(island);
             if (column == null) continue;
             double dx = column.x - player.posX, dz = column.z - player.posZ;

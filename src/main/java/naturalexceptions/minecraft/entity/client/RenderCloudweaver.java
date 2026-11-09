@@ -32,10 +32,21 @@ public final class RenderCloudweaver extends RenderSpider {
         return SKIN;
     }
 
+    private float prevLX, prevLY;
+
     /** Its eyes, drawn bright over the skin as a spider's are. */
     @Override
     protected int shouldRenderPass(EntitySpider spider, int pass, float partialTicks) {
-        if (pass != 0) return -1;
+        if (pass != 0) {
+            if (pass == 1) {
+                OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, prevLX, prevLY);
+                GL11.glEnable(GL11.GL_ALPHA_TEST);
+                GL11.glDisable(GL11.GL_BLEND);
+            }
+            return -1;
+        }
+        prevLX = OpenGlHelper.lastBrightnessX;
+        prevLY = OpenGlHelper.lastBrightnessY;
         bindTexture(EYES);
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glDisable(GL11.GL_ALPHA_TEST);

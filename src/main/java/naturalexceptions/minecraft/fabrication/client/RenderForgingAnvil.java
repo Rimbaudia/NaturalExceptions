@@ -49,6 +49,7 @@ public final class RenderForgingAnvil extends TileEntitySpecialRenderer {
                     .getLightBrightnessForSkyBlocks(te.xCoord, te.yCoord + 1, te.zCoord, 0) : 15728880;
                 int l1 = brightness % 65536;
                 int l2 = brightness / 65536;
+                float prevLX = OpenGlHelper.lastBrightnessX, prevLY = OpenGlHelper.lastBrightnessY;
                 OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, (float) l1, (float) l2);
 
                 int colorInt = workpiece.getItem()
@@ -98,6 +99,8 @@ public final class RenderForgingAnvil extends TileEntitySpecialRenderer {
                     }
                 }
 
+                OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, prevLX, prevLY);
+                GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
                 GL11.glEnable(GL11.GL_CULL_FACE);
                 GL11.glDisable(GL11.GL_BLEND);
                 GL11.glPopMatrix();

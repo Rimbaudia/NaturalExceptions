@@ -35,6 +35,7 @@ public final class P8WorldState {
     private long lastCalendarYear = -1;
     /** Transient: re-derived after load, because regular Star Rain scheduling is idempotent by identity. */
     private long lastStarRainCheckDay = -1;
+    private final java.util.Set<Long> ensuredAnomalyCells = new java.util.HashSet<>();
 
     public P8WorldState(long seed, int epoch, long creationTick) {
         this(
@@ -266,15 +267,32 @@ public final class P8WorldState {
 
     /** Deterministically refines only the 3x3 nearby site cells; registered results then persist as history. */
     public synchronized boolean ensureAnomaliesNear(int x, int z) {
+        long cellX = Math.floorDiv(x, 1024);
+        long cellZ = Math.floorDiv(z, 1024);
+        boolean allEnsured = true;
+        for (long cx = cellX - 1; cx <= cellX + 1; cx++) {
+            for (long cz = cellZ - 1; cz <= cellZ + 1; cz++) {
+                if (!ensuredAnomalyCells.contains(packCell(cx, cz))) {
+                    allEnsured = false;
+                    break;
+                }
+            }
+            if (!allEnsured) break;
+        }
+        if (allEnsured) return false;
+
         OverworldGeneration generation = new OverworldGeneration(
             seed,
             naturalexceptions.core.persistence.WorldgenEpoch.of(epoch));
         WorldgenSites sites = new WorldgenSites(generation);
-        long cellX = Math.floorDiv(x, 1024);
-        long cellZ = Math.floorDiv(z, 1024);
         boolean changed = false;
         for (long cx = cellX - 1; cx <= cellX + 1; cx++) {
             for (long cz = cellZ - 1; cz <= cellZ + 1; cz++) {
+                long packedCell = packCell(cx, cz);
+                if (ensuredAnomalyCells.contains(packedCell)) continue;
+                if (anomalies.size() < MAX_RETAINED_ANOMALIES) {
+                    ensuredAnomalyCells.add(packedCell);
+                }
                 long hash = mix(seed ^ (cx * 0x9e3779b97f4a7c15L) ^ (cz * 0xc2b2ae3d27d4eb4fL) ^ ((long) epoch << 43));
                 double roll = (hash >>> 11) * 0x1.0p-53;
                 if (generation.sample((int) (cx * 1024 + 512), (int) (cz * 1024 + 512))
@@ -318,6 +336,10 @@ public final class P8WorldState {
             }
         }
         return changed;
+    }
+
+    private static long packCell(long cx, long cz) {
+        return (cx << 32) | (cz & 0xFFFFFFFFL);
     }
 
     private static long mix(long value) {

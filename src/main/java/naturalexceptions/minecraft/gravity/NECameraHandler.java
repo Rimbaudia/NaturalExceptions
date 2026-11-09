@@ -29,6 +29,17 @@ public final class NECameraHandler {
     private NECameraHandler() {}
 
     /**
+     * Applies a precomputed presentation frame's 3D orthonormal camera orientation to the OpenGL MODELVIEW matrix.
+     */
+    public static void applyOrientation(NEPlayerPresentationFrame frame) {
+        if (frame == null) {
+            return;
+        }
+        frame.uploadCameraMatrix(MATRIX_BUFFER);
+        GL11.glMultMatrix(MATRIX_BUFFER);
+    }
+
+    /**
      * Applies the complete 3D orthonormal camera orientation to the OpenGL MODELVIEW matrix.
      * Invoked from {@code MixinEntityRenderer.orientCamera()}.
      */
@@ -44,7 +55,6 @@ public final class NECameraHandler {
 
         NEPlayerPresentationFrame frame = NEPlayerPresentationService.instance()
             .getPresentationFrame(viewEntity, partialTicks);
-        frame.uploadCameraMatrix(MATRIX_BUFFER);
-        GL11.glMultMatrix(MATRIX_BUFFER);
+        applyOrientation(frame);
     }
 }

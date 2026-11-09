@@ -421,15 +421,45 @@ public final class BiologicalEvents {
         return 0.0;
     }
 
+    private static final java.lang.reflect.Field FOOD_EXHAUSTION = findFoodField(
+        "foodExhaustionLevel",
+        "field_75126_c");
+    private static final java.lang.reflect.Field FOOD_SATURATION = findFoodField(
+        "foodSaturationLevel",
+        "field_75125_d");
+
+    private static java.lang.reflect.Field findFoodField(String mcpName, String srgName) {
+        try {
+            return cpw.mods.fml.relauncher.ReflectionHelper
+                .findField(net.minecraft.util.FoodStats.class, mcpName, srgName);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
     /**
      * Work done since last time (vanilla's exhaustion from walking, running, jumping, fighting and healing) spent
      * from the body's stores: four exhaustion cost a hunger point of energy and 40 mL of water. The exhaustion is
      * then cleared so vanilla does not spend it again on the bar (which is drawn from the body's energy).
      */
     static void spendExhaustion(EntityPlayer player, BiologicalState state) {
+        net.minecraft.util.FoodStats stats = player.getFoodStats();
+        if (FOOD_EXHAUSTION != null && FOOD_SATURATION != null) {
+            try {
+                float exhaustion = FOOD_EXHAUSTION.getFloat(stats);
+                if (exhaustion <= 0.0F) return;
+                double points = exhaustion / 4.0;
+                state.spend(
+                    points * state.physiology()
+                        .energyPerHungerPoint(),
+                    points * 40.0);
+                FOOD_EXHAUSTION.setFloat(stats, 0.0F);
+                FOOD_SATURATION.setFloat(stats, 0.0F);
+                return;
+            } catch (IllegalAccessException ignored) {}
+        }
         net.minecraft.nbt.NBTTagCompound food = new net.minecraft.nbt.NBTTagCompound();
-        player.getFoodStats()
-            .writeNBT(food);
+        stats.writeNBT(food);
         float exhaustion = food.getFloat("foodExhaustionLevel");
         if (exhaustion <= 0.0F) return;
         double points = exhaustion / 4.0;
@@ -439,8 +469,7 @@ public final class BiologicalEvents {
             points * 40.0);
         food.setFloat("foodExhaustionLevel", 0.0F);
         food.setFloat("foodSaturationLevel", 0.0F);
-        player.getFoodStats()
-            .readNBT(food);
+        stats.readNBT(food);
     }
 
     @SubscribeEvent

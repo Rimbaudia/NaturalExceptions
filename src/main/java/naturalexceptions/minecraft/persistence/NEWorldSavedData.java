@@ -22,12 +22,16 @@ public final class NEWorldSavedData extends WorldSavedData {
     private final DueTimeScheduler scheduler = new DueTimeScheduler();
     private NBTTagCompound p8PendingNbt;
     private P8WorldState p8;
+    private NBTTagCompound cachedP8Tag;
     private NBTTagCompound fluidPendingNbt;
     private FluidWorldState fluids;
+    private NBTTagCompound cachedFluidsTag;
     private NBTTagCompound electricalPendingNbt;
     private ElectricalWorldState electrical;
+    private NBTTagCompound cachedElectricalTag;
     private NBTTagCompound p11PendingNbt;
     private StarRainHistory p11;
+    private NBTTagCompound cachedP11Tag;
 
     public NEWorldSavedData(String name) {
         super(name);
@@ -86,7 +90,7 @@ public final class NEWorldSavedData extends WorldSavedData {
             ? new P8WorldState(world.getSeed(), metadata.worldgenEpoch().value(), createdAt)
             : P8WorldStateNbtCodec.read(p8PendingNbt, world.getSeed(), metadata.worldgenEpoch().value(), createdAt);
         p8PendingNbt = null;
-        markDirty();
+        markP8Dirty();
     }
 
     private synchronized void ensureFluids() {
@@ -94,6 +98,7 @@ public final class NEWorldSavedData extends WorldSavedData {
         fluids = fluidPendingNbt == null ? new FluidWorldState()
             : FluidWorldStateNbtCodec.read(fluidPendingNbt);
         fluidPendingNbt = null;
+        cachedFluidsTag = null;
     }
 
     public synchronized FluidWorldState fluids() {
@@ -106,6 +111,7 @@ public final class NEWorldSavedData extends WorldSavedData {
         electrical = electricalPendingNbt == null ? new ElectricalWorldState()
             : ElectricalWorldStateNbtCodec.read(electricalPendingNbt);
         electricalPendingNbt = null;
+        cachedElectricalTag = null;
     }
 
     public synchronized ElectricalWorldState electrical() {
@@ -117,6 +123,7 @@ public final class NEWorldSavedData extends WorldSavedData {
         if (p11 != null) return;
         p11 = p11PendingNbt == null ? new StarRainHistory() : StarRainHistoryNbtCodec.read(p11PendingNbt);
         p11PendingNbt = null;
+        cachedP11Tag = null;
     }
 
     public synchronized StarRainHistory p11() {
@@ -124,10 +131,51 @@ public final class NEWorldSavedData extends WorldSavedData {
         return p11;
     }
 
+    public synchronized void markP8Dirty() {
+        cachedP8Tag = null;
+        super.markDirty();
+    }
+
+    public synchronized void markFluidsDirty() {
+        cachedFluidsTag = null;
+        super.markDirty();
+    }
+
+    public synchronized void markElectricalDirty() {
+        cachedElectricalTag = null;
+        super.markDirty();
+    }
+
+    public synchronized void markP11Dirty() {
+        cachedP11Tag = null;
+        super.markDirty();
+    }
+
+    public synchronized void markSchedulerDirty() {
+        super.markDirty();
+    }
+
     @Override
-    public void readFromNBT(NBTTagCompound nbt) {
+    public synchronized void markDirty() {
+        cachedP8Tag = null;
+        cachedFluidsTag = null;
+        cachedElectricalTag = null;
+        cachedP11Tag = null;
+        super.markDirty();
+    }
+
+    @Override
+    public synchronized void readFromNBT(NBTTagCompound nbt) {
         this.metadata = NEWorldMetadataCodec.readFromNbt(nbt);
         this.scheduler.restore(NEWorldMetadataCodec.readScheduledEventsFromNbt(nbt));
+        this.p8 = null;
+        this.cachedP8Tag = null;
+        this.fluids = null;
+        this.cachedFluidsTag = null;
+        this.electrical = null;
+        this.cachedElectricalTag = null;
+        this.p11 = null;
+        this.cachedP11Tag = null;
         this.p8PendingNbt = nbt.hasKey("P8", 10) ? (NBTTagCompound) nbt.getCompoundTag("P8").copy() : null;
         this.fluidPendingNbt = nbt.hasKey("P9Fluids", 10)
             ? (NBTTagCompound) nbt.getCompoundTag("P9Fluids").copy() : null;
@@ -139,19 +187,35 @@ public final class NEWorldSavedData extends WorldSavedData {
     }
 
     @Override
-    public void writeToNBT(NBTTagCompound nbt) {
+    public synchronized void writeToNBT(NBTTagCompound nbt) {
         if (metadata != null) {
             NEWorldMetadataCodec.writeToNbt(metadata, nbt);
         }
         NEWorldMetadataCodec.writeScheduledEventsToNbt(scheduler.snapshot(), nbt);
-        if (p8 != null) nbt.setTag("P8", P8WorldStateNbtCodec.write(p8));
-        else if (p8PendingNbt != null) nbt.setTag("P8", (NBTTagCompound) p8PendingNbt.copy());
-        if (fluids != null) nbt.setTag("P9Fluids", FluidWorldStateNbtCodec.write(fluids));
-        else if (fluidPendingNbt != null) nbt.setTag("P9Fluids", (NBTTagCompound) fluidPendingNbt.copy());
-        if (electrical != null) nbt.setTag("P9Electricity", ElectricalWorldStateNbtCodec.write(electrical));
-        else if (electricalPendingNbt != null) nbt.setTag("P9Electricity", (NBTTagCompound) electricalPendingNbt.copy());
-        if (p11 != null) nbt.setTag("P11StarRain", StarRainHistoryNbtCodec.write(p11));
-        else if (p11PendingNbt != null) nbt.setTag("P11StarRain", (NBTTagCompound) p11PendingNbt.copy());
+        if (p8 != null) {
+            if (cachedP8Tag == null) cachedP8Tag = P8WorldStateNbtCodec.write(p8);
+            nbt.setTag("P8", (NBTTagCompound) cachedP8Tag.copy());
+        } else if (p8PendingNbt != null) {
+            nbt.setTag("P8", (NBTTagCompound) p8PendingNbt.copy());
+        }
+        if (fluids != null) {
+            if (cachedFluidsTag == null) cachedFluidsTag = FluidWorldStateNbtCodec.write(fluids);
+            nbt.setTag("P9Fluids", (NBTTagCompound) cachedFluidsTag.copy());
+        } else if (fluidPendingNbt != null) {
+            nbt.setTag("P9Fluids", (NBTTagCompound) fluidPendingNbt.copy());
+        }
+        if (electrical != null) {
+            if (cachedElectricalTag == null) cachedElectricalTag = ElectricalWorldStateNbtCodec.write(electrical);
+            nbt.setTag("P9Electricity", (NBTTagCompound) cachedElectricalTag.copy());
+        } else if (electricalPendingNbt != null) {
+            nbt.setTag("P9Electricity", (NBTTagCompound) electricalPendingNbt.copy());
+        }
+        if (p11 != null) {
+            if (cachedP11Tag == null) cachedP11Tag = StarRainHistoryNbtCodec.write(p11);
+            nbt.setTag("P11StarRain", (NBTTagCompound) cachedP11Tag.copy());
+        } else if (p11PendingNbt != null) {
+            nbt.setTag("P11StarRain", (NBTTagCompound) p11PendingNbt.copy());
+        }
         // Legacy world-global material names are intentionally not written: their author is unknown.
     }
 }

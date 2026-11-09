@@ -188,17 +188,21 @@ public final class EntityBalloon extends Entity {
         motionY = climb * dt;
         motionZ = vz * dt;
         // The envelope over the basket meets the world too: it stops against what it would push into.
-        AxisAlignedBB envelope = AxisAlignedBB.getBoundingBox(
-            posX - ENVELOPE_RADIUS,
-            boundingBox.minY + ENVELOPE_BOTTOM,
-            posZ - ENVELOPE_RADIUS,
-            posX + ENVELOPE_RADIUS,
-            boundingBox.minY + ENVELOPE_TOP,
-            posZ + ENVELOPE_RADIUS);
-        if (motionY > 0 && blocked(envelope.getOffsetBoundingBox(0, motionY, 0))) motionY = climb = 0;
-        if (blocked(envelope.getOffsetBoundingBox(motionX, 0, motionZ))) {
-            motionX = motionZ = 0;
-            vx = vz = 0;
+        boolean checkY = motionY > 0;
+        boolean checkXZ = Math.abs(motionX) > 1e-6 || Math.abs(motionZ) > 1e-6;
+        if (checkY || checkXZ) {
+            AxisAlignedBB envelope = AxisAlignedBB.getBoundingBox(
+                posX - ENVELOPE_RADIUS,
+                boundingBox.minY + ENVELOPE_BOTTOM,
+                posZ - ENVELOPE_RADIUS,
+                posX + ENVELOPE_RADIUS,
+                boundingBox.minY + ENVELOPE_TOP,
+                posZ + ENVELOPE_RADIUS);
+            if (checkY && blocked(envelope.getOffsetBoundingBox(0, motionY, 0))) motionY = climb = 0;
+            if (checkXZ && blocked(envelope.getOffsetBoundingBox(motionX, 0, motionZ))) {
+                motionX = motionZ = 0;
+                vx = vz = 0;
+            }
         }
         double before = climb;
         moveEntity(motionX, motionY, motionZ);
@@ -207,8 +211,14 @@ public final class EntityBalloon extends Entity {
                 rider.attackEntityFrom(DamageSource.fall, (float) ((-before - SAFE_LANDING) * 2.0));
             climb = 0;
         }
-        dataWatcher.updateObject(KELVIN, (int) Math.round(kelvin * 10));
-        dataWatcher.updateObject(FLAME, (byte) flame);
+        int kelvinTenths = (int) Math.round(kelvin * 10);
+        if (dataWatcher.getWatchableObjectInt(KELVIN) != kelvinTenths) {
+            dataWatcher.updateObject(KELVIN, kelvinTenths);
+        }
+        byte flameByte = (byte) flame;
+        if (dataWatcher.getWatchableObjectByte(FLAME) != flameByte) {
+            dataWatcher.updateObject(FLAME, flameByte);
+        }
         if (flame == OPEN && ticksExisted % 30 == 0)
             worldObj.playSoundAtEntity(this, "naturalexceptions:balloon.burner", 1.0F, 0.9F + rand.nextFloat() * 0.2F);
     }

@@ -16,11 +16,11 @@ import naturalexceptions.core.worldgen.SkyIslands;
 public final class SkyIslandSpawns {
 
     /** Islands' undersides, by column (Integer.MAX_VALUE where there is no island), for the columns last asked about. */
-    private final Map<Long, Integer> undersides = new LinkedHashMap<Long, Integer>(512, 0.75F, true) {
+    private final Map<Long, Integer> undersides = new LinkedHashMap<Long, Integer>(16384, 0.75F, true) {
 
         @Override
         protected boolean removeEldestEntry(Map.Entry<Long, Integer> eldest) {
-            return size() > 4096;
+            return size() > 16384;
         }
     };
     private long seed = Long.MIN_VALUE;
@@ -28,7 +28,7 @@ public final class SkyIslandSpawns {
     @SubscribeEvent
     public void onPotentialSpawns(WorldEvent.PotentialSpawns event) {
         if (event.world == null || event.world.provider.dimensionId != 0) return;
-        SkyIslands field = DungeonBeacons.field(event.world);
+        SkyIslands field = SkyIslands.of(NEOverworldGenerator.landmarkSeed(event.world));
         if (forbids(field, event.x, event.y, event.z)) event.setCanceled(true);
     }
 

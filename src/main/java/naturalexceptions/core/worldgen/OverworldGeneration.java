@@ -69,6 +69,11 @@ public final class OverworldGeneration {
         return new OverworldSample(elevation, moisture, temperature, slope, geology, hydrology, soil, ecology);
     }
 
+    /** Samples only the geological province at (x, z), avoiding unrelated field evaluations. */
+    public GeologicalProvince geologyAt(int x, int z) {
+        return classifyGeology(valueField(x, z, 544, GEOLOGY_SALT));
+    }
+
     private GeologicalProvince classifyGeology(double value) {
         if (value > 0.28) return GeologicalProvince.BASALTIC;
         if (value < -0.28) return GeologicalProvince.SEDIMENTARY;

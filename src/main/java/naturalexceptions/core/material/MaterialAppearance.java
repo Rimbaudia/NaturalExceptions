@@ -3,6 +3,7 @@ package naturalexceptions.core.material;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 import naturalexceptions.core.composition.CanonicalComposition;
 import naturalexceptions.core.id.ResourceId;
@@ -19,6 +20,7 @@ import naturalexceptions.core.id.ResourceId;
  */
 public final class MaterialAppearance {
 
+    private static final Pattern NON_ALPHANUM = Pattern.compile("[^a-z0-9]+");
     private static final Map<ResourceId, Integer> ELEMENT_COLORS = new HashMap<>();
 
     // Standard baseline elemental and compound palette
@@ -140,7 +142,7 @@ public final class MaterialAppearance {
             String idStr = ref.asString()
                 .toLowerCase();
             // By whole word of the id: "gravel" is not Avel.
-            java.util.List<String> words = java.util.Arrays.asList(idStr.split("[^a-z0-9]+"));
+            java.util.List<String> words = java.util.Arrays.asList(NON_ALPHANUM.split(idStr));
             if (words.contains("avel")) {
                 return 0x55FFFF; // Radiant cyan
             } else if (words.contains("rhel")) {

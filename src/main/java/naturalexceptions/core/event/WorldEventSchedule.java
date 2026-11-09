@@ -28,6 +28,8 @@ public final class WorldEventSchedule {
     private final PriorityQueue<Transition> transitions = new PriorityQueue<>();
     private final PriorityQueue<CooldownExpiry> cooldownExpiries = new PriorityQueue<>();
     private long lastAdvancedTick;
+    private EventScheduleSnapshot cachedSnapshot;
+    private long cachedSnapshotTick = Long.MIN_VALUE;
 
     public WorldEventSchedule() {
         this(DEFAULT_MAX_RETAINED_EVENTS, DEFAULT_MAX_COOLDOWN_HISTORY);
@@ -100,6 +102,7 @@ public final class WorldEventSchedule {
         if (events.size() >= maxRetainedEvents) return false;
         events.put(event.id(), event);
         transitions.add(new Transition(event.scheduledAtTick(), event.id(), TransitionKind.START));
+        cachedSnapshot = null;
         return true;
     }
 
@@ -141,6 +144,7 @@ public final class WorldEventSchedule {
                 continue;
             }
             events.put(next.id(), next);
+            cachedSnapshot = null;
             changed.add(next);
             if (next.phase() == EventPhase.COMPLETED && !next.protectedOpportunity()) rememberCooldown(next);
         }
@@ -197,13 +201,18 @@ public final class WorldEventSchedule {
     }
 
     public synchronized EventScheduleSnapshot snapshot() {
+        if (cachedSnapshot != null && cachedSnapshotTick == lastAdvancedTick) {
+            return cachedSnapshot;
+        }
         List<EventRecord> eventSnapshot = new ArrayList<>(events.values());
         Collections.sort(eventSnapshot, new Comparator<EventRecord>() {
             @Override public int compare(EventRecord left, EventRecord right) { return left.id().compareTo(right.id()); }
         });
         List<EventCooldownHistory> historySnapshot = new ArrayList<>(cooldownHistory.values());
         Collections.sort(historySnapshot);
-        return new EventScheduleSnapshot(eventSnapshot, historySnapshot, lastAdvancedTick);
+        cachedSnapshot = new EventScheduleSnapshot(eventSnapshot, historySnapshot, lastAdvancedTick);
+        cachedSnapshotTick = lastAdvancedTick;
+        return cachedSnapshot;
     }
 
     private void rememberCooldown(EventRecord event) {
@@ -214,6 +223,7 @@ public final class WorldEventSchedule {
         if (old == null || next.lastOccurrenceTick() >= old.lastOccurrenceTick()) {
             cooldownHistory.put(key, next);
             cooldownExpiries.add(new CooldownExpiry(next.cooldownUntilTick(), key));
+            cachedSnapshot = null;
         }
     }
 
@@ -224,6 +234,7 @@ public final class WorldEventSchedule {
             if (current != null && current.cooldownUntilTick() <= nowTick
                 && current.cooldownUntilTick() == expiry.atTick) {
                 cooldownHistory.remove(expiry.key);
+                cachedSnapshot = null;
             }
         }
     }
@@ -243,6 +254,7 @@ public final class WorldEventSchedule {
         for (EventRecord event : removable) {
             if (events.size() < maxRetainedEvents) break;
             events.remove(event.id());
+            cachedSnapshot = null;
         }
     }
 

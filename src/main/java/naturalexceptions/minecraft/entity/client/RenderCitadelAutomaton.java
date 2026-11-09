@@ -31,6 +31,8 @@ public final class RenderCitadelAutomaton extends RenderBiped {
         "naturalexceptions",
         "textures/entity/citadel_automaton_glow.png");
 
+    private float prevLX, prevLY;
+
     public RenderCitadelAutomaton() {
         super(new Model(), 0.5F);
         setRenderPassModel(new Model());
@@ -49,7 +51,16 @@ public final class RenderCitadelAutomaton extends RenderBiped {
     /** One more pass: the visor slit and the heart, full bright; low while it is dormant. */
     @Override
     protected int shouldRenderPass(EntityLiving entity, int pass, float partialTicks) {
-        if (pass != 0) return -1;
+        if (pass != 0) {
+            if (pass == 1) {
+                OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, prevLX, prevLY);
+                GL11.glEnable(GL11.GL_ALPHA_TEST);
+                GL11.glDisable(GL11.GL_BLEND);
+            }
+            return -1;
+        }
+        prevLX = OpenGlHelper.lastBrightnessX;
+        prevLY = OpenGlHelper.lastBrightnessY;
         bindTexture(GLOW);
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glDisable(GL11.GL_ALPHA_TEST);

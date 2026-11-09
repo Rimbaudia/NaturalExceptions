@@ -19,6 +19,7 @@ public final class TileArcLamp extends TileEntity implements PowerDevice, PowerR
     /** Light at each step of brightness, and the power each step needs. */
     public static final int[] LIGHT = { 0, 7, 12, 15 };
     public static final double[] STEP_WATTS = { 0.0, 10.0, 45.0, 90.0 };
+    public static final double HYSTERESIS_WATTS = 1.5;
 
     private int load = -1;
     private double watts, volts, over;
@@ -28,6 +29,18 @@ public final class TileArcLamp extends TileEntity implements PowerDevice, PowerR
     public static int brightness(double watts) {
         for (int step = STEP_WATTS.length - 1; step > 0; step--) if (watts >= STEP_WATTS[step]) return step;
         return 0;
+    }
+
+    /** How bright it burns on {@code watts} given its current step, with a deadband against wind flicker. */
+    public static int brightness(double watts, int currentStep) {
+        int raw = brightness(watts);
+        if (raw == currentStep || watts <= 0.0) return raw;
+        if (raw < currentStep && currentStep > 0 && currentStep < STEP_WATTS.length) {
+            if (watts >= STEP_WATTS[currentStep] - HYSTERESIS_WATTS) return currentStep;
+        } else if (raw > currentStep && raw < STEP_WATTS.length) {
+            if (watts < STEP_WATTS[raw] + HYSTERESIS_WATTS) return currentStep;
+        }
+        return raw;
     }
 
     @Override
@@ -62,7 +75,8 @@ public final class TileArcLamp extends TileEntity implements PowerDevice, PowerR
             burst();
             return;
         }
-        int step = brightness(watts);
+        int currentMeta = worldObj.getBlockMetadata(xCoord, yCoord, zCoord);
+        int step = brightness(watts, currentMeta);
         // A burning arc hums and hisses.
         if (step > 0 && worldObj.getTotalWorldTime() % 40 < PowerNetworks.TICKS) worldObj.playSoundEffect(
             xCoord + 0.5,
@@ -71,7 +85,7 @@ public final class TileArcLamp extends TileEntity implements PowerDevice, PowerR
             "naturalexceptions:power.hum",
             0.1F * step,
             1.2F);
-        if (worldObj.getBlockMetadata(xCoord, yCoord, zCoord) != step) {
+        if (currentMeta != step) {
             worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, step, 2);
             worldObj.func_147451_t(xCoord, yCoord, zCoord);
         }

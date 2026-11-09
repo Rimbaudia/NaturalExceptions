@@ -29,6 +29,8 @@ public final class RenderCastellan extends RenderLiving {
         "naturalexceptions",
         "textures/entity/castellan_cracks.png");
 
+    private float prevLX, prevLY;
+
     public RenderCastellan() {
         super(new ModelCastellan(), 1.0F);
         setRenderPassModel(new ModelCastellan());
@@ -48,8 +50,16 @@ public final class RenderCastellan extends RenderLiving {
     /** Pass 0: the core and visor, full bright. Pass 1: the cracks, once it is Unbound, pulsing. */
     @Override
     protected int shouldRenderPass(EntityLivingBase entity, int pass, float partialTicks) {
-        if (pass > 1 || pass == 1 && !(entity instanceof EntityCastellan && ((EntityCastellan) entity).unbound()))
+        if (pass == 0) {
+            prevLX = OpenGlHelper.lastBrightnessX;
+            prevLY = OpenGlHelper.lastBrightnessY;
+        }
+        if (pass > 1 || pass == 1 && !(entity instanceof EntityCastellan && ((EntityCastellan) entity).unbound())) {
+            OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, prevLX, prevLY);
+            GL11.glEnable(GL11.GL_ALPHA_TEST);
+            GL11.glDisable(GL11.GL_BLEND);
             return -1;
+        }
         bindTexture(pass == 0 ? GLOW : CRACKS);
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glDisable(GL11.GL_ALPHA_TEST);

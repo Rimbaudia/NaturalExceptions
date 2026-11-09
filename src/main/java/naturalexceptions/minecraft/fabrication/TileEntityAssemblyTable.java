@@ -23,8 +23,15 @@ public class TileEntityAssemblyTable extends TileEntity implements IInventory {
     public static final int SLOT_RESULT = 2;
 
     private final ItemStack[] inventory = new ItemStack[2];
+    private ItemStack cachedResult;
+    private boolean resultDirty = true;
 
     public TileEntityAssemblyTable() {}
+
+    @Override
+    public boolean canUpdate() {
+        return false;
+    }
 
     @Override
     public int getSizeInventory() {
@@ -46,10 +53,15 @@ public class TileEntityAssemblyTable extends TileEntity implements IInventory {
     }
 
     public ItemStack computeResult() {
-        if (inventory[0] == null || inventory[1] == null) {
-            return null;
+        if (resultDirty) {
+            resultDirty = false;
+            if (inventory[0] == null || inventory[1] == null) {
+                cachedResult = null;
+            } else {
+                cachedResult = ToolAssemblyCarrier.assemble(inventory[0], inventory[1]);
+            }
         }
-        return ToolAssemblyCarrier.assemble(inventory[0], inventory[1]);
+        return cachedResult;
     }
 
     /** A single assembled tool can be laid on an empty table to take it apart. */
@@ -67,6 +79,7 @@ public class TileEntityAssemblyTable extends TileEntity implements IInventory {
         if (parts == null) return false;
         inventory[0] = parts[0];
         inventory[1] = parts[1];
+        resultDirty = true;
         markDirty();
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
@@ -79,13 +92,15 @@ public class TileEntityAssemblyTable extends TileEntity implements IInventory {
         if (slot == SLOT_RESULT) {
             ItemStack result = computeResult();
             if (result != null) {
+                ItemStack copy = result.copy();
                 decrSlotInternal(0, 1);
                 decrSlotInternal(1, 1);
+                resultDirty = true;
                 markDirty();
                 if (worldObj != null) {
                     worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
                 }
-                return result;
+                return copy;
             }
             return null;
         }
@@ -102,6 +117,7 @@ public class TileEntityAssemblyTable extends TileEntity implements IInventory {
                         inventory[slot] = null;
                     }
                 }
+                resultDirty = true;
                 markDirty();
                 if (worldObj != null) {
                     worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
@@ -118,6 +134,7 @@ public class TileEntityAssemblyTable extends TileEntity implements IInventory {
             if (inventory[slot].stackSize <= 0) {
                 inventory[slot] = null;
             }
+            resultDirty = true;
         }
     }
 
@@ -126,6 +143,7 @@ public class TileEntityAssemblyTable extends TileEntity implements IInventory {
         if (slot >= 0 && slot < 2) {
             ItemStack stack = inventory[slot];
             inventory[slot] = null;
+            resultDirty = true;
             return stack;
         }
         return null;
@@ -142,6 +160,7 @@ public class TileEntityAssemblyTable extends TileEntity implements IInventory {
             if (stack != null && stack.stackSize > getInventoryStackLimit()) {
                 stack.stackSize = getInventoryStackLimit();
             }
+            resultDirty = true;
             markDirty();
             if (worldObj != null) {
                 worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
@@ -213,6 +232,7 @@ public class TileEntityAssemblyTable extends TileEntity implements IInventory {
                 player.setCurrentItemOrArmor(0, null);
             }
             player.inventoryContainer.detectAndSendChanges();
+            resultDirty = true;
             markDirty();
             if (worldObj != null) {
                 worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
@@ -229,6 +249,7 @@ public class TileEntityAssemblyTable extends TileEntity implements IInventory {
                 player.setCurrentItemOrArmor(0, null);
             }
             player.inventoryContainer.detectAndSendChanges();
+            resultDirty = true;
             markDirty();
             if (worldObj != null) {
                 worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
@@ -264,6 +285,7 @@ public class TileEntityAssemblyTable extends TileEntity implements IInventory {
             if (inventory[i] != null) {
                 ItemStack ret = inventory[i];
                 inventory[i] = null;
+                resultDirty = true;
                 if (!player.inventory.addItemStackToInventory(ret)) {
                     player.dropPlayerItemWithRandomChoice(ret, false);
                 }
@@ -310,6 +332,7 @@ public class TileEntityAssemblyTable extends TileEntity implements IInventory {
                 inventory[slot] = ItemStack.loadItemStackFromNBT(itemTag);
             }
         }
+        resultDirty = true;
     }
 
     @Override

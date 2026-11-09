@@ -1,13 +1,15 @@
 package naturalexceptions.core.worldgen;
 
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import naturalexceptions.core.id.DeterministicId;
 
 /** A deterministic compact copper seam authored by one coarse deposit cell. */
 public final class CopperDeposit {
 
-    private final DeterministicId id;
+    private volatile DeterministicId id;
+    private final Supplier<DeterministicId> idSupplier;
     private final GeologicalProvince hostProvince;
     private final int centerX;
     private final int centerY;
@@ -20,6 +22,21 @@ public final class CopperDeposit {
     CopperDeposit(DeterministicId id, GeologicalProvince hostProvince, int centerX, int centerY, int centerZ,
         double directionX, double directionZ, double halfLength, double radius) {
         this.id = Objects.requireNonNull(id, "id");
+        this.idSupplier = null;
+        this.hostProvince = Objects.requireNonNull(hostProvince, "hostProvince");
+        this.centerX = centerX;
+        this.centerY = centerY;
+        this.centerZ = centerZ;
+        this.directionX = directionX;
+        this.directionZ = directionZ;
+        this.halfLength = halfLength;
+        this.radius = radius;
+    }
+
+    CopperDeposit(Supplier<DeterministicId> idSupplier, GeologicalProvince hostProvince, int centerX, int centerY,
+        int centerZ, double directionX, double directionZ, double halfLength, double radius) {
+        this.id = null;
+        this.idSupplier = Objects.requireNonNull(idSupplier, "idSupplier");
         this.hostProvince = Objects.requireNonNull(hostProvince, "hostProvince");
         this.centerX = centerX;
         this.centerY = centerY;
@@ -31,7 +48,12 @@ public final class CopperDeposit {
     }
 
     public DeterministicId id() {
-        return id;
+        DeterministicId resolved = id;
+        if (resolved == null) {
+            resolved = Objects.requireNonNull(idSupplier.get(), "id");
+            id = resolved;
+        }
+        return resolved;
     }
 
     public GeologicalProvince hostProvince() {
@@ -74,7 +96,7 @@ public final class CopperDeposit {
         if (this == other) return true;
         if (!(other instanceof CopperDeposit)) return false;
         CopperDeposit that = (CopperDeposit) other;
-        return id.equals(that.id) && hostProvince == that.hostProvince
+        return id().equals(that.id()) && hostProvince == that.hostProvince
             && centerX == that.centerX
             && centerY == that.centerY
             && centerZ == that.centerZ
@@ -86,6 +108,6 @@ public final class CopperDeposit {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, hostProvince, centerX, centerY, centerZ, directionX, directionZ, halfLength, radius);
+        return Objects.hash(id(), hostProvince, centerX, centerY, centerZ, directionX, directionZ, halfLength, radius);
     }
 }

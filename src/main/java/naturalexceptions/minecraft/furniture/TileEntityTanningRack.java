@@ -20,6 +20,11 @@ public final class TileEntityTanningRack extends TileEntityStorage {
     }
 
     @Override
+    public boolean canUpdate() {
+        return true;
+    }
+
+    @Override
     public int getInventoryStackLimit() {
         return 1;
     }

@@ -1,7 +1,11 @@
 package naturalexceptions.minecraft.furniture.client;
 
+import java.util.Map;
+import java.util.WeakHashMap;
+
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GLAllocation;
 import net.minecraft.client.renderer.ItemRenderer;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderBlocks;
@@ -44,8 +48,30 @@ public final class RenderFurnitureItems extends TileEntitySpecialRenderer {
     /** Beyond this (squared) a sprite's sixteenth of thickness can't be seen, so it is drawn as a flat card. */
     private static final double THICK_WITHIN_SQ = 12.0 * 12.0;
 
+    private static final class CachedFurnitureRender {
+
+        int displayList = -1;
+        long signature;
+    }
+
+    private final Map<TileEntityStorage, CachedFurnitureRender> cache = new WeakHashMap<>();
     private final RenderBlocks blocks = new RenderBlocks();
     private boolean flat;
+
+    private static long computeSignature(TileEntityStorage storage, int meta, boolean flat) {
+        long h = (meta * 31L) ^ (flat ? 0x9E3779B97F4A7C15L : 0L);
+        int size = storage.getSizeInventory();
+        for (int i = 0; i < size; i++) {
+            ItemStack stack = storage.getStackInSlot(i);
+            h = h * 31L + i;
+            if (stack != null && stack.getItem() != null) {
+                h = h * 31L + Item.getIdFromItem(stack.getItem());
+                h = h * 31L + stack.getItemDamage();
+                h = h * 31L + System.identityHashCode(stack.getTagCompound());
+            }
+        }
+        return h;
+    }
 
     @Override
     public void renderTileEntityAt(TileEntity tile, double x, double y, double z, float partialTicks) {
@@ -54,24 +80,49 @@ public final class RenderFurnitureItems extends TileEntitySpecialRenderer {
         if (storage.isEmpty()) return;
         flat = x * x + y * y + z * z > THICK_WITHIN_SQ;
         int meta = tile.getBlockMetadata();
+        float prevLX = OpenGlHelper.lastBrightnessX, prevLY = OpenGlHelper.lastBrightnessY;
         light(tile, meta);
+        GL11.glPushMatrix();
+        GL11.glTranslated(x, y, z);
         GL11.glEnable(GL12.GL_RESCALE_NORMAL);
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+        long sig = computeSignature(storage, meta, flat);
+        CachedFurnitureRender entry = cache.get(storage);
+        if (entry == null) {
+            entry = new CachedFurnitureRender();
+            entry.displayList = GLAllocation.generateDisplayLists(1);
+            entry.signature = sig - 1L;
+            cache.put(storage, entry);
+        }
+        if (entry.signature != sig) {
+            entry.signature = sig;
+            GL11.glNewList(entry.displayList, GL11.GL_COMPILE_AND_EXECUTE);
+            renderStorageItems(tile, storage, meta);
+            GL11.glEndList();
+        } else {
+            GL11.glCallList(entry.displayList);
+        }
+        GL11.glDisable(GL12.GL_RESCALE_NORMAL);
+        GL11.glPopMatrix();
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, prevLX, prevLY);
+    }
+
+    private void renderStorageItems(TileEntity tile, TileEntityStorage storage, int meta) {
         if (tile instanceof TileEntityWoodenTable) {
             for (int i = 0; i < TABLE.length; i++) lying(
                 storage.getStackInSlot(i),
-                x + TABLE[i][0],
-                y + 1.0,
-                z + TABLE[i][1],
+                TABLE[i][0],
+                1.0,
+                TABLE[i][1],
                 (float) TABLE[i][2],
                 0.3F,
                 0.2F);
         } else if (tile instanceof TileEntityMarketCounter) {
             for (int i = 0; i < COUNTER.length; i++) lying(
                 storage.getStackInSlot(i),
-                x + COUNTER[i][0],
-                y + 1.0,
-                z + COUNTER[i][1],
+                COUNTER[i][0],
+                1.0,
+                COUNTER[i][1],
                 (float) COUNTER[i][2],
                 0.34F,
                 0.22F);
@@ -80,23 +131,23 @@ public final class RenderFurnitureItems extends TileEntitySpecialRenderer {
             int wall = meta ^ 1;
             for (int i = 0; i < 9; i++) {
                 double u = 0.2 + 0.3 * (i % 3), floor = BlockPantryShelf.TIERS[i / 3];
-                standing(storage.getStackInSlot(i), x, y, z, wall, u, floor, 0.5, 0.26F, 0.18F, false);
+                standing(storage.getStackInSlot(i), 0.0, 0.0, 0.0, wall, u, floor, 0.5, 0.26F, 0.18F, false);
             }
         } else if (tile instanceof TileEntityWallShelf) {
             for (int i = 0; i < 3; i++)
-                standing(storage.getStackInSlot(i), x, y, z, meta, 0.2 + 0.3 * i, 0.5625, 0.28, 0.3F, 0.2F, false);
+                standing(storage.getStackInSlot(i), 0.0, 0.0, 0.0, meta, 0.2 + 0.3 * i, 0.5625, 0.28, 0.3F, 0.2F, false);
         } else if (tile instanceof naturalexceptions.minecraft.furniture.TileEntityTanningRack) {
             // Stretched across the frame, in its middle, a third each.
             for (int i = 0; i < 3; i++)
-                standing(storage.getStackInSlot(i), x, y, z, meta, 0.2 + 0.3 * i, 0.35, 0.5, 0.55F, 0.3F, false);
+                standing(storage.getStackInSlot(i), 0.0, 0.0, 0.0, meta, 0.2 + 0.3 * i, 0.35, 0.5, 0.55F, 0.3F, false);
         } else if (tile instanceof TileEntityWeaponRack) {
             for (int i = 0; i < 3; i++)
                 // A third of the rack each, a little further out each, so no two share a plane.
                 standing(
                     storage.getStackInSlot(i),
-                    x,
-                    y,
-                    z,
+                    0.0,
+                    0.0,
+                    0.0,
                     meta,
                     0.2 + 0.3 * i,
                     0.1,
@@ -105,7 +156,6 @@ public final class RenderFurnitureItems extends TileEntitySpecialRenderer {
                     0.3F,
                     true);
         }
-        GL11.glDisable(GL12.GL_RESCALE_NORMAL);
     }
 
     /** Lit by the air the goods sit in (above a counter or table, before a shelf), not by the solid block. */

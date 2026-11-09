@@ -26,14 +26,12 @@ public final class WindGates {
     /** How far around a player to look for arches (an arch reaches less than this from its centre). */
     static final int LOOK = 96;
 
-    private static Landmarks field;
     private final Map<UUID, Long> lastSpoke = new HashMap<>();
     private final Map<UUID, Long> lastChecked = new HashMap<>();
     static final long CHECK_TICKS = 10;
 
-    private static synchronized Landmarks field(long seed) {
-        if (field == null || field.seed() != seed) field = new Landmarks(seed);
-        return field;
+    private static Landmarks field(long seed) {
+        return Landmarks.of(seed);
     }
 
     @SubscribeEvent

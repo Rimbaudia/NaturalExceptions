@@ -23,6 +23,11 @@ public final class TileEntityBarrel extends TileEntity {
     private int count;
     private int water;
 
+    @Override
+    public boolean canUpdate() {
+        return false;
+    }
+
     public ItemStack kind() {
         return kind;
     }

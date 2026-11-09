@@ -161,13 +161,18 @@ public final class InventoryTabs {
         return U_RAISED;
     }
 
+    private static ItemStack chestIcon;
+    private static ItemStack bookIcon;
+
     private static ItemStack iconFor(InventoryTab tab) {
         switch (tab) {
             case INVENTORY:
-                return new ItemStack(Blocks.chest);
+                if (chestIcon == null) chestIcon = new ItemStack(Blocks.chest);
+                return chestIcon;
             case ITEMS:
             default:
-                return new ItemStack(Items.book);
+                if (bookIcon == null) bookIcon = new ItemStack(Items.book);
+                return bookIcon;
         }
     }
 

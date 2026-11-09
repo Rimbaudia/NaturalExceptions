@@ -30,10 +30,9 @@ public final class RenderHoistLoad extends Render {
     public void doRender(Entity entity, double x, double y, double z, float yaw, float partialTicks) {
         // Shaded face by face as blocks are, so not lit again by the item lighting (which left the faces turned
         // from its lights near black).
-        boolean lit = GL11.glIsEnabled(GL11.GL_LIGHTING);
         GL11.glDisable(GL11.GL_LIGHTING);
         draw(entity, x, y, z, partialTicks);
-        if (lit) GL11.glEnable(GL11.GL_LIGHTING);
+        GL11.glEnable(GL11.GL_LIGHTING);
     }
 
     private void draw(Entity entity, double x, double y, double z, float partialTicks) {
@@ -44,13 +43,16 @@ public final class RenderHoistLoad extends Render {
         double iz = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * partialTicks;
         int light = entity.worldObj
             .getLightBrightnessForSkyBlocks((int) Math.floor(ix), (int) Math.floor(iy + 1), (int) Math.floor(iz), 0);
+        float prevLX = OpenGlHelper.lastBrightnessX, prevLY = OpenGlHelper.lastBrightnessY;
         OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, light % 65536, light / 65536);
         bindTexture(TextureMap.locationBlocksTexture);
         GL11.glPushMatrix();
         GL11.glTranslated(x - 0.5, y, z - 0.5); // the basket's corner, its floor level with the entity's foot
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+        HoistDrawing.beginBatch();
         double[][] basket = HoistGeometry.basket();
-        for (int i = 0; i < basket.length - 1; i++) HoistDrawing.box(Blocks.planks.getIcon(1, 1), basket[i]);
+        IIcon plank = Blocks.planks.getIcon(1, 1);
+        for (int i = 0; i < basket.length - 1; i++) HoistDrawing.box(plank, basket[i]);
         // Where the rope comes down: under the far edge of the wheel, a little off the basket's middle.
         double[] away = HoistGeometry.away(load);
         double ringX = 0.5 + away[0] * HoistGeometry.WHEEL, ringZ = 0.5 + away[2] * HoistGeometry.WHEEL;
@@ -63,7 +65,9 @@ public final class RenderHoistLoad extends Render {
         double top = load.sheave()[1] - iy; // the axle's height over the basket's floor
         if (top > RING)
             HoistDrawing.cord(rope, new double[] { ringX, RING, ringZ }, new double[] { ringX, top, ringZ }, 0.05);
+        HoistDrawing.endBatch();
         GL11.glPopMatrix();
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, prevLX, prevLY);
     }
 
     @Override

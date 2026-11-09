@@ -30,11 +30,52 @@ import naturalexceptions.core.gravity.Vector3d;
  */
 public final class NEPlayerPresentationService {
 
+    private static final int MAX_CACHED_ENTITIES = 512;
     private static final NEPlayerPresentationService INSTANCE = new NEPlayerPresentationService();
+
+    private static final class CachedFrame {
+
+        final int ticksExisted;
+        final float partialTicks;
+        final double posX;
+        final double posY;
+        final double posZ;
+        final float yaw;
+        final float pitch;
+        final Vector3d targetUp;
+        final boolean cameraEyeResolved;
+        final NEPlayerPresentationFrame frame;
+
+        CachedFrame(int ticksExisted, float partialTicks, double posX, double posY, double posZ, float yaw, float pitch,
+            Vector3d targetUp, boolean cameraEyeResolved, NEPlayerPresentationFrame frame) {
+            this.ticksExisted = ticksExisted;
+            this.partialTicks = partialTicks;
+            this.posX = posX;
+            this.posY = posY;
+            this.posZ = posZ;
+            this.yaw = yaw;
+            this.pitch = pitch;
+            this.targetUp = targetUp;
+            this.cameraEyeResolved = cameraEyeResolved;
+            this.frame = frame;
+        }
+
+        boolean matches(EntityLivingBase entity, float pt, Vector3d up, boolean requireCameraEye) {
+            return this.ticksExisted == entity.ticksExisted && Float.compare(this.partialTicks, pt) == 0
+                && Double.compare(this.posX, entity.posX) == 0
+                && Double.compare(this.posY, entity.posY) == 0
+                && Double.compare(this.posZ, entity.posZ) == 0
+                && Float.compare(this.yaw, entity.rotationYaw) == 0
+                && Float.compare(this.pitch, entity.rotationPitch) == 0
+                && this.targetUp.equals(up)
+                && (!requireCameraEye || this.cameraEyeResolved);
+        }
+    }
 
     private final Map<Long, Vector3d> smoothedUps = new ConcurrentHashMap<>();
     private final Map<Long, Vector3d> smoothedForwards = new ConcurrentHashMap<>();
     private final Map<Long, Vector3d> prevSafeEyePoints = new ConcurrentHashMap<>();
+    private final Map<Long, CachedFrame> cachedFrames = new ConcurrentHashMap<>();
     private double smoothingFactor = 0.25;
 
     private NEPlayerPresentationService() {}
@@ -47,6 +88,15 @@ public final class NEPlayerPresentationService {
         smoothedUps.clear();
         smoothedForwards.clear();
         prevSafeEyePoints.clear();
+        cachedFrames.clear();
+    }
+
+    public boolean hasActiveSmoothing(EntityLivingBase entity) {
+        if (entity == null || smoothedUps.isEmpty()) {
+            return false;
+        }
+        Vector3d up = smoothedUps.get(entityKey(entity));
+        return up != null && up.dot(Vector3d.UP) <= 0.999999;
     }
 
     public synchronized double smoothingFactor() {
@@ -61,7 +111,17 @@ public final class NEPlayerPresentationService {
      * Gets or updates the canonical rendered presentation frame for an entity using the live World.
      */
     public NEPlayerPresentationFrame getPresentationFrame(EntityLivingBase entity, float partialTicks) {
-        if (entity == null || entity.worldObj == null) {
+        return getPresentationFrame(entity, partialTicks, true);
+    }
+
+    /**
+     * Gets or updates the canonical rendered presentation frame for an entity, optionally resolving
+     * camera eye collision against world geometry. Entity body and model passes should pass
+     * {@code resolveCameraEye = false} to skip world raytraces and AABB collision queries.
+     */
+    public NEPlayerPresentationFrame getPresentationFrame(EntityLivingBase entity, float partialTicks,
+        boolean resolveCameraEye) {
+        if (!resolveCameraEye || entity == null || entity.worldObj == null) {
             return getPresentationFrame(entity, partialTicks, null, null);
         }
         return getPresentationFrame(entity, partialTicks, entity.worldObj::rayTraceBlocks, (e, bb) -> {
@@ -78,16 +138,23 @@ public final class NEPlayerPresentationService {
         NECameraCollisionHelper.RayTraceProvider rayTracer, NECameraCollisionHelper.CollisionBoxProvider boxProvider) {
         Objects.requireNonNull(entity, "entity");
         NEGravityService service = NEGravityService.global();
-        LocalEntityFrame physFrame = service.getOrUpdateLocalFrame(entity);
-
+        boolean nonstandardActive = service.isNonstandardGravityActive();
+        boolean hasCollisionProviders = rayTracer != null || boxProvider != null;
         long key = entityKey(entity);
+
+        LocalEntityFrame physFrame = service.getOrUpdateLocalFrame(entity);
         Vector3d targetUp = physFrame.localUp();
         Vector3d targetFwd = physFrame.tangentForward();
+
+        CachedFrame cached = cachedFrames.get(key);
+        if (cached != null && cached.matches(entity, partialTicks, targetUp, hasCollisionProviders)) {
+            return cached.frame;
+        }
 
         Vector3d currUp = smoothedUps.get(key);
         Vector3d currFwd = smoothedForwards.get(key);
 
-        if (currUp == null || currFwd == null || !service.isNonstandardGravityActive()) {
+        if (currUp == null || currFwd == null || !nonstandardActive) {
             currUp = targetUp;
             currFwd = targetFwd;
         } else {
@@ -135,8 +202,21 @@ public final class NEPlayerPresentationService {
             }
         }
 
-        smoothedUps.put(key, currUp);
-        smoothedForwards.put(key, currFwd);
+        if (nonstandardActive) {
+            if (smoothedUps.size() >= MAX_CACHED_ENTITIES) {
+                smoothedUps.clear();
+                smoothedForwards.clear();
+                prevSafeEyePoints.clear();
+                cachedFrames.clear();
+            }
+            smoothedUps.put(key, currUp);
+            smoothedForwards.put(key, currFwd);
+        } else if (!smoothedUps.isEmpty()) {
+            smoothedUps.remove(key);
+            smoothedForwards.remove(key);
+            prevSafeEyePoints.remove(key);
+            cachedFrames.remove(key);
+        }
 
         // 1. Interpolated entity coordinates
         double interpX = entity.prevPosX + (entity.posX - entity.prevPosX) * (double) partialTicks;
@@ -174,20 +254,42 @@ public final class NEPlayerPresentationService {
         Vector3d supportPoint = physicalStance.supportPoint();
 
         // 4. Collision-aware first-person camera placement and depenetration
-        Vector3d prevSafeEye = prevSafeEyePoints.get(key);
         Vector3d safeEyePoint;
-        if (service.isNonstandardGravityActive() && (rayTracer != null || boxProvider != null)) {
+        if (nonstandardActive && hasCollisionProviders) {
+            Vector3d prevSafeEye = prevSafeEyePoints.get(key);
             safeEyePoint = NECameraCollisionHelper
                 .resolveCameraPosition(rayTracer, boxProvider, entity, physicalBodyCenter, rawEyePoint, prevSafeEye);
+            prevSafeEyePoints.put(key, safeEyePoint);
         } else {
             safeEyePoint = rawEyePoint;
         }
-        prevSafeEyePoints.put(key, safeEyePoint);
 
         float mcPitch = entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch) * partialTicks;
         double mathPitch = -mcPitch;
 
-        return new NEPlayerPresentationFrame(physFrame, currUp, currFwd, safeEyePoint, supportPoint, mathPitch);
+        NEPlayerPresentationFrame result = new NEPlayerPresentationFrame(
+            physFrame,
+            currUp,
+            currFwd,
+            safeEyePoint,
+            supportPoint,
+            mathPitch);
+        if (nonstandardActive) {
+            cachedFrames.put(
+                key,
+                new CachedFrame(
+                    entity.ticksExisted,
+                    partialTicks,
+                    entity.posX,
+                    entity.posY,
+                    entity.posZ,
+                    entity.rotationYaw,
+                    entity.rotationPitch,
+                    targetUp,
+                    hasCollisionProviders,
+                    result));
+        }
+        return result;
     }
 
     private static long entityKey(EntityLivingBase entity) {

@@ -59,7 +59,6 @@ public final class RenderSmelterOutlet extends TileEntitySpecialRenderer {
     private void renderMoltenStream(int facing, double targetDistY, int streamColor, long worldTime,
         float partialTicks) {
         GL11.glPushMatrix();
-        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_CURRENT_BIT | GL11.GL_COLOR_BUFFER_BIT);
         float previousLightX = OpenGlHelper.lastBrightnessX;
         float previousLightY = OpenGlHelper.lastBrightnessY;
         GL11.glEnable(GL11.GL_BLEND);
@@ -147,7 +146,9 @@ public final class RenderSmelterOutlet extends TileEntitySpecialRenderer {
         tess.draw();
 
         OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, previousLightX, previousLightY);
-        GL11.glPopAttrib();
+        GL11.glEnable(GL11.GL_CULL_FACE);
+        GL11.glDisable(GL11.GL_BLEND);
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         GL11.glPopMatrix();
     }
 }

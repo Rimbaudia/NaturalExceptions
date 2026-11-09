@@ -28,6 +28,9 @@ public final class TileEntityLighthouseLamp extends TileEntity {
     @Override
     @SideOnly(Side.CLIENT)
     public AxisAlignedBB getRenderBoundingBox() {
-        return INFINITE_EXTENT_AABB;
+        if (worldObj != null && !BlockLighthouseLamp.lit(worldObj, xCoord, yCoord, zCoord)) {
+            return AxisAlignedBB.getBoundingBox(xCoord, yCoord, zCoord, xCoord + 1, yCoord + 2, zCoord + 1);
+        }
+        return AxisAlignedBB.getBoundingBox(xCoord - 32, yCoord - 4, zCoord - 32, xCoord + 33, yCoord + 8, zCoord + 33);
     }
 }

@@ -93,14 +93,26 @@ public final class NEOverworldGenerator implements IWorldGenerator {
         // Rare, dramatic landmarks are structures too; they share this stage so older chunk records stay valid.
         long landmarkSeed = landmarkSeed(world.getSeed(), epoch);
         stage = time("stage_outcrops", stage);
-        int islandBlocks = LandmarkMaterializer
-            .skyIslands(world, chunkX, chunkZ, new naturalexceptions.core.worldgen.SkyIslands(landmarkSeed));
-        stage = time("stage_sky_islands", stage);
-        int landmarkBlocks = LandmarkMaterializer
-            .landmarks(world, chunkX, chunkZ, new naturalexceptions.core.worldgen.Landmarks(landmarkSeed));
-        stage = time("stage_landmarks", stage);
-        int deepBlocks = LandmarkMaterializer
-            .deepLayers(world, chunkX, chunkZ, new naturalexceptions.core.worldgen.DeepLayers(landmarkSeed));
+        int islandBlocks = 0;
+        int landmarkBlocks = 0;
+        int deepBlocks = 0;
+        LandmarkMaterializer.beginBatch(world, chunkX, chunkZ);
+        boolean skyChanged = false;
+        boolean anyChanged = false;
+        try {
+            islandBlocks = LandmarkMaterializer
+                .skyIslands(world, chunkX, chunkZ, naturalexceptions.core.worldgen.SkyIslands.of(landmarkSeed));
+            stage = time("stage_sky_islands", stage);
+            landmarkBlocks = LandmarkMaterializer
+                .landmarks(world, chunkX, chunkZ, naturalexceptions.core.worldgen.Landmarks.of(landmarkSeed));
+            stage = time("stage_landmarks", stage);
+            deepBlocks = LandmarkMaterializer
+                .deepLayers(world, chunkX, chunkZ, new naturalexceptions.core.worldgen.DeepLayers(landmarkSeed));
+            skyChanged = (islandBlocks + landmarkBlocks) > 0;
+            anyChanged = (islandBlocks + landmarkBlocks + deepBlocks) > 0;
+        } finally {
+            LandmarkMaterializer.endBatch(world, skyChanged, anyChanged);
+        }
         history.mark(WorldgenStage.STRUCTURES);
         stage = time("stage_deep_layers", stage);
         generateInitialAnomalies(world, chunkX, chunkZ, sites);

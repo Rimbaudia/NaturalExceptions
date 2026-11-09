@@ -79,6 +79,9 @@ public final class SkyIslands {
         private final Kind kind;
         private final Tier tier;
         private final boolean cache;
+        private volatile int[] waterfallLip;
+        private volatile boolean waterfallLipComputed;
+        private volatile List<int[]> treeSpots;
 
         Island(Tier tier, long cellX, long cellZ, int centreX, int centreY, int centreZ, double radius,
             double thickness, Kind kind, boolean cache) {
@@ -151,10 +154,67 @@ public final class SkyIslands {
         }
     }
 
+    private static final int SEED_CACHE_SIZE = 8;
+    private static final int CELL_CACHE_SIZE = 8192;
+    private static final Object EMPTY_CELL = new Object();
+
+    private static final java.util.Map<Long, SkyIslands> BY_SEED = new java.util.LinkedHashMap<Long, SkyIslands>(
+        16,
+        0.75F,
+        true) {
+
+        @Override
+        protected boolean removeEldestEntry(java.util.Map.Entry<Long, SkyIslands> eldest) {
+            return size() > SEED_CACHE_SIZE;
+        }
+    };
+
+    private static final java.util.Map<Long, java.util.Map<Long, Object>> CELL_CACHES = new java.util.LinkedHashMap<Long, java.util.Map<Long, Object>>(
+        16,
+        0.75F,
+        true) {
+
+        @Override
+        protected boolean removeEldestEntry(java.util.Map.Entry<Long, java.util.Map<Long, Object>> eldest) {
+            return size() > SEED_CACHE_SIZE;
+        }
+    };
+
+    private static java.util.Map<Long, Object> cellCacheFor(long seed) {
+        synchronized (CELL_CACHES) {
+            java.util.Map<Long, Object> cache = CELL_CACHES.get(seed);
+            if (cache == null) {
+                cache = new java.util.LinkedHashMap<Long, Object>(1024, 0.75F, true) {
+
+                    @Override
+                    protected boolean removeEldestEntry(java.util.Map.Entry<Long, Object> eldest) {
+                        return size() > CELL_CACHE_SIZE;
+                    }
+                };
+                CELL_CACHES.put(seed, cache);
+            }
+            return cache;
+        }
+    }
+
+    /** Returns a cached {@link SkyIslands} field for {@code seed}. */
+    public static SkyIslands of(long seed) {
+        synchronized (BY_SEED) {
+            SkyIslands field = BY_SEED.get(seed);
+            if (field == null) {
+                field = new SkyIslands(seed);
+                BY_SEED.put(seed, field);
+            }
+            return field;
+        }
+    }
+
     private final LandmarkNoise noise;
+    private final java.util.Map<Long, Object> cells;
 
     public SkyIslands(long seed) {
         this.noise = new LandmarkNoise(seed ^ 0x534b5949534c414eL);
+        this.cells = cellCacheFor(this.noise.seed());
     }
 
     /** Identifies this world's islands (for caching the dungeons built on them). */
@@ -168,6 +228,20 @@ public final class SkyIslands {
     }
 
     public Island atCell(Tier tier, long cellX, long cellZ) {
+        long key = ((long) tier.ordinal() << 60) | ((cellX & 0x3FFFFFFFL) << 30) | (cellZ & 0x3FFFFFFFL);
+        Object cached;
+        synchronized (cells) {
+            cached = cells.get(key);
+        }
+        if (cached != null) return cached == EMPTY_CELL ? null : (Island) cached;
+        Island computed = computeAtCell(tier, cellX, cellZ);
+        synchronized (cells) {
+            cells.put(key, computed == null ? EMPTY_CELL : computed);
+        }
+        return computed;
+    }
+
+    private Island computeAtCell(Tier tier, long cellX, long cellZ) {
         long t = tier.ordinal() * 1000L;
         if (noise.unit(cellX, cellZ, t + 1) >= tier.presence) return null;
         int span = tier.cell - 2 * tier.margin;
@@ -235,6 +309,10 @@ public final class SkyIslands {
 
     /** {bottomY, topY} of the island in this column, or null if the column misses it. */
     public int[] column(Island island, int x, int z) {
+        double dx = x + 0.5 - island.centreX;
+        double dz = z + 0.5 - island.centreZ;
+        double maxEdge = island.radius * 1.1801;
+        if (dx * dx + dz * dz >= maxEdge * maxEdge) return null;
         double d = reach(island, x, z);
         if (d >= 1.0) return null;
         int top = island.centreY + (d < 0.5 ? 1 : 0);
@@ -331,9 +409,13 @@ public final class SkyIslands {
     }
 
     public Decor decor(Island island, int x, int z) {
-        if (column(island, x, z) == null || pondAt(island, x, z)
-            || waterfallAt(island, x, z)
-            || dungeonCovers(island, x, z)) return Decor.NONE;
+        if (column(island, x, z) == null || pondAt(island, x, z) || waterfallAt(island, x, z)) return Decor.NONE;
+        return decorOnLand(island, x, z);
+    }
+
+    /** What stands on a column's top block when the column is known to be solid dry land. */
+    public Decor decorOnLand(Island island, int x, int z) {
+        if (dungeonCovers(island, x, z)) return Decor.NONE;
         Decor boulder = boulderAt(island, x, z);
         if (boulder != Decor.NONE) return boulder;
         Surface surface = surface(island, x, z);
@@ -383,6 +465,8 @@ public final class SkyIslands {
 
     /** Where trees stand {x, z}: several in a grove, perhaps one in a meadow, one by a lake, none on a crag. */
     public List<int[]> treeSpots(Island island) {
+        List<int[]> cached = island.treeSpots;
+        if (cached != null) return cached;
         List<int[]> spots = new ArrayList<>();
         int count = island.kind == Kind.GROVE ? 5 + (int) (noise.unit(island.cellX, island.cellZ, 35) * 4)
             : island.kind == Kind.MEADOW ? (noise.unit(island.cellX, island.cellZ, 36) < 0.5 ? 1 : 0)
@@ -401,7 +485,9 @@ public final class SkyIslands {
                 && !(island.cache && Math.hypot(spot[0] - cacheSpot(island)[0], spot[1] - cacheSpot(island)[1]) < 4))
                 spots.add(spot);
         }
-        return spots;
+        cached = java.util.Collections.unmodifiableList(spots);
+        island.treeSpots = cached;
+        return cached;
     }
 
     /** Whether a grove's tree here is a birch. */
@@ -417,6 +503,7 @@ public final class SkyIslands {
      */
     public int[] cloud(Island island, int x, int z) {
         double d = reach(island, x, z);
+        if (d >= CLOUD_RIM_OUTER || d <= 0.25) return null;
         double fluff = noise.smooth(x, z, 3.5, island.cellX * 5 + island.cellZ + 77);
         if (d >= CLOUD_RIM_INNER && d < CLOUD_RIM_OUTER && fluff > 0.42 && !inUpdraftGap(island, x, z)) {
             int top = island.centreY - (d < 1.0 ? 1 : 0);
@@ -425,6 +512,21 @@ public final class SkyIslands {
         if (d < 0.85 && d > 0.25 && fluff > 0.68) {
             int[] column = column(island, x, z);
             if (column != null) return new int[] { column[0] - (fluff > 0.8 ? 2 : 1), column[0] - 1 };
+        }
+        return null;
+    }
+
+    /** Cloud column when the rock {@code column} at (x, z) is already known. */
+    public int[] cloud(Island island, int x, int z, int[] column) {
+        double d = reach(island, x, z);
+        if (d >= CLOUD_RIM_OUTER || d <= 0.25) return null;
+        double fluff = noise.smooth(x, z, 3.5, island.cellX * 5 + island.cellZ + 77);
+        if (d >= CLOUD_RIM_INNER && d < CLOUD_RIM_OUTER && fluff > 0.42 && !inUpdraftGap(island, x, z)) {
+            int top = island.centreY - (d < 1.0 ? 1 : 0);
+            return new int[] { top - (fluff > 0.7 ? 2 : 1), top };
+        }
+        if (d < 0.85 && d > 0.25 && fluff > 0.68 && column != null) {
+            return new int[] { column[0] - (fluff > 0.8 ? 2 : 1), column[0] - 1 };
         }
         return null;
     }
@@ -472,6 +574,7 @@ public final class SkyIslands {
     /** The lip {x, z} where the waterfall pours off the edge: the channel's last column, or null. */
     public int[] waterfallLip(Island island) {
         if (island.kind != Kind.LAKE) return null;
+        if (island.waterfallLipComputed) return island.waterfallLip;
         double heading = waterfallHeading(island);
         int[] last = null;
         for (double r = 0.0; r < island.radius * 1.3; r += 0.5) {
@@ -480,6 +583,8 @@ public final class SkyIslands {
             if (column(island, x, z) == null) break;
             if (waterfallAt(island, x, z)) last = new int[] { x, z };
         }
+        island.waterfallLip = last;
+        island.waterfallLipComputed = true;
         return last;
     }
 
@@ -498,6 +603,8 @@ public final class SkyIslands {
     /** Whether a dungeon's surface works (citadel, sanctum gateway) cover this column, so nothing grows there. */
     public boolean dungeonCovers(Island island, int x, int z) {
         if (!island.hasDungeon()) return false;
+        double limit = island.radius * 1.18 + 8.0;
+        if (Math.abs(x - island.centreX) > limit || Math.abs(z - island.centreZ) > limit) return false;
         SkyDungeon dungeon = SkyDungeon.of(this, island);
         return dungeon != null && dungeon.coversSurface(x, z);
     }

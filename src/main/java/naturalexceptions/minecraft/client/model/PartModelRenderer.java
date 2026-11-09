@@ -40,7 +40,7 @@ public final class PartModelRenderer implements ISimpleBlockRenderingHandler {
         int metadata = world.getBlockMetadata(x, y, z);
         boolean previous = renderer.renderAllFaces;
         renderer.renderAllFaces = true;
-        double[][] parts = model.parts(metadata);
+        double[][] parts = PartModel.cachedParts(model, metadata);
         for (int i = 0; i < parts.length; i++) {
             double[] b = parts[i];
             if (PartModel.empty(b)) continue;
@@ -63,14 +63,14 @@ public final class PartModelRenderer implements ISimpleBlockRenderingHandler {
         GL11.glPushMatrix();
         GL11.glTranslatef(-0.5F, -0.5F, -0.5F);
         Tessellator tess = Tessellator.instance;
-        double[][] parts = model.parts(meta);
+        double[][] parts = PartModel.cachedParts(model, meta);
+        tess.startDrawingQuads();
         for (int i = 0; i < parts.length; i++) {
             double[] b = parts[i];
             if (PartModel.empty(b)) continue;
             IIcon icon = model.partIcon(i, metadata); // the item's own kind: an awning's colour, a table's wood
             renderer.setRenderBounds(b[0], b[1], b[2], b[3], b[4], b[5]);
             for (int side = 0; side < 6; side++) {
-                tess.startDrawingQuads();
                 tess.setNormal(
                     side == 4 ? -1 : side == 5 ? 1 : 0,
                     side == 0 ? -1 : side == 1 ? 1 : 0,
@@ -95,9 +95,9 @@ public final class PartModelRenderer implements ISimpleBlockRenderingHandler {
                         renderer.renderFaceXPos(block, 0, 0, 0, icon);
                         break;
                 }
-                tess.draw();
             }
         }
+        tess.draw();
         block.setBlockBoundsForItemRender();
         renderer.setRenderBoundsFromBlock(block);
         GL11.glPopMatrix();

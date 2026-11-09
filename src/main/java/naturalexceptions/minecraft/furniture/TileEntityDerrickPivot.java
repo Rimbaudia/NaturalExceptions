@@ -244,10 +244,11 @@ public final class TileEntityDerrickPivot extends TileEntity {
         return stays = found.toArray(new int[0][]);
     }
 
-    /** Its turning boom and its guy ropes are drawn far out from it. */
+    /** Its turning boom and its guy ropes are drawn within its reach. */
     @Override
     @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
     public net.minecraft.util.AxisAlignedBB getRenderBoundingBox() {
-        return INFINITE_EXTENT_AABB;
+        return net.minecraft.util.AxisAlignedBB
+            .getBoundingBox(xCoord - 8, yCoord - 2, zCoord - 8, xCoord + 9, yCoord + 14, zCoord + 9);
     }
 }

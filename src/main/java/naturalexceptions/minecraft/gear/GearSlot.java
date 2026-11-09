@@ -23,7 +23,8 @@ public enum GearSlot {
     RING_RIGHT_RING(GearKind.RING, "Right ring-finger ring"),
     RING_RIGHT_LITTLE(GearKind.RING, "Right little ring");
 
-    public static final int COUNT = values().length;
+    public static final GearSlot[] VALUES = values();
+    public static final int COUNT = VALUES.length;
 
     private final GearKind kind;
     private final String label;
@@ -53,7 +54,14 @@ public enum GearSlot {
     }
 
     public static GearSlot byIndex(int index) {
-        GearSlot[] all = values();
-        return index >= 0 && index < all.length ? all[index] : null;
+        return index >= 0 && index < VALUES.length ? VALUES[index] : null;
+    }
+
+    public static GearSlot byName(String name) {
+        if (name == null) return null;
+        for (GearSlot slot : VALUES) {
+            if (slot.name().equals(name)) return slot;
+        }
+        return null;
     }
 }

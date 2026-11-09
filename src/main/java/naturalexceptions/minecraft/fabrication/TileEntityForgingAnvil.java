@@ -90,6 +90,8 @@ public class TileEntityForgingAnvil extends TileEntity implements IInventory {
         }
     }
 
+    private int coolingTicks;
+
     @Override
     public void updateEntity() {
         if (worldObj != null && worldObj.isRemote) {
@@ -97,11 +99,25 @@ public class TileEntityForgingAnvil extends TileEntity implements IInventory {
         }
 
         if (workpiece != null) {
-            coolWorkpiece(0.05); // 1 tick
-            if (worldObj != null && worldObj.getTotalWorldTime() % 20L == 0L) {
-                markDirty();
-                naturalexceptions.minecraft.network.TileSync.toWatchers(this); // cooling: its renderer redraws it
+            coolingTicks++;
+            if (coolingTicks % 5 == 0) {
+                double beforeTemp = ItemGenericComponent.getTemperatureKelvin(workpiece);
+                coolWorkpiece(0.25); // 5 ticks
+                double afterTemp = ItemGenericComponent.getTemperatureKelvin(workpiece);
+                if (afterTemp != beforeTemp) {
+                    if (coolingTicks >= 20) {
+                        coolingTicks = 0;
+                        markDirty();
+                        if (worldObj != null) {
+                            naturalexceptions.minecraft.network.TileSync.toWatchers(this); // cooling: its renderer redraws it
+                        }
+                    }
+                } else {
+                    coolingTicks = 0;
+                }
             }
+        } else {
+            coolingTicks = 0;
         }
     }
 

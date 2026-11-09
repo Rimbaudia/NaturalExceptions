@@ -1,6 +1,9 @@
 package naturalexceptions.minecraft.item;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.creativetab.CreativeTabs;
@@ -14,6 +17,7 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import naturalexceptions.content.material.BuiltinMaterials;
 import naturalexceptions.core.composition.CanonicalComposition;
+import naturalexceptions.core.fabrication.ComponentDamage;
 import naturalexceptions.core.fabrication.ComponentInstance;
 import naturalexceptions.core.fabrication.GeometryId;
 import naturalexceptions.core.fabrication.ManufacturingState;
@@ -22,6 +26,7 @@ import naturalexceptions.core.material.CanonicalMaterialKey;
 import naturalexceptions.core.material.MaterialRef;
 import naturalexceptions.core.metallurgy.MaterialQuantity;
 import naturalexceptions.core.property.MaterialProperties;
+import naturalexceptions.core.property.MaterialPropertyResolver;
 import naturalexceptions.core.thermal.ActiveThermalState;
 import naturalexceptions.minecraft.persistence.AssemblyNbtCodec;
 import naturalexceptions.minecraft.registry.NEItems;
@@ -30,6 +35,66 @@ import naturalexceptions.minecraft.registry.NEItems;
  * Generic Minecraft item carrier representing a physical component instance.
  */
 public final class ItemGenericComponent extends Item {
+
+    private static final MaterialPropertyResolver SHARED_RESOLVER = new MaterialPropertyResolver();
+    private static final Map<NBTTagCompound, CachedComponent> COMPONENT_CACHE = Collections
+        .synchronizedMap(new WeakHashMap<>());
+
+    private static final class CachedComponent {
+
+        final String nbtInstanceId;
+        final String nbtGeometry;
+        final String nbtMaterialRef;
+        final String nbtStateKey;
+        final long nbtMassMg;
+        final String nbtManufacturing;
+        final double wear;
+        final double deformation;
+        final double cracking;
+        final boolean fractured;
+        final CanonicalMaterialKey stateKey;
+        final ManufacturingState manufacturing;
+        final ComponentInstance component;
+
+        CachedComponent(NBTTagCompound nbt, ComponentInstance component) {
+            this.nbtInstanceId = nbt.getString(AssemblyNbtCodec.KEY_INSTANCE_ID);
+            this.nbtGeometry = nbt.getString(AssemblyNbtCodec.KEY_GEOMETRY);
+            this.nbtMaterialRef = nbt.getString(AssemblyNbtCodec.KEY_MATERIAL_REF);
+            this.nbtStateKey = nbt.getString(AssemblyNbtCodec.KEY_STATE_KEY);
+            this.nbtMassMg = nbt.getLong(AssemblyNbtCodec.KEY_MASS_MG);
+            this.nbtManufacturing = nbt.getString(AssemblyNbtCodec.KEY_MANUFACTURING);
+            ComponentDamage d = component.damage();
+            this.wear = d.wear();
+            this.deformation = d.deformation();
+            this.cracking = d.cracking();
+            this.fractured = d.isFractured();
+            this.stateKey = component.stateKey();
+            this.manufacturing = component.manufacturingState();
+            this.component = component;
+        }
+
+        boolean matches(NBTTagCompound nbt) {
+            if (component.stateKey() != stateKey || component.manufacturingState() != manufacturing) {
+                return false;
+            }
+            ComponentDamage d = component.damage();
+            if (Double.compare(d.wear(), wear) != 0 || Double.compare(d.deformation(), deformation) != 0
+                || Double.compare(d.cracking(), cracking) != 0
+                || d.isFractured() != fractured) {
+                return false;
+            }
+            return nbtMassMg == nbt.getLong(AssemblyNbtCodec.KEY_MASS_MG)
+                && nbtGeometry.equals(nbt.getString(AssemblyNbtCodec.KEY_GEOMETRY))
+                && nbtMaterialRef.equals(nbt.getString(AssemblyNbtCodec.KEY_MATERIAL_REF))
+                && nbtStateKey.equals(nbt.getString(AssemblyNbtCodec.KEY_STATE_KEY))
+                && nbtManufacturing.equals(nbt.getString(AssemblyNbtCodec.KEY_MANUFACTURING))
+                && nbtInstanceId.equals(nbt.getString(AssemblyNbtCodec.KEY_INSTANCE_ID))
+                && Double.compare(wear, nbt.getDouble(AssemblyNbtCodec.KEY_WEAR)) == 0
+                && Double.compare(deformation, nbt.getDouble(AssemblyNbtCodec.KEY_DEFORMATION)) == 0
+                && Double.compare(cracking, nbt.getDouble(AssemblyNbtCodec.KEY_CRACKING)) == 0
+                && fractured == nbt.getBoolean(AssemblyNbtCodec.KEY_FRACTURED);
+        }
+    }
 
     @SideOnly(Side.CLIENT)
     private IIcon iconBlank;
@@ -94,6 +159,7 @@ public final class ItemGenericComponent extends Item {
             NBTTagCompound nbt = new NBTTagCompound();
             AssemblyNbtCodec.writeComponentToNbt(comp, nbt);
             stack.setTagCompound(nbt);
+            COMPONENT_CACHE.put(nbt, new CachedComponent(nbt, comp));
         }
         return stack;
     }
@@ -102,8 +168,17 @@ public final class ItemGenericComponent extends Item {
         if (stack == null || !stack.hasTagCompound()) {
             return null;
         }
+        NBTTagCompound nbt = stack.getTagCompound();
+        CachedComponent cached = COMPONENT_CACHE.get(nbt);
+        if (cached != null && cached.matches(nbt)) {
+            return cached.component;
+        }
         try {
-            return AssemblyNbtCodec.readComponentFromNbt(stack.getTagCompound());
+            ComponentInstance parsed = AssemblyNbtCodec.readComponentFromNbt(nbt);
+            if (parsed != null) {
+                COMPONENT_CACHE.put(nbt, new CachedComponent(nbt, parsed));
+            }
+            return parsed;
         } catch (Exception e) {
             return null;
         }
@@ -163,7 +238,7 @@ public final class ItemGenericComponent extends Item {
     public static MaterialProperties resolveProperties(ComponentInstance comp) {
         if (comp != null) {
             try {
-                return new naturalexceptions.core.property.MaterialPropertyResolver()
+                return SHARED_RESOLVER
                     .resolve(
                         comp.materialRef(),
                         comp.stateKey()
@@ -245,7 +320,9 @@ public final class ItemGenericComponent extends Item {
                     .repairDeformation(0.5);
                 comp.damage()
                     .repairCracking(0.5);
-                AssemblyNbtCodec.writeComponentToNbt(comp, stack.getTagCompound());
+                NBTTagCompound nbt = stack.getTagCompound();
+                AssemblyNbtCodec.writeComponentToNbt(comp, nbt);
+                COMPONENT_CACHE.put(nbt, new CachedComponent(nbt, comp));
                 return true;
             }
         }

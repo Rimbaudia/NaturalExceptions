@@ -30,6 +30,7 @@ public final class RenderStormwisp extends Render {
         boolean hurt = entity instanceof EntityLivingBase && ((EntityLivingBase) entity).hurtTime > 0;
         float t = entity.ticksExisted + partialTicks;
         float bright = Math.max(hurt ? 0.7F : 0.0F, charge * 0.8F);
+        float prevLX = OpenGlHelper.lastBrightnessX, prevLY = OpenGlHelper.lastBrightnessY;
         GL11.glPushMatrix();
         CrystalDraw.begin();
         OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240.0F, 240.0F);
@@ -51,6 +52,7 @@ public final class RenderStormwisp extends Render {
         GL11.glRotatef(180.0F - renderManager.playerViewY, 0.0F, 1.0F, 0.0F);
         GL11.glRotatef(-renderManager.playerViewX, 1.0F, 0.0F, 0.0F);
         CrystalDraw.glow(0.45F + 0.35F * charge + (hurt ? 0.2F : 0.0F), 1.0F);
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, prevLX, prevLY);
         CrystalDraw.end();
         GL11.glPopMatrix();
     }

@@ -31,6 +31,8 @@ public class TileEntityCastingTable extends TileEntity implements IInventory {
     private double seasonalWaterReaction;
     private boolean nearbyP8SitesRefined;
 
+    private boolean cooledSinceSync;
+
     public TileEntityCastingTable() {}
 
     public ItemStack getMold() {
@@ -39,6 +41,7 @@ public class TileEntityCastingTable extends TileEntity implements IInventory {
 
     public void setMold(ItemStack mold) {
         this.moldStack = mold;
+        this.cooledSinceSync = false;
         markDirty();
         if (worldObj != null) {
             worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
@@ -59,26 +62,34 @@ public class TileEntityCastingTable extends TileEntity implements IInventory {
 
         if (moldStack != null && moldStack.getItem() instanceof ItemCastingMold) {
             if (ItemCastingMold.hasMetal(moldStack)) {
-                boolean wasSolid = ItemCastingMold.isSolidified(moldStack);
+                long time = worldObj.getTotalWorldTime();
+                if (time % 5L == 0L) {
+                    boolean wasSolid = ItemCastingMold.isSolidified(moldStack);
 
-                coolMold(0.05);
+                    coolMold(0.25);
 
-                boolean nowSolid = ItemCastingMold.isSolidified(moldStack);
-                if (wasSolid != nowSolid) {
-                    worldObj.playSoundEffect(xCoord + 0.5D, yCoord + 1.0D, zCoord + 0.5D, "random.fizz", 0.7F, 1.5F);
-                    for (int i = 0; i < 8; i++) {
-                        particle(
-                            "smoke",
-                            xCoord + 0.3D + worldObj.rand.nextDouble() * 0.4D,
-                            yCoord + 1.05D,
-                            zCoord + 0.3D + worldObj.rand.nextDouble() * 0.4D,
-                            0.0D,
-                            0.04D,
-                            0.0D);
+                    boolean nowSolid = ItemCastingMold.isSolidified(moldStack);
+                    if (wasSolid != nowSolid) {
+                        cooledSinceSync = false;
+                        worldObj
+                            .playSoundEffect(xCoord + 0.5D, yCoord + 1.0D, zCoord + 0.5D, "random.fizz", 0.7F, 1.5F);
+                        for (int i = 0; i < 8; i++) {
+                            particle(
+                                "smoke",
+                                xCoord + 0.3D + worldObj.rand.nextDouble() * 0.4D,
+                                yCoord + 1.05D,
+                                zCoord + 0.3D + worldObj.rand.nextDouble() * 0.4D,
+                                0.0D,
+                                0.04D,
+                                0.0D);
+                        }
+                        markDirty();
+                        worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
+                        return;
                     }
-                    markDirty();
-                    worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-                } else if (worldObj.getTotalWorldTime() % 20L == 0L) {
+                }
+                if (cooledSinceSync && time % 20L == 0L) {
+                    cooledSinceSync = false;
                     markDirty();
                     naturalexceptions.minecraft.network.TileSync.toWatchers(this); // cooling: its renderer redraws it
                 }
@@ -322,6 +333,7 @@ public class TileEntityCastingTable extends TileEntity implements IInventory {
             thermal.removeEnergyJoules(totalLossJoules);
         }
         ItemCastingMold.saveThermalState(moldStack, thermal);
+        this.cooledSinceSync = true;
     }
 
     @Override

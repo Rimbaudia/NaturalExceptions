@@ -328,7 +328,17 @@ public final class TileEntityHoist extends TileEntityStorage {
         TileEntityDerrickPivot swing = swinging();
         if (swing == null && (frame == null || --recheck <= 0)) {
             HoistFrame was = frame;
-            frame = HoistFrames.find(worldObj, xCoord, yCoord, zCoord);
+            HoistFrame verified = null;
+            if (was != null) {
+                if (was.kind == HoistFrame.Kind.HEADFRAME) {
+                    HoistFrame h = naturalexceptions.minecraft.multiblock.HeadframeDefinition
+                        .at(worldObj, was.sheaveX, was.sheaveY, was.sheaveZ);
+                    if (h != null && h.groundY == yCoord - 1) verified = h;
+                } else if (was.kind == HoistFrame.Kind.DERRICK && was.pivotY == yCoord) {
+                    verified = DerrickDefinition.at(worldObj, was.pivotX, was.pivotY, was.pivotZ);
+                }
+            }
+            frame = verified != null ? verified : HoistFrames.find(worldObj, xCoord, yCoord, zCoord);
             recheck = 40;
             if (frame == null ? was != null : !frame.sameAs(was)) {
                 worldObj.markBlockForUpdate(xCoord, yCoord, zCoord); // clients draw the rope to it
@@ -371,7 +381,9 @@ public final class TileEntityHoist extends TileEntityStorage {
         }
         lastTop = top;
         if (!hooked) {
-            hookBasket((int) Math.floor(sheave[0]), (int) Math.floor(sheave[2]), axle, top, bottom);
+            if (worldObj.getTotalWorldTime() % 20L == 0L) {
+                hookBasket((int) Math.floor(sheave[0]), (int) Math.floor(sheave[2]), axle, top, bottom);
+            }
             return;
         }
         if (load == null || load.isDead) {
@@ -539,11 +551,13 @@ public final class TileEntityHoist extends TileEntityStorage {
 
     // --- Drawing -----------------------------------------------------------------------------------------------------
 
-    /** The rope runs far from the windlass, up to its sheave: drawn whenever the windlass is anywhere near view. */
+    /** The rope runs far from the windlass, up to its sheave: bounded to its reach and rope length. */
     @Override
     @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
     public net.minecraft.util.AxisAlignedBB getRenderBoundingBox() {
-        return INFINITE_EXTENT_AABB;
+        int down = Math.max(48, ropeLength() + 8);
+        return net.minecraft.util.AxisAlignedBB
+            .getBoundingBox(xCoord - 12, yCoord - down, zCoord - 12, xCoord + 13, yCoord + 16, zCoord + 13);
     }
 
     @Override
@@ -587,15 +601,17 @@ public final class TileEntityHoist extends TileEntityStorage {
     /** And for a derrick: {pivot x, y, z, mast top, boom facing}. */
     int[] clientDerrick;
     private EntityHoistLoad clientLoad;
-    private int clientLook;
+    private long clientLookTick = -100L;
 
     /** On a client: the basket hanging on this windlass's rope, if one is near enough to be known. */
     @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
     public EntityHoistLoad clientLoad() {
         if (clientLoad != null && !clientLoad.isDead) return clientLoad;
         clientLoad = null;
-        if (worldObj == null || !hooked || clientLook-- > 0) return null;
-        clientLook = 20;
+        if (worldObj == null || !hooked) return null;
+        long now = worldObj.getTotalWorldTime();
+        if (now - clientLookTick < 20L) return null;
+        clientLookTick = now;
         for (Object o : worldObj.loadedEntityList) if (o instanceof EntityHoistLoad) {
             EntityHoistLoad l = (EntityHoistLoad) o;
             if (l.windlassX == xCoord && l.windlassY == yCoord && l.windlassZ == zCoord) return clientLoad = l;

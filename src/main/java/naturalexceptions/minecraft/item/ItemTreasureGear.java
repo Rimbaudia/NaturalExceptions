@@ -86,15 +86,9 @@ public final class ItemTreasureGear extends Item implements IWearable {
 
     /** How many of this treasure the player is wearing (two for a pair of claws, up to ten bands). */
     public static int worn(EntityPlayer player, Treasure treasure) {
-        if (player == null) return 0;
+        if (player == null || treasure == null) return 0;
         PlayerGear gear = PlayerGear.get(player);
-        int count = 0;
-        for (GearSlot slot : GearSlot.values()) {
-            ItemStack stack = gear.get(slot);
-            if (stack != null && stack.getItem() instanceof ItemTreasureGear
-                && ((ItemTreasureGear) stack.getItem()).treasure == treasure) count++;
-        }
-        return count;
+        return gear != null ? gear.wornCount(treasure) : 0;
     }
 
     /** Right-click puts it on, like armour, when a slot of its kind is free. */

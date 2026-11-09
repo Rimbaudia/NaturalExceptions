@@ -29,6 +29,11 @@ public final class TileEntityBrazier extends TileEntity {
     }
 
     @Override
+    public boolean canUpdate() {
+        return worldObj != null && worldObj.isRemote;
+    }
+
+    @Override
     public void updateEntity() {
         if (worldObj == null || worldObj.isRemote || cooking == null) return;
         if (++ticks % 20 == 0)

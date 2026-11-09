@@ -135,6 +135,19 @@ public final class SmelterVesselGeometry {
         return null;
     }
 
+    /** Fast-path verification that an already-discovered vessel geometry still holds in the world. */
+    public static boolean matches(IBlockAccess world, int cx, int cy, int cz, int facing,
+        SmelterVesselGeometry geometry) {
+        if (world == null || geometry == null || facing < 2 || facing > 5) return false;
+        if (geometry.controllerX != cx || geometry.controllerY != cy
+            || geometry.controllerZ != cz
+            || geometry.facing != facing) return false;
+        Block brick = NEBlocks.refractoryBrick;
+        Block controller = NEBlocks.starterSmelter;
+        if (brick == null || controller == null || world.getBlock(cx, cy, cz) != controller) return false;
+        return geometry.matches(world, brick, controller);
+    }
+
     private boolean matches(IBlockAccess world, Block brick, Block controller) {
         crucibles = 0;
         int half = outerWidth / 2;

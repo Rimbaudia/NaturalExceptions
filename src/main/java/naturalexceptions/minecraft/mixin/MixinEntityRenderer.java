@@ -108,7 +108,7 @@ public abstract class MixinEntityRenderer {
             GL11.glTranslatef(0.0F, 0.0F, -0.1F);
         }
 
-        NECameraHandler.applyOrientation(entitylivingbase, partialTicks);
+        NECameraHandler.applyOrientation(frame);
 
         GL11.glTranslatef((float) eyeDelta.x, (float) eyeDelta.y, (float) eyeDelta.z);
 

@@ -25,7 +25,6 @@ public final class EntityHoistCounterweight extends Entity implements IEntityAdd
         super(world);
         setSize(0.7F, 0.7F);
         noClip = true;
-        ignoreFrustumCheck = true;
     }
 
     EntityHoistCounterweight(World world, int[] windlass, int[] well, int mouthY, double depth) {
@@ -54,7 +53,12 @@ public final class EntityHoistCounterweight extends Entity implements IEntityAdd
     }
 
     private void hang() {
-        setPosition(wellX + 0.5, mouthY - depth(), wellZ + 0.5);
+        double x = wellX + 0.5;
+        double y = mouthY - depth();
+        double z = wellZ + 0.5;
+        if (Math.abs(posX - x) > 1e-4 || Math.abs(posY - y) > 1e-4 || Math.abs(posZ - z) > 1e-4) {
+            setPosition(x, y, z);
+        }
     }
 
     @Override
@@ -62,8 +66,10 @@ public final class EntityHoistCounterweight extends Entity implements IEntityAdd
         super.onUpdate();
         hang();
         if (worldObj.isRemote) return;
-        TileEntity tile = worldObj.getTileEntity(windlassX, windlassY, windlassZ);
-        if (!(tile instanceof TileEntityHoist) || !((TileEntityHoist) tile).counterHooked()) setDead();
+        if (ticksExisted % 10 == 0) {
+            TileEntity tile = worldObj.getTileEntity(windlassX, windlassY, windlassZ);
+            if (!(tile instanceof TileEntityHoist) || !((TileEntityHoist) tile).counterHooked()) setDead();
+        }
     }
 
     @Override

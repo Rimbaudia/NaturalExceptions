@@ -22,6 +22,7 @@ import net.minecraftforge.common.MinecraftForge;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
 
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -57,6 +58,8 @@ public final class InventoryBrowserOverlay {
     private ItemStack selectedStack;
     private int recipePage;
     private List<RecipeCategory> resultCategories = Collections.emptyList();
+    private Map<RecipeCategory, List<UniversalRecipe>> cachedResultGroups;
+    private List<UniversalRecipe> cachedRecipes;
     private int categoryIndex;
     private List<GameItemRegistry.IndexedItem> filteredItems = Collections.emptyList();
     private int itemPage;
@@ -102,6 +105,7 @@ public final class InventoryBrowserOverlay {
             showingRecipes = false;
             showingUsages = false;
             searchFocused = false;
+            invalidateRecipeCache();
             UniversalRecipeRegistry.instance()
                 .init();
             GameItemRegistry.instance()
@@ -138,6 +142,14 @@ public final class InventoryBrowserOverlay {
         if (!INSTANCE.panelDrawnThisFrame) renderAtTail(gui, mouseX, mouseY);
     }
 
+    private static void setGlCap(int cap, boolean enabled) {
+        if (enabled) {
+            GL11.glEnable(cap);
+        } else {
+            GL11.glDisable(cap);
+        }
+    }
+
     private static void renderAtTail(GuiContainer gui, int mouseX, int mouseY) {
         InventoryBrowserOverlay overlay = INSTANCE;
         if (gui == null || gui != overlay.lastContainer || overlay.lastLayout == null) return;
@@ -145,7 +157,12 @@ public final class InventoryBrowserOverlay {
         overlay.lastMouseX = mouseX;
         overlay.lastMouseY = mouseY;
         overlay.pendingTooltipStack = null;
-        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        boolean prevLighting = GL11.glGetBoolean(GL11.GL_LIGHTING);
+        boolean prevDepthTest = GL11.glGetBoolean(GL11.GL_DEPTH_TEST);
+        boolean prevDepthMask = GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK);
+        boolean prevBlend = GL11.glGetBoolean(GL11.GL_BLEND);
+        boolean prevAlphaTest = GL11.glGetBoolean(GL11.GL_ALPHA_TEST);
+        boolean prevRescaleNormal = GL11.glGetBoolean(GL12.GL_RESCALE_NORMAL);
         try {
             // Container item rendering leaves depth testing enabled. Keep that state
             // from clipping or tinting the side panel and its item icons.
@@ -160,7 +177,13 @@ public final class InventoryBrowserOverlay {
                 overlay.drawToggleHint(gui, overlay.lastLayout);
             }
         } finally {
-            GL11.glPopAttrib();
+            setGlCap(GL11.GL_LIGHTING, prevLighting);
+            setGlCap(GL11.GL_DEPTH_TEST, prevDepthTest);
+            GL11.glDepthMask(prevDepthMask);
+            setGlCap(GL11.GL_BLEND, prevBlend);
+            setGlCap(GL11.GL_ALPHA_TEST, prevAlphaTest);
+            setGlCap(GL12.GL_RESCALE_NORMAL, prevRescaleNormal);
+            GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         }
     }
 
@@ -220,6 +243,7 @@ public final class InventoryBrowserOverlay {
                 overlay.showingUsages = false;
                 overlay.selectedStack = null;
                 overlay.recipePage = 0;
+                overlay.invalidateRecipeCache();
             } else if (overlay.inCategoryPrevious(x, y)) {
                 overlay.changeCategory(-1);
             } else if (overlay.inCategoryNext(x, y)) {
@@ -293,6 +317,7 @@ public final class InventoryBrowserOverlay {
                 overlay.showingUsages = false;
                 overlay.selectedStack = null;
                 overlay.recipePage = 0;
+                overlay.invalidateRecipeCache();
                 return true;
             }
             return false;
@@ -415,11 +440,43 @@ public final class InventoryBrowserOverlay {
             int cy = gridTop + (local / cols) * CELL;
             ItemStack stack = filteredItems.get(i)
                 .stack();
-            drawCell(gui, stack, cx, cy, mouseX, mouseY);
+            drawCellBackground(gui, cx, cy, mouseX, mouseY);
             if (mouseX >= cx && mouseX < cx + CELL && mouseY >= cy && mouseY < cy + CELL) {
                 hoveredPanelStack = stack;
                 drawItemTooltip(gui, stack, mouseX, mouseY);
             }
+        }
+        if (start < end) {
+            RenderItem renderItem = RenderItem.getInstance();
+            GL11.glEnable(GL11.GL_DEPTH_TEST);
+            GL11.glDepthMask(true);
+            RenderHelper.enableGUIStandardItemLighting();
+            GL11.glEnable(GL12.GL_RESCALE_NORMAL);
+            for (int i = start; i < end; i++) {
+                int local = i - start;
+                int cx = iconLeft + (local % cols) * CELL;
+                int cy = gridTop + (local / cols) * CELL;
+                ItemStack stack = filteredItems.get(i)
+                    .stack();
+                if (stack != null && stack.getItem() != null) {
+                    renderItem.renderItemAndEffectIntoGUI(
+                        gui.mc.fontRenderer,
+                        gui.mc.getTextureManager(),
+                        stack,
+                        cx + 1,
+                        cy + 1);
+                    renderItem.renderItemOverlayIntoGUI(
+                        gui.mc.fontRenderer,
+                        gui.mc.getTextureManager(),
+                        stack,
+                        cx + 1,
+                        cy + 1);
+                }
+            }
+            GL11.glDisable(GL12.GL_RESCALE_NORMAL);
+            RenderHelper.disableStandardItemLighting();
+            GL11.glDepthMask(false);
+            GL11.glDisable(GL11.GL_DEPTH_TEST);
         }
 
         String page = pageCount() == 0 ? "0 / 0" : (itemPage / pageSize + 1) + " / " + pageCount();
@@ -632,7 +689,7 @@ public final class InventoryBrowserOverlay {
         }
     }
 
-    private void drawCell(GuiScreen gui, ItemStack stack, int x, int y, int mouseX, int mouseY) {
+    private static void drawCellBackground(GuiScreen gui, int x, int y, int mouseX, int mouseY) {
         boolean hovered = hit(mouseX, mouseY, x, y, CELL);
         gui.drawRect(x, y, x + CELL, y + CELL, 0xFF373737);
         gui.drawRect(x + 1, y + 1, x + CELL - 1, y + CELL - 1, hovered ? SLOT_HOVER : SLOT_FILL);
@@ -640,13 +697,19 @@ public final class InventoryBrowserOverlay {
         gui.drawRect(x + 1, y + 1, x + 2, y + CELL - 1, 0xFFFFFFFF);
         gui.drawRect(x + 1, y + CELL - 2, x + CELL - 1, y + CELL - 1, 0xFF8B8B8B);
         gui.drawRect(x + CELL - 2, y + 1, x + CELL - 1, y + CELL - 1, 0xFF8B8B8B);
+    }
+
+    private void drawCell(GuiScreen gui, ItemStack stack, int x, int y, int mouseX, int mouseY) {
+        drawCellBackground(gui, x, y, mouseX, mouseY);
         if (stack != null && stack.getItem() != null) {
             RenderItem renderItem = RenderItem.getInstance();
             GL11.glEnable(GL11.GL_DEPTH_TEST);
+            GL11.glDepthMask(true);
             RenderHelper.enableGUIStandardItemLighting();
             renderItem.renderItemAndEffectIntoGUI(gui.mc.fontRenderer, gui.mc.getTextureManager(), stack, x + 1, y + 1);
             renderItem.renderItemOverlayIntoGUI(gui.mc.fontRenderer, gui.mc.getTextureManager(), stack, x + 1, y + 1);
             RenderHelper.disableStandardItemLighting();
+            GL11.glDepthMask(false);
             GL11.glDisable(GL11.GL_DEPTH_TEST);
         }
     }
@@ -732,35 +795,52 @@ public final class InventoryBrowserOverlay {
         showingRecipes = !usages;
         recipePage = 0;
         categoryIndex = 0;
+        invalidateRecipeCache();
         refreshResultCategories();
         searchFocused = false;
     }
 
     private List<UniversalRecipe> currentRecipes() {
         if (selectedStack == null) return Collections.emptyList();
+        if (cachedRecipes != null) return cachedRecipes;
         Map<RecipeCategory, List<UniversalRecipe>> groups = resultGroups();
-        if (groups.isEmpty()) return Collections.emptyList();
+        if (groups.isEmpty()) {
+            cachedRecipes = Collections.emptyList();
+            return cachedRecipes;
+        }
         if (categoryIndex >= resultCategories.size()) categoryIndex = 0;
-        return groups.getOrDefault(resultCategories.get(categoryIndex), Collections.emptyList());
+        cachedRecipes = groups.getOrDefault(resultCategories.get(categoryIndex), Collections.emptyList());
+        return cachedRecipes;
     }
 
     private Map<RecipeCategory, List<UniversalRecipe>> resultGroups() {
         if (selectedStack == null) return Collections.emptyMap();
-        UniversalRecipeRegistry registry = UniversalRecipeRegistry.instance();
-        List<UniversalRecipe> results = showingUsages ? registry.findUsages(selectedStack)
-            : registry.findAcquisitions(selectedStack);
-        return UniversalRecipeRegistry.groupByCategory(results);
+        if (cachedResultGroups == null) {
+            UniversalRecipeRegistry registry = UniversalRecipeRegistry.instance();
+            List<UniversalRecipe> results = showingUsages ? registry.findUsages(selectedStack)
+                : registry.findAcquisitions(selectedStack);
+            cachedResultGroups = UniversalRecipeRegistry.groupByCategory(results);
+        }
+        return cachedResultGroups;
     }
 
     private void refreshResultCategories() {
         resultCategories = new ArrayList<>(resultGroups().keySet());
         categoryIndex = clamp(categoryIndex, 0, Math.max(0, resultCategories.size() - 1));
+        cachedRecipes = null;
+    }
+
+    private void invalidateRecipeCache() {
+        cachedResultGroups = null;
+        cachedRecipes = null;
+        resultCategories = Collections.emptyList();
     }
 
     private void changeCategory(int delta) {
         if (resultCategories.isEmpty()) refreshResultCategories();
         if (resultCategories.isEmpty()) return;
         categoryIndex = (categoryIndex + delta + resultCategories.size()) % resultCategories.size();
+        cachedRecipes = null;
         recipePage = 0;
     }
 
@@ -946,6 +1026,7 @@ public final class InventoryBrowserOverlay {
         showingRecipes = false;
         showingUsages = false;
         selectedStack = null;
+        invalidateRecipeCache();
     }
 
 }

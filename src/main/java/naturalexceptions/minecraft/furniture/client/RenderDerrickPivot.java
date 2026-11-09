@@ -26,15 +26,15 @@ public final class RenderDerrickPivot extends TileEntitySpecialRenderer {
     public void renderTileEntityAt(TileEntity tile, double x, double y, double z, float partialTicks) {
         // Shaded face by face as blocks are, so not lit again by the item lighting (which left the faces turned
         // from its lights near black).
-        boolean lit = GL11.glIsEnabled(GL11.GL_LIGHTING);
         GL11.glDisable(GL11.GL_LIGHTING);
         draw(tile, x, y, z, partialTicks);
-        if (lit) GL11.glEnable(GL11.GL_LIGHTING);
+        GL11.glEnable(GL11.GL_LIGHTING);
     }
 
     private void draw(TileEntity tile, double x, double y, double z, float partialTicks) {
         if (!(tile instanceof TileEntityDerrickPivot)) return;
         TileEntityDerrickPivot pivot = (TileEntityDerrickPivot) tile;
+        float prevLX = OpenGlHelper.lastBrightnessX, prevLY = OpenGlHelper.lastBrightnessY;
         int[][] stays = pivot.stays();
         if (stays.length > 0) {
             int light = tile.getWorldObj()
@@ -45,15 +45,20 @@ public final class RenderDerrickPivot extends TileEntitySpecialRenderer {
             GL11.glTranslated(x - tile.xCoord, y - tile.yCoord, z - tile.zCoord);
             GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
             double[] head = { tile.xCoord + 0.5, stays[0][3] + 0.85, tile.zCoord + 0.5 };
+            HoistDrawing.beginBatch();
             for (int[] s : stays) HoistDrawing.cord(
                 naturalexceptions.minecraft.furniture.HoistGeometry.ropeIcon(),
                 head,
                 new double[] { s[0] + 0.5, s[1] + 0.95, s[2] + 0.5 },
                 0.035);
+            HoistDrawing.endBatch();
             GL11.glPopMatrix();
         }
         int[] brace = pivot.brace();
-        if (!pivot.slewing() && brace == null) return;
+        if (!pivot.slewing() && brace == null) {
+            OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, prevLX, prevLY);
+            return;
+        }
         double angle = pivot.slewing() ? pivot.angle(pivot.ticksIn(partialTicks))
             : TileEntityDerrickPivot.angleOf(brace[0]);
         int mastTop = pivot.slewing() ? pivot.mastTop() : brace[1];
@@ -77,7 +82,10 @@ public final class RenderDerrickPivot extends TileEntitySpecialRenderer {
             HoistDrawing.box(log, new double[] { -half, -0.14, -0.14, half, 0.14, 0.14 });
             GL11.glPopMatrix();
         }
-        if (!pivot.slewing()) return;
+        if (!pivot.slewing()) {
+            OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, prevLX, prevLY);
+            return;
+        }
         int light = tile.getWorldObj()
             .getLightBrightnessForSkyBlocks(tile.xCoord, pivot.mastTop(), tile.zCoord, 0);
         OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, light % 65536, light / 65536);
@@ -87,6 +95,7 @@ public final class RenderDerrickPivot extends TileEntitySpecialRenderer {
         GL11.glRotated(-Math.toDegrees(angle), 0, 1, 0); // local +x now runs out along the boom
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         int length = pivot.length();
+        HoistDrawing.beginBatch();
         HoistDrawing.box(log, new double[] { 0.5, -0.5, -0.5, length - 0.5, 0.5, 0.5 });
         // The sheave's two cheeks and the bar over its wheel, at the tip.
         double t = length;
@@ -97,6 +106,8 @@ public final class RenderDerrickPivot extends TileEntitySpecialRenderer {
             HoistDrawing.box(plank, new double[] { t - 0.125, -0.125, side[0], t + 0.125, 0.125, side[1] });
         }
         HoistDrawing.box(plank, new double[] { t - 0.5, 0.375, -0.375, t + 0.5, 0.5, 0.375 });
+        HoistDrawing.endBatch();
         GL11.glPopMatrix();
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, prevLX, prevLY);
     }
 }

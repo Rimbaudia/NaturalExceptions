@@ -141,7 +141,12 @@ public final class StarterSmelterDefinition extends MultiblockDefinition {
     @Override
     public MultiblockValidationResult validate(net.minecraft.world.IBlockAccess world, int x, int y, int z,
         int facing) {
-        return discoverVessel(world, x, y, z, facing) != null ? MultiblockValidationResult.ok()
+        return validate(world, x, y, z, facing, discoverVessel(world, x, y, z, facing));
+    }
+
+    public MultiblockValidationResult validate(net.minecraft.world.IBlockAccess world, int x, int y, int z,
+        int facing, SmelterVesselGeometry geometry) {
+        return geometry != null ? MultiblockValidationResult.ok()
             : MultiblockValidationResult.fail(
                 x,
                 y,

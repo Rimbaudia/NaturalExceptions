@@ -21,27 +21,28 @@ public final class CopperDepositField {
     }
 
     /** Returns this cell's deposit when its substrate and authored occurrence field permit one. */
-    public CopperDeposit depositAtCell(long cellX, long cellZ) {
+    public CopperDeposit depositAtCell(final long cellX, final long cellZ) {
+        if (unit(cellX, cellZ, 3) >= 0.74) return null;
         int candidateX = (int) (cellX * CELL_SIZE + (int) (unit(cellX, cellZ, 1) * CELL_SIZE));
         int candidateZ = (int) (cellZ * CELL_SIZE + (int) (unit(cellX, cellZ, 2) * CELL_SIZE));
-        OverworldSample host = generation.sample(candidateX, candidateZ);
-        if (host.geology() != GeologicalProvince.BASALTIC || unit(cellX, cellZ, 3) >= 0.74) return null;
+        GeologicalProvince geology = generation.geologyAt(candidateX, candidateZ);
+        if (geology != GeologicalProvince.BASALTIC) return null;
 
         int y = 18 + (int) (unit(cellX, cellZ, 4) * 39.0);
         double angle = unit(cellX, cellZ, 5) * Math.PI;
         double length = 3.0 + unit(cellX, cellZ, 6) * 3.0;
         double radius = 1.4 + unit(cellX, cellZ, 7) * 0.8;
-        DeterministicId id = DeterministicId.derive(
-            "naturalexceptions:worldgen/copper_deposit",
-            Long.toString(generation.worldSeed()),
-            Integer.toString(
-                generation.epoch()
-                    .value()),
-            Long.toString(cellX),
-            Long.toString(cellZ));
+        final long worldSeed = generation.worldSeed();
+        final int epochValue = generation.epoch()
+            .value();
         return new CopperDeposit(
-            id,
-            host.geology(),
+            () -> DeterministicId.derive(
+                "naturalexceptions:worldgen/copper_deposit",
+                Long.toString(worldSeed),
+                Integer.toString(epochValue),
+                Long.toString(cellX),
+                Long.toString(cellZ)),
+            geology,
             candidateX,
             y,
             candidateZ,

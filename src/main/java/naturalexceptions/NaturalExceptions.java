@@ -85,7 +85,11 @@ public final class NaturalExceptions {
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
         naturalexceptions.minecraft.network.NENetwork.init();
-        MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.knowledge.PlayerKnowledgeEvents());
+        naturalexceptions.minecraft.knowledge.PlayerKnowledgeEvents knowledgeEvents = new naturalexceptions.minecraft.knowledge.PlayerKnowledgeEvents();
+        MinecraftForge.EVENT_BUS.register(knowledgeEvents);
+        FMLCommonHandler.instance()
+            .bus()
+            .register(knowledgeEvents);
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.biology.BiologicalEvents());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.gear.GearEvents());
         MinecraftForge.EVENT_BUS.register(new naturalexceptions.minecraft.gear.GearMovement());
@@ -105,9 +109,6 @@ public final class NaturalExceptions {
         FMLCommonHandler.instance()
             .bus()
             .register(starRain.new Ticker());
-        FMLCommonHandler.instance()
-            .bus()
-            .register(new naturalexceptions.minecraft.knowledge.PlayerKnowledgeEvents());
         FMLCommonHandler.instance()
             .bus()
             .register(new naturalexceptions.minecraft.network.MainThreadTasks());

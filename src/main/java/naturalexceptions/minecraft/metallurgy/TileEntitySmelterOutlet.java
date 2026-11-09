@@ -59,8 +59,32 @@ public class TileEntitySmelterOutlet extends TileEntity {
         return pourTicks;
     }
 
+    private int cachedSmelterX, cachedSmelterY, cachedSmelterZ;
+    private boolean hasCachedSmelter;
+
     public TileEntityStarterSmelter findConnectedSmelter() {
-        return SmelterPortLookup.findOutletController(worldObj, xCoord, yCoord, zCoord, getFacing());
+        if (worldObj == null) return null;
+        int currentFacing = getFacing();
+        if (hasCachedSmelter) {
+            TileEntity te = worldObj.getTileEntity(cachedSmelterX, cachedSmelterY, cachedSmelterZ);
+            if (te instanceof TileEntityStarterSmelter) {
+                TileEntityStarterSmelter cached = (TileEntityStarterSmelter) te;
+                if (cached.isStructureValid()
+                    && SmelterPortLookup.isOutletPort(cached.vesselGeometry(), xCoord, yCoord, zCoord, currentFacing)) {
+                    return cached;
+                }
+            }
+            hasCachedSmelter = false;
+        }
+        TileEntityStarterSmelter found = SmelterPortLookup
+            .findOutletController(worldObj, xCoord, yCoord, zCoord, currentFacing);
+        if (found != null) {
+            cachedSmelterX = found.xCoord;
+            cachedSmelterY = found.yCoord;
+            cachedSmelterZ = found.zCoord;
+            hasCachedSmelter = true;
+        }
+        return found;
     }
 
     public TileEntityCastingTable findTargetCastingTable() {
@@ -367,8 +391,5 @@ public class TileEntitySmelterOutlet extends TileEntity {
     @Override
     public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity pkt) {
         readFromNBT(pkt.func_148857_g());
-        if (worldObj != null) {
-            worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
-        }
     }
 }

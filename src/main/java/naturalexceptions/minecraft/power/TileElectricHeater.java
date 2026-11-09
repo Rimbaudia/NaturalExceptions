@@ -33,14 +33,24 @@ public final class TileElectricHeater extends TileSource {
         if (now - sought < 100 && smelter == null) return null;
         sought = now;
         smelter = null;
-        for (int x = -SEEK; x <= SEEK; x++) for (int y = -SEEK; y <= SEEK; y++) for (int z = -SEEK; z <= SEEK; z++) {
-            TileEntity tile = worldObj.getTileEntity(xCoord + x, yCoord + y, zCoord + z);
-            if (!(tile instanceof TileEntityStarterSmelter)) continue;
-            naturalexceptions.minecraft.multiblock.SmelterVesselGeometry g = ((TileEntityStarterSmelter) tile)
-                .vesselGeometry();
-            if (g != null && g.inShell(xCoord, yCoord, zCoord)) {
-                smelter = new int[] { tile.xCoord, tile.yCoord, tile.zCoord };
-                return (TileEntityStarterSmelter) tile;
+        int minCX = (xCoord - SEEK) >> 4, maxCX = (xCoord + SEEK) >> 4;
+        int minCZ = (zCoord - SEEK) >> 4, maxCZ = (zCoord + SEEK) >> 4;
+        for (int cx = minCX; cx <= maxCX; cx++) for (int cz = minCZ; cz <= maxCZ; cz++) {
+            if (worldObj.getChunkProvider() != null && !worldObj.getChunkProvider()
+                .chunkExists(cx, cz)) continue;
+            net.minecraft.world.chunk.Chunk chunk = worldObj.getChunkFromChunkCoords(cx, cz);
+            if (chunk == null || chunk.chunkTileEntityMap == null) continue;
+            for (Object obj : chunk.chunkTileEntityMap.values()) {
+                if (!(obj instanceof TileEntityStarterSmelter)) continue;
+                TileEntityStarterSmelter tile = (TileEntityStarterSmelter) obj;
+                if (tile.isInvalid()) continue;
+                if (Math.abs(tile.xCoord - xCoord) > SEEK || Math.abs(tile.yCoord - yCoord) > SEEK
+                    || Math.abs(tile.zCoord - zCoord) > SEEK) continue;
+                naturalexceptions.minecraft.multiblock.SmelterVesselGeometry g = tile.vesselGeometry();
+                if (g != null && g.inShell(xCoord, yCoord, zCoord)) {
+                    smelter = new int[] { tile.xCoord, tile.yCoord, tile.zCoord };
+                    return tile;
+                }
             }
         }
         return null;

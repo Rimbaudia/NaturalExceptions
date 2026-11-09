@@ -33,6 +33,7 @@ public final class NEWorldTickHandler {
     private long lastElectricalThermalWork;
     private final StarRainWorldMaterializer starRainMaterializer = new StarRainWorldMaterializer();
     private final naturalexceptions.minecraft.event.P8WorldPresence p8Presence = new naturalexceptions.minecraft.event.P8WorldPresence();
+    private NEWorldSavedData lastP11SyncedData;
 
     public NEWorldTickHandler(SubsystemProfiler profiler, int perTickBudget, Consumer<ScheduledEvent> eventConsumer) {
         this.profiler = profiler != null ? profiler : new SubsystemProfiler();
@@ -100,7 +101,7 @@ public final class NEWorldTickHandler {
             .dirtyCellCount() > 0) {
             fluidWork = data.fluids()
                 .processDirty(perTickBudget);
-            if (fluidWork > 0) data.markDirty();
+            if (fluidWork > 0) data.markFluidsDirty();
             profiler.incrementCounter(SUBSYSTEM_FLUIDS, "region_cells_rebuilt", fluidWork);
         }
         java.util.function.Predicate<naturalexceptions.core.fluid.FluidCellKey> loadedFluidCell = key -> world == null
@@ -109,7 +110,7 @@ public final class NEWorldTickHandler {
         int thermalFluidWork = data.fluids()
             .activeThermalCellCount() > 0 ? data.fluids()
                 .processThermalWork(0.05, perTickBudget, loadedFluidCell) : 0;
-        if (thermalFluidWork > 0) data.markDirty();
+        if (thermalFluidWork > 0) data.markFluidsDirty();
         int fluidHostsRefreshed = 0;
         if (world != null) {
             for (naturalexceptions.core.fluid.FluidCellKey key : data.fluids()
@@ -143,7 +144,7 @@ public final class NEWorldTickHandler {
         long electricalStartNanos = System.nanoTime();
         int electricalWork = data.electrical()
             .processWork(0.05, perTickBudget);
-        if (electricalWork > 0) data.markDirty();
+        if (electricalWork > 0) data.markElectricalDirty();
         profiler.incrementCounter(SUBSYSTEM_ELECTRICAL, "solver_and_thermal_work", electricalWork);
         long solves = data.electrical()
             .solveWork();
@@ -174,26 +175,35 @@ public final class NEWorldTickHandler {
                 .queuedWorkCount());
         profiler.recordElapsedNanos(SUBSYSTEM_ELECTRICAL, "network_work", System.nanoTime() - electricalStartNanos);
 
-        java.util.Set<naturalexceptions.core.id.DeterministicId> starRainStarts = new java.util.LinkedHashSet<>();
-        if (data.p8() != null) {
-            for (naturalexceptions.core.event.EventRecord record : data.p8()
-                .events()
-                .snapshot()
-                .events()) {
-                if (naturalexceptions.core.event.EventRecord.PROTECTED_STAR_RAIN.equals(record.type())
-                    && record.phase() == naturalexceptions.core.event.EventPhase.SCHEDULED)
-                    starRainStarts.add(record.id());
+        java.util.Set<naturalexceptions.core.id.DeterministicId> starRainStarts = java.util.Collections.emptySet();
+        boolean p8Changed = false;
+        naturalexceptions.core.event.P8WorldState p8 = data.p8();
+        if (p8 != null) {
+            long nextTransition = p8.events()
+                .nextTransitionTick();
+            boolean transitionDue = nextTransition != -1L && nextTransition <= worldTime;
+            if (world != null && transitionDue) {
+                for (naturalexceptions.core.event.EventRecord record : p8.events()
+                    .snapshot()
+                    .events()) {
+                    if (naturalexceptions.core.event.EventRecord.PROTECTED_STAR_RAIN.equals(record.type())
+                        && record.phase() == naturalexceptions.core.event.EventPhase.SCHEDULED) {
+                        if (starRainStarts.isEmpty()) starRainStarts = new java.util.LinkedHashSet<>();
+                        starRainStarts.add(record.id());
+                    }
+                }
             }
+            java.util.Collection<naturalexceptions.core.anomaly.RegionKey> witnessed = world != null && transitionDue
+                ? naturalexceptions.minecraft.event.P8WorldPresence.witnessedRegions(world)
+                : java.util.Collections.<naturalexceptions.core.anomaly.RegionKey>emptySet();
+            p8Changed = p8.advance(worldTime, witnessed);
         }
-        boolean p8Changed = data.p8() != null && data.p8()
-            .advance(worldTime, naturalexceptions.minecraft.event.P8WorldPresence.witnessedRegions(world));
         if (p8Changed) {
-            data.markDirty();
+            data.markP8Dirty();
             profiler.incrementCounter(SUBSYSTEM_SCHEDULER, "p8_state_transitions", 1L);
         }
         if (world != null && !starRainStarts.isEmpty()) {
-            for (naturalexceptions.core.event.EventRecord record : data.p8()
-                .events()
+            for (naturalexceptions.core.event.EventRecord record : p8.events()
                 .snapshot()
                 .events()) {
                 if (!starRainStarts.contains(record.id())
@@ -207,7 +217,8 @@ public final class NEWorldTickHandler {
 
         if (world != null) p8Presence.tick(world, data, worldTime);
 
-        if (data.p8() != null) {
+        if (p8 != null && (p8Changed || lastP11SyncedData != data)) {
+            lastP11SyncedData = data;
             net.minecraft.util.ChunkCoordinates spawn = world != null ? world.getSpawnPoint() : null;
             int centerX = spawn != null ? spawn.posX : 0;
             int centerZ = spawn != null ? spawn.posZ : 0;
@@ -219,8 +230,7 @@ public final class NEWorldTickHandler {
                 centerZ = net.minecraft.util.MathHelper.floor_double(witness.posZ);
             }
             // Impacts are placed when a shower actually starts (not when it is scheduled), around a witness.
-            naturalexceptions.core.event.EventScheduleSnapshot schedule = data.p8()
-                .events()
+            naturalexceptions.core.event.EventScheduleSnapshot schedule = p8.events()
                 .snapshot();
             java.util.List<naturalexceptions.core.event.EventRecord> started = new java.util.ArrayList<>();
             for (naturalexceptions.core.event.EventRecord record : schedule.events()) {
@@ -234,7 +244,7 @@ public final class NEWorldTickHandler {
                         schedule.lastAdvancedTick()),
                     centerX,
                     centerZ))
-                data.markDirty();
+                data.markP11Dirty();
         }
 
         long starRainStartNanos = System.nanoTime();
@@ -255,7 +265,7 @@ public final class NEWorldTickHandler {
                     if (world != null && starRainMaterializer.materialize(world, data, impact)) sitesMaterialized++;
                 }
             }
-            if (impactsResolved > 0) data.markDirty();
+            if (impactsResolved > 0) data.markP11Dirty();
         }
         // Impacts whose falling star was lost (unload, restart) or whose crater chunks were not yet loaded.
         if (world != null && worldTime % 100L == 0L
@@ -303,14 +313,14 @@ public final class NEWorldTickHandler {
             List<ScheduledEvent> dueEvents = data.scheduler()
                 .pollDueEvents(worldTime);
             workQueue.enqueueAll(dueEvents);
-            data.markDirty();
+            data.markSchedulerDirty();
         }
 
         // 2. Drain bounded work queue with per-tick budget
         if (!workQueue.isEmpty()) {
             int drained = workQueue.drain(perTickBudget, eventConsumer);
             profiler.incrementCounter(SUBSYSTEM_SCHEDULER, "events_processed", drained);
-            data.markDirty();
+            data.markSchedulerDirty();
         }
 
         long elapsedNanos = System.nanoTime() - startNanos;

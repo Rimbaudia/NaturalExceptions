@@ -24,6 +24,7 @@ public final class RenderStormglassBolt extends Render {
 
     @Override
     public void doRender(Entity entity, double x, double y, double z, float yaw, float partialTicks) {
+        float prevLX = OpenGlHelper.lastBrightnessX, prevLY = OpenGlHelper.lastBrightnessY;
         GL11.glPushMatrix();
         CrystalDraw.begin();
         OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240.0F, 240.0F);
@@ -49,6 +50,7 @@ public final class RenderStormglassBolt extends Render {
         GL11.glRotatef(-renderManager.playerViewX, 1.0F, 0.0F, 0.0F);
         CrystalDraw.glow(0.42F * pulse, 1.0F);
 
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, prevLX, prevLY);
         CrystalDraw.end();
         GL11.glPopMatrix();
     }

@@ -44,9 +44,20 @@ public final class RenderGathered extends RenderLiving {
         GL11.glScalef(SCALE, SCALE, SCALE);
     }
 
+    private float prevLX, prevLY;
+
     @Override
     protected int shouldRenderPass(EntityLivingBase entity, int pass, float partialTicks) {
-        if (pass != 0) return -1;
+        if (pass != 0) {
+            if (pass == 1) {
+                OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, prevLX, prevLY);
+                GL11.glEnable(GL11.GL_ALPHA_TEST);
+                GL11.glDisable(GL11.GL_BLEND);
+            }
+            return -1;
+        }
+        prevLX = OpenGlHelper.lastBrightnessX;
+        prevLY = OpenGlHelper.lastBrightnessY;
         bindTexture(GLOW);
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glDisable(GL11.GL_ALPHA_TEST);

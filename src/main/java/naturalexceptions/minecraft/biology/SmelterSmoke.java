@@ -40,13 +40,21 @@ public final class SmelterSmoke {
         boolean openAir = world.canBlockSeeTheSky(px, py, pz);
         if (openAir && OPEN_AIR_FACTOR <= 0.0) return 0.0;
         double total = 0.0;
-        for (int x = px - SEARCH_RADIUS; x <= px + SEARCH_RADIUS; x++) {
-            for (int y = py - 2; y <= py + 2; y++) {
-                for (int z = pz - SEARCH_RADIUS; z <= pz + SEARCH_RADIUS; z++) {
-                    if (world.getBlock(x, y, z) != NEBlocks.starterSmelter) continue;
-                    TileEntity tile = world.getTileEntity(x, y, z);
-                    if (!(tile instanceof TileEntityStarterSmelter)) continue;
-                    TileEntityStarterSmelter smelter = (TileEntityStarterSmelter) tile;
+        int minCX = (px - SEARCH_RADIUS) >> 4, maxCX = (px + SEARCH_RADIUS) >> 4;
+        int minCZ = (pz - SEARCH_RADIUS) >> 4, maxCZ = (pz + SEARCH_RADIUS) >> 4;
+        for (int cx = minCX; cx <= maxCX; cx++) {
+            for (int cz = minCZ; cz <= maxCZ; cz++) {
+                if (world.getChunkProvider() != null && !world.getChunkProvider()
+                    .chunkExists(cx, cz)) continue;
+                net.minecraft.world.chunk.Chunk chunk = world.getChunkFromChunkCoords(cx, cz);
+                if (chunk == null || chunk.chunkTileEntityMap == null) continue;
+                for (Object obj : chunk.chunkTileEntityMap.values()) {
+                    if (!(obj instanceof TileEntityStarterSmelter)) continue;
+                    TileEntityStarterSmelter smelter = (TileEntityStarterSmelter) obj;
+                    if (smelter.isInvalid()) continue;
+                    int x = smelter.xCoord, y = smelter.yCoord, z = smelter.zCoord;
+                    if (Math.abs(x - px) > SEARCH_RADIUS || Math.abs(y - py) > 2
+                        || Math.abs(z - pz) > SEARCH_RADIUS) continue;
                     // An incomplete shell pauses the smelter; its buffered fire is stalled, not burning.
                     if (!smelter.isStructureValid() || !smelter.vesselState()
                         .fuelState()

@@ -1,5 +1,8 @@
 package naturalexceptions.minecraft.furniture.client;
 
+import java.util.Map;
+import java.util.WeakHashMap;
+
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
@@ -29,14 +32,16 @@ import naturalexceptions.minecraft.furniture.TileEntityHoist;
 @SideOnly(Side.CLIENT)
 public final class RenderWindlass extends TileEntitySpecialRenderer {
 
+    private static final Map<TileEntityHoist, EntityHoistCounterweight> COUNTERS = new WeakHashMap<>();
+    private static final Map<TileEntityHoist, Long> NEXT_LOOKUP = new WeakHashMap<>();
+
     @Override
     public void renderTileEntityAt(TileEntity tile, double x, double y, double z, float partialTicks) {
         // Shaded face by face as blocks are, so not lit again by the item lighting (which left the faces turned
         // from its lights near black).
-        boolean lit = GL11.glIsEnabled(GL11.GL_LIGHTING);
         GL11.glDisable(GL11.GL_LIGHTING);
         draw(tile, x, y, z, partialTicks);
-        if (lit) GL11.glEnable(GL11.GL_LIGHTING);
+        GL11.glEnable(GL11.GL_LIGHTING);
     }
 
     private void draw(TileEntity tile, double x, double y, double z, float partialTicks) {
@@ -48,6 +53,7 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
             : load.sheave()[1] - (load.lastTickPosY + (load.posY - load.lastTickPosY) * partialTicks);
         int light = tile.getWorldObj()
             .getLightBrightnessForSkyBlocks(tile.xCoord, tile.yCoord, tile.zCoord, 0);
+        float prevLX = OpenGlHelper.lastBrightnessX, prevLY = OpenGlHelper.lastBrightnessY;
         OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, light % 65536, light / 65536);
         bindTexture(TextureMap.locationBlocksTexture);
         GL11.glPushMatrix();
@@ -68,6 +74,7 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
             // The rope off the top of the drum, by way of the mast for a derrick, up to the near side of the wheel.
             double[] from = point(0.5, 0.6 + r + 0.03, 0.5, facing);
             int[] derrick = hoist.derrickForDrawing();
+            HoistDrawing.beginBatch();
             if (derrick != null) {
                 double px = derrick[0] - tile.xCoord + 0.5, py = derrick[1] - tile.yCoord,
                     pz = derrick[2] - tile.zCoord + 0.5;
@@ -92,6 +99,7 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
                     iron,
                     new double[] { end[0] - 0.06, end[1] - 0.2, end[2] - 0.06, end[0] + 0.06, end[1], end[2] + 0.06 });
             }
+            HoistDrawing.endBatch();
             // The wheel: two squares a quarter-turn apart make its rim, standing in the rope's way, turning.
             GL11.glPushMatrix();
             GL11.glTranslated(ax, ay, az);
@@ -109,6 +117,7 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
             HoistDrawing.cord(cord, back, bail, 0.05);
         }
         GL11.glPopMatrix();
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, prevLX, prevLY);
     }
 
     /** The drum, its wound rope and the crank, all turning with the rope about the axle at (_, 0.6, 0.5). */
@@ -119,10 +128,20 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
         rotate(Math.toDegrees(rope / r), alongX);
         // Barrel, the rope wound on it, and a flange either side, each one round solid; the barrel stops short of
         // the posts so its ends do not lie in their faces.
+        HoistDrawing.beginBatch();
         HoistDrawing.prism(log, 12, r * 0.95, -0.29, 0.29, alongX);
         HoistDrawing.prism(HoistGeometry.ropeIcon(), 12, r * 0.95 + 0.03, -0.21, 0.21, alongX);
         HoistDrawing.prism(log, 12, r * 0.95 + 0.07, -0.25, -0.21, alongX);
         HoistDrawing.prism(log, 12, r * 0.95 + 0.07, 0.21, 0.25, alongX);
+        HoistDrawing.box(iron, axial(-0.5, 0.5, 0.04, alongX)); // the axle, out through both posts
+        double[] arm = axial(0.47, 0.51, 0.03, alongX);
+        arm[4] = 0.28;
+        HoistDrawing.box(iron, arm);
+        double[] handle = axial(0.51, 0.62, 0.035, alongX);
+        handle[1] = 0.24;
+        handle[4] = 0.31;
+        HoistDrawing.box(wood, handle);
+        HoistDrawing.endBatch();
         // The ratchet's teeth round the brake end.
         for (int k = 0; k < 8; k++) {
             GL11.glPushMatrix();
@@ -133,14 +152,6 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
             HoistDrawing.box(iron, tooth);
             GL11.glPopMatrix();
         }
-        HoistDrawing.box(iron, axial(-0.5, 0.5, 0.04, alongX)); // the axle, out through both posts
-        double[] arm = axial(0.47, 0.51, 0.03, alongX);
-        arm[4] = 0.28;
-        HoistDrawing.box(iron, arm);
-        double[] handle = axial(0.51, 0.62, 0.035, alongX);
-        handle[1] = 0.24;
-        handle[4] = 0.31;
-        HoistDrawing.box(wood, handle);
         GL11.glPopMatrix();
     }
 
@@ -174,14 +185,16 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
 
     /** A sheave's wheel in its own frame (its axle along z): a twelve-sided rim, six spokes and a hub. */
     private static void wheel(double w, IIcon log, IIcon wood, IIcon iron) {
+        HoistDrawing.beginBatch();
         HoistDrawing.ring(log, 12, w - 0.07, w, 0.07);
+        HoistDrawing.box(iron, new double[] { -0.07, -0.07, -0.08, 0.07, 0.07, 0.08 });
+        HoistDrawing.endBatch();
         for (int k = 0; k < 6; k++) {
             GL11.glPushMatrix();
             GL11.glRotated(60 * k, 0, 0, 1);
             HoistDrawing.box(wood, new double[] { -0.02, 0.05, -0.025, 0.02, w - 0.06, 0.025 });
             GL11.glPopMatrix();
         }
-        HoistDrawing.box(iron, new double[] { -0.07, -0.07, -0.08, 0.07, 0.07, 0.08 });
     }
 
     /** The brake lever on its quadrant at the -x end: up when set, laid over when off. */
@@ -222,10 +235,28 @@ public final class RenderWindlass extends TileEntitySpecialRenderer {
     }
 
     private static EntityHoistCounterweight counter(TileEntityHoist hoist) {
-        if (!hoist.counterHooked()) return null;
+        if (!hoist.counterHooked() || hoist.getWorldObj() == null) return null;
+        EntityHoistCounterweight cached = COUNTERS.get(hoist);
+        if (cached != null && !cached.isDead
+            && cached.worldObj == hoist.getWorldObj()
+            && cached.windlassX == hoist.xCoord
+            && cached.windlassY == hoist.yCoord
+            && cached.windlassZ == hoist.zCoord) {
+            return cached;
+        }
+        long now = hoist.getWorldObj()
+            .getTotalWorldTime();
+        Long next = NEXT_LOOKUP.get(hoist);
+        if (next != null && now < next) return null;
+        NEXT_LOOKUP.put(hoist, now + 20L);
         for (Object o : hoist.getWorldObj().loadedEntityList) if (o instanceof EntityHoistCounterweight) {
             EntityHoistCounterweight c = (EntityHoistCounterweight) o;
-            if (c.windlassX == hoist.xCoord && c.windlassY == hoist.yCoord && c.windlassZ == hoist.zCoord) return c;
+            if (!c.isDead && c.windlassX == hoist.xCoord
+                && c.windlassY == hoist.yCoord
+                && c.windlassZ == hoist.zCoord) {
+                COUNTERS.put(hoist, c);
+                return c;
+            }
         }
         return null;
     }

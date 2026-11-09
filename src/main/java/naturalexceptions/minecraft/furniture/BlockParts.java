@@ -35,13 +35,13 @@ abstract class BlockParts extends Block implements PartModel {
 
     @Override
     public void setBlockBoundsBasedOnState(IBlockAccess world, int x, int y, int z) {
-        double[] b = PartModel.bounds(parts(world.getBlockMetadata(x, y, z)));
+        double[] b = PartModel.cachedBounds(this, world.getBlockMetadata(x, y, z));
         setBlockBounds((float) b[0], (float) b[1], (float) b[2], (float) b[3], (float) b[4], (float) b[5]);
     }
 
     @Override
     public void setBlockBoundsForItemRender() {
-        double[] b = PartModel.bounds(parts(inventoryMetadata()));
+        double[] b = PartModel.cachedBounds(this, inventoryMetadata());
         setBlockBounds((float) b[0], (float) b[1], (float) b[2], (float) b[3], (float) b[4], (float) b[5]);
     }
 
@@ -49,7 +49,7 @@ abstract class BlockParts extends Block implements PartModel {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public void addCollisionBoxesToList(World world, int x, int y, int z, AxisAlignedBB mask, List boxes,
         Entity entity) {
-        for (double[] b : parts(world.getBlockMetadata(x, y, z))) {
+        for (double[] b : PartModel.cachedParts(this, world.getBlockMetadata(x, y, z))) {
             if (PartModel.empty(b)) continue;
             AxisAlignedBB box = AxisAlignedBB
                 .getBoundingBox(x + b[0], y + b[1], z + b[2], x + b[3], y + b[4], z + b[5]);

@@ -1,5 +1,8 @@
 package naturalexceptions.minecraft.furniture.client;
 
+import java.util.Map;
+import java.util.WeakHashMap;
+
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.tileentity.TileEntitySpecialRenderer;
@@ -29,15 +32,35 @@ public final class RenderLighthouseLamp extends TileEntitySpecialRenderer {
     private static final ResourceLocation BULLSEYE = new ResourceLocation(
         "naturalexceptions",
         "textures/blocks/lighthouse_lens_bullseye.png");
+    private static final Map<TileEntity, long[]> LIT_CACHE = new WeakHashMap<>();
+
+    private static boolean isLitCached(TileEntity tile) {
+        long bucket = tile.getWorldObj()
+            .getTotalWorldTime() >> 2;
+        long[] entry = LIT_CACHE.get(tile);
+        if (entry != null && entry[0] == bucket) {
+            return entry[1] != 0L;
+        }
+        boolean lit = BlockLighthouseLamp.lit(tile.getWorldObj(), tile.xCoord, tile.yCoord, tile.zCoord);
+        if (entry == null) {
+            LIT_CACHE.put(tile, new long[] { bucket, lit ? 1L : 0L });
+        } else {
+            entry[0] = bucket;
+            entry[1] = lit ? 1L : 0L;
+        }
+        return lit;
+    }
 
     @Override
     public void renderTileEntityAt(TileEntity tile, double x, double y, double z, float partialTicks) {
         if (tile.getWorldObj() == null) return;
-        boolean lit = BlockLighthouseLamp.lit(tile.getWorldObj(), tile.xCoord, tile.yCoord, tile.zCoord);
+        boolean lit = isLitCached(tile);
+        if (!lit && x * x + y * y + z * z > 64.0 * 64.0) return;
         double turn = Math.toRadians(
             ((tile.getWorldObj()
                 .getTotalWorldTime() + (lit ? partialTicks : 0)) * (lit ? TileEntityLighthouseLamp.TURN : 0.0))
                 % 360.0);
+        float prevLX = OpenGlHelper.lastBrightnessX, prevLY = OpenGlHelper.lastBrightnessY;
         GL11.glPushMatrix();
         GL11.glTranslated(x + 0.5, y, z + 0.5);
         GL11.glDisable(GL11.GL_LIGHTING);
@@ -47,7 +70,6 @@ public final class RenderLighthouseLamp extends TileEntitySpecialRenderer {
         OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240.0F, 240.0F);
         lens(turn);
         if (lit) {
-            boolean fog = GL11.glIsEnabled(GL11.GL_FOG);
             GL11.glDisable(GL11.GL_FOG);
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
             bindTexture(BEAM);
@@ -60,14 +82,16 @@ public final class RenderLighthouseLamp extends TileEntitySpecialRenderer {
                 beam(t, a, 0.12, 0.9, 1.0F, 0.98F, 0.92F, 1.0F);
             }
             t.draw();
-            if (fog) GL11.glEnable(GL11.GL_FOG);
+            GL11.glEnable(GL11.GL_FOG);
         }
         GL11.glDepthMask(true);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GL11.glDisable(GL11.GL_BLEND);
         GL11.glEnable(GL11.GL_CULL_FACE);
         GL11.glEnable(GL11.GL_LIGHTING);
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         GL11.glPopMatrix();
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, prevLX, prevLY);
     }
 
     /** The lens's four panels round the core, turned with the beams; the bull's-eyes face along them. */

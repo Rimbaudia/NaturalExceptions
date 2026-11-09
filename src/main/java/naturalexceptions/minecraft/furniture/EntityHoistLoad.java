@@ -40,7 +40,6 @@ public final class EntityHoistLoad extends Entity implements IEntityAdditionalSp
         super(world);
         setSize(0.9F, 0.6F);
         noClip = true;
-        ignoreFrustumCheck = true; // its rope reaches up to the sheave, far from its own box
     }
 
     EntityHoistLoad(World world, int[] windlass, int[] sheave, double paidOut) {
@@ -91,7 +90,10 @@ public final class EntityHoistLoad extends Entity implements IEntityAdditionalSp
             x = sheaveX + 0.5;
             z = sheaveZ + 0.5;
         }
-        setPosition(x, sheaveY + 0.5 - rope(), z);
+        double y = sheaveY + 0.5 - rope();
+        if (Math.abs(posX - x) > 1e-4 || Math.abs(posY - y) > 1e-4 || Math.abs(posZ - z) > 1e-4) {
+            setPosition(x, y, z);
+        }
     }
 
     public double[] sheave() {
@@ -103,10 +105,13 @@ public final class EntityHoistLoad extends Entity implements IEntityAdditionalSp
         super.onUpdate();
         hang();
         if (worldObj.isRemote) return;
-        TileEntity tile = worldObj.getTileEntity(windlassX, windlassY, windlassZ);
-        if (!(tile instanceof TileEntityHoist) || ((TileEntityHoist) tile).load() != this) {
-            if (riddenByEntity != null) riddenByEntity.mountEntity(null);
-            setDead();
+        if (ticksExisted % 10 == 0) {
+            TileEntity tile = worldObj.getTileEntity(windlassX, windlassY, windlassZ);
+            if (!(tile instanceof TileEntityHoist) || ((TileEntityHoist) tile).load() != this) {
+                if (riddenByEntity != null) riddenByEntity.mountEntity(null);
+                setDead();
+                return;
+            }
         }
         if (lastRider != null && riddenByEntity != lastRider) setDown(lastRider);
         lastRider = riddenByEntity;

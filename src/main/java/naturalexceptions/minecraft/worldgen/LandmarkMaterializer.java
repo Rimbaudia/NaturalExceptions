@@ -36,9 +36,31 @@ final class LandmarkMaterializer {
 
     private LandmarkMaterializer() {}
 
+    static void beginBatch(World world, int chunkX, int chunkZ) {
+        batchChunk = world.getChunkFromChunkCoords(chunkX, chunkZ);
+        batchGlowing = new ArrayList<>();
+    }
+
+    static void endBatch(World world, boolean skyChanged, boolean anyChanged) {
+        Chunk chunk = batchChunk;
+        List<int[]> glowing = batchGlowing;
+        batchChunk = null;
+        batchGlowing = null;
+        if (chunk == null || !anyChanged) return;
+        if (skyChanged) {
+            relight(world, chunk, glowing);
+        } else {
+            for (int[] p : glowing) world.func_147451_t(p[0], p[1], p[2]);
+            chunk.setChunkModified();
+        }
+    }
+
     static int skyIslands(World world, int chunkX, int chunkZ, SkyIslands field) {
         int x0 = chunkX * 16;
         int z0 = chunkZ * 16;
+        if (batchChunk != null) {
+            return materializeIslands(world, batchChunk, x0, z0, field, batchGlowing);
+        }
         int placed = 0;
         // Island rock, soil, cloud and decor go straight into the chunk and it is lit once at the end: through
         // world.setBlock each block relit its column and neighbours, a quarter-second a chunk over a grand island.
@@ -65,67 +87,115 @@ final class LandmarkMaterializer {
     private static int materializeIslands(World world, Chunk chunk, int x0, int z0, SkyIslands field,
         List<int[]> glowing) {
         int placed = 0;
+        int[][][] columns = new int[16][16][];
+        boolean[][] water = new boolean[16][16];
         for (SkyIslands.Island island : field.near(x0, z0, x0 + 15, z0 + 15)) {
+            double maxReach = island.radius() * 1.38 + 16.0;
+            double cdx = (x0 + 8) - island.centreX(), cdz = (z0 + 8) - island.centreZ();
+            if (cdx * cdx + cdz * cdz > maxReach * maxReach) continue;
+
+            boolean anyColumn = false;
+            for (int lx = 0; lx < 16; lx++) {
+                int x = x0 + lx;
+                for (int lz = 0; lz < 16; lz++) {
+                    int z = z0 + lz;
+                    int[] col = field.column(island, x, z);
+                    columns[lx][lz] = col;
+                    if (col != null) {
+                        anyColumn = true;
+                        water[lx][lz] = field.pondAt(island, x, z) || field.waterfallAt(island, x, z);
+                    } else {
+                        water[lx][lz] = false;
+                    }
+                }
+            }
+
             // 1. Rock, soil and the kind's surface; the pond and the waterfall's channel.
-            for (int x = x0; x < x0 + 16; x++) {
-                for (int z = z0; z < z0 + 16; z++) {
-                    int[] column = field.column(island, x, z);
-                    if (column == null) continue;
-                    boolean water = field.pondAt(island, x, z) || field.waterfallAt(island, x, z);
-                    SkyIslands.Surface surface = field.surface(island, x, z);
-                    boolean grand = island.tier() == SkyIslands.Tier.GRAND;
-                    for (int y = column[0]; y <= column[1]; y++) {
-                        place(chunk, x, y, z, islandBlock(field, x, y, z, column, water, surface, grand), 0, glowing);
-                        placed++;
+            if (anyColumn) {
+                boolean grand = island.tier() == SkyIslands.Tier.GRAND;
+                for (int lx = 0; lx < 16; lx++) {
+                    int x = x0 + lx;
+                    for (int lz = 0; lz < 16; lz++) {
+                        int[] column = columns[lx][lz];
+                        if (column == null) continue;
+                        int z = z0 + lz;
+                        boolean isWater = water[lx][lz];
+                        SkyIslands.Surface surface = field.surface(island, x, z);
+                        for (int y = column[0]; y <= column[1]; y++) {
+                            place(
+                                chunk,
+                                x,
+                                y,
+                                z,
+                                islandBlock(field, x, y, z, column, isWater, surface, grand),
+                                0,
+                                glowing);
+                            placed++;
+                        }
                     }
                 }
             }
             // 2. The cloud rim and puffs under the island.
-            for (int x = x0; x < x0 + 16; x++) {
-                for (int z = z0; z < z0 + 16; z++) {
-                    int[] cloud = field.cloud(island, x, z);
-                    if (cloud == null || NEBlocks.cloud == null
-                        || field.pondAt(island, x, z)
-                        || field.waterfallAt(island, x, z)) continue;
-                    for (int y = cloud[0]; y <= cloud[1]; y++) {
-                        place(chunk, x, y, z, NEBlocks.cloud, 0, glowing);
-                        placed++;
+            if (NEBlocks.cloud != null) {
+                for (int lx = 0; lx < 16; lx++) {
+                    int x = x0 + lx;
+                    for (int lz = 0; lz < 16; lz++) {
+                        if (water[lx][lz]) continue;
+                        int z = z0 + lz;
+                        int[] cloud = field.cloud(island, x, z, columns[lx][lz]);
+                        if (cloud == null) continue;
+                        for (int y = cloud[0]; y <= cloud[1]; y++) {
+                            place(chunk, x, y, z, NEBlocks.cloud, 0, glowing);
+                            placed++;
+                        }
                     }
                 }
             }
-            // 2b. Stormglass hanging in points from the underside, where nothing (no cloud) is in the way.
-            if (NEBlocks.stormglassCluster != null) for (int x = x0; x < x0 + 16; x++) {
-                for (int z = z0; z < z0 + 16; z++) {
-                    int length = field.stormglassHang(island, x, z);
-                    int[] column = length > 0 ? field.column(island, x, z) : null;
-                    if (column == null) continue;
-                    for (int y = column[0] - 1; y >= column[0] - length && world.isAirBlock(x, y, z); y--) {
-                        place(chunk, x, y, z, NEBlocks.stormglassCluster, 0, glowing);
-                        placed++;
+            if (anyColumn) {
+                // 2b. Stormglass hanging in points from the underside, where nothing (no cloud) is in the way.
+                if (NEBlocks.stormglassCluster != null && island.tier() != SkyIslands.Tier.SMALL) {
+                    for (int lx = 0; lx < 16; lx++) {
+                        int x = x0 + lx;
+                        for (int lz = 0; lz < 16; lz++) {
+                            int[] column = columns[lx][lz];
+                            if (column == null) continue;
+                            int z = z0 + lz;
+                            int length = field.stormglassHang(island, x, z);
+                            if (length <= 0) continue;
+                            for (int y = column[0] - 1; y >= column[0] - length && world.isAirBlock(x, y, z); y--) {
+                                place(chunk, x, y, z, NEBlocks.stormglassCluster, 0, glowing);
+                                placed++;
+                            }
+                        }
                     }
                 }
-            }
-            // 3. The waterfall: its lip is a source that starts flowing over the edge once the chunk is live.
-            int[] lip = field.waterfallLip(island);
-            if (lip != null && insideChunk(lip[0], lip[1], x0, z0, 0)) {
-                int[] column = field.column(island, lip[0], lip[1]);
-                if (column != null) world.scheduleBlockUpdate(lip[0], column[1], lip[1], Blocks.water, 5);
-            }
-            // 4. What grows and lies on top.
-            for (int x = x0; x < x0 + 16; x++) {
-                for (int z = z0; z < z0 + 16; z++) {
-                    SkyIslands.Decor decor = field.decor(island, x, z);
-                    if (decor == SkyIslands.Decor.NONE) continue;
-                    int[] column = field.column(island, x, z);
-                    if (column == null || world.getBlock(x, column[1], z) == NEBlocks.cloud) continue;
-                    placed += placeDecor(chunk, field, decor, x, column[1] + 1, z, glowing);
+                // 3. The waterfall: its lip is a source that starts flowing over the edge once the chunk is live.
+                int[] lip = field.waterfallLip(island);
+                if (lip != null && insideChunk(lip[0], lip[1], x0, z0, 0)) {
+                    int[] column = columns[lip[0] - x0][lip[1] - z0];
+                    if (column != null) world.scheduleBlockUpdate(lip[0], column[1], lip[1], Blocks.water, 5);
                 }
+                // 4. What grows and lies on top.
+                for (int lx = 0; lx < 16; lx++) {
+                    int x = x0 + lx;
+                    for (int lz = 0; lz < 16; lz++) {
+                        int[] column = columns[lx][lz];
+                        if (column == null || water[lx][lz]) continue;
+                        int z = z0 + lz;
+                        SkyIslands.Decor decor = field.decorOnLand(island, x, z);
+                        if (decor == SkyIslands.Decor.NONE || world.getBlock(x, column[1], z) == NEBlocks.cloud)
+                            continue;
+                        placed += placeDecor(chunk, field, decor, x, column[1] + 1, z, glowing);
+                    }
+                }
+                // 5. Trees, each only when it fits wholly inside this chunk.
+                for (int[] spot : field.treeSpots(island)) plantTree(world, field, island, spot, x0, z0);
+                // 6. A hidden cache in its ring of boulders, or the island's sky dungeon (this chunk's share of it).
+                placeCache(world, field, island, x0, z0);
             }
-            // 5. Trees, each only when it fits wholly inside this chunk.
-            for (int[] spot : field.treeSpots(island)) plantTree(world, field, island, spot, x0, z0);
-            // 6. A hidden cache in its ring of boulders, or the island's sky dungeon (this chunk's share of it).
-            placeCache(world, field, island, x0, z0);
-            placed += buildDungeon(world, field, island, x0, z0);
+            if (island.hasDungeon()) {
+                placed += buildDungeon(world, field, island, x0, z0);
+            }
         }
         return placed;
     }
@@ -133,16 +203,21 @@ final class LandmarkMaterializer {
     /**
      * True when a block can be written straight into storage: it holds no tile entity and does nothing on being
      * placed. Still water is the exception kept in: its placement check only matters beside lava. A class that
-     * overrides either of Block's (World, x, y, z) hooks counts as reacting, which errs safe.
+     * overrides Block's onBlockAdded (World, x, y, z) hook counts as reacting, which errs safe.
      */
     private static boolean plain(Block block, int meta) {
         if (block == Blocks.water) return true;
         if (block.hasTileEntity(meta)) return false;
-        Boolean reacts = REACTS.get(block.getClass());
+        Boolean reacts;
+        synchronized (REACTS) {
+            reacts = REACTS.get(block.getClass());
+        }
         if (reacts == null) {
             reacts = false;
             for (Class<?> c = block.getClass(); c != Block.class && c != null && !reacts; c = c.getSuperclass()) {
                 for (java.lang.reflect.Method m : c.getDeclaredMethods()) {
+                    String name = m.getName();
+                    if (!name.equals("onBlockAdded") && !name.equals("func_149726_b")) continue;
                     Class<?>[] p = m.getParameterTypes();
                     if (p.length == 4 && p[0] == World.class
                         && p[1] == int.class
@@ -154,7 +229,9 @@ final class LandmarkMaterializer {
                     }
                 }
             }
-            REACTS.put(block.getClass(), reacts);
+            synchronized (REACTS) {
+                REACTS.put(block.getClass(), reacts);
+            }
         }
         return !reacts;
     }
@@ -1042,7 +1119,7 @@ final class LandmarkMaterializer {
      * at the end: a chasm or sinkhole through world.setBlock relit its column and neighbours at every block.
      */
     static int landmarks(final World world, final int chunkX, final int chunkZ, final Landmarks field) {
-        return batched(world, chunkX, chunkZ, new java.util.function.IntSupplier() {
+        return batched(world, chunkX, chunkZ, true, new java.util.function.IntSupplier() {
 
             @Override
             public int getAsInt() {
@@ -1280,7 +1357,7 @@ final class LandmarkMaterializer {
 
     /** The deep pockets (Lumenite grottos, magma) through this chunk, carved and lit as {@link #landmarks} are. */
     static int deepLayers(final World world, final int chunkX, final int chunkZ, final DeepLayers field) {
-        return batched(world, chunkX, chunkZ, new java.util.function.IntSupplier() {
+        return batched(world, chunkX, chunkZ, false, new java.util.function.IntSupplier() {
 
             @Override
             public int getAsInt() {
@@ -1293,20 +1370,16 @@ final class LandmarkMaterializer {
      * Runs {@code work} with this chunk open for {@link #set} to write straight into, then lights it once if
      * anything changed. Blocks outside the chunk, and any but plain ones, still go through world.setBlock.
      */
-    private static int batched(World world, int chunkX, int chunkZ, java.util.function.IntSupplier work) {
-        if (batchChunk != null) return work.getAsInt(); // already inside a batch (an island's): its relight covers it
-        Chunk chunk = world.getChunkFromChunkCoords(chunkX, chunkZ);
-        List<int[]> glowing = new ArrayList<>();
-        batchChunk = chunk;
-        batchGlowing = glowing;
-        int changed;
+    private static int batched(World world, int chunkX, int chunkZ, boolean skyAffected,
+        java.util.function.IntSupplier work) {
+        if (batchChunk != null) return work.getAsInt(); // already inside a batch: its relight covers it
+        beginBatch(world, chunkX, chunkZ);
+        int changed = 0;
         try {
             changed = work.getAsInt();
         } finally {
-            batchChunk = null;
-            batchGlowing = null;
+            endBatch(world, skyAffected && changed > 0, changed > 0);
         }
-        if (changed > 0) relight(world, chunk, glowing);
         return changed;
     }
 

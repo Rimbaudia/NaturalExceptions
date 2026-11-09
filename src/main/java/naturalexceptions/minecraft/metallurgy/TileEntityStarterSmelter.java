@@ -114,6 +114,13 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
 
     /** The state last sent to watching players by the periodic sync. */
     private NBTTagCompound lastSynced;
+    private boolean syncDirty = true;
+
+    @Override
+    public void markDirty() {
+        this.syncDirty = true;
+        super.markDirty();
+    }
 
     public VesselState vesselState() {
         return vesselState;
@@ -138,11 +145,18 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
 
     public void validateStructure() {
         if (worldObj != null) {
-            vesselGeometry = naturalexceptions.minecraft.multiblock.StarterSmelterDefinition.INSTANCE
-                .discoverVessel(worldObj, xCoord, yCoord, zCoord, getFacing());
+            boolean wasValid = this.structureValid;
+            boolean wasOverCapacity = this.overCapacity;
+            int facing = getFacing();
+            if (!structureValid || vesselGeometry == null
+                || !naturalexceptions.minecraft.multiblock.SmelterVesselGeometry
+                    .matches(worldObj, xCoord, yCoord, zCoord, facing, vesselGeometry)) {
+                vesselGeometry = naturalexceptions.minecraft.multiblock.StarterSmelterDefinition.INSTANCE
+                    .discoverVessel(worldObj, xCoord, yCoord, zCoord, facing);
+            }
             overCapacity = vesselGeometry != null && occupiedVolumeLitres() > vesselGeometry.capacityLitres();
             this.structureValidationResult = naturalexceptions.minecraft.multiblock.StarterSmelterDefinition.INSTANCE
-                .validate(worldObj, xCoord, yCoord, zCoord, getFacing());
+                .validate(worldObj, xCoord, yCoord, zCoord, facing, vesselGeometry);
             if (overCapacity)
                 this.structureValidationResult = naturalexceptions.minecraft.multiblock.MultiblockValidationResult.fail(
                     xCoord,
@@ -151,6 +165,9 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
                     null,
                     "Vessel contents exceed the repaired cavity capacity; remove material before restarting.");
             this.structureValid = structureValidationResult.isValid();
+            if (this.structureValid != wasValid || this.overCapacity != wasOverCapacity) {
+                this.syncDirty = true;
+            }
         }
     }
 
@@ -318,11 +335,18 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
             markDirty();
         }
 
-        if (vesselGeometry == null || worldObj == null || worldObj.getTotalWorldTime() % 10L == 0L) validateStructure();
+        long validateInterval = (!structureValid || vesselState.isDormant(293.15)) ? 40L : 10L;
+        if ((structureValid && vesselGeometry == null)
+            || (worldObj != null && worldObj.getTotalWorldTime() % validateInterval == 0L)) {
+            validateStructure();
+        }
 
         // A damaged/downsized shell pauses processing. Its contents remain authoritative and are never discarded.
         if (worldObj != null && !structureValid) {
-            if (forcedDraftTicks > 0) forcedDraftTicks--;
+            if (forcedDraftTicks > 0) {
+                forcedDraftTicks--;
+                syncDirty = true;
+            }
             return;
         }
 
@@ -442,7 +466,10 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
         }
 
         // 4. Only actively pumped, connected nozzles supply forced air. Draft expires even without fuel.
-        if (worldObj != null && forcedDraftTicks > 0 && countAttachedTuyeres() == 0) forcedDraftTicks = 0;
+        if (worldObj != null && forcedDraftTicks > 0 && countAttachedTuyeres() == 0) {
+            forcedDraftTicks = 0;
+            syncDirty = true;
+        }
         if (!vesselState.isDormant(293.15)) {
             double airMultiplier = (forcedDraftTicks > 0 ? 1.60 : 1.0) * crucibleDraft();
             vesselState.step(1, 293.15, airMultiplier);
@@ -455,8 +482,10 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
 
         // 5. Periodic sync for the players who can see it, only when its state has moved (a cold smelter sends
         // nothing), and without resending the block (its melt and workpiece are drawn by its special renderer).
-        if (worldObj != null && worldObj.getTotalWorldTime() % 10L == 0L)
+        if (worldObj != null && syncDirty && worldObj.getTotalWorldTime() % 10L == 0L) {
+            syncDirty = false;
             lastSynced = naturalexceptions.minecraft.network.TileSync.toWatchersIfChanged(this, lastSynced);
+        }
     }
 
     public boolean insertFuel(ItemStack stack) {
@@ -950,6 +979,7 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
         if (slot >= 0 && slot < INVENTORY_SIZE && inventory[slot] != null) {
             ItemStack itemstack = inventory[slot];
             inventory[slot] = null;
+            syncDirty = true;
             return itemstack;
         }
         return null;
@@ -1207,6 +1237,7 @@ public final class TileEntityStarterSmelter extends TileEntity implements ISided
                 inventory[slot] = ItemStack.loadItemStackFromNBT(itemTag);
             }
         }
+        this.syncDirty = true;
     }
 
     @Override

@@ -86,22 +86,96 @@ public final class BlockVaultGate extends Block {
 
     /** Breaks every Warden-bound seal within {@code reach} of (x, y, z); returns how many gate blocks opened. */
     public static int breakWardenSeals(World world, int x, int y, int z, int reach) {
+        if (world == null) return 0;
         int opened = 0;
-        for (int dx = -reach; dx <= reach; dx++)
-            for (int dy = -reach / 2; dy <= reach / 2; dy++) for (int dz = -reach; dz <= reach; dz++) {
-                int bx = x + dx, by = y + dy, bz = z + dz;
-                if (by < 1 || by > 254) continue;
-                if (!(world.getBlock(bx, by, bz) instanceof BlockVaultGate)
-                    || world.getBlockMetadata(bx, by, bz) != WARDEN_BOUND) continue;
-                int n = open(world, bx, by, bz);
-                if (n > 0) {
-                    opened += n;
-                    world.playSoundEffect(bx + 0.5, by + 0.5, bz + 0.5, "random.anvil_land", 1.0F, 0.4F);
-                    world.playSoundEffect(bx + 0.5, by + 0.5, bz + 0.5, "naturalexceptions:warden.phase", 1.5F, 1.4F);
-                    if (world instanceof net.minecraft.world.WorldServer) ((net.minecraft.world.WorldServer) world)
-                        .func_147487_a("fireworksSpark", bx + 0.5, by + 1.0, bz + 0.5, 40, 1.0, 1.0, 1.0, 0.1);
+        int minX = x - reach, maxX = x + reach;
+        int minY = Math.max(1, y - reach / 2), maxY = Math.min(254, y + reach / 2);
+        int minZ = z - reach, maxZ = z + reach;
+        int minCX = minX >> 4, maxCX = maxX >> 4;
+        int minCZ = minZ >> 4, maxCZ = maxZ >> 4;
+        int minSection = minY >> 4, maxSection = maxY >> 4;
+        for (int cx = minCX; cx <= maxCX; cx++) {
+            for (int cz = minCZ; cz <= maxCZ; cz++) {
+                if (world.getChunkProvider() != null && !world.getChunkProvider()
+                    .chunkExists(cx, cz)) continue;
+                net.minecraft.world.chunk.Chunk chunk = world.getChunkFromChunkCoords(cx, cz);
+                if (chunk == null) continue;
+                if (chunk.chunkTileEntityMap != null) {
+                    for (Object obj : new java.util.ArrayList<>(chunk.chunkTileEntityMap.values())) {
+                        if (obj instanceof TileEntityWardenSeal) {
+                            TileEntityWardenSeal seal = (TileEntityWardenSeal) obj;
+                            if (!seal.isInvalid() && Math.abs(seal.xCoord - x) <= reach
+                                && Math.abs(seal.yCoord - y) <= reach / 2
+                                && Math.abs(seal.zCoord - z) <= reach
+                                && naturalexceptions.minecraft.registry.NEBlocks.skystoneBricks != null) {
+                                world.setBlock(
+                                    seal.xCoord,
+                                    seal.yCoord,
+                                    seal.zCoord,
+                                    naturalexceptions.minecraft.registry.NEBlocks.skystoneBricks,
+                                    0,
+                                    3);
+                            }
+                        }
+                    }
+                }
+                net.minecraft.world.chunk.storage.ExtendedBlockStorage[] storages = chunk.getBlockStorageArray();
+                if (storages == null) continue;
+                int startX = Math.max(minX, cx << 4), endX = Math.min(maxX, (cx << 4) + 15);
+                int startZ = Math.max(minZ, cz << 4), endZ = Math.min(maxZ, (cz << 4) + 15);
+                for (int sec = minSection; sec <= maxSection && sec < storages.length; sec++) {
+                    net.minecraft.world.chunk.storage.ExtendedBlockStorage storage = storages[sec];
+                    if (storage == null || storage.isEmpty()) continue;
+                    int startY = Math.max(minY, sec << 4), endY = Math.min(maxY, (sec << 4) + 15);
+                    for (int bx = startX; bx <= endX; bx++) {
+                        int lx = bx & 15;
+                        for (int bz = startZ; bz <= endZ; bz++) {
+                            int lz = bz & 15;
+                            for (int by = startY; by <= endY; by++) {
+                                int ly = by & 15;
+                                Block blk = storage.getBlockByExtId(lx, ly, lz);
+                                if (blk == naturalexceptions.minecraft.registry.NEBlocks.wardenSeal
+                                    && naturalexceptions.minecraft.registry.NEBlocks.skystoneBricks != null) {
+                                    world.setBlock(
+                                        bx,
+                                        by,
+                                        bz,
+                                        naturalexceptions.minecraft.registry.NEBlocks.skystoneBricks,
+                                        0,
+                                        3);
+                                    continue;
+                                }
+                                if (!(blk instanceof BlockVaultGate)
+                                    || storage.getExtBlockMetadata(lx, ly, lz) != WARDEN_BOUND) continue;
+                                int n = open(world, bx, by, bz);
+                                if (n > 0) {
+                                    opened += n;
+                                    world.playSoundEffect(bx + 0.5, by + 0.5, bz + 0.5, "random.anvil_land", 1.0F, 0.4F);
+                                    world.playSoundEffect(
+                                        bx + 0.5,
+                                        by + 0.5,
+                                        bz + 0.5,
+                                        "naturalexceptions:warden.phase",
+                                        1.5F,
+                                        1.4F);
+                                    if (world instanceof net.minecraft.world.WorldServer)
+                                        ((net.minecraft.world.WorldServer) world).func_147487_a(
+                                            "fireworksSpark",
+                                            bx + 0.5,
+                                            by + 1.0,
+                                            bz + 0.5,
+                                            40,
+                                            1.0,
+                                            1.0,
+                                            1.0,
+                                            0.1);
+                                }
+                            }
+                        }
+                    }
                 }
             }
+        }
         return opened;
     }
 

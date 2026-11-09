@@ -3,7 +3,9 @@ package naturalexceptions.minecraft.item;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.WeakHashMap;
 
 import net.minecraft.block.Block;
 import net.minecraft.client.renderer.texture.IIconRegister;
@@ -156,12 +158,88 @@ public final class ItemGenericAssembly extends Item {
         return getIcon(stack, 1);
     }
 
+    private static final MaterialPropertyResolver SHARED_RESOLVER = new MaterialPropertyResolver();
+    private static final Map<NBTTagCompound, CachedAssembly> ASSEMBLY_CACHE = Collections
+        .synchronizedMap(new WeakHashMap<>());
+
+    private static final class CachedAssembly {
+
+        final NBTTagCompound headTag;
+        final NBTTagCompound handleTag;
+        final String attachment;
+        final double headWear;
+        final double headDeform;
+        final double headCracks;
+        final boolean headFractured;
+        final double handleWear;
+        final double handleDeform;
+        final double handleCracks;
+        final boolean handleFractured;
+        final AssemblyGraph assembly;
+
+        CachedAssembly(NBTTagCompound nbt, AssemblyGraph assembly) {
+            this.headTag = nbt.getCompoundTag(AssemblyNbtCodec.KEY_HEAD);
+            this.handleTag = nbt.getCompoundTag(AssemblyNbtCodec.KEY_HANDLE);
+            this.attachment = nbt.getString(AssemblyNbtCodec.KEY_ATTACHMENT);
+            ComponentDamage hd = assembly.head()
+                .damage();
+            this.headWear = hd.wear();
+            this.headDeform = hd.deformation();
+            this.headCracks = hd.cracking();
+            this.headFractured = hd.isFractured();
+            ComponentDamage hnd = assembly.handle()
+                .damage();
+            this.handleWear = hnd.wear();
+            this.handleDeform = hnd.deformation();
+            this.handleCracks = hnd.cracking();
+            this.handleFractured = hnd.isFractured();
+            this.assembly = assembly;
+        }
+
+        boolean matches(NBTTagCompound nbt) {
+            if (nbt.getTag(AssemblyNbtCodec.KEY_HEAD) != headTag
+                || nbt.getTag(AssemblyNbtCodec.KEY_HANDLE) != handleTag) {
+                return false;
+            }
+            if (!attachment.equals(nbt.getString(AssemblyNbtCodec.KEY_ATTACHMENT))) {
+                return false;
+            }
+            ComponentDamage hd = assembly.head()
+                .damage();
+            if (Double.compare(hd.wear(), headWear) != 0 || Double.compare(hd.deformation(), headDeform) != 0
+                || Double.compare(hd.cracking(), headCracks) != 0
+                || hd.isFractured() != headFractured) {
+                return false;
+            }
+            if (Double.compare(headTag.getDouble(AssemblyNbtCodec.KEY_WEAR), headWear) != 0
+                || Double.compare(headTag.getDouble(AssemblyNbtCodec.KEY_DEFORMATION), headDeform) != 0
+                || Double.compare(headTag.getDouble(AssemblyNbtCodec.KEY_CRACKING), headCracks) != 0
+                || headTag.getBoolean(AssemblyNbtCodec.KEY_FRACTURED) != headFractured) {
+                return false;
+            }
+            ComponentDamage hnd = assembly.handle()
+                .damage();
+            if (Double.compare(hnd.wear(), handleWear) != 0 || Double.compare(hnd.deformation(), handleDeform) != 0
+                || Double.compare(hnd.cracking(), handleCracks) != 0
+                || hnd.isFractured() != handleFractured) {
+                return false;
+            }
+            return Double.compare(handleTag.getDouble(AssemblyNbtCodec.KEY_WEAR), handleWear) == 0
+                && Double.compare(handleTag.getDouble(AssemblyNbtCodec.KEY_DEFORMATION), handleDeform) == 0
+                && Double.compare(handleTag.getDouble(AssemblyNbtCodec.KEY_CRACKING), handleCracks) == 0
+                && handleTag.getBoolean(AssemblyNbtCodec.KEY_FRACTURED) == handleFractured;
+        }
+    }
+
     public static ItemStack createStack(AssemblyGraph assembly) {
         Item item = NEItems.genericAssembly != null ? NEItems.genericAssembly : new ItemGenericAssembly();
         ItemStack stack = new ItemStack(item);
         NBTTagCompound nbt = new NBTTagCompound();
         AssemblyNbtCodec.writeToNbt(assembly, nbt);
         stack.setTagCompound(nbt);
+        if (assembly != null && assembly.head() != null && assembly.handle() != null) {
+            ASSEMBLY_CACHE.put(nbt, new CachedAssembly(nbt, assembly));
+        }
         return stack;
     }
 
@@ -169,8 +247,17 @@ public final class ItemGenericAssembly extends Item {
         if (stack == null || !stack.hasTagCompound()) {
             return null;
         }
+        NBTTagCompound nbt = stack.getTagCompound();
+        CachedAssembly cached = ASSEMBLY_CACHE.get(nbt);
+        if (cached != null && cached.matches(nbt)) {
+            return cached.assembly;
+        }
         try {
-            return AssemblyNbtCodec.readFromNbt(stack.getTagCompound());
+            AssemblyGraph parsed = AssemblyNbtCodec.readFromNbt(nbt);
+            if (parsed != null && parsed.head() != null && parsed.handle() != null) {
+                ASSEMBLY_CACHE.put(nbt, new CachedAssembly(nbt, parsed));
+            }
+            return parsed;
         } catch (Exception e) {
             return null;
         }
@@ -181,6 +268,11 @@ public final class ItemGenericAssembly extends Item {
         NBTTagCompound nbt = stack.hasTagCompound() ? stack.getTagCompound() : new NBTTagCompound();
         AssemblyNbtCodec.writeToNbt(assembly, nbt);
         stack.setTagCompound(nbt);
+        if (assembly != null && assembly.head() != null && assembly.handle() != null) {
+            ASSEMBLY_CACHE.put(nbt, new CachedAssembly(nbt, assembly));
+        } else {
+            ASSEMBLY_CACHE.remove(nbt);
+        }
     }
 
     public static DerivedCapability getCapability(AssemblyGraph assembly) {
@@ -200,8 +292,7 @@ public final class ItemGenericAssembly extends Item {
             }
         }
         if (headProps == null) {
-            MaterialPropertyResolver resolver = new MaterialPropertyResolver();
-            headProps = resolver.resolve(
+            headProps = SHARED_RESOLVER.resolve(
                 assembly.head()
                     .materialRef(),
                 assembly.head()
@@ -222,8 +313,7 @@ public final class ItemGenericAssembly extends Item {
             if (def != null) {
                 handleProps = def.properties();
             } else {
-                MaterialPropertyResolver resolver = new MaterialPropertyResolver();
-                handleProps = resolver.resolve(
+                handleProps = SHARED_RESOLVER.resolve(
                     assembly.handle()
                         .materialRef(),
                     assembly.handle()

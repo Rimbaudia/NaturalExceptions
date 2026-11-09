@@ -74,7 +74,13 @@ public final class HeadframeDefinition extends MultiblockDefinition {
     }
 
     /** The headframe round the sheave at (sx, sy, sz), if it is whole; null if not. */
+    public static HoistFrame at(IBlockAccess world, int sx, int sy, int sz) {
+        return INSTANCE.frame(world, sx, sy, sz);
+    }
+
+    /** The headframe round the sheave at (sx, sy, sz), if it is whole; null if not. */
     public HoistFrame frame(IBlockAccess world, int sx, int sy, int sz) {
+        if (world == null || !(world.getBlock(sx, sy, sz) instanceof BlockSheave)) return null;
         for (boolean alongX : new boolean[] { true, false }) {
             int ax = alongX ? 1 : 0, az = alongX ? 0 : 1;
             int ground = post(world, sx - ax, sy, sz - az);

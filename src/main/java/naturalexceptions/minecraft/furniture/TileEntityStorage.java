@@ -29,6 +29,11 @@ public abstract class TileEntityStorage extends TileEntity implements IInventory
         this.name = name;
     }
 
+    @Override
+    public boolean canUpdate() {
+        return false;
+    }
+
     /** True when nothing is held, so there is nothing to draw. */
     public boolean isEmpty() {
         for (ItemStack stack : slots) if (stack != null) return false;

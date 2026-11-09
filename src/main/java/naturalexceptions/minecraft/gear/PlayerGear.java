@@ -25,6 +25,8 @@ public final class PlayerGear implements IExtendedEntityProperties, IInventory {
     private boolean appearanceDirty = true;
     /** Set when anything changed and the owner's client has not been told yet (it needs its gear for movement). */
     private boolean ownerDirty = true;
+    private long wornTreasuresMask = -1L;
+    private final byte[] wornTreasureCounts = new byte[32];
 
     public static PlayerGear get(EntityPlayer player) {
         if (player == null) return null;
@@ -40,9 +42,37 @@ public final class PlayerGear implements IExtendedEntityProperties, IInventory {
         return stacks[slot.ordinal()];
     }
 
+    private long wornTreasuresMask() {
+        if (wornTreasuresMask == -1L) {
+            long mask = 0L;
+            java.util.Arrays.fill(wornTreasureCounts, (byte) 0);
+            for (int i = 0; i < stacks.length; i++) {
+                ItemStack stack = stacks[i];
+                if (stack != null && stack.getItem() instanceof naturalexceptions.minecraft.item.ItemTreasureGear) {
+                    Treasure treasure = ((naturalexceptions.minecraft.item.ItemTreasureGear) stack.getItem())
+                        .treasure();
+                    int ord = treasure.ordinal();
+                    mask |= (1L << ord);
+                    wornTreasureCounts[ord]++;
+                }
+            }
+            wornTreasuresMask = mask;
+        }
+        return wornTreasuresMask;
+    }
+
+    public boolean isWearing(Treasure treasure) {
+        return treasure != null && (wornTreasuresMask() & (1L << treasure.ordinal())) != 0L;
+    }
+
+    public int wornCount(Treasure treasure) {
+        if (treasure == null || (wornTreasuresMask() & (1L << treasure.ordinal())) == 0L) return 0;
+        return wornTreasureCounts[treasure.ordinal()];
+    }
+
     /** The first worn stack of a kind, or null. */
     public ItemStack worn(GearKind kind) {
-        for (GearSlot slot : GearSlot.values()) {
+        for (GearSlot slot : GearSlot.VALUES) {
             if (slot.kind() == kind && stacks[slot.ordinal()] != null) return stacks[slot.ordinal()];
         }
         return null;
@@ -52,7 +82,7 @@ public final class PlayerGear implements IExtendedEntityProperties, IInventory {
     public boolean wear(ItemStack stack) {
         GearKind kind = IWearable.kindOf(stack);
         if (kind == null) return false;
-        for (GearSlot slot : GearSlot.values()) {
+        for (GearSlot slot : GearSlot.VALUES) {
             if (slot.kind() == kind && stacks[slot.ordinal()] == null) {
                 ItemStack one = stack.copy();
                 one.stackSize = 1;
@@ -70,6 +100,7 @@ public final class PlayerGear implements IExtendedEntityProperties, IInventory {
             if (stacks[i] != null) result.add(stacks[i]);
             stacks[i] = null;
         }
+        wornTreasuresMask = -1L;
         appearanceDirty = true;
         ownerDirty = true;
         return result;
@@ -84,6 +115,7 @@ public final class PlayerGear implements IExtendedEntityProperties, IInventory {
     /** Client side: replace what this player wears with what the server says they wear. */
     public void applySync(ItemStack[] synced) {
         for (int i = 0; i < stacks.length; i++) stacks[i] = synced != null && i < synced.length ? synced[i] : null;
+        wornTreasuresMask = -1L;
     }
 
     public ItemStack[] snapshot() {
@@ -112,7 +144,7 @@ public final class PlayerGear implements IExtendedEntityProperties, IInventory {
         for (int i = 0; i < stacks.length; i++) {
             if (stacks[i] == null) continue;
             NBTTagCompound entry = new NBTTagCompound();
-            entry.setString(TAG_SLOT, GearSlot.values()[i].name());
+            entry.setString(TAG_SLOT, GearSlot.VALUES[i].name());
             stacks[i].writeToNBT(entry);
             list.appendTag(entry);
         }
@@ -124,17 +156,14 @@ public final class PlayerGear implements IExtendedEntityProperties, IInventory {
     @Override
     public void loadNBTData(NBTTagCompound compound) {
         for (int i = 0; i < stacks.length; i++) stacks[i] = null;
+        wornTreasuresMask = -1L;
         if (compound == null || !compound.hasKey(KEY, 10)) return;
         NBTTagList list = compound.getCompoundTag(KEY)
             .getTagList(TAG_ITEMS, 10);
         for (int i = 0; i < list.tagCount(); i++) {
             NBTTagCompound entry = list.getCompoundTagAt(i);
-            GearSlot slot;
-            try {
-                slot = GearSlot.valueOf(entry.getString(TAG_SLOT));
-            } catch (IllegalArgumentException unknown) {
-                continue;
-            }
+            GearSlot slot = GearSlot.byName(entry.getString(TAG_SLOT));
+            if (slot == null) continue;
             stacks[slot.ordinal()] = ItemStack.loadItemStackFromNBT(entry);
         }
         appearanceDirty = true;
@@ -175,6 +204,7 @@ public final class PlayerGear implements IExtendedEntityProperties, IInventory {
 
     @Override
     public ItemStack getStackInSlotOnClosing(int index) {
+        wornTreasuresMask = -1L;
         return null;
     }
 
@@ -187,6 +217,7 @@ public final class PlayerGear implements IExtendedEntityProperties, IInventory {
     }
 
     private void markDirty(int index) {
+        wornTreasuresMask = -1L;
         ownerDirty = true;
         if (GearSlot.byIndex(index) == GearSlot.FACE || GearSlot.byIndex(index) == GearSlot.BACK)
             appearanceDirty = true;
@@ -208,7 +239,9 @@ public final class PlayerGear implements IExtendedEntityProperties, IInventory {
     }
 
     @Override
-    public void markDirty() {}
+    public void markDirty() {
+        wornTreasuresMask = -1L;
+    }
 
     @Override
     public boolean isUseableByPlayer(EntityPlayer player) {

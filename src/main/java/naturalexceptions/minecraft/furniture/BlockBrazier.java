@@ -69,7 +69,18 @@ public final class BlockBrazier extends BlockParts {
         if (!player.capabilities.isCreativeMode && --held.stackSize <= 0)
             player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
         world.playSoundEffect(x + 0.5, y + 0.8, z + 0.5, "random.fizz", 0.5F, 1.4F);
+        world.scheduleBlockUpdate(x, y, z, this, 1);
         return true;
+    }
+
+    @Override
+    public void updateTick(World world, int x, int y, int z, Random random) {
+        TileEntity tile = world.getTileEntity(x, y, z);
+        if (tile instanceof TileEntityBrazier) {
+            TileEntityBrazier brazier = (TileEntityBrazier) tile;
+            brazier.updateEntity();
+            if (brazier.cooking() != null) world.scheduleBlockUpdate(x, y, z, this, 1);
+        }
     }
 
     @Override
