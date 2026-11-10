@@ -61,7 +61,7 @@ public final class DungeonBeacons {
     public static synchronized SkyIslands field(World world) {
         long seed = NEOverworldGenerator.landmarkSeed(world);
         if (field == null || field.seed() != seed) {
-            field = new SkyIslands(seed);
+            field = SkyIslands.of(seed);
             BEACONS.clear();
         }
         return field;
@@ -107,7 +107,7 @@ public final class DungeonBeacons {
     }
 
     /** How far out a dungeon's layout is started ahead of a player, so it's ready before anything needs it. */
-    static final int PREFETCH_REACH = 2 * REACH;
+    static final int PREFETCH_REACH = 768;
 
     /** Starts the layouts of the dungeons near (x, z) on the layout thread. */
     static void prefetchNear(World world, double x, double z) {
@@ -171,7 +171,7 @@ public final class DungeonBeacons {
         if (event.phase != TickEvent.Phase.END || player.worldObj.isRemote) return;
         long tick = player.worldObj.getTotalWorldTime() + player.getEntityId();
         if (tick % 20 != 0) return;
-        if (tick % 100 == 0) prefetchNear(player.worldObj, player.posX, player.posZ);
+        if (tick % 40 == 0) prefetchNear(player.worldObj, player.posX, player.posZ);
         Beacon beacon = nearest(player.worldObj, player.posX, player.posZ);
         if (beacon == null) return;
         // The room the player stands in goes on their chart (once the layout is to hand; never waiting for it).

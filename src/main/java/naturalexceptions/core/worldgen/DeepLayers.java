@@ -1,7 +1,9 @@
 package naturalexceptions.core.worldgen;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Zoned pockets deep underground: Lumenite grottos (y 14-34), oval caverns walled with Lumenite ore and floored
@@ -94,34 +96,96 @@ public final class DeepLayers {
         }
     }
 
+    private static final int SEED_CACHE_SIZE = 8;
+    private static final int CELL_CACHE_SIZE = 4096;
+    private static final Object EMPTY_CELL = new Object();
+    private static final Map<Long, DeepLayers> BY_SEED = new LinkedHashMap<Long, DeepLayers>(16, 0.75F, true) {
+
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Long, DeepLayers> eldest) {
+            return size() > SEED_CACHE_SIZE;
+        }
+    };
+
+    public static DeepLayers of(long seed) {
+        synchronized (BY_SEED) {
+            DeepLayers cached = BY_SEED.get(seed);
+            if (cached == null) {
+                cached = new DeepLayers(seed);
+                BY_SEED.put(seed, cached);
+            }
+            return cached;
+        }
+    }
+
     private final LandmarkNoise noise;
+    private final Map<Long, Object> grottoCells = new LinkedHashMap<Long, Object>(256, 0.75F, true) {
+
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Long, Object> eldest) {
+            return size() > CELL_CACHE_SIZE;
+        }
+    };
+    private final Map<Long, Object> magmaCells = new LinkedHashMap<Long, Object>(256, 0.75F, true) {
+
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Long, Object> eldest) {
+            return size() > CELL_CACHE_SIZE;
+        }
+    };
 
     public DeepLayers(long seed) {
         this.noise = new LandmarkNoise(seed ^ 0x444545504c415952L);
     }
 
+    private static long cellKey(long cx, long cz) {
+        return (cx << 32) ^ (cz & 0xffffffffL);
+    }
+
     public Pocket grottoAtCell(long cellX, long cellZ) {
-        if (noise.unit(cellX, cellZ, 1) >= GROTTO_PRESENCE) return null;
-        int margin = 26;
-        int x = (int) (cellX * GROTTO_CELL + margin + noise.unit(cellX, cellZ, 2) * (GROTTO_CELL - 2 * margin));
-        int z = (int) (cellZ * GROTTO_CELL + margin + noise.unit(cellX, cellZ, 3) * (GROTTO_CELL - 2 * margin));
-        int y = 20 + (int) (noise.unit(cellX, cellZ, 4) * 8);
-        double rx = 10.0 + noise.unit(cellX, cellZ, 5) * 10.0;
-        double rz = 10.0 + noise.unit(cellX, cellZ, 6) * 10.0;
-        double ry = 5.0 + noise.unit(cellX, cellZ, 7) * 4.0;
-        return new Pocket(false, cellX, cellZ, x, y, z, rx, ry, rz);
+        long key = cellKey(cellX, cellZ);
+        synchronized (grottoCells) {
+            Object hit = grottoCells.get(key);
+            if (hit != null) return hit == EMPTY_CELL ? null : (Pocket) hit;
+        }
+        Pocket pocket = null;
+        if (noise.unit(cellX, cellZ, 1) < GROTTO_PRESENCE) {
+            int margin = 26;
+            int x = (int) (cellX * GROTTO_CELL + margin + noise.unit(cellX, cellZ, 2) * (GROTTO_CELL - 2 * margin));
+            int z = (int) (cellZ * GROTTO_CELL + margin + noise.unit(cellX, cellZ, 3) * (GROTTO_CELL - 2 * margin));
+            int y = 20 + (int) (noise.unit(cellX, cellZ, 4) * 8);
+            double rx = 10.0 + noise.unit(cellX, cellZ, 5) * 10.0;
+            double rz = 10.0 + noise.unit(cellX, cellZ, 6) * 10.0;
+            double ry = 5.0 + noise.unit(cellX, cellZ, 7) * 4.0;
+            pocket = new Pocket(false, cellX, cellZ, x, y, z, rx, ry, rz);
+        }
+        synchronized (grottoCells) {
+            grottoCells.put(key, pocket == null ? EMPTY_CELL : pocket);
+        }
+        return pocket;
     }
 
     public Pocket magmaAtCell(long cellX, long cellZ) {
-        if (noise.unit(cellX, cellZ, 11) >= MAGMA_PRESENCE) return null;
-        int margin = 18;
-        int x = (int) (cellX * MAGMA_CELL + margin + noise.unit(cellX, cellZ, 12) * (MAGMA_CELL - 2 * margin));
-        int z = (int) (cellZ * MAGMA_CELL + margin + noise.unit(cellX, cellZ, 13) * (MAGMA_CELL - 2 * margin));
-        int y = 9 + (int) (noise.unit(cellX, cellZ, 14) * 3);
-        double rx = 6.0 + noise.unit(cellX, cellZ, 15) * 6.0;
-        double rz = 6.0 + noise.unit(cellX, cellZ, 16) * 6.0;
-        double ry = 3.0 + noise.unit(cellX, cellZ, 17) * 2.0;
-        return new Pocket(true, cellX, cellZ, x, y, z, rx, ry, rz);
+        long key = cellKey(cellX, cellZ);
+        synchronized (magmaCells) {
+            Object hit = magmaCells.get(key);
+            if (hit != null) return hit == EMPTY_CELL ? null : (Pocket) hit;
+        }
+        Pocket pocket = null;
+        if (noise.unit(cellX, cellZ, 11) < MAGMA_PRESENCE) {
+            int margin = 18;
+            int x = (int) (cellX * MAGMA_CELL + margin + noise.unit(cellX, cellZ, 12) * (MAGMA_CELL - 2 * margin));
+            int z = (int) (cellZ * MAGMA_CELL + margin + noise.unit(cellX, cellZ, 13) * (MAGMA_CELL - 2 * margin));
+            int y = 9 + (int) (noise.unit(cellX, cellZ, 14) * 3);
+            double rx = 6.0 + noise.unit(cellX, cellZ, 15) * 6.0;
+            double rz = 6.0 + noise.unit(cellX, cellZ, 16) * 6.0;
+            double ry = 3.0 + noise.unit(cellX, cellZ, 17) * 2.0;
+            pocket = new Pocket(true, cellX, cellZ, x, y, z, rx, ry, rz);
+        }
+        synchronized (magmaCells) {
+            magmaCells.put(key, pocket == null ? EMPTY_CELL : pocket);
+        }
+        return pocket;
     }
 
     /** Pockets that may reach any column in the box [minX, maxX] x [minZ, maxZ]. */

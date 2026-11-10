@@ -54,7 +54,7 @@ public final class CommandLandmarks extends CommandBase {
         }
         long seed = landmarkSeed(world);
         int px = (int) Math.floor(player.posX), pz = (int) Math.floor(player.posZ);
-        SkyIslands islands = new SkyIslands(seed);
+        SkyIslands islands = SkyIslands.of(seed);
         List<SkyIslands.Island> found = new ArrayList<>(
             islands.near(px - SEARCH, pz - SEARCH, px + SEARCH, pz + SEARCH));
         found.sort(
@@ -110,7 +110,7 @@ public final class CommandLandmarks extends CommandBase {
                         direction(island.centreX() - px, island.centreZ() - pz),
                         presence.words)));
         }
-        Landmarks landmarks = new Landmarks(seed);
+        Landmarks landmarks = Landmarks.of(seed);
         List<Landmarks.Landmark> giants = new ArrayList<>(
             landmarks.near(px - SEARCH, pz - SEARCH, px + SEARCH, pz + SEARCH));
         giants.sort((a, b) -> Double.compare(distance(a.x(), a.z(), px, pz), distance(b.x(), b.z(), px, pz)));
@@ -177,40 +177,29 @@ public final class CommandLandmarks extends CommandBase {
                             + " blocks can still appear here."));
                 return;
             }
-            int tx = target.centreX(), tz = target.centreZ();
-            int y;
-            if (toDungeon) {
-                // Beside the entrance (in the sanctum's gateway, or outside the citadel's gate), not on a roof.
-                int[] entrance = naturalexceptions.core.worldgen.SkyDungeon.of(islands, target)
-                    .entrance();
-                tx = entrance[0];
-                tz = entrance[2] + 2;
-                y = entrance[1];
-            } else {
-                int[] top = islands.column(target, tx, tz);
-                y = (top != null ? top[1] : target.centreY()) + 2;
-            }
             String arrived = toDungeon ? kindName(islands.dungeonKind(target)) : "island";
             SkyIslands.Island to = target;
+            Runnable onArrival = () -> sender.addChatMessage(
+                new ChatComponentText(
+                    "Went to the " + arrived
+                        + " at "
+                        + to.centreX()
+                        + ", "
+                        + to.centreY()
+                        + ", "
+                        + to.centreZ()
+                        + " ("
+                        + presence(world, islands, to).words
+                        + ")."));
             sender.addChatMessage(new ChatComponentText("\u00a77Going to the " + arrived + " once its land is made."));
-            LandPreparation.start(
-                player,
-                tx + 0.5,
-                y,
-                tz + 0.5,
-                "the " + arrived + "'s land",
-                () -> sender.addChatMessage(
-                    new ChatComponentText(
-                        "Went to the " + arrived
-                            + " at "
-                            + to.centreX()
-                            + ", "
-                            + to.centreY()
-                            + ", "
-                            + to.centreZ()
-                            + " ("
-                            + presence(world, islands, to).words
-                            + ").")));
+            if (toDungeon) {
+                LandPreparation.startToDungeon(player, islands, target, "the " + arrived + "'s land", onArrival);
+            } else {
+                int tx = target.centreX(), tz = target.centreZ();
+                int[] top = islands.column(target, tx, tz);
+                int y = (top != null ? top[1] : target.centreY()) + 2;
+                LandPreparation.start(player, tx + 0.5, y, tz + 0.5, "the " + arrived + "'s land", onArrival);
+            }
         }
     }
 

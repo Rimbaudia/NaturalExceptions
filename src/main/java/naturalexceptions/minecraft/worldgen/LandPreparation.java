@@ -13,6 +13,8 @@ import net.minecraft.world.WorldServer;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
+import naturalexceptions.core.worldgen.SkyDungeon;
+import naturalexceptions.core.worldgen.SkyIslands;
 
 /**
  * Makes the land around a teleport's landing spot a few chunks a tick before the player is sent there. Arriving in
@@ -23,7 +25,8 @@ import cpw.mods.fml.common.gameevent.TickEvent;
 public final class LandPreparation {
 
     /** Generation allowed in one tick, so the server keeps near its twenty ticks a second. */
-    private static final long BUDGET_NANOS = 20_000_000L;
+    private static final long BUDGET_NANOS = 8_000_000L;
+    private static final int MAX_GENERATED_PER_TICK = 2;
     private static final int REPORT_TICKS = 20;
 
     private static final Map<UUID, Trip> TRIPS = new HashMap<>();
@@ -31,20 +34,36 @@ public final class LandPreparation {
     private static final class Trip {
 
         final WorldServer world;
-        final double x, y, z;
+        final SkyIslands islands;
+        final SkyIslands.Island dungeonIsland;
+        final int view;
+        double x, y, z;
         final String what;
         final Runnable arrived;
-        final List<int[]> chunks;
+        List<int[]> chunks;
         int next, ticks;
 
         Trip(WorldServer world, double x, double y, double z, String what, Runnable arrived, List<int[]> chunks) {
             this.world = world;
+            this.islands = null;
+            this.dungeonIsland = null;
+            this.view = 0;
             this.x = x;
             this.y = y;
             this.z = z;
             this.what = what;
             this.arrived = arrived;
             this.chunks = chunks;
+        }
+
+        Trip(WorldServer world, SkyIslands islands, SkyIslands.Island dungeonIsland, int view, String what,
+            Runnable arrived) {
+            this.world = world;
+            this.islands = islands;
+            this.dungeonIsland = dungeonIsland;
+            this.view = view;
+            this.what = what;
+            this.arrived = arrived;
         }
     }
 
@@ -62,10 +81,25 @@ public final class LandPreparation {
         TRIPS.put(player.getUniqueID(), new Trip(world, x, y, z, what, arrived, chunks));
     }
 
+    /**
+     * Prefetches {@code target}'s dungeon layout off-thread first, then prepares the chunks around its entrance across
+     * ticks so the server thread never stalls waiting for a Citadel blueprint.
+     */
+    public static void startToDungeon(EntityPlayerMP player, SkyIslands islands, SkyIslands.Island target, String what,
+        Runnable arrived) {
+        WorldServer world = (WorldServer) player.worldObj;
+        int view = MinecraftServer.getServer()
+            .getConfigurationManager()
+            .getViewDistance();
+        SkyDungeon.prefetch(islands, target);
+        TRIPS.put(player.getUniqueID(), new Trip(world, islands, target, view, what, arrived));
+    }
+
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || TRIPS.isEmpty()) return;
         long start = System.nanoTime();
+        int generatedThisTick = 0;
         List<UUID> done = new ArrayList<>();
         for (Map.Entry<UUID, Trip> entry : TRIPS.entrySet()) {
             Trip trip = entry.getValue();
@@ -74,10 +108,27 @@ public final class LandPreparation {
                 done.add(entry.getKey());
                 continue;
             }
-            while (trip.next < trip.chunks.size() && System.nanoTime() - start < BUDGET_NANOS) {
+            if (trip.chunks == null) {
+                SkyDungeon ready = SkyDungeon.ifReady(trip.islands, trip.dungeonIsland);
+                if (ready == null) {
+                    if (trip.ticks++ % REPORT_TICKS == 0) {
+                        player.addChatMessage(new ChatComponentText("§7Charting " + trip.what + "..."));
+                    }
+                    continue;
+                }
+                int[] entrance = ready.entrance();
+                trip.x = entrance[0] + 0.5;
+                trip.y = entrance[1];
+                trip.z = entrance[2] + 2.5;
+                trip.chunks = nearestFirst((int) Math.floor(trip.x) >> 4, (int) Math.floor(trip.z) >> 4, trip.view + 1);
+            }
+            while (trip.next < trip.chunks.size() && generatedThisTick < MAX_GENERATED_PER_TICK
+                && System.nanoTime() - start < BUDGET_NANOS) {
                 int[] c = trip.chunks.get(trip.next++);
-                if (!trip.world.theChunkProviderServer.chunkExists(c[0], c[1]))
+                if (!trip.world.theChunkProviderServer.chunkExists(c[0], c[1])) {
                     trip.world.theChunkProviderServer.loadChunk(c[0], c[1]);
+                    generatedThisTick++;
+                }
             }
             if (trip.next >= trip.chunks.size()) {
                 player.setPositionAndUpdate(trip.x, trip.y, trip.z);

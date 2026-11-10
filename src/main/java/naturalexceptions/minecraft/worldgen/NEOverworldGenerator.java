@@ -107,14 +107,15 @@ public final class NEOverworldGenerator implements IWorldGenerator {
                 .landmarks(world, chunkX, chunkZ, naturalexceptions.core.worldgen.Landmarks.of(landmarkSeed));
             stage = time("stage_landmarks", stage);
             deepBlocks = LandmarkMaterializer
-                .deepLayers(world, chunkX, chunkZ, new naturalexceptions.core.worldgen.DeepLayers(landmarkSeed));
+                .deepLayers(world, chunkX, chunkZ, naturalexceptions.core.worldgen.DeepLayers.of(landmarkSeed));
+            stage = time("stage_deep_layers", stage);
             skyChanged = (islandBlocks + landmarkBlocks) > 0;
             anyChanged = (islandBlocks + landmarkBlocks + deepBlocks) > 0;
         } finally {
             LandmarkMaterializer.endBatch(world, skyChanged, anyChanged);
         }
         history.mark(WorldgenStage.STRUCTURES);
-        stage = time("stage_deep_layers", stage);
+        stage = time("stage_relight", stage);
         generateInitialAnomalies(world, chunkX, chunkZ, sites);
         history.mark(WorldgenStage.INITIAL_ANOMALIES);
         time("stage_anomalies", stage);

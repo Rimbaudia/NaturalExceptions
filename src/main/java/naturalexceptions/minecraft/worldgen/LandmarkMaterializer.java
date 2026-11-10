@@ -50,7 +50,7 @@ final class LandmarkMaterializer {
         if (skyChanged) {
             relight(world, chunk, glowing);
         } else {
-            for (int[] p : glowing) world.func_147451_t(p[0], p[1], p[2]);
+            relightGlowing(world, chunk, glowing);
             chunk.setChunkModified();
         }
     }
@@ -201,13 +201,15 @@ final class LandmarkMaterializer {
     }
 
     /**
-     * True when a block can be written straight into storage: it holds no tile entity and does nothing on being
-     * placed. Still water is the exception kept in: its placement check only matters beside lava. A class that
-     * overrides Block's onBlockAdded (World, x, y, z) hook counts as reacting, which errs safe.
+     * True when a block can be written straight into storage without world.setBlock's per-block relighting. Tile
+     * entities are attached directly in {@link #place}; BlockContainer and BlockStairs declare forwarding hooks whose
+     * targets here are inert, and chests/furnaces/dispensers are given explicit facing metadata by the writer.
      */
     private static boolean plain(Block block, int meta) {
-        if (block == Blocks.water) return true;
-        if (block.hasTileEntity(meta)) return false;
+        if (block == Blocks.water || block == Blocks.chest
+            || block == Blocks.furnace
+            || block == Blocks.lit_furnace
+            || block == Blocks.dispenser) return true;
         Boolean reacts;
         synchronized (REACTS) {
             reacts = REACTS.get(block.getClass());
@@ -215,6 +217,8 @@ final class LandmarkMaterializer {
         if (reacts == null) {
             reacts = false;
             for (Class<?> c = block.getClass(); c != Block.class && c != null && !reacts; c = c.getSuperclass()) {
+                if (c == net.minecraft.block.BlockContainer.class || c == net.minecraft.block.BlockStairs.class)
+                    continue;
                 for (java.lang.reflect.Method m : c.getDeclaredMethods()) {
                     String name = m.getName();
                     if (!name.equals("onBlockAdded") && !name.equals("func_149726_b")) continue;
@@ -238,7 +242,7 @@ final class LandmarkMaterializer {
 
     /**
      * One block written into the chunk's storage, with none of world.setBlock's per-block lighting; what gives
-     * light is noted so {@link #relight} can light it. Only for plain blocks: nothing here needs onBlockAdded.
+     * light is noted so {@link #relight} can light it, and any tile entity is attached straight onto the chunk.
      */
     private static void place(Chunk chunk, int x, int y, int z, Block block, int meta, List<int[]> glowing) {
         if (y < 0 || y > 255) return;
@@ -250,9 +254,17 @@ final class LandmarkMaterializer {
         }
         int lx = x & 15, ly = y & 15, lz = z & 15;
         Block old = section.getBlockByExtId(lx, ly, lz);
-        if (old.hasTileEntity(section.getExtBlockMetadata(lx, ly, lz))) chunk.removeTileEntity(lx, y, lz);
+        if (old.hasTileEntity(section.getExtBlockMetadata(lx, ly, lz))) chunk.worldObj.removeTileEntity(x, y, z);
         section.func_150818_a(lx, ly, lz, block);
         section.setExtBlockMetadata(lx, ly, lz, meta);
+        if (block.hasTileEntity(meta)) {
+            TileEntity te = block.createTileEntity(chunk.worldObj, meta);
+            if (te != null) {
+                chunk.worldObj.setTileEntity(x, y, z, te);
+                te.updateContainingBlockInfo();
+                te.blockMetadata = meta;
+            }
+        }
         if (block.getLightValue() > 0) glowing.add(new int[] { x, y, z });
     }
 
@@ -269,8 +281,42 @@ final class LandmarkMaterializer {
             spreadIntoShade(world, chunk);
         }
         chunk.isLightPopulated = true;
-        for (int[] p : glowing) world.func_147451_t(p[0], p[1], p[2]);
+        relightGlowing(world, chunk, glowing);
         chunk.setChunkModified();
+    }
+
+    /**
+     * Block-light only for positions recorded in {@code glowing}: skylight is already settled, overwritten blocks
+     * are skipped, and veins boxed in on all six sides by opaque rock are lit in place without a 3D search.
+     */
+    private static void relightGlowing(World world, Chunk chunk, List<int[]> glowing) {
+        for (int i = 0, n = glowing.size(); i < n; i++) {
+            int[] p = glowing.get(i);
+            int x = p[0], y = p[1], z = p[2];
+            if (y < 0 || y > 255) continue;
+            Chunk target = (x >> 4 == chunk.xPosition && z >> 4 == chunk.zPosition) ? chunk : neighbour(world, x, z);
+            if (target == null) continue;
+            int lx = x & 15, lz = z & 15;
+            int emit = target.getBlock(lx, y, lz)
+                .getLightValue();
+            if (emit <= 0 || target.getSavedLightValue(EnumSkyBlock.Block, lx, y, lz) >= emit) continue;
+            if (lx > 0 && lx < 15
+                && lz > 0
+                && lz < 15
+                && y > 0
+                && y < 255
+                && target.func_150808_b(lx - 1, y, lz) >= 15
+                && target.func_150808_b(lx + 1, y, lz) >= 15
+                && target.func_150808_b(lx, y - 1, lz) >= 15
+                && target.func_150808_b(lx, y + 1, lz) >= 15
+                && target.func_150808_b(lx, y, lz - 1) >= 15
+                && target.func_150808_b(lx, y, lz + 1) >= 15) {
+                ExtendedBlockStorage sec = target.getBlockStorageArray()[y >> 4];
+                if (sec != null) sec.setExtBlocklightValue(lx, y & 15, lz, emit);
+                continue;
+            }
+            world.updateLightByType(EnumSkyBlock.Block, x, y, z);
+        }
     }
 
     /**
@@ -294,30 +340,145 @@ final class LandmarkMaterializer {
         }
     }
 
+    private static final int[][] CARDINAL_SIDES = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+    private static final int[][] SIX_DIRS = { { 1, 0, 0 }, { -1, 0, 0 }, { 0, 0, 1 }, { 0, 0, -1 }, { 0, 1, 0 },
+        { 0, -1, 0 } };
+
     /**
-     * Daylight into the shade under the island: each open block beneath a covered column that has open sky
-     * beside it (in this chunk or a generated neighbour, either way across the border) is relit, and the light
-     * spreads on inward from there by itself.
+     * Daylight into the shade under the island via a single 15-level bucket pass across this chunk and its
+     * generated neighbours, so every shaded rim block is visited once instead of cascading per-height BFS waves.
      */
     private static void spreadIntoShade(World world, Chunk chunk) {
-        int x0 = chunk.xPosition << 4, z0 = chunk.zPosition << 4;
-        int[][] sides = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
-        for (int lx = 0; lx < 16; lx++) for (int lz = 0; lz < 16; lz++) {
-            int here = chunk.heightMap[lz << 4 | lx];
-            for (int[] side : sides) {
-                int nx = lx + side[0], nz = lz + side[1];
-                boolean inside = nx >= 0 && nx < 16 && nz >= 0 && nz < 16;
-                Chunk other = inside ? chunk : neighbour(world, x0 + nx, z0 + nz);
-                if (other == null) continue;
-                int there = other.heightMap[(nz & 15) << 4 | (nx & 15)];
-                // This column is covered where the one beside it is open...
-                for (int y = there; y < here; y++) if (chunk.func_150808_b(lx, y, lz) < 15)
-                    world.updateLightByType(EnumSkyBlock.Sky, x0 + lx, y, z0 + lz);
-                // ...and across the border, the other way round (inside the chunk the loop above sees both).
-                if (!inside) for (int y = here; y < there; y++) if (other.func_150808_b(nx & 15, y, nz & 15) < 15)
-                    world.updateLightByType(EnumSkyBlock.Sky, x0 + nx, y, z0 + nz);
+        int cx = chunk.xPosition, cz = chunk.zPosition;
+        Chunk[] grid = new Chunk[9];
+        boolean[] touched = new boolean[9];
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                int idx = (dx + 1) * 3 + (dz + 1);
+                grid[idx] = (dx == 0 && dz == 0) ? chunk : neighbour(world, (cx + dx) << 4, (cz + dz) << 4);
             }
         }
+        int[][] buckets = new int[15][];
+        int[] sizes = new int[15];
+
+        for (int lx = 0; lx < 16; lx++) {
+            for (int lz = 0; lz < 16; lz++) {
+                int here = chunk.heightMap[lz << 4 | lx];
+                for (int[] side : CARDINAL_SIDES) {
+                    int nx = lx + side[0], nz = lz + side[1];
+                    boolean inside = nx >= 0 && nx < 16 && nz >= 0 && nz < 16;
+                    int gIdx = inside ? 4 : ((nx >> 4) + 1) * 3 + ((nz >> 4) + 1);
+                    Chunk other = grid[gIdx];
+                    if (other == null) continue;
+                    int there = other.heightMap[(nz & 15) << 4 | (nx & 15)];
+                    for (int y = Math.max(0, there - 14); y < here; y++) {
+                        int adj = y >= there ? 15 : getSkyLight(other, nx & 15, y, nz & 15);
+                        if (adj <= 1) continue;
+                        int op = chunk.func_150808_b(lx, y, lz);
+                        if (op >= 15) continue;
+                        int cand = adj - Math.max(1, op);
+                        if (cand > getSkyLight(chunk, lx, y, lz)) {
+                            setSkyLight(chunk, lx, y, lz, cand);
+                            if (cand >= 2) pushSkyBucket(buckets, sizes, cand, y, lx + 16, lz + 16);
+                        }
+                    }
+                    if (!inside) {
+                        for (int y = Math.max(0, here - 14); y < there; y++) {
+                            int adj = y >= here ? 15 : getSkyLight(chunk, lx, y, lz);
+                            if (adj <= 1) continue;
+                            int olx = nx & 15, olz = nz & 15;
+                            int op = other.func_150808_b(olx, y, olz);
+                            if (op >= 15) continue;
+                            int cand = adj - Math.max(1, op);
+                            if (cand > getSkyLight(other, olx, y, olz)) {
+                                setSkyLight(other, olx, y, olz, cand);
+                                touched[gIdx] = true;
+                                if (cand >= 2) pushSkyBucket(buckets, sizes, cand, y, nx + 16, nz + 16);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        for (int level = 14; level >= 2; level--) {
+            int[] bucket = buckets[level];
+            if (bucket == null) continue;
+            int i = 0;
+            while (i < sizes[level]) {
+                int packed = bucket[i++];
+                int y = packed >>> 12;
+                int rx = (packed >>> 6) & 63;
+                int rz = packed & 63;
+                Chunk cur = grid[(rx >> 4) * 3 + (rz >> 4)];
+                if (getSkyLight(cur, rx & 15, y, rz & 15) > level) continue;
+                for (int[] d : SIX_DIRS) {
+                    int qx = rx + d[0], qy = y + d[1], qz = rz + d[2];
+                    if (qx < 0 || qx >= 48 || qz < 0 || qz >= 48 || qy < 0 || qy > 255) continue;
+                    int qg = (qx >> 4) * 3 + (qz >> 4);
+                    Chunk qc = grid[qg];
+                    if (qc == null) continue;
+                    int qlx = qx & 15, qlz = qz & 15;
+                    int op = qc.func_150808_b(qlx, qy, qlz);
+                    if (op >= 15) continue;
+                    int cand = level - Math.max(1, op);
+                    if (cand > getSkyLight(qc, qlx, qy, qlz)) {
+                        setSkyLight(qc, qlx, qy, qlz, cand);
+                        touched[qg] = true;
+                        if (cand >= 2) pushSkyBucket(buckets, sizes, cand, qy, qx, qz);
+                    }
+                }
+            }
+        }
+
+        for (int g = 0; g < 9; g++) {
+            if (touched[g] && g != 4 && grid[g] != null) grid[g].setChunkModified();
+        }
+    }
+
+    private static void pushSkyBucket(int[][] buckets, int[] sizes, int level, int y, int rx, int rz) {
+        int[] b = buckets[level];
+        int s = sizes[level];
+        if (b == null) {
+            b = buckets[level] = new int[64];
+        } else if (s == b.length) {
+            b = buckets[level] = java.util.Arrays.copyOf(b, b.length << 1);
+        }
+        b[s] = (y << 12) | (rx << 6) | rz;
+        sizes[level] = s + 1;
+    }
+
+    private static int getSkyLight(Chunk c, int lx, int y, int lz) {
+        ExtendedBlockStorage sec = c.getBlockStorageArray()[y >> 4];
+        if (sec != null) return sec.getExtSkylightValue(lx, y & 15, lz);
+        return y >= c.heightMap[lz << 4 | lx] ? 15 : 0;
+    }
+
+    private static void setSkyLight(Chunk c, int lx, int y, int lz, int val) {
+        ExtendedBlockStorage[] sections = c.getBlockStorageArray();
+        int idx = y >> 4;
+        ExtendedBlockStorage sec = sections[idx];
+        if (sec == null) {
+            if (val <= 0) return;
+            sec = new ExtendedBlockStorage(idx << 4, !c.worldObj.provider.hasNoSky);
+            int baseY = idx << 4;
+            int aboveY = baseY + 16;
+            for (int x = 0; x < 16; x++) {
+                for (int z = 0; z < 16; z++) {
+                    if (baseY >= c.heightMap[z << 4 | x]) {
+                        for (int ly = 0; ly < 16; ly++) sec.setExtSkylightValue(x, ly, z, 15);
+                    } else {
+                        int light = aboveY < 256 ? getSkyLight(c, x, aboveY, z) : 15;
+                        for (int ly = 15; ly >= 0 && light > 1; ly--) {
+                            light--;
+                            sec.setExtSkylightValue(x, ly, z, light);
+                        }
+                    }
+                }
+            }
+            sections[idx] = sec;
+        }
+        sec.setExtSkylightValue(lx, y & 15, lz, val);
     }
 
     /** The chunk holding (x, z) if it has been generated, without generating it. */
@@ -408,16 +569,35 @@ final class LandmarkMaterializer {
         return x >= x0 + inset && x < x0 + 16 - inset && z >= z0 + inset && z < z0 + 16 - inset;
     }
 
+    private static final WorldGenTrees BATCHED_OAK_TREE = new WorldGenTrees(false) {
+
+        @Override
+        protected void setBlockAndNotifyAdequately(World world, int x, int y, int z, Block block, int meta) {
+            set(world, x, y, z, block, meta);
+        }
+    };
+
+    private static final net.minecraft.world.gen.feature.WorldGenForest BATCHED_BIRCH_TREE = new net.minecraft.world.gen.feature.WorldGenForest(
+        false,
+        false) {
+
+        @Override
+        protected void setBlockAndNotifyAdequately(World world, int x, int y, int z, Block block, int meta) {
+            set(world, x, y, z, block, meta);
+        }
+    };
+
     private static void plantTree(World world, SkyIslands field, SkyIslands.Island island, int[] spot, int x0, int z0) {
         if (!insideChunk(spot[0], spot[1], x0, z0, INSET)) return;
         int[] column = field.column(island, spot[0], spot[1]);
         if (column == null) return;
-        world.setBlock(spot[0], column[1] + 1, spot[1], Blocks.air, 0, 2); // clear any grass where the trunk goes
-        world.setBlock(spot[0], column[1], spot[1], Blocks.grass, 0, 2);
+        set(world, spot[0], column[1] + 1, spot[1], Blocks.air, 0); // clear any grass where the trunk goes
+        set(world, spot[0], column[1], spot[1], Blocks.dirt, 0);
         Random random = new Random(spot[0] * 341873128712L ^ spot[1] * 132897987541L);
-        if (field.birch(island, spot)) new net.minecraft.world.gen.feature.WorldGenForest(false, false)
-            .generate(world, random, spot[0], column[1] + 1, spot[1]);
-        else new WorldGenTrees(false).generate(world, random, spot[0], column[1] + 1, spot[1]);
+        boolean grown = field.birch(island, spot)
+            ? BATCHED_BIRCH_TREE.generate(world, random, spot[0], column[1] + 1, spot[1])
+            : BATCHED_OAK_TREE.generate(world, random, spot[0], column[1] + 1, spot[1]);
+        if (!grown) set(world, spot[0], column[1], spot[1], Blocks.grass, 0);
     }
 
     private static void placeCache(World world, SkyIslands field, SkyIslands.Island island, int x0, int z0) {
@@ -534,7 +714,7 @@ final class LandmarkMaterializer {
                 break;
             case CHEST:
                 // A chest with no loot is furniture: a barracks footlocker, a cupboard.
-                if (piece.loot == null) set(world, x, y, z, Blocks.chest, 0);
+                if (piece.loot == null) set(world, x, y, z, Blocks.chest, chestFacing(world, x, y, z));
                 else chest(world, x, y, z, tierOf(piece.loot), island);
                 break;
             case SPAWNER:
@@ -542,8 +722,8 @@ final class LandmarkMaterializer {
                 break;
             case DISPENSER: {
                 set(world, x, y, z, Blocks.dispenser, meta & 7);
-                // A dispenser aims itself at open air when placed; the dungeon's aim is the one that counts.
-                world.setBlockMetadataWithNotify(x, y, z, meta & 7, 2);
+                // A dispenser aims itself at open air when placed via world.setBlock; direct chunk writes keep meta.
+                if (batchChunk == null) world.setBlockMetadataWithNotify(x, y, z, meta & 7, 2);
                 TileEntity tile = world.getTileEntity(x, y, z);
                 if (tile instanceof net.minecraft.tileentity.TileEntityDispenser) {
                     net.minecraft.tileentity.TileEntityDispenser dispenser = (net.minecraft.tileentity.TileEntityDispenser) tile;
@@ -699,7 +879,7 @@ final class LandmarkMaterializer {
                 // A hearth's fire is a furnace set alight with no fuel: it glows and never goes out or spreads.
                 Block furnace = (meta & 8) != 0 ? Blocks.lit_furnace : Blocks.furnace;
                 set(world, x, y, z, furnace, meta & 7);
-                world.setBlockMetadataWithNotify(x, y, z, meta & 7, 2);
+                if (batchChunk == null) world.setBlockMetadataWithNotify(x, y, z, meta & 7, 2);
                 if ((meta & naturalexceptions.core.worldgen.SkyDungeon.MID_WORK) != 0
                     && world.getTileEntity(x, y, z) instanceof net.minecraft.inventory.IInventory)
                     Wares.leftMidWork(
@@ -1102,9 +1282,29 @@ final class LandmarkMaterializer {
         }
     }
 
+    private static boolean safeOpaque(World world, int x, int y, int z) {
+        Chunk c = batchChunk != null && x >> 4 == batchChunk.xPosition && z >> 4 == batchChunk.zPosition ? batchChunk
+            : neighbour(world, x, z);
+        return c != null && c.getBlock(x & 15, y, z & 15)
+            .func_149730_j();
+    }
+
+    private static int chestFacing(World world, int x, int y, int z) {
+        boolean n = safeOpaque(world, x, y, z - 1);
+        boolean s = safeOpaque(world, x, y, z + 1);
+        boolean w = safeOpaque(world, x - 1, y, z);
+        boolean e = safeOpaque(world, x + 1, y, z);
+        int meta = 3;
+        if (n && !s) meta = 3;
+        if (s && !n) meta = 2;
+        if (w && !e) meta = 5;
+        if (e && !w) meta = 4;
+        return meta;
+    }
+
     /** A chest with its loot, seeded from where it stands, so it is the same whichever chunk writes it. */
     private static void chest(World world, int x, int y, int z, SkyCacheLoot.Tier tier, SkyIslands.Island island) {
-        world.setBlock(x, y, z, Blocks.chest, 0, 2);
+        set(world, x, y, z, Blocks.chest, chestFacing(world, x, y, z));
         TileEntity tile = world.getTileEntity(x, y, z);
         if (tile instanceof TileEntityChest) {
             long seed = x * 0x9E3779B97F4A7C15L ^ y * 0xC2B2AE3D27D4EB4FL ^ z * 0x165667B19E3779F9L ^ island.cellX();
@@ -1303,7 +1503,7 @@ final class LandmarkMaterializer {
 
     /** The lookout's chest: what the last watch left, and the log of bearings to the sky-halls. */
     private static void lookoutChest(World world, int x, int y, int z) {
-        world.setBlock(x, y, z, Blocks.chest, 0, 2);
+        set(world, x, y, z, Blocks.chest, chestFacing(world, x, y, z));
         TileEntity tile = world.getTileEntity(x, y, z);
         if (!(tile instanceof TileEntityChest)) return;
         TileEntityChest chest = (TileEntityChest) tile;

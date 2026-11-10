@@ -378,10 +378,10 @@ public final class SkyDungeon {
      * The blocks, packed: a dungeon holds a couple of hundred thousand, and several may be cached while chunks
      * generate, so each is a position (long) and its data (int) in parallel arrays, found through an open hash.
      */
-    private long[] positions = new long[1 << 12];
-    private int[] data = new int[1 << 12];
+    private long[] positions;
+    private int[] data;
     private int count;
-    private int[] tableIndex = new int[1 << 13];
+    private int[] tableIndex;
     private final List<String> mobNames = new ArrayList<>();
     final List<Room> rooms = new ArrayList<>();
     /** The citadel's features out on its island (a farmstead, the pier ...), by name, as they were built. */
@@ -394,6 +394,8 @@ public final class SkyDungeon {
     private int surfaceMaxX = Integer.MAX_VALUE, surfaceMaxZ = Integer.MAX_VALUE;
     /** {minX, minZ, maxX, maxZ} of each landmark's site out on a citadel's island (not the town or the road). */
     final List<int[]> sites = new ArrayList<>();
+    private int chunkMinX, chunkMinZ, chunkSpanX, chunkSpanZ;
+    private volatile int[][] chunkGrid;
     private volatile Map<Long, int[]> byChunk;
 
     private SkyDungeon(SkyIslands field, SkyIslands.Island island, Kind kind) {
@@ -401,6 +403,10 @@ public final class SkyDungeon {
         this.island = island;
         this.kind = kind;
         this.noise = new LandmarkNoise(field.seed() ^ 0x534b5944554e4745L ^ island.cellX() * 31 ^ island.cellZ());
+        int initialCap = kind == Kind.CITADEL ? (1 << 19) : (1 << 14);
+        this.positions = new long[initialCap];
+        this.data = new int[initialCap];
+        this.tableIndex = new int[initialCap << 1];
     }
 
     // --- Cache ------------------------------------------------------------------------------------------------
@@ -427,7 +433,7 @@ public final class SkyDungeon {
         .newSingleThreadExecutor(runnable -> {
             Thread thread = new Thread(runnable, "Natural Exceptions dungeon layout");
             thread.setDaemon(true);
-            thread.setPriority(Thread.MIN_PRIORITY);
+            thread.setPriority(Math.max(Thread.MIN_PRIORITY, Thread.NORM_PRIORITY - 1));
             return thread;
         });
 
@@ -513,6 +519,52 @@ public final class SkyDungeon {
         surfaceMinZ = minZ;
         surfaceMaxX = maxX;
         surfaceMaxZ = maxZ;
+        buildChunkGrid();
+    }
+
+    private void buildChunkGrid() {
+        if (count == 0) {
+            chunkGrid = new int[0][];
+            return;
+        }
+        int cMinX = Integer.MAX_VALUE, cMinZ = Integer.MAX_VALUE;
+        int cMaxX = Integer.MIN_VALUE, cMaxZ = Integer.MIN_VALUE;
+        for (int i = 0; i < count; i++) {
+            long pos = positions[i];
+            int cx = unpackX(pos) >> 4;
+            int cz = unpackZ(pos) >> 4;
+            if (cx < cMinX) cMinX = cx;
+            if (cx > cMaxX) cMaxX = cx;
+            if (cz < cMinZ) cMinZ = cz;
+            if (cz > cMaxZ) cMaxZ = cz;
+        }
+        int spanX = cMaxX - cMinX + 1;
+        int spanZ = cMaxZ - cMinZ + 1;
+        if ((long) spanX * spanZ <= 65536L) {
+            int total = spanX * spanZ;
+            int[] sizes = new int[total];
+            for (int i = 0; i < count; i++) {
+                long pos = positions[i];
+                sizes[((unpackX(pos) >> 4) - cMinX) * spanZ + ((unpackZ(pos) >> 4) - cMinZ)]++;
+            }
+            int[][] grid = new int[total][];
+            for (int idx = 0; idx < total; idx++) {
+                if (sizes[idx] > 0) {
+                    grid[idx] = new int[sizes[idx]];
+                    sizes[idx] = 0;
+                }
+            }
+            for (int i = 0; i < count; i++) {
+                long pos = positions[i];
+                int idx = ((unpackX(pos) >> 4) - cMinX) * spanZ + ((unpackZ(pos) >> 4) - cMinZ);
+                grid[idx][sizes[idx]++] = i;
+            }
+            chunkMinX = cMinX;
+            chunkMinZ = cMinZ;
+            chunkSpanX = spanX;
+            chunkSpanZ = spanZ;
+            chunkGrid = grid;
+        }
     }
 
     public Kind kind() {
@@ -536,33 +588,42 @@ public final class SkyDungeon {
 
     /** The pieces inside one chunk. */
     public List<Piece> piecesInChunk(int chunkX, int chunkZ) {
-        Map<Long, int[]> index = byChunk;
-        if (index == null) {
-            synchronized (this) {
-                if (byChunk == null) {
-                    Map<Long, int[]> sizes = new HashMap<>();
-                    for (int i = 0; i < count; i++) {
-                        long k = chunkKey(unpackX(positions[i]) >> 4, unpackZ(positions[i]) >> 4);
-                        int[] c = sizes.get(k);
-                        if (c == null) sizes.put(k, c = new int[1]);
-                        c[0]++;
+        int[][] grid = chunkGrid;
+        final int[] found;
+        if (grid != null) {
+            if (chunkX < chunkMinX || chunkX >= chunkMinX + chunkSpanX
+                || chunkZ < chunkMinZ
+                || chunkZ >= chunkMinZ + chunkSpanZ) return Collections.<Piece>emptyList();
+            found = grid[(chunkX - chunkMinX) * chunkSpanZ + (chunkZ - chunkMinZ)];
+        } else {
+            Map<Long, int[]> index = byChunk;
+            if (index == null) {
+                synchronized (this) {
+                    if (byChunk == null) {
+                        Map<Long, int[]> sizes = new HashMap<>();
+                        for (int i = 0; i < count; i++) {
+                            long k = chunkKey(unpackX(positions[i]) >> 4, unpackZ(positions[i]) >> 4);
+                            int[] c = sizes.get(k);
+                            if (c == null) sizes.put(k, c = new int[1]);
+                            c[0]++;
+                        }
+                        Map<Long, int[]> built = new HashMap<>();
+                        Map<Long, int[]> fill = new HashMap<>();
+                        for (Map.Entry<Long, int[]> e : sizes.entrySet()) {
+                            built.put(e.getKey(), new int[e.getValue()[0]]);
+                            fill.put(e.getKey(), new int[1]);
+                        }
+                        for (int i = 0; i < count; i++) {
+                            long k = chunkKey(unpackX(positions[i]) >> 4, unpackZ(positions[i]) >> 4);
+                            built.get(k)[fill.get(k)[0]++] = i;
+                        }
+                        byChunk = built;
                     }
-                    Map<Long, int[]> built = new HashMap<>();
-                    Map<Long, int[]> fill = new HashMap<>();
-                    for (Map.Entry<Long, int[]> e : sizes.entrySet()) {
-                        built.put(e.getKey(), new int[e.getValue()[0]]);
-                        fill.put(e.getKey(), new int[1]);
-                    }
-                    for (int i = 0; i < count; i++) {
-                        long k = chunkKey(unpackX(positions[i]) >> 4, unpackZ(positions[i]) >> 4);
-                        built.get(k)[fill.get(k)[0]++] = i;
-                    }
-                    byChunk = built;
+                    index = byChunk;
                 }
-                index = byChunk;
             }
+            found = index.get(chunkKey(chunkX, chunkZ));
         }
-        final int[] found = index.get(chunkKey(chunkX, chunkZ));
         if (found == null) return Collections.<Piece>emptyList();
         return new java.util.AbstractList<Piece>() {
 
